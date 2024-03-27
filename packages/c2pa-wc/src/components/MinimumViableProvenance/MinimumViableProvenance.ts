@@ -102,7 +102,7 @@ export class MinimumViableProvenance extends Configurable(
     return html`
       <div class="container">
         <div class="heading">
-          <div class="heading-text">
+          <div class="heading-text" role="heading" aria-level="2">
             ${this._config.stringMap['minimum-viable-provenance.header']}
           </div>
         </div>

@@ -11,6 +11,8 @@ import { L2SocialAccount } from 'c2pa';
 import { css, html, LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { Configurable } from '../../mixins/configurable';
+import { ifDefined } from 'lit/directives/if-defined.js';
+import defaultStringMap from '../SocialMedia/SocialMedia.str.json';
 import { baseSectionStyles, defaultStyles } from '../../styles';
 import defaultStringMap from '../SocialMedia/SocialMedia.str.json';
 
@@ -52,7 +54,6 @@ export class SocialMedia extends Configurable(LitElement, defaultConfig) {
           list-style: none;
           padding: 0px 0px 0px 2px;
           margin: 0;
-          overflow: hidden;
         }
 
         .section-social-media-list-item {
@@ -80,13 +81,13 @@ export class SocialMedia extends Configurable(LitElement, defaultConfig) {
       helpText=${this._config.stringMap['social-media.helpText']}
     >
       <div slot="header">${this._config.stringMap['social-media.header']}</div>
-      <ul class="section-social-media-list" slot="content">
+      <ul class="section-social-media-list" slot="content" aria-label=${this._config.stringMap['social-media.header']}>
         ${this.data?.map(
           (socialAccount) => html`
             <li class="section-social-media-list-item">
               <a
                 class="section-social-media-list-item-link"
-                href=${socialAccount['@id']}
+                href=${ifDefined(socialAccount['@id'] ?? undefined)}
                 target="_blank"
               >
                 <cai-icon source="${socialAccount['@id']}"></cai-icon>

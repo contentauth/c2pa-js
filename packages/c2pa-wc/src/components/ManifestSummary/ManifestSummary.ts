@@ -130,7 +130,6 @@ export class ManifestSummary extends Configurable(LitElement, defaultConfig) {
         #view-more {
           display: block;
           transition: all 150ms ease-in-out;
-          background-color: transparent;
           border-radius: 9999px;
           border: 2px solid var(--cai-button-color);
           padding: 8px 0;
@@ -139,6 +138,8 @@ export class ManifestSummary extends Configurable(LitElement, defaultConfig) {
           text-decoration: none;
           width: 100%;
           color: var(--cai-primary-color);
+          outline-offset: 3px;
+          outline-color: var(--cai-focus-ring-color, #1473e6);
           background-color: var(--cai-button-color);
         }
 
