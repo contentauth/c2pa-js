@@ -20,6 +20,10 @@ export const defaultStyles = css`
     --cai-secondary-color: #666666;
     --cai-button-color: #ffc840;
     --cai-background-pill: #e5e5e5;
+    --cai-popover-bg-color: #ffffff;
+    --cai-popover-color: var(--cai-primary-color);
+    --cai-focus-ring-color: #1473e6;
+    --cai-social-media-item-color: #1473e6;
 
     font-family: var(--cai-font-family);
     font-size: var(--cai-font-size-base);
