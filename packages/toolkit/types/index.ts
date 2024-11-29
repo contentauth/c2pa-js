@@ -129,7 +129,7 @@ export type CreativeWorkAssertion = Assertion<
   {
     '@context': string;
     '@type': string;
-    author: Author[];
+    author?: Author[];
     url?: string;
   }
 >;
