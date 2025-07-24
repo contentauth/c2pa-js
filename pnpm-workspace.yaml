@@ -1,2 +1,8 @@
-packages: 
-  - "packages/*"
+packages:
+  - packages/*
+  - tools/*
+
+onlyBuiltDependencies:
+  - '@swc/core'
+  - nx
+  - unrs-resolver

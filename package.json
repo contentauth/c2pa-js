@@ -1,18 +1,41 @@
 {
-  "name": "@c2pa-js-v2/source",
+  "name": "@contentauth/source",
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {},
   "private": true,
-  "dependencies": {},
   "devDependencies": {
+    "@eslint/js": "^9.8.0",
+    "@monodon/rust": "^2.3.0",
+    "@nx/eslint": "21.3.5",
+    "@nx/eslint-plugin": "21.3.5",
     "@nx/js": "21.3.5",
+    "@nx/plugin": "21.3.5",
+    "@nx/vite": "21.3.5",
+    "@nx/web": "21.3.5",
     "@swc-node/register": "~1.9.1",
+    "@swc/cli": "~0.6.0",
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
+    "@types/node": "18.16.9",
+    "@vitest/coverage-v8": "^3.0.5",
+    "@vitest/ui": "^3.0.0",
+    "eslint": "^9.8.0",
+    "eslint-config-prettier": "^10.0.0",
+    "jiti": "2.4.2",
+    "jsdom": "~22.1.0",
+    "jsonc-eslint-parser": "^2.1.0",
     "nx": "21.3.5",
     "prettier": "^2.6.2",
     "tslib": "^2.3.0",
-    "typescript": "~5.8.2"
+    "typescript": "~5.8.2",
+    "typescript-eslint": "^8.29.0",
+    "vite": "^6.0.0",
+    "vite-plugin-dts": "~4.5.0",
+    "vitest": "^3.0.0"
+  },
+  "packageManager": "pnpm@10.14.0-0+sha512.2cd47a0cbf5f1d1de7693a88307a0ede5be94e0d3b34853d800ee775efbea0650cb562b77605ec80bc8d925f5cd27c4dfe8bb04d3a0b76090784c664450d32d6",
+  "dependencies": {
+    "@nx/devkit": "21.3.5"
   }
 }

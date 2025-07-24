@@ -1,2 +1,2 @@
 
-fatal: not a git repository (or any of the parent directories): .git
+/bin/sh: gh: command not found

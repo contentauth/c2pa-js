@@ -1,0 +1,37 @@
+{
+  "name": "wasm",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "packages/wasm/src",
+  "targets": {
+    "build": {
+      "executor": "nx-wasm-pack:build",
+      "outputs": ["{options.target-dir}"],
+      "options": {
+        "project-dir": "{projectRoot}"
+      }
+    },
+    "test": {
+      "cache": true,
+      "executor": "@monodon/rust:test",
+      "outputs": ["{options.target-dir}"],
+      "options": {
+        "target-dir": "dist/target/wasm"
+      },
+      "configurations": {
+        "production": {
+          "release": true
+        }
+      }
+    },
+    "lint": {
+      "cache": true,
+      "executor": "@monodon/rust:lint",
+      "outputs": ["{options.target-dir}"],
+      "options": {
+        "target-dir": "dist/target/wasm"
+      }
+    }
+  },
+  "tags": []
+}

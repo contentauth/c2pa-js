@@ -1,0 +1,56 @@
+{
+  "name": "nx-wasm-pack",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "nx": {
+    "targets": {
+      "build": {
+        "executor": "@nx/js:tsc",
+        "outputs": [
+          "{options.outputPath}"
+        ],
+        "options": {
+          "outputPath": "tools/nx-wasm-pack/dist",
+          "main": "tools/nx-wasm-pack/src/index.ts",
+          "tsConfig": "tools/nx-wasm-pack/tsconfig.lib.json",
+          "rootDir": "tools/nx-wasm-pack/src",
+          "generatePackageJson": false,
+          "assets": [
+            {
+              "input": "./tools/nx-wasm-pack/src",
+              "glob": "**/!(*.ts)",
+              "output": "."
+            },
+            {
+              "input": "./tools/nx-wasm-pack/src",
+              "glob": "**/*.d.ts",
+              "output": "."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@nx/devkit": "21.3.5",
+    "tslib": "^2.3.0"
+  },
+  "executors": "./executors.json",
+  "files": [
+    "dist",
+    "!**/*.tsbuildinfo",
+    "executors.json"
+  ]
+}
