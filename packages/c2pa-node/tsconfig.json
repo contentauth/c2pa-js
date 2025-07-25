@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "outDir": "./dist",
+    "rootDir": "./js-src",
+    "strict": true,
+    "target": "es6",
+    "module": "commonjs",
+    "types": ["node", "jest"],
+    "paths": {
+      "index.node": ["./index.node"]
+    },
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "js-src/**/*.ts"
+  ]
+}
