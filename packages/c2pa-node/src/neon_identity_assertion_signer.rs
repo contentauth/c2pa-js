@@ -15,10 +15,13 @@ use crate::{
     neon_identity_assertion_builder::NeonIdentityAssertionBuilder, neon_signer::NeonCallbackSigner,
 };
 use async_trait::async_trait;
-use c2pa::{dynamic_assertion::AsyncDynamicAssertion, AsyncSigner, SigningAlg};
-use c2pa_crypto::{
-    raw_signature::{AsyncRawSigner, RawSignerError},
-    time_stamp::AsyncTimeStampProvider,
+use c2pa::{
+    crypto::{
+        raw_signature::{AsyncRawSigner, RawSignerError},
+        time_stamp::AsyncTimeStampProvider,
+    },
+    dynamic_assertion::AsyncDynamicAssertion,
+    AsyncSigner, SigningAlg,
 };
 use neon::prelude::FunctionContext;
 use neon::prelude::*;

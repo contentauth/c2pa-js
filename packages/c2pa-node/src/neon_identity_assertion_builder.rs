@@ -12,9 +12,10 @@
 // each license.
 
 use crate::neon_signer::NeonCallbackSigner;
-use c2pa::dynamic_assertion::{AsyncDynamicAssertion, DynamicAssertionContent};
-use cawg_identity::builder::AsyncCredentialHolder;
-use cawg_identity::SignerPayload;
+use c2pa::{
+    dynamic_assertion::{AsyncDynamicAssertion, DynamicAssertionContent},
+    identity::{builder::AsyncCredentialHolder, SignerPayload},
+};
 use neon::prelude::*;
 use std::ops::Deref;
 use std::sync::RwLock;

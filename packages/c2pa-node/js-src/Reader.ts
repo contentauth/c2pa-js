@@ -11,13 +11,21 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import * as neon from 'index.node';
+import * as neon from "index.node";
 
 export class Reader implements neon.Reader {
   private constructor(private reader: neon.Reader) {}
 
   json(): neon.ManifestStore {
     return JSON.parse(neon.readerJson.call(this.reader));
+  }
+
+  remoteUrl(): string {
+    return neon.readerRemoteUrl.call(this.reader);
+  }
+
+  isEmbedded(): boolean {
+    return neon.readerIsEmbedded.call(this.reader);
   }
 
   async resourceToAsset(

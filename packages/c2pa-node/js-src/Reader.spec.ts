@@ -11,16 +11,16 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import { Reader } from './index';
+import { Reader } from "./index";
 
 // import native objects from built native code
-import { ManifestStore } from 'index.node';
-import path from 'path';
-import * as fs from 'fs-extra';
+import { ManifestStore } from "index.node";
+import path from "path";
+import * as fs from "fs-extra";
 
-const tempDir = path.join(__dirname, 'tmp');
+const tempDir = path.join(__dirname, "tmp");
 
-describe('Reader', () => {
+describe("Reader", () => {
   const manifestStore: ManifestStore = JSON.parse(`{
   "active_manifest": "contentauth:urn:uuid:e8ce52bc-df72-4ba5-ba37-52c360e76ba4",
   "manifests": {
@@ -82,7 +82,7 @@ describe('Reader', () => {
           "kind": "Json"
         },
         {
-          "label": "c2pa.actions",
+          "label": "c2pa.actions.v2",
           "data": {
             "actions": [
               {
@@ -145,58 +145,58 @@ describe('Reader', () => {
     await fs.remove(tempDir);
   });
 
-  it('should read from an ArrayBuffer', async () => {
-    const buffer = await fs.readFile('./tests/fixtures/CAI.jpg');
-    const reader = await Reader.fromAsset({ buffer, mimeType: 'jpeg' });
+  it("should read from an ArrayBuffer", async () => {
+    const buffer = await fs.readFile("./tests/fixtures/CAI.jpg");
+    const reader = await Reader.fromAsset({ buffer, mimeType: "jpeg" });
 
     const json = reader.json();
     expect(json.manifests).toEqual(manifestStore.manifests);
     expect(json.active_manifest).toEqual(manifestStore.active_manifest);
   });
 
-  it('should read from a file', async () => {
-    const reader = await Reader.fromAsset({ path: './tests/fixtures/CAI.jpg' });
+  it("should read from a file", async () => {
+    const reader = await Reader.fromAsset({ path: "./tests/fixtures/CAI.jpg" });
     const json = reader.json();
     expect(json.manifests).toEqual(manifestStore.manifests);
     expect(json.active_manifest).toEqual(manifestStore.active_manifest);
   });
 
-  it('should read from a file with a C2PA 2.x manifest', async () => {
+  it("should read from a file with a C2PA 2.x manifest", async () => {
     const reader = await Reader.fromAsset({
-      path: './tests/fixtures/bench2.png',
+      path: "./tests/fixtures/bench2.png",
     });
     reader.json();
   });
 
-  it('should read from manifest data and buffer', async () => {
+  it("should read from manifest data and buffer", async () => {
     const manifestData = await fs.readFile(
-      './tests/fixtures/CAI/manifest_data.c2pa',
+      "./tests/fixtures/CAI/manifest_data.c2pa",
     );
-    const buffer = await fs.readFile('./tests/fixtures/CAI.jpg');
+    const buffer = await fs.readFile("./tests/fixtures/CAI.jpg");
     const reader = await Reader.fromManifestDataAndAsset(manifestData, {
       buffer,
-      mimeType: 'jpeg',
+      mimeType: "jpeg",
     });
     const json = reader.json();
     expect(json.manifests).toEqual(manifestStore.manifests);
     expect(json.active_manifest).toEqual(manifestStore.active_manifest);
   });
 
-  it('should read from manifest data and file', async () => {
+  it("should read from manifest data and file", async () => {
     const manifestData = await fs.readFile(
-      './tests/fixtures/CAI/manifest_data.c2pa',
+      "./tests/fixtures/CAI/manifest_data.c2pa",
     );
     const reader = await Reader.fromManifestDataAndAsset(manifestData, {
-      path: './tests/fixtures/CAI.jpg',
+      path: "./tests/fixtures/CAI.jpg",
     });
     const json = reader.json();
     expect(json.manifests).toEqual(manifestStore.manifests);
   });
 
-  it('should write to a file', async () => {
+  it("should write to a file", async () => {
     let bytesWritten = 0;
-    const outputPath = path.join(tempDir, 'thumbnail.jpg');
-    const reader = await Reader.fromAsset({ path: './tests/fixtures/CAI.jpg' });
+    const outputPath = path.join(tempDir, "thumbnail.jpg");
+    const reader = await Reader.fromAsset({ path: "./tests/fixtures/CAI.jpg" });
     const activeManifest = reader.getActive();
     const uri = activeManifest?.thumbnail?.identifier;
 

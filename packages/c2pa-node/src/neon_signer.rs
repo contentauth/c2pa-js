@@ -13,15 +13,20 @@
 
 use crate::runtime::runtime;
 use async_trait::async_trait;
-use c2pa::{create_signer, AsyncSigner, Error::OtherError, Signer, SigningAlg};
-use c2pa_crypto::{
-    cose::{sign, TimeStampStorage},
-    raw_signature::{AsyncRawSigner, RawSigner, RawSignerError},
-    time_stamp::{AsyncTimeStampProvider, TimeStampProvider},
-};
-use cawg_identity::{
-    builder::{AsyncCredentialHolder, IdentityBuilderError},
-    SignerPayload,
+use c2pa::{
+    create_signer,
+    crypto::{
+        cose::{sign, TimeStampStorage},
+        raw_signature::{AsyncRawSigner, RawSigner, RawSignerError},
+        time_stamp::{AsyncTimeStampProvider, TimeStampProvider},
+    },
+    identity::{
+        builder::{AsyncCredentialHolder, IdentityBuilderError},
+        SignerPayload,
+    },
+    AsyncSigner,
+    Error::OtherError,
+    Signer, SigningAlg,
 };
 use neon::prelude::*;
 use neon::types::buffer::TypedArray;
