@@ -438,7 +438,7 @@ impl NeonLocalSigner {
                 .map(|js_string| js_string.value(&mut cx))
         });
         let signer = create_signer::from_keys(&signcert, &pkey, alg, tsa_url)
-            .or_else(|err| cx.throw_error(format!("Failed to create signer from keys: {}", err)))?;
+            .or_else(|err| cx.throw_error(format!("Failed to create signer from keys: {err}")))?;
         Ok(cx.boxed(Self { signer }))
     }
 

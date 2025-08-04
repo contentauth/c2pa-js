@@ -255,10 +255,10 @@ impl NeonBuilder {
             let mut signed_asset = Vec::new();
             output_stream
                 .rewind()
-                .or_else(|e| cx.throw_error(format!("Failed to rewind stream: {}", e)))?;
+                .or_else(|e| cx.throw_error(format!("Failed to rewind stream: {e}")))?;
             output_stream
                 .read_to_end(&mut signed_asset)
-                .or_else(|e| cx.throw_error(format!("Failed to read stream: {}", e)))?;
+                .or_else(|e| cx.throw_error(format!("Failed to read stream: {e}")))?;
             let buffer = JsBuffer::from_slice(&mut cx, &signed_asset)?;
             // Set the new JsBuffer on the output JsObject
             output_obj.set(&mut cx, "buffer", buffer)?;
@@ -316,13 +316,13 @@ impl NeonBuilder {
                         match output_stream.rewind() {
                             Ok(_) => (),
                             Err(e) => {
-                                return cx.throw_error(format!("Failed to rewind stream: {}", e))
+                                return cx.throw_error(format!("Failed to rewind stream: {e}"))
                             }
                         }
                         match output_stream.read_to_end(&mut buffer) {
                             Ok(_) => (),
                             Err(e) => {
-                                return cx.throw_error(format!("Failed to read stream: {}", e))
+                                return cx.throw_error(format!("Failed to read stream: {e}"))
                             }
                         }
                         Some(buffer)
@@ -391,13 +391,13 @@ impl NeonBuilder {
                         match output_stream.rewind() {
                             Ok(_) => (),
                             Err(e) => {
-                                return cx.throw_error(format!("Failed to rewind stream: {}", e))
+                                return cx.throw_error(format!("Failed to rewind stream: {e}"))
                             }
                         }
                         match output_stream.read_to_end(&mut buffer) {
                             Ok(_) => (),
                             Err(e) => {
-                                return cx.throw_error(format!("Failed to read stream: {}", e))
+                                return cx.throw_error(format!("Failed to read stream: {e}"))
                             }
                         }
                         Some(buffer)
@@ -467,13 +467,13 @@ impl NeonBuilder {
                         match output_stream.rewind() {
                             Ok(_) => (),
                             Err(e) => {
-                                return cx.throw_error(format!("Failed to rewind stream: {}", e))
+                                return cx.throw_error(format!("Failed to rewind stream: {e}"))
                             }
                         }
                         match output_stream.read_to_end(&mut buffer) {
                             Ok(_) => (),
                             Err(e) => {
-                                return cx.throw_error(format!("Failed to read stream: {}", e))
+                                return cx.throw_error(format!("Failed to read stream: {e}"))
                             }
                         }
                         Some(buffer)
@@ -557,8 +557,7 @@ impl NeonBuilder {
             }
             _ => {
                 return cx.throw_error(format!(
-                    "Property '{}' not found or not a valid type",
-                    property
+                    "Property '{property}' not found or not a valid type"
                 ))
             }
         }
