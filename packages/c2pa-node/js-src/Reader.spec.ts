@@ -201,4 +201,20 @@ describe("Reader", () => {
     expect(bytesWritten).toBe(85281);
     expect(fs.existsSync(outputPath));
   });
+
+  it("should report manifest is embedded", async () => {
+    const reader = await Reader.fromAsset({ path: "./tests/fixtures/CAI.jpg" });
+    expect(reader.remoteUrl()).toEqual("");
+    expect(reader.isEmbedded()).toBeTruthy();
+  });
+
+  it("should report manifest is not embedded", async () => {
+    const reader = await Reader.fromAsset({
+      path: "./tests/fixtures/cloud.jpg",
+    });
+    expect(reader.remoteUrl()).toEqual(
+      "https://cai-manifests.adobe.com/manifests/adobe-urn-uuid-5f37e182-3687-462e-a7fb-573462780391",
+    );
+    expect(reader.isEmbedded()).toBeFalsy();
+  });
 });
