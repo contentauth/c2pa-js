@@ -11,9 +11,7 @@ crate-type = ["cdylib"]
 [dependencies]
 async-trait = "0.1.77"
 ciborium = "0.2.2"
-c2pa = { version = "0.49", features = ["file_io", "pdf"] }
-cawg-identity = "0.13"
-c2pa-crypto = "0.8.2"
+c2pa = { version = "0.58", features = ["file_io", "pdf", "fetch_remote_manifests"] }
 futures = "0.3"
 neon = { version = "1.0.0", default-features = false, features = [
     "futures",

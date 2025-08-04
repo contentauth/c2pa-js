@@ -11,15 +11,15 @@
 // specific language governing permissions and limitations under
 // each license.
 
-declare module 'index.node' {
-  import { Buffer } from 'buffer';
+declare module "index.node" {
+  import { Buffer } from "buffer";
   /**
    * Assertions in C2PA can be stored in several formats
    */
-  export type ManifestAssertionKind = 'Cbor' | 'Json';
+  export type ManifestAssertionKind = "Cbor" | "Json";
   export type UriOrResource = ResourceRef | HashedUri;
   export type DateT = string;
-  export type Relationship = 'parentOf' | 'componentOf' | 'inputTo';
+  export type Relationship = "parentOf" | "componentOf" | "inputTo";
   /**
    * Describes the digital signature algorithms allowed by the C2PA spec
    *
@@ -28,13 +28,13 @@ declare module 'index.node' {
    * > All digital signatures that are stored in a C2PA Manifest shall > be generated using one of the digital signature algorithms and > key types listed as described in this section
    */
   export type SigningAlg =
-    | 'es256'
-    | 'es384'
-    | 'es512'
-    | 'ps256'
-    | 'ps384'
-    | 'ps512'
-    | 'ed25519';
+    | "es256"
+    | "es384"
+    | "es512"
+    | "ps256"
+    | "ps384"
+    | "ps512"
+    | "ed25519";
 
   // A claim_version field is now allowed in a manifest definition for Builder and, if set to 2 will generate v2 claims
   export type ClaimVersion = 1 | 2;
@@ -675,6 +675,17 @@ declare module 'index.node' {
      * Get the JSON representation of the manifest
      */
     json(): ManifestStore;
+
+    /**
+     * Get the remote url of the manifest if this reader obtained the manifest remotely
+     */
+    remoteUrl(): string;
+
+    /**
+     * Returns true if the the reader was created from an embedded manifest
+     */
+    isEmbedded(): boolean;
+
     /**
      * Write a resource to a buffer or file
      * @param uri The URI of the resource
@@ -775,6 +786,8 @@ declare module 'index.node' {
     asset: SourceAsset,
   ): Promise<Reader>;
   export function readerJson(): string;
+  export function readerRemoteUrl(): string;
+  export function readerIsEmbedded(): boolean;
   export function readerResourceToAsset(
     uri: string,
     output: DestinationAsset,

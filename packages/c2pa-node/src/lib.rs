@@ -82,6 +82,8 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         neon_reader::NeonReader::from_manifest_data_and_asset,
     )?;
     cx.export_function("readerJson", neon_reader::NeonReader::json)?;
+    cx.export_function("readerRemoteUrl", neon_reader::NeonReader::remote_url)?;
+    cx.export_function("readerIsEmbedded", neon_reader::NeonReader::is_embedded)?;
     cx.export_function(
         "readerResourceToAsset",
         neon_reader::NeonReader::resource_to_asset,

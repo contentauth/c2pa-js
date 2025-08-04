@@ -14,8 +14,7 @@
 use crate::asset::parse_asset;
 use crate::error::{as_js_error, Error};
 use crate::runtime::runtime;
-use c2pa::Reader;
-use cawg_identity::validator::CawgValidator;
+use c2pa::{identity::validator::CawgValidator, Reader};
 use neon::prelude::*;
 use neon::types::buffer::TypedArray;
 use std::sync::Arc;
@@ -103,6 +102,22 @@ impl NeonReader {
         let reader = rt.block_on(async { this.reader.lock().await });
         let json = reader.json();
         Ok(cx.string(json).upcast())
+    }
+
+    pub fn remote_url(mut cx: FunctionContext) -> JsResult<JsValue> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<NeonReader>>()?;
+        let reader = rt.block_on(async { this.reader.lock().await });
+        let remote_url = reader.remote_url().unwrap_or("");
+        Ok(cx.string(remote_url).upcast())
+    }
+
+    pub fn is_embedded(mut cx: FunctionContext) -> JsResult<JsValue> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<NeonReader>>()?;
+        let reader = rt.block_on(async { this.reader.lock().await });
+        let is_embedded = reader.is_embedded();
+        Ok(cx.boolean(is_embedded).upcast())
     }
 
     pub fn resource_to_asset(mut cx: FunctionContext) -> JsResult<JsPromise> {
