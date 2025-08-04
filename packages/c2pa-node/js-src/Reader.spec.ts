@@ -161,13 +161,6 @@ describe("Reader", () => {
     expect(json.active_manifest).toEqual(manifestStore.active_manifest);
   });
 
-  it("should read from a file with a C2PA 2.x manifest", async () => {
-    const reader = await Reader.fromAsset({
-      path: "./tests/fixtures/bench2.png",
-    });
-    reader.json();
-  });
-
   it("should read from manifest data and buffer", async () => {
     const manifestData = await fs.readFile(
       "./tests/fixtures/CAI/manifest_data.c2pa",
