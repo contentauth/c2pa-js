@@ -19,3 +19,4 @@ export {
   IdentityAssertionBuilder,
   IdentityAssertionSigner,
 } from './IdentityAssertion';
+export { Trustmark } from './Trustmark';

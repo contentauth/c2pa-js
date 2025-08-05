@@ -18,11 +18,11 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error(transparent)]
-    Json(#[from] serde_json::Error),
+    #[error("Asset parsing failed: {0}")]
+    Asset(String),
 
-    #[error(transparent)]
-    RemoteManifestFetch(#[from] reqwest::Error),
+    #[error("Async signing failed {0}")]
+    AsyncSigning(String),
 
     #[error(transparent)]
     C2pa(#[from] c2pa::Error),
@@ -31,10 +31,25 @@ pub enum Error {
     FileIO(#[from] std::io::Error),
 
     #[error(transparent)]
-    UTF8(#[from] std::str::Utf8Error),
+    Image(#[from] image::ImageError),
+
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
+
+    #[error("Lock acquisition failed: {0}")]
+    Lock(String),
 
     #[error(transparent)]
     NeonSerde(#[from] neon_serde4::errors::Error),
+
+    #[error("Trustmark model download failed")]
+    ModelDownload(String),
+
+    #[error(transparent)]
+    RemoteManifestFetch(#[from] reqwest::Error),
+
+    #[error("Signing failed: {0}")]
+    Signing(String),
 
     #[error(transparent)]
     TokioJoin(#[from] tokio::task::JoinError),
@@ -45,17 +60,14 @@ pub enum Error {
     #[error(transparent)]
     TokioLock(#[from] tokio::sync::TryLockError),
 
-    #[error("Lock acquisition failed: {0}")]
-    Lock(String),
+    #[error(transparent)]
+    Watermark(#[from] trustmark::Error),
 
-    #[error("Signing failed: {0}")]
-    Signing(String),
+    #[error("Watermark configuration error: {0}")]
+    WatermarkConfiguration(String),
 
-    #[error("Async signing failed {0}")]
-    AsyncSigning(String),
-
-    #[error("Asset parsing failed: {0}")]
-    Asset(String),
+    #[error(transparent)]
+    UTF8(#[from] std::str::Utf8Error),
 }
 
 impl<T> From<PoisonError<T>> for Error {
@@ -79,4 +91,11 @@ pub fn as_js_error<'a>(cx: &mut TaskContext<'a>, err: Error) -> JsResult<'a, JsE
 
         Ok(js_err)
     })
+}
+
+pub fn as_js_error_fn<'a>(cx: &mut FunctionContext<'a>, err: Error) -> JsResult<'a, JsError> {
+    let js_err = cx.error(err.to_string())?;
+    let js_err_name = cx.string(format!("{err:?}"));
+    js_err.set(cx, "name", js_err_name)?;
+    Ok(js_err)
 }

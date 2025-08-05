@@ -39,6 +39,28 @@ declare module "index.node" {
   // A claim_version field is now allowed in a manifest definition for Builder and, if set to 2 will generate v2 claims
   export type ClaimVersion = 1 | 2;
 
+  // Trustmark Versions
+  export type TrustmarkVersion =
+    // Tolerates 8 bit flips
+    | "BchSuper"
+    // Tolerates 5 bit flips
+    | "Bch5"
+    // Tolerates 4 bit flips
+    | "Bch4"
+    // Tolerates 3 bit flips
+    | "Bch3";
+
+  // Trustmark Variants. See https://github.com/adobe/trustmark/blob/main/FAQ.md for more
+  export type TrustmarkVariant =
+    // Original Trustmark model
+    | "B"
+    // Compact Trustmark model
+    | "C"
+    // Perceptual model
+    | "P"
+    // Quality Trustmark model
+    | "Q";
+
   /**
    * A Container for a set of Manifests and a ValidationStatus list
    */
@@ -732,6 +754,33 @@ declare module "index.node" {
     builder(): IdentityAssertionBuilder;
   }
 
+  export interface Trustmark {
+    /**
+     * Encode a watermark into an image.
+     * @param image image to be watermarked
+     * @param strength number between 0 and 1 indicating how strongly the watermark should be applied
+     * @param watermark optional bitstring to be encoded, automatically generated if not provided
+     * @returns raw pixel data in RGB8 format (width * height * 3 bytes)
+     */
+    encode(
+      image: Buffer,
+      strength: number,
+      watermark?: string,
+    ): Promise<Buffer>;
+
+    /**
+     * Decode a watermark from an image.
+     * @param image image to extract the watermark from (must be in a supported image format like JPEG, PNG, etc.)
+     */
+    decode(image: Buffer): Promise<string>;
+  }
+
+  export interface TrustmarkConfig {
+    variant: TrustmarkVariant;
+    version: TrustmarkVersion;
+    modelPath?: string;
+  }
+
   // Builder methods
   export function builderNew(): Builder;
   export function builderWithJson(json: string): Builder;
@@ -834,4 +883,13 @@ declare module "index.node" {
     referenced_assertions: Array<string>,
   ): void;
   export function identityBuilderAddRoles(roles: Array<string>): void;
+
+  // Trustmark
+  export function trustmarkNew(config: TrustmarkConfig): Promise<Trustmark>;
+  export function trustmarkEncode(
+    image: Buffer,
+    strength: number,
+    watermark?: string,
+  ): Promise<Buffer>;
+  export function trustmarkDecode(image: Buffer): Promise<string>;
 }
