@@ -14,21 +14,24 @@
     "dist/Cargo.toml",
     "dist/Cargo.lock"
   ],
+  "engines": {
+    "node": ">=18.20.2"
+  },
   "scripts": {
     "build": "run-s build:rust build:ts build:docs",
     "build:docs": "typedoc --plugin typedoc-plugin-markdown --readme none --out docs js-src/index.ts",
     "build:rust": "cargo build --message-format=json-render-diagnostics > cargo.log --release",
+    "build:rust-debug": "cargo build --message-format=json-render-diagnostics > cargo.log",
     "build:ts": "tsc -b && cpy index.node dist",
     "changeset:publish": "changeset publish",
     "clean": "rimraf dist generated target",
     "cross": "pnpm run cross-build --release",
-    "cargo-build": "cargo build --message-format=json-render-diagnostics > cargo.log",
     "cross-build": "cross build --message-format=json-render-diagnostics > cross.log",
     "debug": "pnpm run cargo-build --",
     "postcargo-build": "neon dist < cargo.log",
     "postcross-build": "neon dist -m /target < cross.log",
     "release": "run-s build changeset:publish",
-    "test": "pnpm cargo-build && jest",
+    "test": "run-s build:rust-debug && build:ts && jest",
     "test:watch": "jest --watch --runInBand --detectOpenHandles --forceExit"
   },
   "author": "Colin Murphy <colmurph@adobe.com>",
