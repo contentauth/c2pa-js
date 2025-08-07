@@ -1,0 +1,44 @@
+name: Build and test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  build-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    env:
+      COREPACK_ENABLE_STRICT: 0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.88.0
+
+      - name: Install pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - env:
+          SKIP_RUST_BUILD: 1
+        run: pnpm install
+
+      - run: pnpm run build
+
+      - run: pnpm run test
