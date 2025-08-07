@@ -39,6 +39,4 @@ jobs:
           SKIP_RUST_BUILD: 1
         run: pnpm install
 
-      - run: pnpm run build
-
       - run: pnpm run test
