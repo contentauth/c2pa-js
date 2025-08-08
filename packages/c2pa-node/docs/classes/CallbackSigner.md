@@ -6,7 +6,7 @@
 
 # Class: CallbackSigner
 
-Defined in: [Signer.ts:59](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Signer.ts#L59)
+Defined in: [Signer.ts:59](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L59)
 
 ## Implements
 
@@ -18,7 +18,7 @@ Defined in: [Signer.ts:59](https://github.com/contentauth/c2pa-node-v2/blob/89b3
 
 > **alg**(): [`SigningAlg`](../type-aliases/SigningAlg.md)
 
-Defined in: [Signer.ts:80](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Signer.ts#L80)
+Defined in: [Signer.ts:80](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L80)
 
 #### Returns
 
@@ -34,7 +34,7 @@ Defined in: [Signer.ts:80](https://github.com/contentauth/c2pa-node-v2/blob/89b3
 
 > **certs**(): `Buffer`\<`ArrayBufferLike`\>[]
 
-Defined in: [Signer.ts:84](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Signer.ts#L84)
+Defined in: [Signer.ts:84](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L84)
 
 #### Returns
 
@@ -50,7 +50,7 @@ Defined in: [Signer.ts:84](https://github.com/contentauth/c2pa-node-v2/blob/89b3
 
 > **reserveSize**(): `number`
 
-Defined in: [Signer.ts:88](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Signer.ts#L88)
+Defined in: [Signer.ts:88](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L88)
 
 #### Returns
 
@@ -66,7 +66,7 @@ Defined in: [Signer.ts:88](https://github.com/contentauth/c2pa-node-v2/blob/89b3
 
 > **sign**(`data`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
 
-Defined in: [Signer.ts:76](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Signer.ts#L76)
+Defined in: [Signer.ts:76](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L76)
 
 #### Parameters
 
@@ -88,7 +88,7 @@ Defined in: [Signer.ts:76](https://github.com/contentauth/c2pa-node-v2/blob/89b3
 
 > **signer**(): `CallbackSigner`
 
-Defined in: [Signer.ts:62](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Signer.ts#L62)
+Defined in: [Signer.ts:62](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L62)
 
 #### Returns
 
@@ -104,7 +104,7 @@ Defined in: [Signer.ts:62](https://github.com/contentauth/c2pa-node-v2/blob/89b3
 
 > **timeAuthorityUrl**(): `undefined` \| `string`
 
-Defined in: [Signer.ts:92](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Signer.ts#L92)
+Defined in: [Signer.ts:92](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L92)
 
 #### Returns
 
@@ -120,7 +120,7 @@ Defined in: [Signer.ts:92](https://github.com/contentauth/c2pa-node-v2/blob/89b3
 
 > `static` **newSigner**(`config`, `callback`): `CallbackSigner`
 
-Defined in: [Signer.ts:66](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Signer.ts#L66)
+Defined in: [Signer.ts:66](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L66)
 
 #### Parameters
 

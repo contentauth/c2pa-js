@@ -6,7 +6,7 @@
 
 # Class: Reader
 
-Defined in: [Reader.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Reader.ts#L16)
+Defined in: [Reader.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Reader.ts#L16)
 
 ## Implements
 
@@ -18,7 +18,7 @@ Defined in: [Reader.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/89b3
 
 > **activeLabel**(): `undefined` \| `string`
 
-Defined in: [Reader.ts:56](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Reader.ts#L56)
+Defined in: [Reader.ts:56](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Reader.ts#L56)
 
 #### Returns
 
@@ -30,7 +30,7 @@ Defined in: [Reader.ts:56](https://github.com/contentauth/c2pa-node-v2/blob/89b3
 
 > **getActive**(): `undefined` \| [`Manifest`](../interfaces/Manifest.md)
 
-Defined in: [Reader.ts:61](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Reader.ts#L61)
+Defined in: [Reader.ts:61](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Reader.ts#L61)
 
 #### Returns
 
@@ -42,7 +42,7 @@ Defined in: [Reader.ts:61](https://github.com/contentauth/c2pa-node-v2/blob/89b3
 
 > **isEmbedded**(): `boolean`
 
-Defined in: [Reader.ts:27](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Reader.ts#L27)
+Defined in: [Reader.ts:27](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Reader.ts#L27)
 
 Returns true if the the reader was created from an embedded manifest
 
@@ -60,7 +60,7 @@ Returns true if the the reader was created from an embedded manifest
 
 > **json**(): [`ManifestStore`](../interfaces/ManifestStore.md)
 
-Defined in: [Reader.ts:19](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Reader.ts#L19)
+Defined in: [Reader.ts:19](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Reader.ts#L19)
 
 Get the JSON representation of the manifest
 
@@ -78,7 +78,7 @@ Get the JSON representation of the manifest
 
 > **postValidateCawg**(): `Promise`\<`void`\>
 
-Defined in: [Reader.ts:72](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Reader.ts#L72)
+Defined in: [Reader.ts:72](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Reader.ts#L72)
 
 Run CAWG validation
 
@@ -96,7 +96,7 @@ Run CAWG validation
 
 > **remoteUrl**(): `string`
 
-Defined in: [Reader.ts:23](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Reader.ts#L23)
+Defined in: [Reader.ts:23](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Reader.ts#L23)
 
 Get the remote url of the manifest if this reader obtained the manifest remotely
 
@@ -114,7 +114,7 @@ Get the remote url of the manifest if this reader obtained the manifest remotely
 
 > **resourceToAsset**(`uri`, `asset`): `Promise`\<`number`\>
 
-Defined in: [Reader.ts:31](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Reader.ts#L31)
+Defined in: [Reader.ts:31](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Reader.ts#L31)
 
 Write a resource to a buffer or file
 
@@ -144,7 +144,7 @@ The URI of the resource
 
 > `static` **fromAsset**(`asset`): `Promise`\<`Reader`\>
 
-Defined in: [Reader.ts:38](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Reader.ts#L38)
+Defined in: [Reader.ts:38](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Reader.ts#L38)
 
 #### Parameters
 
@@ -162,7 +162,7 @@ Defined in: [Reader.ts:38](https://github.com/contentauth/c2pa-node-v2/blob/89b3
 
 > `static` **fromManifestDataAndAsset**(`manifestData`, `asset`): `Promise`\<`Reader`\>
 
-Defined in: [Reader.ts:43](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/Reader.ts#L43)
+Defined in: [Reader.ts:43](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Reader.ts#L43)
 
 #### Parameters
 

@@ -8,7 +8,7 @@
 
 > **SigningAlg** = `"es256"` \| `"es384"` \| `"es512"` \| `"ps256"` \| `"ps384"` \| `"ps512"` \| `"ed25519"`
 
-Defined in: [types.d.ts:30](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/types.d.ts#L30)
+Defined in: [types.d.ts:30](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L30)
 
 Describes the digital signature algorithms allowed by the C2PA spec
 

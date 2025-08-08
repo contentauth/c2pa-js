@@ -6,7 +6,7 @@
 
 # Interface: HashedUri
 
-Defined in: [types.d.ts:204](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/types.d.ts#L204)
+Defined in: [types.d.ts:204](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L204)
 
 Hashed Uri structure as defined by C2PA spec It is annotated to produce the correctly tagged cbor serialization
 
@@ -20,7 +20,7 @@ Hashed Uri structure as defined by C2PA spec It is annotated to produce the corr
 
 > `optional` **alg**: `string`
 
-Defined in: [types.d.ts:205](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/types.d.ts#L205)
+Defined in: [types.d.ts:205](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L205)
 
 ***
 
@@ -28,7 +28,7 @@ Defined in: [types.d.ts:205](https://github.com/contentauth/c2pa-node-v2/blob/89
 
 > **hash**: `number`[]
 
-Defined in: [types.d.ts:206](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/types.d.ts#L206)
+Defined in: [types.d.ts:206](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L206)
 
 ***
 
@@ -36,4 +36,4 @@ Defined in: [types.d.ts:206](https://github.com/contentauth/c2pa-node-v2/blob/89
 
 > **url**: `string`
 
-Defined in: [types.d.ts:207](https://github.com/contentauth/c2pa-node-v2/blob/89b34f9846b48a2d62e217587555c0cf0305136a/js-src/types.d.ts#L207)
+Defined in: [types.d.ts:207](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L207)
