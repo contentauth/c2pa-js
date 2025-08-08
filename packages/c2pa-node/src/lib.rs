@@ -23,6 +23,7 @@ pub mod neon_identity_assertion_builder;
 pub mod neon_identity_assertion_signer;
 pub mod neon_reader;
 pub mod neon_signer;
+pub mod neon_trustmark;
 
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
@@ -150,6 +151,14 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         "identityBuilderAddRoles",
         neon_identity_assertion_builder::NeonIdentityAssertionBuilder::add_roles,
     )?;
+
+    // Trustmark
+    cx.export_function(
+        "trustmarkNew",
+        neon_trustmark::NeonTrustmark::new_from_config,
+    )?;
+    cx.export_function("trustmarkEncode", neon_trustmark::NeonTrustmark::encode)?;
+    cx.export_function("trustmarkDecode", neon_trustmark::NeonTrustmark::decode)?;
 
     Ok(())
 }

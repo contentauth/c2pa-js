@@ -29,7 +29,7 @@ impl Finalize for NeonReader {}
 
 impl NeonReader {
     pub fn new(mut cx: FunctionContext) -> JsResult<JsBox<NeonReader>> {
-        Ok(cx.boxed(NeonReader {
+        Ok(cx.boxed(Self {
             reader: Arc::new(Mutex::new(Reader::default())),
         }))
     }
@@ -53,7 +53,7 @@ impl NeonReader {
             })
             .promise(move |mut cx, result: Result<Reader, Error>| match result {
                 Ok(reader) => {
-                    let boxed_reader = cx.boxed(NeonReader {
+                    let boxed_reader = cx.boxed(Self {
                         reader: Arc::new(Mutex::new(reader)),
                     });
                     Ok(boxed_reader.upcast::<JsValue>())
@@ -85,7 +85,7 @@ impl NeonReader {
             })
             .promise(move |mut cx, result: Result<Reader, Error>| match result {
                 Ok(reader) => {
-                    let boxed_reader = cx.boxed(NeonReader {
+                    let boxed_reader = cx.boxed(Self {
                         reader: Arc::new(Mutex::new(reader)),
                     });
                     Ok(boxed_reader.upcast::<JsValue>())
@@ -98,7 +98,7 @@ impl NeonReader {
 
     pub fn json(mut cx: FunctionContext) -> JsResult<JsValue> {
         let rt = runtime();
-        let this = cx.this::<JsBox<NeonReader>>()?;
+        let this = cx.this::<JsBox<Self>>()?;
         let reader = rt.block_on(async { this.reader.lock().await });
         let json = reader.json();
         Ok(cx.string(json).upcast())
@@ -106,7 +106,7 @@ impl NeonReader {
 
     pub fn remote_url(mut cx: FunctionContext) -> JsResult<JsValue> {
         let rt = runtime();
-        let this = cx.this::<JsBox<NeonReader>>()?;
+        let this = cx.this::<JsBox<Self>>()?;
         let reader = rt.block_on(async { this.reader.lock().await });
         let remote_url = reader.remote_url().unwrap_or("");
         Ok(cx.string(remote_url).upcast())
@@ -114,7 +114,7 @@ impl NeonReader {
 
     pub fn is_embedded(mut cx: FunctionContext) -> JsResult<JsValue> {
         let rt = runtime();
-        let this = cx.this::<JsBox<NeonReader>>()?;
+        let this = cx.this::<JsBox<Self>>()?;
         let reader = rt.block_on(async { this.reader.lock().await });
         let is_embedded = reader.is_embedded();
         Ok(cx.boolean(is_embedded).upcast())
@@ -130,7 +130,7 @@ impl NeonReader {
         let mut output_stream = output
             .write_stream()
             .or_else(|err| cx.throw_error(err.to_string()))?;
-        let this = cx.this::<JsBox<NeonReader>>()?;
+        let this = cx.this::<JsBox<Self>>()?;
 
         let reader = Arc::clone(&this.reader);
 
@@ -174,7 +174,7 @@ impl NeonReader {
 
     pub fn post_validate_cawg(mut cx: FunctionContext) -> JsResult<JsPromise> {
         let rt = runtime();
-        let this = cx.this::<JsBox<NeonReader>>()?;
+        let this = cx.this::<JsBox<Self>>()?;
         let reader = Arc::clone(&this.reader);
 
         let channel = cx.channel();

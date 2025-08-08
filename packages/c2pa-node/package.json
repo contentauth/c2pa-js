@@ -19,6 +19,7 @@
   },
   "scripts": {
     "build": "run-s build:rust build:ts build:docs",
+    "build:debug": "run-s build:rust-debug build:ts",
     "build:docs": "typedoc --plugin typedoc-plugin-markdown --readme none --out docs js-src/index.ts",
     "build:rust": "pnpm run build:rust-debug --release",
     "build:rust-debug": "cargo build --message-format=json-render-diagnostics > cargo.log",
