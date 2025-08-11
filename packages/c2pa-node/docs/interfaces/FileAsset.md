@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / FileAsset
+[@contentauth/c2pa-node](../README.md) / FileAsset
 
 # Interface: FileAsset
 
-Defined in: [types.d.ts:480](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L480)
+Defined in: [types.d.ts:502](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L502)
 
 A file that can be used either the source or destination
 
@@ -16,7 +16,7 @@ A file that can be used either the source or destination
 
 > `optional` **mimeType**: `string`
 
-Defined in: [types.d.ts:485](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L485)
+Defined in: [types.d.ts:507](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L507)
 
 ***
 
@@ -24,4 +24,4 @@ Defined in: [types.d.ts:485](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > **path**: `string`
 
-Defined in: [types.d.ts:482](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L482)
+Defined in: [types.d.ts:504](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L504)

@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / ManifestAssertion
+[@contentauth/c2pa-node](../README.md) / ManifestAssertion
 
 # Interface: ManifestAssertion
 
-Defined in: [types.d.ts:128](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L128)
+Defined in: [types.d.ts:150](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L150)
 
 A labeled container for an Assertion value in a Manifest
 
@@ -20,7 +20,7 @@ A labeled container for an Assertion value in a Manifest
 
 > **data**: `unknown`
 
-Defined in: [types.d.ts:129](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L129)
+Defined in: [types.d.ts:151](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L151)
 
 ***
 
@@ -28,7 +28,7 @@ Defined in: [types.d.ts:129](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > `optional` **instance**: `number`
 
-Defined in: [types.d.ts:133](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L133)
+Defined in: [types.d.ts:155](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L155)
 
 There can be more than one assertion for any label
 
@@ -38,7 +38,7 @@ There can be more than one assertion for any label
 
 > `optional` **kind**: [`ManifestAssertionKind`](../type-aliases/ManifestAssertionKind.md)
 
-Defined in: [types.d.ts:137](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L137)
+Defined in: [types.d.ts:159](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L159)
 
 The [ManifestAssertionKind] for this assertion (as stored in c2pa content)
 
@@ -48,6 +48,6 @@ The [ManifestAssertionKind] for this assertion (as stored in c2pa content)
 
 > **label**: `string`
 
-Defined in: [types.d.ts:141](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L141)
+Defined in: [types.d.ts:163](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L163)
 
 An assertion label in reverse domain format

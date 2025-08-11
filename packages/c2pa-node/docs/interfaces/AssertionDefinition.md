@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / AssertionDefinition
+[@contentauth/c2pa-node](../README.md) / AssertionDefinition
 
 # Interface: AssertionDefinition
 
-Defined in: [types.d.ts:440](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L440)
+Defined in: [types.d.ts:462](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L462)
 
 ## Indexable
 
@@ -18,7 +18,7 @@ Defined in: [types.d.ts:440](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > **data**: `unknown`
 
-Defined in: [types.d.ts:441](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L441)
+Defined in: [types.d.ts:463](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L463)
 
 ***
 
@@ -26,4 +26,4 @@ Defined in: [types.d.ts:441](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > **label**: `string`
 
-Defined in: [types.d.ts:442](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L442)
+Defined in: [types.d.ts:464](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L464)

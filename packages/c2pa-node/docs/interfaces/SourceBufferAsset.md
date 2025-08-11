@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / SourceBufferAsset
+[@contentauth/c2pa-node](../README.md) / SourceBufferAsset
 
 # Interface: SourceBufferAsset
 
-Defined in: [types.d.ts:462](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L462)
+Defined in: [types.d.ts:484](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L484)
 
 A buffer for the source asset
 
@@ -16,7 +16,7 @@ A buffer for the source asset
 
 > **buffer**: `Buffer`
 
-Defined in: [types.d.ts:464](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L464)
+Defined in: [types.d.ts:486](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L486)
 
 ***
 
@@ -24,4 +24,4 @@ Defined in: [types.d.ts:464](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > **mimeType**: `string`
 
-Defined in: [types.d.ts:466](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L466)
+Defined in: [types.d.ts:488](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L488)

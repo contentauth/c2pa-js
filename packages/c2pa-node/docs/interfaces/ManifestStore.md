@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / ManifestStore
+[@contentauth/c2pa-node](../README.md) / ManifestStore
 
 # Interface: ManifestStore
 
-Defined in: [types.d.ts:45](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L45)
+Defined in: [types.d.ts:67](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L67)
 
 A Container for a set of Manifests and a ValidationStatus list
 
@@ -20,7 +20,7 @@ A Container for a set of Manifests and a ValidationStatus list
 
 > `optional` **active\_manifest**: `string`
 
-Defined in: [types.d.ts:49](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L49)
+Defined in: [types.d.ts:71](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L71)
 
 A label for the active (most recent) manifest in the store
 
@@ -30,7 +30,7 @@ A label for the active (most recent) manifest in the store
 
 > **manifests**: `object`
 
-Defined in: [types.d.ts:53](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L53)
+Defined in: [types.d.ts:75](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L75)
 
 A HashMap of Manifests
 
@@ -44,6 +44,6 @@ A HashMap of Manifests
 
 > `optional` **validation\_status**: [`ValidationStatus`](ValidationStatus.md)[]
 
-Defined in: [types.d.ts:59](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L59)
+Defined in: [types.d.ts:81](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L81)
 
 ValidationStatus generated when loading the ManifestStore from an asset

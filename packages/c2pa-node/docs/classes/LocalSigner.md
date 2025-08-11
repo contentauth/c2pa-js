@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / LocalSigner
+[@contentauth/c2pa-node](../README.md) / LocalSigner
 
 # Class: LocalSigner
 
-Defined in: [Signer.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L16)
+Defined in: [Signer.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/Signer.ts#L16)
 
 ## Implements
 
@@ -18,7 +18,7 @@ Defined in: [Signer.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/5303
 
 > **alg**(): [`SigningAlg`](../type-aliases/SigningAlg.md)
 
-Defined in: [Signer.ts:38](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L38)
+Defined in: [Signer.ts:38](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/Signer.ts#L38)
 
 #### Returns
 
@@ -34,7 +34,7 @@ Defined in: [Signer.ts:38](https://github.com/contentauth/c2pa-node-v2/blob/5303
 
 > **certs**(): `Buffer`\<`ArrayBufferLike`\>[]
 
-Defined in: [Signer.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L42)
+Defined in: [Signer.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/Signer.ts#L42)
 
 #### Returns
 
@@ -50,7 +50,7 @@ Defined in: [Signer.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/5303
 
 > **reserveSize**(): `number`
 
-Defined in: [Signer.ts:46](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L46)
+Defined in: [Signer.ts:46](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/Signer.ts#L46)
 
 #### Returns
 
@@ -66,7 +66,7 @@ Defined in: [Signer.ts:46](https://github.com/contentauth/c2pa-node-v2/blob/5303
 
 > **sign**(`data`): `Buffer`
 
-Defined in: [Signer.ts:34](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L34)
+Defined in: [Signer.ts:34](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/Signer.ts#L34)
 
 #### Parameters
 
@@ -88,7 +88,7 @@ Defined in: [Signer.ts:34](https://github.com/contentauth/c2pa-node-v2/blob/5303
 
 > **signer**(): `LocalSigner`
 
-Defined in: [Signer.ts:54](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L54)
+Defined in: [Signer.ts:54](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/Signer.ts#L54)
 
 #### Returns
 
@@ -104,7 +104,7 @@ Defined in: [Signer.ts:54](https://github.com/contentauth/c2pa-node-v2/blob/5303
 
 > **timeAuthorityUrl**(): `undefined` \| `string`
 
-Defined in: [Signer.ts:50](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L50)
+Defined in: [Signer.ts:50](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/Signer.ts#L50)
 
 #### Returns
 
@@ -120,7 +120,7 @@ Defined in: [Signer.ts:50](https://github.com/contentauth/c2pa-node-v2/blob/5303
 
 > `static` **newSigner**(`certificate`, `privateKey`, `algorithm`, `tsaUrl?`): `LocalSigner`
 
-Defined in: [Signer.ts:19](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/Signer.ts#L19)
+Defined in: [Signer.ts:19](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/Signer.ts#L19)
 
 #### Parameters
 

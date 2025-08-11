@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / JsCallbackSignerConfig
+[@contentauth/c2pa-node](../README.md) / JsCallbackSignerConfig
 
 # Interface: JsCallbackSignerConfig
 
-Defined in: [types.d.ts:534](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L534)
+Defined in: [types.d.ts:556](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L556)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.d.ts:534](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > **alg**: [`SigningAlg`](../type-aliases/SigningAlg.md)
 
-Defined in: [types.d.ts:535](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L535)
+Defined in: [types.d.ts:557](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L557)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [types.d.ts:535](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > **certs**: `Buffer`\<`ArrayBufferLike`\>[]
 
-Defined in: [types.d.ts:536](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L536)
+Defined in: [types.d.ts:558](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L558)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [types.d.ts:536](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > **reserveSize**: `number`
 
-Defined in: [types.d.ts:537](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L537)
+Defined in: [types.d.ts:559](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L559)
 
 ***
 
@@ -38,7 +38,7 @@ Defined in: [types.d.ts:537](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > `optional` **tsaBody**: `Buffer`\<`ArrayBufferLike`\>
 
-Defined in: [types.d.ts:540](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L540)
+Defined in: [types.d.ts:562](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L562)
 
 ***
 
@@ -46,7 +46,7 @@ Defined in: [types.d.ts:540](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > `optional` **tsaHeaders**: \[`string`, `string`\][]
 
-Defined in: [types.d.ts:539](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L539)
+Defined in: [types.d.ts:561](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L561)
 
 ***
 
@@ -54,4 +54,4 @@ Defined in: [types.d.ts:539](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > `optional` **tsaUrl**: `string`
 
-Defined in: [types.d.ts:538](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L538)
+Defined in: [types.d.ts:560](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L560)

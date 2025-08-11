@@ -1,14 +1,14 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / builderUpdateManifestProperty
+[@contentauth/c2pa-node](../README.md) / builderUpdateManifestProperty
 
 # Function: builderUpdateManifestProperty()
 
 > **builderUpdateManifestProperty**(`property`, `value`): `void`
 
-Defined in: [types.d.ts:777](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L777)
+Defined in: [types.d.ts:826](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L826)
 
 ## Parameters
 

@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / IngredientThumbnail
+[@contentauth/c2pa-node](../README.md) / IngredientThumbnail
 
 # Interface: IngredientThumbnail
 
-Defined in: [types.d.ts:449](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L449)
+Defined in: [types.d.ts:471](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L471)
 
 Types unique to index.node
 
@@ -16,7 +16,7 @@ Types unique to index.node
 
 > **data**: `Uint8Array`
 
-Defined in: [types.d.ts:451](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L451)
+Defined in: [types.d.ts:473](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L473)
 
 ***
 
@@ -24,4 +24,4 @@ Defined in: [types.d.ts:451](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > **format**: `string`
 
-Defined in: [types.d.ts:450](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L450)
+Defined in: [types.d.ts:472](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L472)

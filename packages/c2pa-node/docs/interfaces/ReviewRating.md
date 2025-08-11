@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / ReviewRating
+[@contentauth/c2pa-node](../README.md) / ReviewRating
 
 # Interface: ReviewRating
 
-Defined in: [types.d.ts:341](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L341)
+Defined in: [types.d.ts:363](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L363)
 
 A rating on an Assertion
 
@@ -22,7 +22,7 @@ See <https://c2pa.org/specifications/specifications/1.0/specs/C2PA_Specification
 
 > `optional` **code**: `string`
 
-Defined in: [types.d.ts:342](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L342)
+Defined in: [types.d.ts:364](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L364)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [types.d.ts:342](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > **explanation**: `string`
 
-Defined in: [types.d.ts:343](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L343)
+Defined in: [types.d.ts:365](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L365)
 
 ***
 
@@ -38,4 +38,4 @@ Defined in: [types.d.ts:343](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > **value**: `number`
 
-Defined in: [types.d.ts:344](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L344)
+Defined in: [types.d.ts:366](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L366)

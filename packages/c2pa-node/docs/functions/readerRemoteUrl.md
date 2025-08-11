@@ -1,14 +1,14 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / readerRemoteUrl
+[@contentauth/c2pa-node](../README.md) / readerRemoteUrl
 
 # Function: readerRemoteUrl()
 
 > **readerRemoteUrl**(): `string`
 
-Defined in: [types.d.ts:789](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L789)
+Defined in: [types.d.ts:838](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L838)
 
 ## Returns
 

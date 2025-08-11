@@ -1,14 +1,14 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / localSignerAlg
+[@contentauth/c2pa-node](../README.md) / localSignerAlg
 
 # Function: localSignerAlg()
 
 > **localSignerAlg**(): [`SigningAlg`](../type-aliases/SigningAlg.md)
 
-Defined in: [types.d.ts:805](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L805)
+Defined in: [types.d.ts:854](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L854)
 
 ## Returns
 
