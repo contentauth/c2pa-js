@@ -1,5 +1,5 @@
 {
-  "name": "@contentauth/node",
+  "name": "@contentauth/c2pa-node",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/contentauth/c2pa-node-v2.git"
