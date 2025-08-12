@@ -7,6 +7,9 @@
       "path": "./tools/nx-wasm-bindgen"
     },
     {
+      "path": "./tools/testbed"
+    },
+    {
       "path": "./packages/c2pa-web"
     }
   ]

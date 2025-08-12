@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "../../packages/c2pa-web"
+    },
+    {
+      "path": "./tsconfig.app.json"
+    }
+  ]
+}
