@@ -8,15 +8,6 @@
     "project-dir": {
       "type": "string",
       "description": "Directory of project"
-    },
-    "profile": {
-      "type": "string",
-      "enum": [
-        "dev",
-        "profiling",
-        "release"
-      ],      
-      "default": "release"
     }
   },
   "required": ["project-dir"]

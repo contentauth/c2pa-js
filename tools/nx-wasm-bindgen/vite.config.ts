@@ -1,13 +1,8 @@
 import { defineConfig } from 'vite';
-
 export default defineConfig(() => ({
   root: __dirname,
-  cacheDir: '../../node_modules/.vite/tools/nx-wasm-pack',
+  cacheDir: '../../node_modules/.vite/tools/nx-wasm-bindgen',
   plugins: [],
-  // Uncomment this if you are using workers.
-  // worker: {
-  //  plugins: [ nxViteTsPaths() ],
-  // },
   test: {
     watch: false,
     globals: true,

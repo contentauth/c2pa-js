@@ -1,7 +1,8 @@
 {
-  "name": "nx-wasm-pack",
+  "name": "nx-wasm-bindgen",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,19 +23,19 @@
           "{options.outputPath}"
         ],
         "options": {
-          "outputPath": "tools/nx-wasm-pack/dist",
-          "main": "tools/nx-wasm-pack/src/index.ts",
-          "tsConfig": "tools/nx-wasm-pack/tsconfig.lib.json",
-          "rootDir": "tools/nx-wasm-pack/src",
+          "outputPath": "tools/nx-wasm-bindgen/dist",
+          "main": "tools/nx-wasm-bindgen/src/index.ts",
+          "tsConfig": "tools/nx-wasm-bindgen/tsconfig.lib.json",
+          "rootDir": "tools/nx-wasm-bindgen/src",
           "generatePackageJson": false,
           "assets": [
             {
-              "input": "./tools/nx-wasm-pack/src",
+              "input": "./tools/nx-wasm-bindgen/src",
               "glob": "**/!(*.ts)",
               "output": "."
             },
             {
-              "input": "./tools/nx-wasm-pack/src",
+              "input": "./tools/nx-wasm-bindgen/src",
               "glob": "**/*.d.ts",
               "output": "."
             }
@@ -45,6 +46,9 @@
   },
   "dependencies": {
     "@nx/devkit": "21.3.5",
+    "@types/ssri": "^7.1.5",
+    "rimraf": "^6.0.1",
+    "ssri": "^12.0.0",
     "tslib": "^2.3.0"
   },
   "executors": "./executors.json",
