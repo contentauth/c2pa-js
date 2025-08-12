@@ -18,6 +18,6 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": [
-    "js-src/**/*.ts"
+    "js-src/*.ts"
   ]
 }

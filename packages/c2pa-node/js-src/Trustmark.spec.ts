@@ -21,7 +21,7 @@ import path from "path";
 import * as fs from "fs-extra";
 import sharp from "sharp";
 
-const tempDir = path.join(__dirname, "tmp");
+const tempDir = path.join(__dirname, "..", "tmp");
 
 // Helper function to convert raw RGB pixel data to JPEG format
 async function rawRgbToJpeg(
