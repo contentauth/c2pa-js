@@ -1,9 +1,7 @@
 {
-  "name": "@contentauth/browser",
+  "name": "@contentauth/c2pa-web",
   "version": "0.0.1",
-  "private": true,
   "type": "module",
-  "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -16,10 +14,12 @@
     }
   },
   "dependencies": {
-    "@contentauth/wasm": "workspace:*"
+    "@contentauth/c2pa-wasm": "workspace:*"
   },
   "devDependencies": {
     "@vitest/browser": "^3.2.4",
-    "playwright": "^1.54.1"
+    "playwright": "^1.54.1",
+    "rimraf": "^6.0.1",
+    "@types/ssri": "^7.1.5"
   }
 }

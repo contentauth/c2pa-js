@@ -3,14 +3,16 @@
   "compilerOptions": {
     "outDir": "./out-tsc/vitest",
     "types": [
-      "vitest/globals",
       "vitest/importMeta",
       "vite/client",
-      "node",
       "vitest",
       "@vitest/browser/providers/playwright"
     ],
-    "forceConsistentCasingInFileNames": true
+    "lib": ["DOM"],
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "module":"NodeNext",
+    "moduleResolution": "NodeNext",
   },
   "include": [
     "vite.config.ts",
@@ -25,7 +27,8 @@
     "src/**/*.spec.js",
     "src/**/*.test.jsx",
     "src/**/*.spec.jsx",
-    "src/**/*.d.ts"
+    "src/**/*.d.ts",
+    "test/**/*.json"
   ],
   "references": [
     {
