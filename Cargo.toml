@@ -2,8 +2,9 @@
 [workspace]
 resolver = '2'
 members = [
-	'packages/wasm',
+	'packages/c2pa-wasm',
 ]
 
 [profile.release]
+opt-level = "s"
 lto = true

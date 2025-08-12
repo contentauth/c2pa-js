@@ -1,11 +1,12 @@
 {
-  "name": "wasm",
+  "name": "c2pa-wasm",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
   "sourceRoot": "packages/wasm/src",
   "targets": {
     "build": {
-      "executor": "nx-wasm-pack:build",
+      "cache": true,
+      "executor": "nx-wasm-bindgen:build",
       "outputs": ["{options.target-dir}"],
       "options": {
         "project-dir": "{projectRoot}"

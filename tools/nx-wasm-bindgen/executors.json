@@ -3,7 +3,7 @@
     "build": {
       "implementation": "./src/executors/build/executor",
       "schema": "./src/executors/build/schema.json",
-      "description": "Build a project with wasm-pack"
+      "description": "Build a project with wasm-bindgen"
     }
   }
 }
