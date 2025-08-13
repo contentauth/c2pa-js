@@ -1,72 +1,63 @@
-import { execSync } from 'node:child_process';
 import { PromiseExecutor } from '@nx/devkit';
 import { BuildExecutorSchema } from './schema.js';
-import { rimrafSync } from 'rimraf';
-import { join } from 'path';
-import { readFileSync } from 'fs';
-import { fromData } from 'ssri';
-import { appendFileSync } from 'node:fs';
+import { fromStream } from 'ssri';
+import { $, path, fs } from 'zx';
 
 const runExecutor: PromiseExecutor<BuildExecutorSchema> = async (
   options,
   context
 ) => {
-  const projectPath = join(context.root, options['project-dir']);
+  const projectPath = path.join(context.root, options['project-dir']);
   const outputWasmName = 'c2pa';
+  const $$ = $({ cwd: projectPath });
 
-  const cargoOutDir = join(
+  const cargoOutDir = path.join(
     context.root,
     'dist',
     'target',
     'wasm32-unknown-unknown'
   );
 
-  rimrafSync(cargoOutDir);
+  await fs.remove(cargoOutDir);
 
   try {
     // Run cargo build
-    execSync('cargo build --release --target wasm32-unknown-unknown', {
-      cwd: projectPath,
-    });
+    await $$`cargo build --release --target wasm32-unknown-unknown`;
 
     const formattedProjectName = context.projectName?.replace('-', '_');
 
-    const cargoOutput = join(
+    const cargoOutput = path.join(
       context.root,
       `dist/target/wasm32-unknown-unknown/release/${formattedProjectName}.wasm`
     );
 
-    const outDir = join(projectPath, 'pkg');
+    const outDir = path.join(projectPath, 'pkg');
 
     // Clean output directory
-    rimrafSync(outDir);
+    await fs.remove(outDir);
 
     // Run wasm-bindgen on cargo build output
-    execSync(
-      `wasm-bindgen ${cargoOutput} --out-dir ${outDir} --out-name ${outputWasmName} --target web --omit-default-module-path`,
-      {
-        cwd: projectPath,
-      }
-    );
+    await $$`wasm-bindgen ${cargoOutput} --out-dir ${outDir} --out-name ${outputWasmName} --target web --omit-default-module-path`;
 
     // Run wasm-opt on wasm-bindgen output, optimizing for size
-    const wasmOptInput = join(outDir, `${outputWasmName}_bg.wasm`);
+    const wasmOptInput = path.join(outDir, `${outputWasmName}_bg.wasm`);
 
-    execSync(`wasm-opt ${wasmOptInput} -o ${wasmOptInput} -Oz`, {
-      cwd: projectPath,
-    });
+    await $$`wasm-opt ${wasmOptInput} -o ${wasmOptInput} -Oz`;
 
     // Compute SRI integrity and append it to wasm-bindgen's JS output and .d.ts as an exported const
-    const wasmFile = readFileSync(wasmOptInput);
-    const integrity = JSON.stringify(fromData(wasmFile).toString());
+    const wasmFileStream = fs.createReadStream(wasmOptInput);
+    const integrity = JSON.stringify(fromStream(wasmFileStream).toString());
 
-    const javascriptOutput = join(outDir, `${outputWasmName}.js`);
+    const javascriptOutput = path.join(outDir, `${outputWasmName}.js`);
 
-    appendFileSync(javascriptOutput, `export const WASM_SRI = ${integrity};`);
+    await fs.appendFile(
+      javascriptOutput,
+      `export const WASM_SRI = ${integrity};`
+    );
 
-    const dtsOutput = join(outDir, `${outputWasmName}.d.ts`);
+    const dtsOutput = path.join(outDir, `${outputWasmName}.d.ts`);
 
-    appendFileSync(dtsOutput, 'export const WASM_SRI: string;');
+    await fs.appendFile(dtsOutput, 'export declare const WASM_SRI: string;');
 
     return {
       success: true,

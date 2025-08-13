@@ -1,0 +1,7 @@
+{
+  "name": "c2pa-web",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "tags": ["lib"],
+  "projectType": "library",
+  "sourceRoot": "packages/c2pa-web/src"
+}

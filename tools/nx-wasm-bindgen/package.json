@@ -15,6 +15,9 @@
       "default": "./dist/index.js"
     }
   },
+  "scripts": {
+    "test": "echo \"No tests to run\" && exit 0"
+  },
   "nx": {
     "targets": {
       "build": {
@@ -46,10 +49,11 @@
   },
   "dependencies": {
     "@nx/devkit": "21.3.5",
+    "@types/fs-extra": "^11.0.4",
     "@types/ssri": "^7.1.5",
-    "rimraf": "^6.0.1",
     "ssri": "^12.0.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "zx": "^8.8.0"
   },
   "executors": "./executors.json",
   "files": [

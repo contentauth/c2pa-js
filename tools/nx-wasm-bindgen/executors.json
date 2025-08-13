@@ -4,6 +4,11 @@
       "implementation": "./src/executors/build/executor",
       "schema": "./src/executors/build/schema.json",
       "description": "Build a project with wasm-bindgen"
+    },
+    "test": {
+      "implementation": "./dist/executors/test/executor",
+      "schema": "./dist/executors/test/schema.json",
+      "description": "Test a project with wasm-bindgen-test"
     }
   }
 }
