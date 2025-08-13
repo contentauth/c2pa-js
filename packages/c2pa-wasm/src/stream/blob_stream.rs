@@ -94,3 +94,91 @@ impl Seek for BlobStream<'_> {
 
 // WASM is single-threaded so this "unsafe" is acceptable
 unsafe impl Send for BlobStream<'_> {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use js_sys::Array;
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_dedicated_worker);
+
+    #[wasm_bindgen_test]
+    fn test_read_in_sequence() {
+        let blob = blob_from_vec(vec![0, 1, 2, 3]);
+
+        let mut stream = BlobStream::new(&blob);
+
+        let mut buf = vec![0; 2];
+        let bytes_read = stream.read(&mut buf).unwrap();
+
+        assert_eq!(buf, vec![0, 1]);
+        assert_eq!(bytes_read, 2);
+
+        let mut next_buf = vec![0; 2];
+        let next_bytes_read = stream.read(&mut next_buf).unwrap();
+
+        assert_eq!(next_buf, vec![2, 3]);
+        assert_eq!(next_bytes_read, 2);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_read_into_oversize_buffer() {
+        let blob = blob_from_vec(vec![0, 1, 2, 3]);
+
+        let mut stream = BlobStream::new(&blob);
+
+        let mut buf = vec![0; 6];
+        let bytes_read = stream.read(&mut buf).unwrap();
+
+        assert_eq!(buf, vec![0, 1, 2, 3, 0, 0]);
+        assert_eq!(bytes_read, 4);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_read_and_seek() {
+        let blob = blob_from_vec(vec![0, 1, 2, 3]);
+
+        let mut stream = BlobStream::new(&blob);
+
+        stream.seek(SeekFrom::Start(2)).unwrap();
+        let mut buf = vec![0; 2];
+        stream.read(&mut buf).unwrap();
+
+        assert_eq!(buf, vec![2, 3]);
+
+        stream.seek(SeekFrom::Current(-4)).unwrap();
+        let mut next_buf = vec![0; 2];
+        stream.read(&mut next_buf).unwrap();
+
+        assert_eq!(next_buf, vec![0, 1]);
+
+        stream.seek(SeekFrom::End(-2)).unwrap();
+        let mut final_buf = vec![0; 2];
+        stream.read(&mut final_buf).unwrap();
+
+        assert_eq!(final_buf, vec![2, 3]);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_seek_past_end_and_read() {
+        let blob = blob_from_vec(vec![0, 1, 2, 3]);
+
+        let mut stream = BlobStream::new(&blob);
+
+        stream.seek(SeekFrom::Start(10)).unwrap();
+        let mut buf = vec![0; 2];
+        let bytes_read = stream.read(&mut buf).unwrap();
+
+        assert_eq!(buf, vec![0, 0]);
+        assert_eq!(bytes_read, 0)
+    }
+
+    fn blob_from_vec(vec: Vec<u8>) -> Blob {
+        let u8array = Uint8Array::from(vec.as_slice());
+        let parts = Array::new();
+        parts.push(&u8array);
+
+        Blob::new_with_u8_array_sequence(&parts).unwrap()
+    }
+}
