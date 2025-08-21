@@ -20,6 +20,7 @@ export interface WorkerManager {
       ? Data
       : Awaited<ReturnType<K>>
   >;
+  terminate: () => void;
 }
 
 export interface CreateWorkerManagerConfig {
@@ -47,5 +48,6 @@ export async function createWorkerManager({
 
   return {
     execute,
+    terminate: () => worker.terminate(),
   };
 }
