@@ -1,3 +1,12 @@
+/**
+ * Copyright 2025 Adobe
+ * All Rights Reserved.
+ *
+ * NOTICE: Adobe permits you to use, modify, and distribute this file in
+ * accordance with the terms of the Adobe license agreement accompanying
+ * it.
+ */
+
 import { PromiseExecutor } from '@nx/devkit';
 import { BuildExecutorSchema } from './schema.js';
 import { fromStream } from 'ssri';
@@ -46,13 +55,14 @@ const runExecutor: PromiseExecutor<BuildExecutorSchema> = async (
 
     // Compute SRI integrity and append it to wasm-bindgen's JS output and .d.ts as an exported const
     const wasmFileStream = fs.createReadStream(wasmOptInput);
-    const integrity = JSON.stringify(fromStream(wasmFileStream).toString());
+    const integrityData = await fromStream(wasmFileStream);
+    const integrityString = JSON.stringify(integrityData.toString());
 
     const javascriptOutput = path.join(outDir, `${outputWasmName}.js`);
 
     await fs.appendFile(
       javascriptOutput,
-      `export const WASM_SRI = ${integrity};`
+      `export const WASM_SRI = ${integrityString};`
     );
 
     const dtsOutput = path.join(outDir, `${outputWasmName}.d.ts`);
