@@ -1,16 +1,26 @@
-use js_sys::Uint8Array;
+// Copyright 2025 Adobe
+// All Rights Reserved.
+//
+// NOTICE: Adobe permits you to use, modify, and distribute this file in
+// accordance with the terms of the Adobe license agreement accompanying
+// it.
+
 use std::{
     cmp::min,
     io::{Error as IoError, ErrorKind as IoErrorKind, Read, Result as IoResult, Seek, SeekFrom},
 };
+
+use js_sys::Uint8Array;
 use web_sys::{Blob, FileReaderSync};
 
+/// Wraps a JS-space Blob and a byte offset to support the implementation of Read + Seek.
 pub struct BlobStream<'a> {
     offset: usize,
-    pub blob: &'a Blob,
+    blob: &'a Blob,
 }
 
 impl<'a> BlobStream<'a> {
+    /// Create a new BlobStream from a `web_sys::Blob`.
     pub fn new(blob: &'a Blob) -> Self {
         Self { offset: 0, blob }
     }
@@ -18,60 +28,48 @@ impl<'a> BlobStream<'a> {
 
 impl Read for BlobStream<'_> {
     fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
-        let pos = self.offset;
-        let buffer_len = self.blob.size() as usize;
-        let into_len = buf.len();
-
-        if pos < buffer_len {
-            let end = min(buffer_len, pos + into_len);
-            let slice = self
-                .blob
-                .slice_with_f64_and_f64(pos as f64, end as f64)
-                .map_err(|err| {
-                    IoError::new(
-                        IoErrorKind::Other,
-                        format!("Failed to create slice from blob. Details: {:?}", err),
-                    )
-                })?;
-
-            let reader_sync = FileReaderSync::new().map_err(|err| {
-                IoError::new(
-                    IoErrorKind::Other,
-                    format!(
-                        "Failed to create FileReaderSync on blob slice. Details: {:?}",
-                        err
-                    ),
-                )
-            })?;
-
-            let slice_buf = reader_sync
-                .read_as_array_buffer(&slice)
-                .map(|array_buffer| Uint8Array::new(&array_buffer))
-                .map_err(|err| {
-                    IoError::new(
-                        IoErrorKind::Other,
-                        format!("Failed to read blob slice. Details: {:?}", err),
-                    )
-                })?;
-
-            let slice_len = slice_buf.byte_length() as usize;
-
-            if slice_len == into_len {
-                slice_buf.copy_to(buf);
-            } else {
-                let mut slice_with_padding = vec![0; slice_len];
-                slice_buf.copy_to(&mut slice_with_padding);
-                slice_with_padding.resize(into_len, 0);
-                buf.copy_from_slice(&slice_with_padding);
-            }
-
-            self.offset += slice_len;
-
-            Ok(slice_len)
-        } else {
-            Ok(0)
-        }
+        let mut slice: &[u8] = &get_vec_u8_from_blob(self.blob, self.offset, buf.len())?;
+        let bytes_read = slice.read(buf)?;
+        self.offset += bytes_read;
+        Ok(bytes_read)
     }
+}
+
+fn get_vec_u8_from_blob(blob: &Blob, offset: usize, len: usize) -> IoResult<Vec<u8>> {
+    let end = min(blob.size() as usize, offset + len);
+    let slice = blob
+        .slice_with_f64_and_f64(offset as f64, end as f64)
+        .map_err(|err| {
+            IoError::new(
+                IoErrorKind::Other,
+                format!("Failed to create slice from blob. Details: {:?}", err),
+            )
+        })?;
+
+    let reader_sync = FileReaderSync::new().map_err(|err| {
+        IoError::new(
+            IoErrorKind::Other,
+            format!(
+                "Failed to create FileReaderSync on blob slice. Details: {:?}",
+                err
+            ),
+        )
+    })?;
+
+    let slice_u8array = reader_sync
+        .read_as_array_buffer(&slice)
+        .map(|array_buffer| Uint8Array::new(&array_buffer))
+        .map_err(|err| {
+            IoError::new(
+                IoErrorKind::Other,
+                format!("Failed to read blob slice. Details: {:?}", err),
+            )
+        })?;
+
+    let mut buf = vec![0; slice_u8array.byte_length() as usize];
+    slice_u8array.copy_to(&mut buf);
+
+    Ok(buf)
 }
 
 impl Seek for BlobStream<'_> {
@@ -92,14 +90,15 @@ impl Seek for BlobStream<'_> {
     }
 }
 
-// WASM is single-threaded so this "unsafe" is acceptable
+// SAFETY: WASM is single-threaded.
 unsafe impl Send for BlobStream<'_> {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use js_sys::Array;
     use wasm_bindgen_test::wasm_bindgen_test;
+
+    use super::*;
 
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_dedicated_worker);
 
