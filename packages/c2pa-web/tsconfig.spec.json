@@ -8,11 +8,9 @@
       "vitest",
       "@vitest/browser/providers/playwright"
     ],
-    "lib": ["DOM"],
+    "lib": ["DOM", "ES2023"],
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "module":"NodeNext",
-    "moduleResolution": "NodeNext",
   },
   "include": [
     "vite.config.ts",

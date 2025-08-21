@@ -2,11 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "lib": ["DOM", "DOM.Iterable"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "rootDir": "src",
     "types": ["node", "vite/client"],
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
     "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo"
   },
   "exclude": [

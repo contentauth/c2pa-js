@@ -8,8 +8,7 @@
     "emitDeclarationOnly": true,
     "forceConsistentCasingInFileNames": true,
     "types": ["vite/client"],
-    "module":"nodenext",
-    "moduleResolution": "nodenext"
+    "lib": ["DOM", "ES2023"]
   },
   "include": ["src/**/*.ts"],
   "references": [],
