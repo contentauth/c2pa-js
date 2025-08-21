@@ -1,14 +1,24 @@
-use c2pa::{identity::validator::CawgValidator, Reader};
-use js_sys::{ArrayBuffer, Error as JsError, Uint8Array};
+// Copyright 2025 Adobe
+// All Rights Reserved.
+//
+// NOTICE: Adobe permits you to use, modify, and distribute this file in
+// accordance with the terms of the Adobe license agreement accompanying
+// it.
+
 use std::io::{Cursor, Read, Seek};
-use wasm_bindgen::prelude::*;
-use web_sys::Blob;
 
-use crate::{
-    error::WasmError,
-    stream::{BlobStream, BufferStream},
+use c2pa::{
+    identity::validator::CawgValidator,
+    settings::{self, Settings},
+    Reader,
 };
+use js_sys::{ArrayBuffer, Error as JsError, Uint8Array};
+use wasm_bindgen::prelude::*;
+use web_sys::{console, Blob};
 
+use crate::{error::WasmError, stream::BlobStream};
+
+/// Wraps a `c2pa::Reader`.
 #[wasm_bindgen]
 pub struct WasmReader {
     reader: Reader,
@@ -16,12 +26,7 @@ pub struct WasmReader {
 
 #[wasm_bindgen]
 impl WasmReader {
-    #[wasm_bindgen(js_name = fromBuffer)]
-    pub async fn from_buffer(format: &str, buffer: &ArrayBuffer) -> Result<WasmReader, JsError> {
-        let stream = BufferStream::new(buffer);
-        WasmReader::from_stream(format, stream).await
-    }
-
+    /// Attempts to create a new `WasmReader` from an asset format and `web_sys::Blob` of the asset's bytes.
     #[wasm_bindgen(js_name = fromBlob)]
     pub async fn from_blob(format: &str, blob: &Blob) -> Result<WasmReader, JsError> {
         let stream = BlobStream::new(blob);
@@ -45,16 +50,19 @@ impl WasmReader {
         Ok(WasmReader { reader })
     }
 
+    /// Returns a JSON representation of the asset's manifest store.
     #[wasm_bindgen]
     pub fn json(&self) -> String {
         self.reader.json()
     }
 
+    /// Returns the label of the asset's active manifest.
     #[wasm_bindgen(js_name = activeLabel)]
     pub fn active_label(&self) -> Option<String> {
         self.reader.active_label().map(|val| val.to_owned())
     }
 
+    /// Accepts a URI reference to a binary object in the resource store and returns a `js_sys::ArrayBuffer` containing the resource's bytes.
     #[wasm_bindgen(js_name = resourceToBuffer)]
     pub fn resource_to_buffer(&self, uri: &str) -> Result<ArrayBuffer, JsError> {
         let mut data = Vec::new();

@@ -1,4 +1,14 @@
+/**
+ * Copyright 2025 Adobe
+ * All Rights Reserved.
+ *
+ * NOTICE: Adobe permits you to use, modify, and distribute this file in
+ * accordance with the terms of the Adobe license agreement accompanying
+ * it.
+ */
+
 /// <reference lib="webworker" />
+
 import { WasmReader, initSync } from '@contentauth/c2pa-wasm';
 import {
   setupWorker,
@@ -15,14 +25,6 @@ const workerFunctions = {
   },
 
   // Reader creation methods
-  async reader_fromBuffer(
-    format: string,
-    buffer: ArrayBuffer
-  ): Promise<WorkerResponse<number>> {
-    const reader = await WasmReader.fromBuffer(format, new Uint8Array(buffer));
-    const readerId = readerMap.add(reader);
-    return { data: readerId };
-  },
   async reader_fromBlob(
     format: string,
     blob: Blob

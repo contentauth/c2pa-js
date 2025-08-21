@@ -1,7 +1,13 @@
 import type { WorkerManager } from './worker/workerManager.js';
 
 export interface ReaderFactory {
-  fromBuffer: (format: string, buffer: ArrayBuffer) => Promise<Reader>;
+  /**
+   * Create a reader from an asset's format and a blob of its bytes.
+   *
+   * @param format Asset format
+   * @param blob Blob of asset bytes
+   * @returns An object that provides methods for reading C2PA data from the provided asset.
+   */
   fromBlob: (format: string, blob: Blob) => Promise<Reader>;
 }
 
@@ -17,16 +23,6 @@ export interface Reader {
  */
 export function createReaderFactory(worker: WorkerManager): ReaderFactory {
   return {
-    async fromBuffer(format: string, buffer: ArrayBuffer): Promise<Reader> {
-      const readerId = await worker.execute({
-        method: 'reader_fromBuffer',
-        args: [format, buffer],
-        transfer: [buffer],
-      });
-
-      return createReader(worker, readerId);
-    },
-
     async fromBlob(format: string, blob: Blob): Promise<Reader> {
       const readerId = await worker.execute({
         method: 'reader_fromBlob',
