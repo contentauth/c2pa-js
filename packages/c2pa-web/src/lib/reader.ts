@@ -31,6 +31,10 @@ export interface Reader {
  * Returns an object with functions to create reader objects
  */
 export function createReaderFactory(worker: WorkerManager): ReaderFactory {
+  const registry = new FinalizationRegistry<number>((id) => {
+    worker.execute({ method: 'reader_free', args: [id] });
+  });
+
   return {
     async fromBlob(format: string, blob: Blob): Promise<Reader> {
       const readerId = await worker.execute({
@@ -38,15 +42,22 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
         args: [format, blob],
       });
 
-      return createReader(worker, readerId);
+      const unregisterToken = Symbol(readerId);
+      const reader = createReader(worker, readerId, () => {
+        registry.unregister(unregisterToken);
+      });
+      registry.register(reader, readerId, unregisterToken);
+
+      return reader;
     },
   };
 }
 
-/**
- * Provides a convenient API to call reader methods on the worker. Creates a closure around the worker ID to hide that implementation from the caller.
- */
-function createReader(worker: WorkerManager, id: number): Reader {
+function createReader(
+  worker: WorkerManager,
+  id: number,
+  onFree: () => void
+): Reader {
   return {
     // TODO: manifest type
     async manifestStore(): Promise<any> {
@@ -70,6 +81,7 @@ function createReader(worker: WorkerManager, id: number): Reader {
       });
     },
     async free(): Promise<void> {
+      onFree();
       return worker.execute({ method: 'reader_free', args: [id] });
     },
   };
