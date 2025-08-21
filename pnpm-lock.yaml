@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@nx/devkit':
-        specifier: 21.3.5
-        version: 21.3.5(nx@21.3.5(@swc-node/register@1.9.2(@swc/core@1.5.29(@swc/helpers@0.5.17))(@swc/types@0.1.23)(typescript@5.8.3))(@swc/core@1.5.29(@swc/helpers@0.5.17)))
     devDependencies:
       '@eslint/js':
         specifier: ^9.8.0
@@ -18,6 +14,9 @@ importers:
       '@monodon/rust':
         specifier: ^2.3.0
         version: 2.3.0(@napi-rs/cli@3.0.3(@emnapi/runtime@1.4.5)(@types/node@18.16.9))(nx@21.3.5(@swc-node/register@1.9.2(@swc/core@1.5.29(@swc/helpers@0.5.17))(@swc/types@0.1.23)(typescript@5.8.3))(@swc/core@1.5.29(@swc/helpers@0.5.17)))
+      '@nx/devkit':
+        specifier: 21.3.5
+        version: 21.3.5(nx@21.3.5(@swc-node/register@1.9.2(@swc/core@1.5.29(@swc/helpers@0.5.17))(@swc/types@0.1.23)(typescript@5.8.3))(@swc/core@1.5.29(@swc/helpers@0.5.17)))
       '@nx/eslint':
         specifier: 21.3.5
         version: 21.3.5(@babel/traverse@7.28.0)(@swc-node/register@1.9.2(@swc/core@1.5.29(@swc/helpers@0.5.17))(@swc/types@0.1.23)(typescript@5.8.3))(@swc/core@1.5.29(@swc/helpers@0.5.17))(@zkochan/js-yaml@0.0.7)(eslint@9.31.0(jiti@2.4.2))(nx@21.3.5(@swc-node/register@1.9.2(@swc/core@1.5.29(@swc/helpers@0.5.17))(@swc/types@0.1.23)(typescript@5.8.3))(@swc/core@1.5.29(@swc/helpers@0.5.17)))
