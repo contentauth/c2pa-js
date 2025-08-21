@@ -7,7 +7,12 @@
  * it.
  */
 
+import { AssetTooLargeError, UnsupportedFormatError } from './error.js';
+import { isSupportedReaderFormat } from './supportedFormats.js';
 import type { WorkerManager } from './worker/workerManager.js';
+
+// 1 GB
+export const MAX_SIZE_IN_BYTES = 10 ** 9;
 
 export interface ReaderFactory {
   /**
@@ -21,14 +26,30 @@ export interface ReaderFactory {
 }
 
 export interface Reader {
+  /**
+   * @returns The object's full manifest store containing the all manifests, validation statuses, and the URI of the active manifest.
+   */
   manifestStore: () => Promise<any>;
+
+  /**
+   * @returns The label of the active manifest.
+   */
   activeLabel: () => Promise<string | null>;
+
+  /**
+   * Resolves a URI reference to a binary object (e.g. a thumbnail) in the resource store.
+   *
+   * @param uri URI of the binary object to resolve.
+   * @returns An array buffer of the resource's bytes.
+   */
   resourceToBuffer: (uri: string) => Promise<ArrayBuffer>;
   free: () => Promise<void>;
 }
 
 /**
- * Returns an object with functions to create reader objects
+ *
+ * @param worker - Worker (via WorkerManager) to be associated with this reader factory
+ * @returns Object containing reader creation methods
  */
 export function createReaderFactory(worker: WorkerManager): ReaderFactory {
   const registry = new FinalizationRegistry<number>((id) => {
@@ -37,6 +58,14 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
 
   return {
     async fromBlob(format: string, blob: Blob): Promise<Reader> {
+      if (!isSupportedReaderFormat(format)) {
+        throw new UnsupportedFormatError(format);
+      }
+
+      if (blob.size > MAX_SIZE_IN_BYTES) {
+        throw new AssetTooLargeError(blob.size);
+      }
+
       const readerId = await worker.execute({
         method: 'reader_fromBlob',
         args: [format, blob],
