@@ -136,14 +136,13 @@ impl NeonReader {
 
         let (deferred, promise) = cx.promise();
         rt.spawn(async move {
-            let result = async {
-                let reader = reader.lock().await;
-                let bytes_written = reader
-                    .resource_to_stream(&uri, &mut output_stream)
-                    .map_err(Error::from)?;
-                Ok::<_, Error>((bytes_written, output_stream))
-            }
-            .await;
+            let result = reader
+                .lock()
+                .await
+                .resource_to_stream(&uri, &mut output_stream)
+                .map(|bytes_written| (bytes_written, output_stream))
+                .map_err(Error::from);
+
             deferred.settle_with(&channel, move |mut cx| match result {
                 Ok((bytes_written, mut output_stream)) => {
                     let buffer = if output.name() == "destination_buffer" {
@@ -181,12 +180,13 @@ impl NeonReader {
         let (deferred, promise) = cx.promise();
 
         rt.spawn(async move {
-            let result = async {
-                let mut reader = reader.lock().await;
-                reader.post_validate_async(&CawgValidator {}).await?;
-                Ok(())
-            }
-            .await;
+            let result = reader
+                .lock()
+                .await
+                .post_validate_async(&CawgValidator {})
+                .await
+                .map_err(Error::from);
+
             deferred.settle_with(&channel, move |mut cx| match result {
                 Ok(_) => Ok(cx.undefined()),
                 Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
