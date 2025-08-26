@@ -9,7 +9,7 @@
 
 /// <reference lib="webworker" />
 
-import { WasmReader, initSync } from '@contentauth/c2pa-wasm';
+import { WasmReader, initSync, loadSettings } from '@contentauth/c2pa-wasm';
 import {
   setupWorker,
   WorkerFunctions,
@@ -20,8 +20,12 @@ import { createWorkerObjectMap } from './worker/workerObjectMap.js';
 const readerMap = createWorkerObjectMap<WasmReader>();
 
 const workerFunctions = {
-  async initWasm(module: WebAssembly.Module) {
+  async initWorker(module: WebAssembly.Module, settings?: string) {
     initSync(module);
+
+    if (settings) {
+      loadSettings(settings);
+    }
   },
 
   // Reader creation methods

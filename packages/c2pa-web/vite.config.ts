@@ -44,6 +44,11 @@ export default defineConfig(() => ({
       external: [],
     },
   },
+  server: {
+    fs: {
+      deny: [],
+    },
+  },
   test: {
     watch: false,
     include: ['{src,test}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],

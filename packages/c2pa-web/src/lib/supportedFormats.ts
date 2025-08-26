@@ -68,6 +68,5 @@ export const READER_SUPPORTED_FORMATS = [
 ];
 
 export function isSupportedReaderFormat(format: string): boolean {
-  console.log('testing', format);
   return READER_SUPPORTED_FORMATS.includes(format);
 }

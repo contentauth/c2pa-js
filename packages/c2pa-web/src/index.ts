@@ -6,4 +6,7 @@
  * accordance with the terms of the Adobe license agreement accompanying
  * it.
  */
+
 export * from './lib/c2pa.js';
+
+export { type Settings } from './lib/settings.js';

@@ -9,12 +9,18 @@
 import { createWorkerManager } from './worker/workerManager.js';
 import { createReaderFactory, ReaderFactory } from './reader.js';
 import { WASM_SRI } from '@contentauth/c2pa-wasm';
+import { Settings, settingsToWasmJson } from './settings.js';
 
-interface CreateC2paConfig {
+export interface Config {
   /**
    * URL to fetch the WASM binary or an already-instantiated WASM module.
    */
   wasmSrc: string | WebAssembly.Module;
+
+  /**
+   * c2pa-rs settings
+   */
+  sdkSettings?: Settings;
 }
 
 interface C2paSdk {
@@ -35,13 +41,15 @@ interface C2paSdk {
  * const reader = await c2pa.reader.fromBlob(imageBlob.type, imageBlob);
  * ```
  */
-export async function createC2pa(config: CreateC2paConfig): Promise<C2paSdk> {
-  const { wasmSrc } = config;
+export async function createC2pa(config: Config): Promise<C2paSdk> {
+  const { wasmSrc, sdkSettings } = config;
 
   const wasm =
     typeof wasmSrc === 'string' ? await fetchAndCompileWasm(wasmSrc) : wasmSrc;
 
-  const worker = await createWorkerManager({ wasm });
+  const settings = sdkSettings ? settingsToWasmJson(sdkSettings) : undefined;
+
+  const worker = await createWorkerManager({ wasm, settingsString: settings });
 
   return {
     reader: createReaderFactory(worker),

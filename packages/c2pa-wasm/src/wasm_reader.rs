@@ -7,14 +7,10 @@
 
 use std::io::{Cursor, Read, Seek};
 
-use c2pa::{
-    identity::validator::CawgValidator,
-    settings::{self, Settings},
-    Reader,
-};
+use c2pa::{identity::validator::CawgValidator, Reader};
 use js_sys::{ArrayBuffer, Error as JsError, Uint8Array};
 use wasm_bindgen::prelude::*;
-use web_sys::{console, Blob};
+use web_sys::Blob;
 
 use crate::{error::WasmError, stream::BlobStream};
 

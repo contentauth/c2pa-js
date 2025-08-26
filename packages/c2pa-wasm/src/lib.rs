@@ -16,8 +16,11 @@ mod error;
 /// Contains functions to create types usable by c2pa-rs from JS types.
 pub mod stream;
 
-/// Provides a wasm-bindgen reader that can be called from JS.
+/// Exposes a reader API to JS via wasm-bindgen.
 pub mod wasm_reader;
+
+/// Provides a JS interface for loading c2pa-rs settings.
+pub mod settings;
 
 /// Called when the WASM binary is initialized.
 #[wasm_bindgen(start)]
