@@ -23,6 +23,12 @@ export interface ReaderFactory {
    * @returns An object that provides methods for reading C2PA data from the provided asset.
    */
   fromBlob: (format: string, blob: Blob) => Promise<Reader>;
+
+  fromBlobFragment: (
+    format: string,
+    init: Blob,
+    fragment: Blob
+  ) => Promise<Reader>;
 }
 
 export interface Reader {
@@ -69,6 +75,29 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
       const readerId = await worker.execute({
         method: 'reader_fromBlob',
         args: [format, blob],
+      });
+
+      const unregisterToken = Symbol(readerId);
+      const reader = createReader(worker, readerId, () => {
+        registry.unregister(unregisterToken);
+      });
+      registry.register(reader, readerId, unregisterToken);
+
+      return reader;
+    },
+
+    async fromBlobFragment(format: string, init: Blob, fragment: Blob) {
+      if (!isSupportedReaderFormat(format)) {
+        throw new UnsupportedFormatError(format);
+      }
+
+      if (init.size > MAX_SIZE_IN_BYTES) {
+        throw new AssetTooLargeError(init.size);
+      }
+
+      const readerId = await worker.execute({
+        method: 'reader_fromBlobFragment',
+        args: [format, init, fragment],
       });
 
       const unregisterToken = Symbol(readerId);

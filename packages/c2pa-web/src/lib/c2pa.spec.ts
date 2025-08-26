@@ -19,6 +19,9 @@ import C_with_CAWG_data_ManifestStore from '../../test/fixtures/assets/C_with_CA
 import C_with_CAWG_data_trusted_ManifestStore from '../../test/fixtures/assets/C_with_CAWG_data_trusted.json' with { type: "json" };
 import C_with_CAWG_data_untrusted_ManifestStore from '../../test/fixtures/assets/C_with_CAWG_data_untrusted.json' with { type: "json" };
 import no_alg from '../../test/fixtures/assets/no_alg.jpg';
+import dashinit from '../../test/fixtures/assets/dashinit.mp4';
+import dash1 from '../../test/fixtures/assets/dash1.m4s?url';
+import dashinit_ManifestStore from '../../test/fixtures/assets/dashinit.json' with { type: "json" };
 
 import anchor_correct from '../../test/fixtures/trust/anchor-correct.pem?raw';
 import anchor_incorrect from '../../test/fixtures/trust/anchor-incorrect.pem?raw';
@@ -120,6 +123,21 @@ describe('c2pa', () => {
       const manifestStore = await reader.manifestStore();
 
       expect(manifestStore).toEqual(C_with_CAWG_data_untrusted_ManifestStore);
+
+      await reader.free();
+    });
+
+    test('should work when created from an initial segment and fragment', async () => {
+      const c2pa = await createC2pa({ wasmSrc });
+
+      const initBlob = await getBlobForAsset(dashinit);
+      const fragmentBlob = await getBlobForAsset(dash1);
+
+      const reader = await c2pa.reader.fromBlobFragment(initBlob.type, initBlob, fragmentBlob);
+
+      const manifestStore = await reader.manifestStore();
+
+      expect(manifestStore).toEqual(dashinit_ManifestStore);
 
       await reader.free();
     });

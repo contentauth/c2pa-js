@@ -38,6 +38,16 @@ const workerFunctions = {
     return { data: readerId };
   },
 
+  async reader_fromBlobFragment(
+    format: string,
+    init: Blob,
+    fragment: Blob
+  ): Promise<WorkerResponse<number>> {
+    const reader = await WasmReader.fromBlobFragment(format, init, fragment);
+    const readerId = readerMap.add(reader);
+    return { data: readerId };
+  },
+
   // Reader object methods
   reader_json(readerId: number): WorkerResponse<string> {
     const reader = readerMap.get(readerId);

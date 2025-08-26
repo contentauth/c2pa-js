@@ -22,7 +22,7 @@ pub struct WasmReader {
 
 #[wasm_bindgen]
 impl WasmReader {
-    /// Attempts to create a new `WasmReader` from an asset format and `web_sys::Blob` of the asset's bytes.
+    /// Attempts to create a new `WasmReader` from an asset format and `Blob` of the asset's bytes.
     #[wasm_bindgen(js_name = fromBlob)]
     pub async fn from_blob(format: &str, blob: &Blob) -> Result<WasmReader, JsError> {
         let stream = BlobStream::new(blob);
@@ -36,6 +36,37 @@ impl WasmReader {
         let mut reader = Reader::from_stream_async(format, stream)
             .await
             .map_err(WasmError::from)?;
+
+        // This will be removed once CawgValidation is rolled into the reader
+        reader
+            .post_validate_async(&CawgValidator {})
+            .await
+            .map_err(WasmError::other)?;
+
+        Ok(WasmReader { reader })
+    }
+
+    /// Attempts to create a new `WasmReader` from an asset format, a `Blob` of the bytes of the initial segment, and a fragment `Blob`.
+    #[wasm_bindgen(js_name = fromBlobFragment)]
+    pub async fn from_blob_fragment(
+        format: &str,
+        init: &Blob,
+        fragment: &Blob,
+    ) -> Result<WasmReader, JsError> {
+        let init_stream = BlobStream::new(init);
+        let fragment_stream = BlobStream::new(fragment);
+
+        WasmReader::from_stream_fragment(format, init_stream, fragment_stream).await
+    }
+
+    async fn from_stream_fragment(
+        format: &str,
+        init: impl Read + Seek + Send,
+        fragment: impl Read + Seek + Send,
+    ) -> Result<WasmReader, JsError> {
+        let mut reader = Reader::from_fragment_async(format, init, fragment)
+            .await
+            .map_err(WasmError::other)?;
 
         // This will be removed once CawgValidation is rolled into the reader
         reader
