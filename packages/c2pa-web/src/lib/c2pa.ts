@@ -18,9 +18,9 @@ export interface Config {
   wasmSrc: string | WebAssembly.Module;
 
   /**
-   * c2pa-rs settings
+   * Settings for the SDK.
    */
-  sdkSettings?: Settings;
+  settings?: Settings;
 }
 
 interface C2paSdk {
@@ -42,14 +42,14 @@ interface C2paSdk {
  * ```
  */
 export async function createC2pa(config: Config): Promise<C2paSdk> {
-  const { wasmSrc, sdkSettings } = config;
+  const { wasmSrc, settings } = config;
 
   const wasm =
     typeof wasmSrc === 'string' ? await fetchAndCompileWasm(wasmSrc) : wasmSrc;
 
-  const settings = sdkSettings ? settingsToWasmJson(sdkSettings) : undefined;
+  const settingsString = settings ? settingsToWasmJson(settings) : undefined;
 
-  const worker = await createWorkerManager({ wasm, settingsString: settings });
+  const worker = await createWorkerManager({ wasm, settingsString });
 
   return {
     reader: createReaderFactory(worker),

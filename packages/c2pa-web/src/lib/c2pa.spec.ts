@@ -82,7 +82,7 @@ describe('c2pa', () => {
     });
 
     test('should report a trusted asset when when configured to verify trust', async () => {
-      const sdkSettings: Settings = {
+      const settings: Settings = {
         trust: {
           trustAnchors: anchor_correct,
         },
@@ -91,7 +91,7 @@ describe('c2pa', () => {
         }
       }
 
-      const c2pa = await createC2pa({ wasmSrc, sdkSettings });
+      const c2pa = await createC2pa({ wasmSrc, settings });
 
       const blob = await getBlobForAsset(C_with_CAWG_data);
 
@@ -105,7 +105,7 @@ describe('c2pa', () => {
     });
 
     test('should report an untrusted asset when configured to verify trust', async () => {
-      const sdkSettings: Settings = {
+      const settings: Settings = {
         trust: {
           trustAnchors: anchor_incorrect,
         },
@@ -114,7 +114,7 @@ describe('c2pa', () => {
         }
       }
 
-      const c2pa = await createC2pa({ wasmSrc, sdkSettings });
+      const c2pa = await createC2pa({ wasmSrc, settings });
 
       const blob = await getBlobForAsset(C_with_CAWG_data);
 

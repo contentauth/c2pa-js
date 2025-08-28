@@ -16,7 +16,7 @@ export const MAX_SIZE_IN_BYTES = 10 ** 9;
 
 export interface ReaderFactory {
   /**
-   * Create a reader from an asset's format and a blob of its bytes.
+   * Create a Reader from an asset's format and a blob of its bytes.
    *
    * @param format Asset format
    * @param blob Blob of asset bytes
@@ -33,7 +33,7 @@ export interface ReaderFactory {
 
 export interface Reader {
   /**
-   * @returns The object's full manifest store containing the all manifests, validation statuses, and the URI of the active manifest.
+   * @returns The asset's full manifest store containing all its manifests, validation statuses, and the URI of the active manifest.
    */
   manifestStore: () => Promise<any>;
 
@@ -49,6 +49,10 @@ export interface Reader {
    * @returns An array buffer of the resource's bytes.
    */
   resourceToBuffer: (uri: string) => Promise<ArrayBuffer>;
+
+  /**
+   * Dispose of this Reader, freeing the memory it occupied and preventing further use. Call this whenever the Reader is no longer needed.
+   */
   free: () => Promise<void>;
 }
 
