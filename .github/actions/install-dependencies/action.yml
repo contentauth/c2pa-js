@@ -1,0 +1,34 @@
+name: 'Install dependencies'
+runs:
+  using: 'composite'
+  steps:
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        target: wasm32-unknown-unknown
+
+    - uses: Swatinem/rust-cache@v2
+
+    # Install cargo-binstall
+    - run: curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+      shell: bash
+
+    - run: cargo binstall wasm-bindgen-cli@0.2.100 --no-confirm
+      shell: bash
+    - run: cargo binstall wasm-pack@0.13.1 --no-confirm
+      shell: bash
+    - run: cargo binstall wasm-opt@0.116.1 --no-confirm
+      shell: bash
+
+    - uses: pnpm/action-setup@v4
+      name: Install pnpm
+      with:
+        run_install: false
+
+    # Cache node_modules
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 24
+        cache: 'pnpm'
+
+    - run: pnpm install --frozen-lockfile
+      shell: bash
