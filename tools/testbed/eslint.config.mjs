@@ -7,7 +7,6 @@
  * it.
  */
 
-export default [
-  '**/vite.config.{mjs,js,ts,mts}',
-  '**/vitest.config.{mjs,js,ts,mts}',
-];
+import baseConfig from '../../eslint.config.mjs';
+
+export default [...baseConfig];

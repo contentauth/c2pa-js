@@ -1,0 +1,38 @@
+{
+  "name": "c2pa-wasm",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "tags": ["lib"],
+  "projectType": "library",
+  "sourceRoot": "packages/c2pa-wasm/src",
+  "targets": {
+    "build": {
+      "cache": true,
+      "executor": "nx-wasm-bindgen:build",
+      "outputs": ["{options.target-dir}"],
+      "options": {
+        "project-dir": "{projectRoot}"
+      }
+    },
+    "test": {
+      "cache": true,
+      "executor": "nx-wasm-bindgen:test",
+      "outputs": ["{options.target-dir}"],
+      "options": {
+        "project-dir": "{projectRoot}"
+      },
+      "configurations": {
+        "production": {
+          "release": true
+        }
+      }
+    },
+    "lint": {
+      "cache": true,
+      "executor": "@monodon/rust:lint",
+      "outputs": ["{options.target-dir}"],
+      "options": {
+        "target-dir": "dist/target/wasm"
+      }
+    }
+  }
+}

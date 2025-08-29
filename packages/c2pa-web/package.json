@@ -1,0 +1,26 @@
+{
+  "name": "@contentauth/c2pa-web",
+  "version": "0.0.1",
+  "type": "module",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@contentauth/c2pa-wasm": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/ssri": "^7.1.5",
+    "@vitest/browser": "^3.2.4",
+    "rimraf": "^6.0.1"
+  },
+  "scripts": {}
+}

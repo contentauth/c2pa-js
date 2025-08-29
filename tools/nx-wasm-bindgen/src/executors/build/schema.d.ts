@@ -7,7 +7,6 @@
  * it.
  */
 
-export default [
-  '**/vite.config.{mjs,js,ts,mts}',
-  '**/vitest.config.{mjs,js,ts,mts}',
-];
+export interface BuildExecutorSchema {
+  'project-dir': string;
+}

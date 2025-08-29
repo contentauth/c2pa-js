@@ -4,10 +4,13 @@
   "files": [],
   "references": [
     {
-      "path": "./packages/browser"
+      "path": "./tools/nx-wasm-bindgen"
     },
     {
-      "path": "./tools/nx-wasm-pack"
+      "path": "./tools/testbed"
+    },
+    {
+      "path": "./packages/c2pa-web"
     }
   ]
 }

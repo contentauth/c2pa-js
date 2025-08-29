@@ -12,16 +12,23 @@ permissions:
 
 jobs:
   main:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
           filter: tree:0
           fetch-depth: 0
 
-      - uses: jetli/wasm-pack-action@v0.4.0
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          version: 0.13.1
+          target: wasm32-unknown-unknown
+
+      # Install cargo-binstall
+      - run: curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+      - run: cargo binstall wasm-bindgen-cli@0.2.100 --no-confirm
+      - run: cargo binstall wasm-pack@0.13.1 --no-confirm
+      - run: cargo binstall wasm-opt@0.116.1 --no-confirm
 
       - uses: pnpm/action-setup@v4
         name: Install pnpm
@@ -42,9 +49,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - run: pnpx playwright install --with-deps
+
       # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
       # - run: pnpm exec nx-cloud record -- echo Hello World
-      - run: pnpm exec nx run-many -t lint test build
-      # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
-      - run: pnpm exec nx fix-ci
-        if: always()
+      - run: pnpm exec nx run-many -t lint test build --projects=tag:lib

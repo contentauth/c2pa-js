@@ -1,4 +1,14 @@
+/**
+ * Copyright 2025 Adobe
+ * All Rights Reserved.
+ *
+ * NOTICE: Adobe permits you to use, modify, and distribute this file in
+ * accordance with the terms of the Adobe license agreement accompanying
+ * it.
+ */
+
 import nx from '@nx/eslint-plugin';
+import headers from 'eslint-plugin-headers';
 
 export default [
   {
@@ -49,6 +59,30 @@ export default [
       '**/*.mjs',
     ],
     // Override or add rules here
-    rules: {},
+    rules: {
+      'headers/header-format': [
+        'error',
+        {
+          source: 'string',
+          content: [
+            'Copyright (year) Adobe',
+            'All Rights Reserved.',
+            '',
+            'NOTICE: Adobe permits you to use, modify, and distribute this file in',
+            'accordance with the terms of the Adobe license agreement accompanying',
+            'it.',
+          ].join('\n'),
+          patterns: {
+            year: {
+              pattern: '\\d{4}',
+              defaultValue: new Date().getFullYear().toString(),
+            },
+          },
+        },
+      ],
+    },
+    plugins: {
+      headers,
+    },
   },
 ];

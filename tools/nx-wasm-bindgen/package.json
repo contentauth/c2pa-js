@@ -1,0 +1,64 @@
+{
+  "name": "nx-wasm-bindgen",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "test": "echo \"No tests to run\" && exit 0"
+  },
+  "nx": {
+    "targets": {
+      "build": {
+        "executor": "@nx/js:tsc",
+        "outputs": [
+          "{options.outputPath}"
+        ],
+        "options": {
+          "outputPath": "tools/nx-wasm-bindgen/dist",
+          "main": "tools/nx-wasm-bindgen/src/index.ts",
+          "tsConfig": "tools/nx-wasm-bindgen/tsconfig.lib.json",
+          "rootDir": "tools/nx-wasm-bindgen/src",
+          "generatePackageJson": false,
+          "assets": [
+            {
+              "input": "./tools/nx-wasm-bindgen/src",
+              "glob": "**/!(*.ts)",
+              "output": "."
+            },
+            {
+              "input": "./tools/nx-wasm-bindgen/src",
+              "glob": "**/*.d.ts",
+              "output": "."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@nx/devkit": "21.3.5",
+    "@types/fs-extra": "^11.0.4",
+    "@types/ssri": "^7.1.5",
+    "ssri": "^12.0.0",
+    "tslib": "^2.3.0",
+    "zx": "^8.8.0"
+  },
+  "executors": "./executors.json",
+  "files": [
+    "dist",
+    "!**/*.tsbuildinfo",
+    "executors.json"
+  ]
+}
