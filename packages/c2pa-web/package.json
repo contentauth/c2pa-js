@@ -1,6 +1,6 @@
 {
   "name": "@contentauth/c2pa-web",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
