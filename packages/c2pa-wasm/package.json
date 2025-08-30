@@ -1,7 +1,6 @@
 {
   "name": "@contentauth/c2pa-wasm",
   "version": "0.0.1",
-  "private": true,
   "type": "module",
   "module": "./pkg/c2pa.js",
   "types": "./pkg/c2pa.d.ts",
