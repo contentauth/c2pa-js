@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "release": "pnpm prepublish && pnpm changeset:publish",
-    "prepublish": "pnpm exec nx run-many -t build --projects=tag:lib",
-    "changeset:publish": "changeset publish"
+    "ci:release": "pnpm ci:prepublish && pnpm ci:publish",
+    "ci:prepublish": "pnpm exec nx run-many -t build --projects=tag:lib",
+    "ci:publish": "pnpm publish -r"
   },
   "private": true,
   "devDependencies": {
