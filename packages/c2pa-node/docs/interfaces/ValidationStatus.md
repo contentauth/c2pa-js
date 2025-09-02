@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / ValidationStatus
+[@contentauth/c2pa-node](../README.md) / ValidationStatus
 
 # Interface: ValidationStatus
 
-Defined in: [types.d.ts:364](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L364)
+Defined in: [types.d.ts:386](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L386)
 
 A `ValidationStatus` struct describes the validation status of a specific part of a manifest
 
@@ -22,7 +22,7 @@ See <https://c2pa.org/specifications/specifications/1.0/specs/C2PA_Specification
 
 > **code**: `string`
 
-Defined in: [types.d.ts:365](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L365)
+Defined in: [types.d.ts:387](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L387)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [types.d.ts:365](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > `optional` **explanation**: `string`
 
-Defined in: [types.d.ts:366](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L366)
+Defined in: [types.d.ts:388](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L388)
 
 ***
 
@@ -38,4 +38,4 @@ Defined in: [types.d.ts:366](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > `optional` **url**: `string`
 
-Defined in: [types.d.ts:367](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L367)
+Defined in: [types.d.ts:389](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L389)

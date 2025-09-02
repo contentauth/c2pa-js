@@ -1,14 +1,14 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / builderFromArchive
+[@contentauth/c2pa-node](../README.md) / builderFromArchive
 
 # Function: builderFromArchive()
 
 > **builderFromArchive**(`asset`): `Promise`\<`Builder`\>
 
-Defined in: [types.d.ts:754](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L754)
+Defined in: [types.d.ts:803](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L803)
 
 ## Parameters
 

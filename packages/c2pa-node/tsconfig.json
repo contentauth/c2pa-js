@@ -5,6 +5,8 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "outDir": "./dist",
+    "declaration": true,
+    "declarationDir": "./dist/types",
     "rootDir": "./js-src",
     "strict": true,
     "target": "es6",
@@ -16,6 +18,6 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": [
-    "js-src/**/*.ts"
+    "js-src/*.ts"
   ]
 }

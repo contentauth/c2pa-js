@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / ClaimGeneratorInfo
+[@contentauth/c2pa-node](../README.md) / ClaimGeneratorInfo
 
 # Interface: ClaimGeneratorInfo
 
-Defined in: [types.d.ts:150](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L150)
+Defined in: [types.d.ts:172](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L172)
 
 Description of the claim generator, or the software used in generating the claim
 
@@ -22,7 +22,7 @@ This structure is also used for actions softwareAgent
 
 > `optional` **icon**: [`UriOrResource`](../type-aliases/UriOrResource.md)
 
-Defined in: [types.d.ts:154](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L154)
+Defined in: [types.d.ts:176](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L176)
 
 hashed URI to the icon (either embedded or remote)
 
@@ -32,7 +32,7 @@ hashed URI to the icon (either embedded or remote)
 
 > **name**: `string`
 
-Defined in: [types.d.ts:158](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L158)
+Defined in: [types.d.ts:180](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L180)
 
 A human readable string naming the claim_generator
 
@@ -42,6 +42,6 @@ A human readable string naming the claim_generator
 
 > `optional` **version**: `string`
 
-Defined in: [types.d.ts:162](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L162)
+Defined in: [types.d.ts:184](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L184)
 
 A human readable string of the product's version

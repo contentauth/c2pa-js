@@ -266,7 +266,7 @@ impl NeonBuilder {
 
     // TODO: This mimics the previous c2pa-node iteration's arguments.
     // It is probably redundant with sign_async.
-    pub fn sign_config_async(mut cx: FunctionContext<'_>) -> JsResult<JsPromise> {
+    pub fn sign_config_async(mut cx: FunctionContext) -> JsResult<JsPromise> {
         let rt = runtime();
         let channel = cx.channel();
 
@@ -340,7 +340,7 @@ impl NeonBuilder {
         Ok(promise)
     }
 
-    pub fn sign_async(mut cx: FunctionContext<'_>) -> JsResult<JsPromise> {
+    pub fn sign_async(mut cx: FunctionContext) -> JsResult<JsPromise> {
         let rt = runtime();
         let channel = cx.channel();
 
@@ -411,7 +411,7 @@ impl NeonBuilder {
         Ok(promise)
     }
 
-    pub fn identity_sign_async(mut cx: FunctionContext<'_>) -> JsResult<JsPromise> {
+    pub fn identity_sign_async(mut cx: FunctionContext) -> JsResult<JsPromise> {
         let rt = runtime();
         let channel = cx.channel();
 

@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / Actor
+[@contentauth/c2pa-node](../README.md) / Actor
 
 # Interface: Actor
 
-Defined in: [types.d.ts:324](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L324)
+Defined in: [types.d.ts:346](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L346)
 
 Identifies a person responsible for an action
 
@@ -20,7 +20,7 @@ Identifies a person responsible for an action
 
 > `optional` **credentials**: [`HashedUri`](HashedUri.md)[]
 
-Defined in: [types.d.ts:328](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L328)
+Defined in: [types.d.ts:350](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L350)
 
 List of references to W3C Verifiable Credentials
 
@@ -30,6 +30,6 @@ List of references to W3C Verifiable Credentials
 
 > `optional` **identifier**: `string`
 
-Defined in: [types.d.ts:332](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L332)
+Defined in: [types.d.ts:354](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L354)
 
 An identifier for a human actor, used when the "type" is `humanEntry.identified`

@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / IdentityAssertionBuilder
+[@contentauth/c2pa-node](../README.md) / IdentityAssertionBuilder
 
 # Class: IdentityAssertionBuilder
 
-Defined in: [IdentityAssertion.ts:17](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/IdentityAssertion.ts#L17)
+Defined in: [IdentityAssertion.ts:17](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/IdentityAssertion.ts#L17)
 
 ## Implements
 
@@ -18,7 +18,7 @@ Defined in: [IdentityAssertion.ts:17](https://github.com/contentauth/c2pa-node-v
 
 > **addReferencedAssertions**(`referencedAssertions`): `void`
 
-Defined in: [IdentityAssertion.ts:29](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/IdentityAssertion.ts#L29)
+Defined in: [IdentityAssertion.ts:29](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/IdentityAssertion.ts#L29)
 
 Add assertion labels to consider as referenced_assertions.
 If any of these labels match assertions that are present in the partial
@@ -47,7 +47,7 @@ The list of assertion labels to add
 
 > **addRoles**(`roles`): `void`
 
-Defined in: [IdentityAssertion.ts:36](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/IdentityAssertion.ts#L36)
+Defined in: [IdentityAssertion.ts:36](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/IdentityAssertion.ts#L36)
 
 Add roles to attach to the named actor for this identity assertion.
 
@@ -73,7 +73,7 @@ Named actor roles
 
 > **builder**(): `IdentityAssertionBuilder`
 
-Defined in: [IdentityAssertion.ts:40](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/IdentityAssertion.ts#L40)
+Defined in: [IdentityAssertion.ts:40](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/IdentityAssertion.ts#L40)
 
 Get the underlying IdentityAssertionBuilder
 
@@ -91,7 +91,7 @@ Get the underlying IdentityAssertionBuilder
 
 > `static` **identityBuilderForCredentialHolder**(`credentialHolder`): `Promise`\<`IdentityAssertionBuilder`\>
 
-Defined in: [IdentityAssertion.ts:20](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/IdentityAssertion.ts#L20)
+Defined in: [IdentityAssertion.ts:20](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/IdentityAssertion.ts#L20)
 
 #### Parameters
 

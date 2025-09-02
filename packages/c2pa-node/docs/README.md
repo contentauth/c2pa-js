@@ -1,8 +1,8 @@
-**c2pa-node**
+**@contentauth/c2pa-node**
 
 ***
 
-# c2pa-node
+# @contentauth/c2pa-node
 
 ## Classes
 
@@ -12,6 +12,7 @@
 - [IdentityAssertionSigner](classes/IdentityAssertionSigner.md)
 - [LocalSigner](classes/LocalSigner.md)
 - [Reader](classes/Reader.md)
+- [Trustmark](classes/Trustmark.md)
 
 ## Interfaces
 
@@ -37,6 +38,7 @@
 - [ReviewRating](interfaces/ReviewRating.md)
 - [SignatureInfo](interfaces/SignatureInfo.md)
 - [SourceBufferAsset](interfaces/SourceBufferAsset.md)
+- [TrustmarkConfig](interfaces/TrustmarkConfig.md)
 - [ValidationStatus](interfaces/ValidationStatus.md)
 
 ## Type Aliases
@@ -49,6 +51,8 @@
 - [Relationship](type-aliases/Relationship.md)
 - [SigningAlg](type-aliases/SigningAlg.md)
 - [SourceAsset](type-aliases/SourceAsset.md)
+- [TrustmarkVariant](type-aliases/TrustmarkVariant.md)
+- [TrustmarkVersion](type-aliases/TrustmarkVersion.md)
 - [UriOrResource](type-aliases/UriOrResource.md)
 
 ## Functions
@@ -93,3 +97,6 @@
 - [readerPostValidateCawg](functions/readerPostValidateCawg.md)
 - [readerRemoteUrl](functions/readerRemoteUrl.md)
 - [readerResourceToAsset](functions/readerResourceToAsset.md)
+- [trustmarkDecode](functions/trustmarkDecode.md)
+- [trustmarkEncode](functions/trustmarkEncode.md)
+- [trustmarkNew](functions/trustmarkNew.md)

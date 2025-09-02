@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / Metadata
+[@contentauth/c2pa-node](../README.md) / Metadata
 
 # Interface: Metadata
 
-Defined in: [types.d.ts:294](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L294)
+Defined in: [types.d.ts:316](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L316)
 
 The Metadata structure can be used as part of other assertions or on its own to reference others
 
@@ -20,7 +20,7 @@ The Metadata structure can be used as part of other assertions or on its own to 
 
 > `optional` **data\_source**: [`DataSource`](DataSource.md)
 
-Defined in: [types.d.ts:295](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L295)
+Defined in: [types.d.ts:317](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L317)
 
 ***
 
@@ -28,7 +28,7 @@ Defined in: [types.d.ts:295](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > `optional` **dateTime**: `string`
 
-Defined in: [types.d.ts:296](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L296)
+Defined in: [types.d.ts:318](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L318)
 
 ***
 
@@ -36,7 +36,7 @@ Defined in: [types.d.ts:296](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > `optional` **reference**: [`HashedUri`](HashedUri.md)
 
-Defined in: [types.d.ts:297](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L297)
+Defined in: [types.d.ts:319](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L319)
 
 ***
 
@@ -44,4 +44,4 @@ Defined in: [types.d.ts:297](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > `optional` **reviewRatings**: [`ReviewRating`](ReviewRating.md)[]
 
-Defined in: [types.d.ts:298](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L298)
+Defined in: [types.d.ts:320](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L320)

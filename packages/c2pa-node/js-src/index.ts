@@ -11,12 +11,12 @@
 // specific language governing permissions and limitations under
 // each license.
 
-export * from 'index.node';
-export { Builder } from './Builder';
-export { Reader } from './Reader';
-export { LocalSigner, CallbackSigner } from './Signer';
+export * from "index.node";
+export { Builder } from "./Builder";
+export { Reader } from "./Reader";
+export { LocalSigner, CallbackSigner } from "./Signer";
 export {
   IdentityAssertionBuilder,
   IdentityAssertionSigner,
-} from './IdentityAssertion';
-export { Trustmark } from './Trustmark';
+} from "./IdentityAssertion";
+export { Trustmark } from "./Trustmark";

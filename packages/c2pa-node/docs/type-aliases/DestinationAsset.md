@@ -1,14 +1,14 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / DestinationAsset
+[@contentauth/c2pa-node](../README.md) / DestinationAsset
 
 # Type Alias: DestinationAsset
 
 > **DestinationAsset** = [`DestinationBufferAsset`](../interfaces/DestinationBufferAsset.md) \| [`FileAsset`](../interfaces/FileAsset.md)
 
-Defined in: [types.d.ts:498](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L498)
+Defined in: [types.d.ts:520](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L520)
 
 An destination asset that can either be in memory or on disk
 This is a workaround since Neon does not support streams

@@ -1,12 +1,12 @@
-[**c2pa-node**](../README.md)
+[**@contentauth/c2pa-node**](../README.md)
 
 ***
 
-[c2pa-node](../README.md) / HashedUri
+[@contentauth/c2pa-node](../README.md) / HashedUri
 
 # Interface: HashedUri
 
-Defined in: [types.d.ts:204](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L204)
+Defined in: [types.d.ts:226](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L226)
 
 Hashed Uri structure as defined by C2PA spec It is annotated to produce the correctly tagged cbor serialization
 
@@ -20,7 +20,7 @@ Hashed Uri structure as defined by C2PA spec It is annotated to produce the corr
 
 > `optional` **alg**: `string`
 
-Defined in: [types.d.ts:205](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L205)
+Defined in: [types.d.ts:227](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L227)
 
 ***
 
@@ -28,7 +28,7 @@ Defined in: [types.d.ts:205](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > **hash**: `number`[]
 
-Defined in: [types.d.ts:206](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L206)
+Defined in: [types.d.ts:228](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L228)
 
 ***
 
@@ -36,4 +36,4 @@ Defined in: [types.d.ts:206](https://github.com/contentauth/c2pa-node-v2/blob/53
 
 > **url**: `string`
 
-Defined in: [types.d.ts:207](https://github.com/contentauth/c2pa-node-v2/blob/5303c5fd1e9a72d23f327699b48a7620e901a41c/js-src/types.d.ts#L207)
+Defined in: [types.d.ts:229](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L229)
