@@ -6,7 +6,7 @@
 
 # Interface: Manifest
 
-Defined in: [types.d.ts:88](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L88)
+Defined in: [types.d.ts:88](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L88)
 
 A Manifest represents all the information in a c2pa manifest
 
@@ -20,7 +20,7 @@ A Manifest represents all the information in a c2pa manifest
 
 > `optional` **assertions**: [`ManifestAssertion`](ManifestAssertion.md)[]
 
-Defined in: [types.d.ts:92](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L92)
+Defined in: [types.d.ts:92](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L92)
 
 A list of assertions
 
@@ -30,7 +30,7 @@ A list of assertions
 
 > `optional` **claim\_generator**: `string`
 
-Defined in: [types.d.ts:96](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L96)
+Defined in: [types.d.ts:96](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L96)
 
 A User Agent formatted string identifying the software/hardware/system produced this claim Spaces are not allowed in names, versions can be specified with product/1.0 syntax
 
@@ -40,7 +40,7 @@ A User Agent formatted string identifying the software/hardware/system produced 
 
 > `optional` **claim\_generator\_hints**: `object`
 
-Defined in: [types.d.ts:97](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L97)
+Defined in: [types.d.ts:97](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L97)
 
 #### Index Signature
 
@@ -52,7 +52,7 @@ Defined in: [types.d.ts:97](https://github.com/contentauth/c2pa-node-v2/blob/920
 
 > `optional` **claim\_generator\_info**: [`ClaimGeneratorInfo`](ClaimGeneratorInfo.md)[]
 
-Defined in: [types.d.ts:105](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L105)
+Defined in: [types.d.ts:105](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L105)
 
 A list of claim generator info data identifying the software/hardware/system produced this claim
 
@@ -62,7 +62,7 @@ A list of claim generator info data identifying the software/hardware/system pro
 
 > `optional` **credentials**: `unknown`[]
 
-Defined in: [types.d.ts:109](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L109)
+Defined in: [types.d.ts:109](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L109)
 
 A List of verified credentials
 
@@ -72,7 +72,7 @@ A List of verified credentials
 
 > `optional` **format**: `string`
 
-Defined in: [types.d.ts:113](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L113)
+Defined in: [types.d.ts:113](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L113)
 
 The format of the source file as a MIME type
 
@@ -82,7 +82,7 @@ The format of the source file as a MIME type
 
 > `optional` **ingredients**: [`Ingredient`](Ingredient.md)[]
 
-Defined in: [types.d.ts:117](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L117)
+Defined in: [types.d.ts:117](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L117)
 
 A List of ingredients
 
@@ -92,7 +92,7 @@ A List of ingredients
 
 > `optional` **instance\_id**: `string`
 
-Defined in: [types.d.ts:121](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L121)
+Defined in: [types.d.ts:121](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L121)
 
 Instance ID from `xmpMM:InstanceID` in XMP metadata
 
@@ -102,7 +102,7 @@ Instance ID from `xmpMM:InstanceID` in XMP metadata
 
 > `optional` **label**: `string`
 
-Defined in: [types.d.ts:122](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L122)
+Defined in: [types.d.ts:122](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L122)
 
 ***
 
@@ -110,7 +110,7 @@ Defined in: [types.d.ts:122](https://github.com/contentauth/c2pa-node-v2/blob/92
 
 > `optional` **redactions**: `string`[]
 
-Defined in: [types.d.ts:126](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L126)
+Defined in: [types.d.ts:126](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L126)
 
 A list of redactions - URIs to a redacted assertions
 
@@ -120,7 +120,7 @@ A list of redactions - URIs to a redacted assertions
 
 > `optional` **resources**: [`ResourceStore`](ResourceStore.md)
 
-Defined in: [types.d.ts:130](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L130)
+Defined in: [types.d.ts:130](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L130)
 
 container for binary assets (like thumbnails)
 
@@ -130,7 +130,7 @@ container for binary assets (like thumbnails)
 
 > `optional` **signature\_info**: [`SignatureInfo`](SignatureInfo.md)
 
-Defined in: [types.d.ts:134](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L134)
+Defined in: [types.d.ts:134](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L134)
 
 Signature data (only used for reporting)
 
@@ -140,7 +140,7 @@ Signature data (only used for reporting)
 
 > `optional` **thumbnail**: [`ResourceRef`](ResourceRef.md)
 
-Defined in: [types.d.ts:135](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L135)
+Defined in: [types.d.ts:135](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L135)
 
 ***
 
@@ -148,7 +148,7 @@ Defined in: [types.d.ts:135](https://github.com/contentauth/c2pa-node-v2/blob/92
 
 > `optional` **title**: `string`
 
-Defined in: [types.d.ts:139](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L139)
+Defined in: [types.d.ts:139](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L139)
 
 A human-readable title, generally source filename
 
@@ -158,6 +158,6 @@ A human-readable title, generally source filename
 
 > `optional` **vendor**: `string`
 
-Defined in: [types.d.ts:143](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L143)
+Defined in: [types.d.ts:143](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L143)
 
 Optional prefix added to the generated Manifest Label This is typically Internet domain name for the vendor (i.e. `adobe`)

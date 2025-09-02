@@ -6,7 +6,7 @@
 
 # Class: Trustmark
 
-Defined in: [Trustmark.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/Trustmark.ts#L16)
+Defined in: [Trustmark.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Trustmark.ts#L16)
 
 ## Implements
 
@@ -18,7 +18,7 @@ Defined in: [Trustmark.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/9
 
 > **decode**(`image`): `Promise`\<`string`\>
 
-Defined in: [Trustmark.ts:37](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/Trustmark.ts#L37)
+Defined in: [Trustmark.ts:37](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Trustmark.ts#L37)
 
 Decode a watermark from an image.
 
@@ -44,7 +44,7 @@ image to extract the watermark from (must be in a supported image format like JP
 
 > **encode**(`image`, `strength`, `watermark?`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
 
-Defined in: [Trustmark.ts:24](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/Trustmark.ts#L24)
+Defined in: [Trustmark.ts:24](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Trustmark.ts#L24)
 
 Encode a watermark into an image.
 
@@ -84,7 +84,7 @@ raw pixel data in RGB8 format (width * height * 3 bytes)
 
 > `static` **newTrustmark**(`config`): `Promise`\<`Trustmark`\>
 
-Defined in: [Trustmark.ts:19](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/Trustmark.ts#L19)
+Defined in: [Trustmark.ts:19](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Trustmark.ts#L19)
 
 #### Parameters
 

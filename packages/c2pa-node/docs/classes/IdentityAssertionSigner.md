@@ -6,7 +6,7 @@
 
 # Class: IdentityAssertionSigner
 
-Defined in: [IdentityAssertion.ts:45](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/IdentityAssertion.ts#L45)
+Defined in: [IdentityAssertion.ts:45](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/IdentityAssertion.ts#L45)
 
 ## Implements
 
@@ -18,7 +18,7 @@ Defined in: [IdentityAssertion.ts:45](https://github.com/contentauth/c2pa-node-v
 
 > **addIdentityAssertion**(`identityAssertionBuilder`): `void`
 
-Defined in: [IdentityAssertion.ts:53](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/IdentityAssertion.ts#L53)
+Defined in: [IdentityAssertion.ts:53](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/IdentityAssertion.ts#L53)
 
 Add a IdentityAssertionBuilder  to be used when signing the
 next Manifest
@@ -46,7 +46,7 @@ IdentityAssertionBuilders will be cleared.
 
 > **signer**(): `IdentityAssertionSigner`
 
-Defined in: [IdentityAssertion.ts:62](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/IdentityAssertion.ts#L62)
+Defined in: [IdentityAssertion.ts:62](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/IdentityAssertion.ts#L62)
 
 #### Returns
 
@@ -58,7 +58,7 @@ Defined in: [IdentityAssertion.ts:62](https://github.com/contentauth/c2pa-node-v
 
 > `static` **new**(`signer`): `IdentityAssertionSigner`
 
-Defined in: [IdentityAssertion.ts:48](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/IdentityAssertion.ts#L48)
+Defined in: [IdentityAssertion.ts:48](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/IdentityAssertion.ts#L48)
 
 #### Parameters
 
