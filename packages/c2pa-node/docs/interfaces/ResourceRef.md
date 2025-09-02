@@ -6,7 +6,7 @@
 
 # Interface: ResourceRef
 
-Defined in: [types.d.ts:191](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L191)
+Defined in: [types.d.ts:191](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L191)
 
 A reference to a resource to be used in JSON serialization
 
@@ -20,7 +20,7 @@ A reference to a resource to be used in JSON serialization
 
 > `optional` **alg**: `string`
 
-Defined in: [types.d.ts:195](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L195)
+Defined in: [types.d.ts:195](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L195)
 
 The algorithm used to hash the resource (if applicable)
 
@@ -30,7 +30,7 @@ The algorithm used to hash the resource (if applicable)
 
 > `optional` **data\_types**: [`AssetType`](AssetType.md)[]
 
-Defined in: [types.d.ts:199](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L199)
+Defined in: [types.d.ts:199](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L199)
 
 More detailed data types as defined in the C2PA spec
 
@@ -40,7 +40,7 @@ More detailed data types as defined in the C2PA spec
 
 > **format**: `string`
 
-Defined in: [types.d.ts:203](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L203)
+Defined in: [types.d.ts:203](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L203)
 
 The mime type of the referenced resource
 
@@ -50,7 +50,7 @@ The mime type of the referenced resource
 
 > `optional` **hash**: `string`
 
-Defined in: [types.d.ts:207](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L207)
+Defined in: [types.d.ts:207](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L207)
 
 The hash of the resource (if applicable)
 
@@ -60,7 +60,7 @@ The hash of the resource (if applicable)
 
 > **identifier**: `string`
 
-Defined in: [types.d.ts:213](https://github.com/contentauth/c2pa-node-v2/blob/c336e36bb30fc393837615821d0e64cbfdcdeea6/js-src/types.d.ts#L213)
+Defined in: [types.d.ts:213](https://github.com/contentauth/c2pa-node-v2/blob/92024140271b3589278f2b732abca2c4a33b231a/js-src/types.d.ts#L213)
 
 A URI that identifies the resource as referenced from the manifest
 
