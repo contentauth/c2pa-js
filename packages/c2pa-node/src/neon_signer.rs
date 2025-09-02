@@ -208,10 +208,10 @@ impl NeonCallbackSigner {
 
         rt.spawn(async move {
             let signer = NeonCallbackSigner::new(channel.clone(), callback, config);
-            let result = match <Self as AsyncSigner>::sign(&signer, data).await {
-                Ok(sig) => Ok(sig),
-                Err(e) => Err(e.to_string()),
-            };
+            let result = <Self as AsyncSigner>::sign(&signer, data)
+                .await
+                .map_err(|e| e.to_string());
+
             deferred.settle_with(&channel, move |mut cx| match result {
                 Ok(signature) => {
                     let buffer = JsBuffer::from_slice(&mut cx, &signature)?;

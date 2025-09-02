@@ -115,14 +115,14 @@ impl NeonBuilder {
         let (deferred, promise) = cx.promise();
 
         rt.spawn(async move {
-            let result = async {
-                let mut builder = builder.lock().await;
-                let mut resource_stream = resource.into_read_stream()?;
+            let mut builder = builder.lock().await;
+
+            let result = resource.into_read_stream().and_then(|mut resource_stream| {
                 builder.add_resource(&uri, &mut resource_stream)?;
                 Ok(())
-            }
-            .await;
-            deferred.settle_with(&channel, move |mut cx| match result {
+            });
+
+            deferred.settle_with(&channel, |mut cx| match result {
                 Ok(_) => Ok(cx.undefined()),
                 Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
             });
@@ -145,23 +145,21 @@ impl NeonBuilder {
         let (deferred, promise) = cx.promise();
 
         rt.spawn(async move {
-            let result = async {
-                let mut builder = builder.lock().await;
-                let format = ingredient
-                    .mime_type()
-                    .ok_or_else(|| {
-                        Error::Signing("Ingredient asset must have a mime type".to_string())
-                    })?
-                    .to_owned();
-                let mut ingredient_stream = ingredient.into_read_stream()?;
-                builder.add_ingredient_from_stream(
-                    &ingredient_json,
-                    &format,
-                    &mut ingredient_stream,
-                )?;
-                Ok(())
-            }
-            .await;
+            let mut builder = builder.lock().await;
+
+            let result = ingredient
+                .mime_type()
+                .ok_or_else(|| Error::Signing("Ingredient asset must have a mime type".to_string()))
+                .and_then(|format| {
+                    let mut ingredient_stream = ingredient.into_read_stream()?;
+                    builder.add_ingredient_from_stream(
+                        &ingredient_json,
+                        &format,
+                        &mut ingredient_stream,
+                    )?;
+                    Ok(())
+                });
+
             deferred.settle_with(&channel, move |mut cx| match result {
                 Ok(_) => Ok(cx.undefined()),
                 Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
@@ -183,13 +181,12 @@ impl NeonBuilder {
         let (deferred, promise) = cx.promise();
 
         rt.spawn(async move {
-            let result = async {
-                let mut builder = builder.lock().await;
-                let dest_stream = dest.write_stream()?;
+            let mut builder = builder.lock().await;
+            let result = dest.write_stream().and_then(|dest_stream| {
                 builder.to_archive(dest_stream)?;
                 Ok(())
-            }
-            .await;
+            });
+
             deferred.settle_with(&channel, move |mut cx| match result {
                 Ok(_) => Ok(cx.undefined()),
                 Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
@@ -208,12 +205,11 @@ impl NeonBuilder {
         let (deferred, promise) = cx.promise();
 
         rt.spawn(async move {
-            let result = async {
-                let source_stream = source.into_read_stream()?;
+            let result = source.into_read_stream().and_then(|source_stream| {
                 let builder = Builder::from_archive(source_stream)?;
                 Ok(builder)
-            }
-            .await;
+            });
+
             deferred.settle_with(&channel, move |mut cx| match result {
                 Ok(builder) => Ok(cx.boxed(Self {
                     builder: Arc::new(Mutex::new(builder)),
@@ -300,14 +296,12 @@ impl NeonBuilder {
         let builder = Arc::clone(&this.builder);
         let (deferred, promise) = cx.promise();
         rt.spawn(async move {
-            let result = async {
-                let mut builder = builder.lock().await;
-                let sign_result = builder
-                    .sign_async(&signer, &format, &mut input_stream, &mut output_stream)
-                    .await?;
-                Ok::<_, Error>((sign_result, output_stream))
-            }
-            .await;
+            let result = builder
+                .lock()
+                .await
+                .sign_async(&signer, &format, &mut input_stream, &mut output_stream)
+                .await
+                .map(|sign_result| (sign_result, output_stream));
 
             deferred.settle_with(&channel, move |mut cx| match result {
                 Ok((signed_bytes, mut output_stream)) => {
@@ -321,9 +315,7 @@ impl NeonBuilder {
                         }
                         match output_stream.read_to_end(&mut buffer) {
                             Ok(_) => (),
-                            Err(e) => {
-                                return cx.throw_error(format!("Failed to read stream: {e}"))
-                            }
+                            Err(e) => return cx.throw_error(format!("Failed to read stream: {e}")),
                         }
                         Some(buffer)
                     } else {
@@ -375,14 +367,12 @@ impl NeonBuilder {
         let builder = Arc::clone(&this.builder);
         let (deferred, promise) = cx.promise();
         rt.spawn(async move {
-            let result = async {
-                let mut builder = builder.lock().await;
-                let sign_result = builder
-                    .sign_async(&signer, &format, &mut input_stream, &mut output_stream)
-                    .await?;
-                Ok::<_, Error>((sign_result, output_stream))
-            }
-            .await;
+            let result = builder
+                .lock()
+                .await
+                .sign_async(&signer, &format, &mut input_stream, &mut output_stream)
+                .await
+                .map(|sign_result| (sign_result, output_stream));
 
             deferred.settle_with(&channel, move |mut cx| match result {
                 Ok((signed_bytes, mut output_stream)) => {
@@ -396,9 +386,7 @@ impl NeonBuilder {
                         }
                         match output_stream.read_to_end(&mut buffer) {
                             Ok(_) => (),
-                            Err(e) => {
-                                return cx.throw_error(format!("Failed to read stream: {e}"))
-                            }
+                            Err(e) => return cx.throw_error(format!("Failed to read stream: {e}")),
                         }
                         Some(buffer)
                     } else {
@@ -451,14 +439,12 @@ impl NeonBuilder {
         let (deferred, promise) = cx.promise();
 
         rt.spawn(async move {
-            let result = async {
-                let mut builder = builder.lock().await;
-                let sign_result = builder
-                    .sign_async(&signer, &format, &mut input_stream, &mut output_stream)
-                    .await?;
-                Ok::<_, Error>((sign_result, output_stream))
-            }
-            .await;
+            let result = builder
+                .lock()
+                .await
+                .sign_async(&signer, &format, &mut input_stream, &mut output_stream)
+                .await
+                .map(|sign_result| (sign_result, output_stream));
 
             deferred.settle_with(&channel, move |mut cx| match result {
                 Ok((signed_bytes, mut output_stream)) => {
@@ -472,9 +458,7 @@ impl NeonBuilder {
                         }
                         match output_stream.read_to_end(&mut buffer) {
                             Ok(_) => (),
-                            Err(e) => {
-                                return cx.throw_error(format!("Failed to read stream: {e}"))
-                            }
+                            Err(e) => return cx.throw_error(format!("Failed to read stream: {e}")),
                         }
                         Some(buffer)
                     } else {
