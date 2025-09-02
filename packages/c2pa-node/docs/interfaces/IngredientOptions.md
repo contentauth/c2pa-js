@@ -6,7 +6,7 @@
 
 # Interface: IngredientOptions
 
-Defined in: [types.d.ts:476](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L476)
+Defined in: [types.d.ts:476](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L476)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.d.ts:476](https://github.com/contentauth/c2pa-node-v2/blob/8b
 
 > **isParent**: `boolean`
 
-Defined in: [types.d.ts:477](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L477)
+Defined in: [types.d.ts:477](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L477)
 
 ***
 
@@ -22,4 +22,4 @@ Defined in: [types.d.ts:477](https://github.com/contentauth/c2pa-node-v2/blob/8b
 
 > `optional` **thumbnail**: [`IngredientThumbnail`](IngredientThumbnail.md)
 
-Defined in: [types.d.ts:478](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L478)
+Defined in: [types.d.ts:478](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L478)

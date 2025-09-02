@@ -6,7 +6,7 @@
 
 # Interface: ResourceStore
 
-Defined in: [types.d.ts:373](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L373)
+Defined in: [types.d.ts:373](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L373)
 
 Resource store to contain binary objects referenced from JSON serializable structures
 
@@ -20,7 +20,7 @@ Resource store to contain binary objects referenced from JSON serializable struc
 
 > `optional` **label**: `string`
 
-Defined in: [types.d.ts:374](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L374)
+Defined in: [types.d.ts:374](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L374)
 
 ***
 
@@ -28,7 +28,7 @@ Defined in: [types.d.ts:374](https://github.com/contentauth/c2pa-node-v2/blob/8b
 
 > **resources**: `object`
 
-Defined in: [types.d.ts:375](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L375)
+Defined in: [types.d.ts:375](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L375)
 
 #### Index Signature
 

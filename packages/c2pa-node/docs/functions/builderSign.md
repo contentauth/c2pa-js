@@ -8,7 +8,7 @@
 
 > **builderSign**(`signer`, `input`, `output`): `Buffer`
 
-Defined in: [types.d.ts:804](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L804)
+Defined in: [types.d.ts:804](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L804)
 
 ## Parameters
 

@@ -6,7 +6,7 @@
 
 # Interface: Metadata
 
-Defined in: [types.d.ts:316](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L316)
+Defined in: [types.d.ts:316](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L316)
 
 The Metadata structure can be used as part of other assertions or on its own to reference others
 
@@ -20,7 +20,7 @@ The Metadata structure can be used as part of other assertions or on its own to 
 
 > `optional` **data\_source**: [`DataSource`](DataSource.md)
 
-Defined in: [types.d.ts:317](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L317)
+Defined in: [types.d.ts:317](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L317)
 
 ***
 
@@ -28,7 +28,7 @@ Defined in: [types.d.ts:317](https://github.com/contentauth/c2pa-node-v2/blob/8b
 
 > `optional` **dateTime**: `string`
 
-Defined in: [types.d.ts:318](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L318)
+Defined in: [types.d.ts:318](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L318)
 
 ***
 
@@ -36,7 +36,7 @@ Defined in: [types.d.ts:318](https://github.com/contentauth/c2pa-node-v2/blob/8b
 
 > `optional` **reference**: [`HashedUri`](HashedUri.md)
 
-Defined in: [types.d.ts:319](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L319)
+Defined in: [types.d.ts:319](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L319)
 
 ***
 
@@ -44,4 +44,4 @@ Defined in: [types.d.ts:319](https://github.com/contentauth/c2pa-node-v2/blob/8b
 
 > `optional` **reviewRatings**: [`ReviewRating`](ReviewRating.md)[]
 
-Defined in: [types.d.ts:320](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L320)
+Defined in: [types.d.ts:320](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L320)

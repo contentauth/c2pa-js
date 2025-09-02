@@ -8,7 +8,7 @@
 
 > **SourceAsset** = [`SourceBufferAsset`](../interfaces/SourceBufferAsset.md) \| [`FileAsset`](../interfaces/FileAsset.md)
 
-Defined in: [types.d.ts:514](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L514)
+Defined in: [types.d.ts:514](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L514)
 
 A source asset that can either be in memory or on disk
 This is a workaround since Neon does not support streams

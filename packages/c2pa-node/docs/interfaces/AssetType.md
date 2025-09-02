@@ -6,7 +6,7 @@
 
 # Interface: AssetType
 
-Defined in: [types.d.ts:217](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L217)
+Defined in: [types.d.ts:217](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L217)
 
 ## Indexable
 
@@ -18,7 +18,7 @@ Defined in: [types.d.ts:217](https://github.com/contentauth/c2pa-node-v2/blob/8b
 
 > **type**: `string`
 
-Defined in: [types.d.ts:218](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L218)
+Defined in: [types.d.ts:218](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L218)
 
 ***
 
@@ -26,4 +26,4 @@ Defined in: [types.d.ts:218](https://github.com/contentauth/c2pa-node-v2/blob/8b
 
 > `optional` **version**: `string`
 
-Defined in: [types.d.ts:219](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/types.d.ts#L219)
+Defined in: [types.d.ts:219](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L219)

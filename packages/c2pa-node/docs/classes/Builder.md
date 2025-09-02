@@ -6,7 +6,7 @@
 
 # Class: Builder
 
-Defined in: [Builder.ts:17](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L17)
+Defined in: [Builder.ts:17](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L17)
 
 ## Implements
 
@@ -18,7 +18,7 @@ Defined in: [Builder.ts:17](https://github.com/contentauth/c2pa-node-v2/blob/8bb
 
 > **addAssertion**(`label`, `assertion`, `assertionKind?`): `void`
 
-Defined in: [Builder.ts:52](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L52)
+Defined in: [Builder.ts:52](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L52)
 
 Add CBOR assertion to the builder
 
@@ -54,7 +54,7 @@ The CBOR encoded assertion
 
 > **addIngredient**(`ingredientJson`, `ingredient`): `Promise`\<`void`\>
 
-Defined in: [Builder.ts:69](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L69)
+Defined in: [Builder.ts:69](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L69)
 
 Add an ingredient from a buffer or file
 
@@ -86,7 +86,7 @@ The source and format of the ingredient
 
 > **addResource**(`uri`, `resource`): `Promise`\<`void`\>
 
-Defined in: [Builder.ts:65](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L65)
+Defined in: [Builder.ts:65](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L65)
 
 Add a resource from a buffer or file
 
@@ -118,7 +118,7 @@ The source and format of the resource
 
 > **getManifestDefinition**(): [`ManifestDefinition`](../interfaces/ManifestDefinition.md)
 
-Defined in: [Builder.ts:184](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L184)
+Defined in: [Builder.ts:184](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L184)
 
 Getter for the builder's manifest definition
 
@@ -138,7 +138,7 @@ The manifest definition
 
 > **identitySignAsync**(`signer`, `input`, `output`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
 
-Defined in: [Builder.ts:158](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L158)
+Defined in: [Builder.ts:158](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L158)
 
 Sign an asset from a buffer or file asynchronously, using an
 IdentityAssertionSigner
@@ -175,7 +175,7 @@ the bytes of the c2pa_manifest that was embedded
 
 > **setNoEmbed**(`noEmbed`): `void`
 
-Defined in: [Builder.ts:44](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L44)
+Defined in: [Builder.ts:44](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L44)
 
 Set the no embed flag of the manifest
 
@@ -201,7 +201,7 @@ The no embed flag of the manifest
 
 > **setRemoteUrl**(`remoteUrl`): `void`
 
-Defined in: [Builder.ts:48](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L48)
+Defined in: [Builder.ts:48](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L48)
 
 Set the remote URL of the manifest
 
@@ -225,7 +225,7 @@ Set the remote URL of the manifest
 
 > **sign**(`signer`, `input`, `output`): `Buffer`
 
-Defined in: [Builder.ts:88](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L88)
+Defined in: [Builder.ts:88](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L88)
 
 Sign an asset from a buffer or file
 
@@ -261,7 +261,7 @@ the bytes of the c2pa_manifest that was embedded
 
 > **signAsync**(`signer`, `input`, `output`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
 
-Defined in: [Builder.ts:132](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L132)
+Defined in: [Builder.ts:132](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L132)
 
 Sign an asset from a buffer or file asynchronously, using a
 CallbackSigner
@@ -296,7 +296,7 @@ the bytes of the c2pa_manifest that was embedded
 
 > **signConfigAsync**(`callback`, `signerConfig`, `input`, `output`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
 
-Defined in: [Builder.ts:105](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L105)
+Defined in: [Builder.ts:105](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L105)
 
 Sign an asset from a buffer or file asynchronously, using a callback
 and not passing a private key
@@ -339,7 +339,7 @@ the bytes of the c2pa_manifest that was embedded
 
 > **signFile**(`signer`, `filePath`, `output`): `Buffer`
 
-Defined in: [Builder.ts:96](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L96)
+Defined in: [Builder.ts:96](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L96)
 
 Embed a signed manifest into a stream using the LocalSigner
 
@@ -375,7 +375,7 @@ the bytes of the c2pa_manifest that was embedded
 
 > **toArchive**(`asset`): `Promise`\<`void`\>
 
-Defined in: [Builder.ts:80](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L80)
+Defined in: [Builder.ts:80](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L80)
 
 Convert the Builder into a archive formatted buffer or file
 
@@ -401,7 +401,7 @@ The file or buffer for the archive
 
 > **updateManifestProperty**(`property`, `value`): `void`
 
-Defined in: [Builder.ts:188](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L188)
+Defined in: [Builder.ts:188](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L188)
 
 Update a string property of the manifest
 
@@ -431,7 +431,7 @@ The manifest definition
 
 > `static` **fromArchive**(`asset`): `Promise`\<`Builder`\>
 
-Defined in: [Builder.ts:84](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L84)
+Defined in: [Builder.ts:84](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L84)
 
 #### Parameters
 
@@ -449,7 +449,7 @@ Defined in: [Builder.ts:84](https://github.com/contentauth/c2pa-node-v2/blob/8bb
 
 > `static` **new**(): `Builder`
 
-Defined in: [Builder.ts:20](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L20)
+Defined in: [Builder.ts:20](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L20)
 
 #### Returns
 
@@ -461,7 +461,7 @@ Defined in: [Builder.ts:20](https://github.com/contentauth/c2pa-node-v2/blob/8bb
 
 > `static` **withJson**(`json`): `Builder`
 
-Defined in: [Builder.ts:25](https://github.com/contentauth/c2pa-node-v2/blob/8bb2490bb1f0c6c00c0930669451a7750cccfebc/js-src/Builder.ts#L25)
+Defined in: [Builder.ts:25](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L25)
 
 #### Parameters
 
