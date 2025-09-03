@@ -16,9 +16,9 @@ const path = require('path');
 const distTypesDir = path.join(__dirname, '..', 'dist', 'types');
 
 function createIndexNodeDeclaration() {
-  // Create index.node.d.ts in the types directory
-  const indexNodePath = path.join(distTypesDir, 'index.node.d.ts');
-  const content = `// Copyright 2024 Adobe. All rights reserved.
+	// Create index.node.d.ts in the types directory
+	const indexNodePath = path.join(distTypesDir, 'index.node.d.ts');
+	const content = `// Copyright 2024 Adobe. All rights reserved.
 // This file is licensed to you under the Apache License,
 // Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
 // or the MIT license (http://opensource.org/licenses/MIT),
@@ -36,92 +36,92 @@ function createIndexNodeDeclaration() {
 export * from "./types";
 `;
 
-  fs.writeFileSync(indexNodePath, content);
-  console.log('Created index.node.d.ts in dist/types');
+	fs.writeFileSync(indexNodePath, content);
+	console.log('Created index.node.d.ts in dist/types');
 }
 
 function fixTypesFile() {
-  const typesPath = path.join(distTypesDir, 'types.d.ts');
-  let content = fs.readFileSync(typesPath, 'utf8');
+	const typesPath = path.join(distTypesDir, 'types.d.ts');
+	let content = fs.readFileSync(typesPath, 'utf8');
 
-  // Remove the module declaration wrapper and fix indentation
-  const lines = content.split('\n');
-  let inModule = false;
-  let braceCount = 1;
-  let fixedLines = [];
+	// Remove the module declaration wrapper and fix indentation
+	const lines = content.split('\n');
+	let inModule = false;
+	let braceCount = 1;
+	let fixedLines = [];
 
-  for (let line of lines) {
-    if (line.includes('declare module "index.node"')) {
-      inModule = true;
-      continue;
-    }
-    if (inModule) {
-      // Count braces to find the end of the module
-      braceCount += (line.match(/\{/g) || []).length;
-      braceCount -= (line.match(/\}/g) || []).length;
+	for (let line of lines) {
+		if (line.includes('declare module "index.node"')) {
+			inModule = true;
+			continue;
+		}
+		if (inModule) {
+			// Count braces to find the end of the module
+			braceCount += (line.match(/\{/g) || []).length;
+			braceCount -= (line.match(/\}/g) || []).length;
 
-      if (braceCount === 0 && line.trim() === '}') {
-        inModule = false;
-        continue;
-      }
+			if (braceCount === 0 && line.trim() === '}') {
+				inModule = false;
+				continue;
+			}
 
-      // Remove 2 spaces of indentation
-      if (line.startsWith('  ')) {
-        line = line.substring(2);
-      }
-    }
-    fixedLines.push(line);
-  }
+			// Remove 2 spaces of indentation
+			if (line.startsWith('  ')) {
+				line = line.substring(2);
+			}
+		}
+		fixedLines.push(line);
+	}
 
-  // Fix the ManifestStore interface structure
-  let fixedContent = fixedLines.join('\n');
+	// Fix the ManifestStore interface structure
+	let fixedContent = fixedLines.join('\n');
 
-  fs.writeFileSync(typesPath, fixedContent);
-  console.log('Fixed types.d.ts');
+	fs.writeFileSync(typesPath, fixedContent);
+	console.log('Fixed types.d.ts');
 }
 
 function fixClassDeclarations() {
-  const classFiles = ['Builder.d.ts', 'Reader.d.ts', 'Signer.d.ts', 'IdentityAssertion.d.ts', 'Trustmark.d.ts'];
+	const classFiles = ['Builder.d.ts', 'Reader.d.ts', 'Signer.d.ts', 'IdentityAssertion.d.ts', 'Trustmark.d.ts'];
 
-  classFiles.forEach(fileName => {
-    const filePath = path.join(distTypesDir, fileName);
-    if (fs.existsSync(filePath)) {
-      let content = fs.readFileSync(filePath, 'utf8');
-      // Replace 'index.node' imports with './types'
-      content = content.replace(/from ['"]index\.node['"]/g, 'from "./types"');
-      fs.writeFileSync(filePath, content);
-      console.log(`Fixed imports in ${fileName}`);
-    }
-  });
+	classFiles.forEach(fileName => {
+		const filePath = path.join(distTypesDir, fileName);
+		if (fs.existsSync(filePath)) {
+			let content = fs.readFileSync(filePath, 'utf8');
+			// Replace 'index.node' imports with './types'
+			content = content.replace(/from ['"]index\.node['"]/g, 'from "./types"');
+			fs.writeFileSync(filePath, content);
+			console.log(`Fixed imports in ${fileName}`);
+		}
+	});
 }
 
 function fixIndexDeclaration() {
-  const indexPath = path.join(distTypesDir, 'index.d.ts');
-  if (fs.existsSync(indexPath)) {
-    let content = fs.readFileSync(indexPath, 'utf8');
-    // Replace 'index.node' exports with './types'
-    content = content.replace(/from ['"]index\.node['"]/g, 'from "./types"');
-    fs.writeFileSync(indexPath, content);
-    console.log('Fixed exports in index.d.ts');
-  }
+	const indexPath = path.join(distTypesDir, 'index.d.ts');
+	if (fs.existsSync(indexPath)) {
+		let content = fs.readFileSync(indexPath, 'utf8');
+		// Replace 'index.node' exports with './types'
+		content = content.replace(/from ['"]index\.node['"]/g, 'from "./types"');
+		fs.writeFileSync(indexPath, content);
+		console.log('Fixed exports in index.d.ts');
+	}
 }
 
 function main() {
-  try {
-    console.log('Fixing TypeScript declarations...');
+	try {
+		console.log('Fixing TypeScript declarations...');
 
-    fixTypesFile();
-    fixClassDeclarations();
-    fixIndexDeclaration();
-    createIndexNodeDeclaration();
+		fixTypesFile();
+		fixClassDeclarations();
+		fixIndexDeclaration();
+		createIndexNodeDeclaration();
 
-    console.log('TypeScript declarations fixed successfully!');
-  } catch (error) {
-    console.error('Error fixing TypeScript declarations:', error);
-    process.exit(1);
-  }
+		console.log('TypeScript declarations fixed successfully!');
+	} catch (error) {
+		console.error('Error fixing TypeScript declarations:', error);
+		process.exit(1);
+	}
 }
 
 if (require.main === module) {
-  main();
+	main();
 }
