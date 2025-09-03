@@ -56,7 +56,7 @@ jobs:
     name: Build binaries for ${{matrix.target}}
     runs-on: ${{matrix.runner}}
     env:
-      PUBLISHED_VERSION: ${{ fromJson(needs.release.outputs.publishedPackages)[0].version }}
+      PUBLISHED_VERSION: 0.1.2
       COREPACK_ENABLE_STRICT: 0
     strategy:
       fail-fast: false
