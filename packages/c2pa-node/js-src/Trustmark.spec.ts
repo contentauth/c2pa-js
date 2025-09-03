@@ -11,12 +11,12 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import { Trustmark } from "./index";
-import {
+import { Trustmark } from "./Trustmark";
+import type {
   TrustmarkConfig,
   TrustmarkVariant,
   TrustmarkVersion,
-} from "index.node";
+} from "./types";
 import path from "path";
 import * as fs from "fs-extra";
 import sharp from "sharp";

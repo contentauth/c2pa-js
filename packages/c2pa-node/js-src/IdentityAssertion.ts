@@ -11,14 +11,20 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import * as neon from 'index.node';
-import { CallbackSigner } from './index';
+import * as neon from "index.node";
+import type {
+  CallbackSignerInterface,
+  IdentityAssertionBuilderInterface,
+  IdentityAssertionSignerInterface,
+} from "./types";
 
-export class IdentityAssertionBuilder implements neon.IdentityAssertionBuilder {
-  private constructor(private _builder: neon.IdentityAssertionBuilder) {}
+export class IdentityAssertionBuilder
+  implements IdentityAssertionBuilderInterface
+{
+  private constructor(private _builder: IdentityAssertionBuilderInterface) {}
 
   static async identityBuilderForCredentialHolder(
-    credentialHolder: CallbackSigner,
+    credentialHolder: CallbackSignerInterface,
   ): Promise<IdentityAssertionBuilder> {
     const builder = neon.identityBuilderForCredentialHolder(
       credentialHolder.signer(),
@@ -37,15 +43,17 @@ export class IdentityAssertionBuilder implements neon.IdentityAssertionBuilder {
     neon.identityBuilderAddRoles.call(this._builder, roles);
   }
 
-  builder(): neon.IdentityAssertionBuilder {
+  builder(): IdentityAssertionBuilderInterface {
     return this._builder;
   }
 }
 
-export class IdentityAssertionSigner implements neon.IdentityAssertionSigner {
-  private constructor(private _signer: neon.IdentityAssertionSigner) {}
+export class IdentityAssertionSigner
+  implements IdentityAssertionSignerInterface
+{
+  private constructor(private _signer: IdentityAssertionSignerInterface) {}
 
-  static new(signer: CallbackSigner): IdentityAssertionSigner {
+  static new(signer: CallbackSignerInterface): IdentityAssertionSigner {
     const identitySigner = neon.identitySignerNew(signer.signer());
     return new IdentityAssertionSigner(identitySigner);
   }
@@ -59,7 +67,7 @@ export class IdentityAssertionSigner implements neon.IdentityAssertionSigner {
     );
   }
 
-  signer(): neon.IdentityAssertionSigner {
+  signer(): IdentityAssertionSignerInterface {
     return this._signer;
   }
 }

@@ -12,11 +12,18 @@
 // each license.
 
 import * as neon from "index.node";
+import type {
+  DestinationAsset,
+  Manifest,
+  ManifestStore,
+  ReaderInterface,
+  SourceAsset,
+} from "./types";
 
-export class Reader implements neon.Reader {
-  private constructor(private reader: neon.Reader) {}
+export class Reader implements ReaderInterface {
+  private constructor(private reader: ReaderInterface) {}
 
-  json(): neon.ManifestStore {
+  json(): ManifestStore {
     return JSON.parse(neon.readerJson.call(this.reader));
   }
 
@@ -28,21 +35,18 @@ export class Reader implements neon.Reader {
     return neon.readerIsEmbedded.call(this.reader);
   }
 
-  async resourceToAsset(
-    uri: string,
-    asset: neon.DestinationAsset,
-  ): Promise<number> {
+  async resourceToAsset(uri: string, asset: DestinationAsset): Promise<number> {
     return neon.readerResourceToAsset.call(this.reader, uri, asset);
   }
 
-  static async fromAsset(asset: neon.SourceAsset): Promise<Reader> {
+  static async fromAsset(asset: SourceAsset): Promise<Reader> {
     const reader = await neon.readerFromAsset(asset);
     return new Reader(reader);
   }
 
   static async fromManifestDataAndAsset(
     manifestData: Buffer,
-    asset: neon.SourceAsset,
+    asset: SourceAsset,
   ): Promise<Reader> {
     const reader = await neon.readerFromManifestDataAndAsset(
       manifestData,
@@ -58,7 +62,7 @@ export class Reader implements neon.Reader {
     return manifestStore.active_manifest ?? undefined;
   }
 
-  getActive(): neon.Manifest | undefined {
+  getActive(): Manifest | undefined {
     const manifestStore = this.json();
     const activeManifest = manifestStore.active_manifest;
 

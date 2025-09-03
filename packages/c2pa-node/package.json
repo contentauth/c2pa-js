@@ -15,12 +15,12 @@
     "node": ">=18.20.2"
   },
   "scripts": {
-    "build": "run-s build:rust build:ts build:docs",
+    "build": "run-s build:rust build:ts",
     "build:debug": "run-s build:rust-debug build:ts",
     "build:docs": "rimraf docs && typedoc --plugin typedoc-plugin-markdown --readme none --out docs js-src/index.ts",
     "build:rust": "pnpm run build:rust-debug --release",
     "build:rust-debug": "cargo build --message-format=json-render-diagnostics > cargo.log",
-    "build:ts": "tsc -b && cpy index.node dist && cpy --flat js-src/types.d.ts dist/types && node scripts/fix-types.js",
+    "build:ts": "tsc -b && cpy index.node dist && cpy --flat js-src/types.d.ts dist/types",
     "changeset:publish": "changeset publish",
     "ci": "run-s build:rust-debug build:ts test",
     "clean": "rimraf dist generated target",
