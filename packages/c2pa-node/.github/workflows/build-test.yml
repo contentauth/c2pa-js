@@ -36,7 +36,10 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - run: pnpm install
+      - name: Install dependencies
+        env:
+          SKIP_RUST_BUILD: 1
+        run: pnpm install
 
       - run: pnpm run ci
 

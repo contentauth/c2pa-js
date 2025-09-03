@@ -15,7 +15,7 @@ const unzipper = require('unzipper');
 const os = require('node:os');
 const { mkdirp } = require('mkdirp');
 const { resolve } = require('node:path');
-const { exec } = require('node:child_process');
+const { exec, spawn } = require('node:child_process');
 const downloadTestCerts = require('./lib/download-test-certs.js');
 const { promisify } = require('node:util');
 
@@ -162,13 +162,30 @@ async function buildRust(root) {
 	const bindingsPath = resolve(generatedDir, 'c2pa.node');
 	const cargoPath = resolve(root, 'Cargo.toml');
 	await mkdirp(generatedDir);
+
 	return new Promise((resolve, reject) => {
-		const result = exec(
-			`npx cargo-cp-artifact -nc "${bindingsPath}" -- cargo build --message-format=json-render-diagnostics --release --manifest-path="${cargoPath}"`,
-			execCallback,
-		);
-		result.on('exit', (code) => {
-			code === 0 ? resolve() : reject();
+		const child = spawn('npx', [
+			'cargo-cp-artifact',
+			'-nc', bindingsPath,
+			'--',
+			'cargo', 'build',
+			'--message-format=json-render-diagnostics',
+			'--release',
+			`--manifest-path=${cargoPath}`
+		], {
+			stdio: 'inherit' // This will show real-time output
+		});
+
+		child.on('exit', (code) => {
+			if (code === 0) {
+				resolve();
+			} else {
+				reject(new Error(`Cargo build failed with exit code ${code}`));
+			}
+		});
+
+		child.on('error', (err) => {
+			reject(err);
 		});
 	});
 }
