@@ -124,7 +124,6 @@ jobs:
         run: |
           mkdir -p generated/${{matrix.target}}
           pnpm run build:rust --target=${{matrix.target}}
-          cp index.node generated
 
       - name: Build library
         id: build-library
@@ -132,7 +131,6 @@ jobs:
         run: |
           mkdir -p generated/${{matrix.target}}
           pnpm run build:rust --target=${{matrix.target}}
-          cp index.node generated
 
       - name: Package artifact
         id: package-artifact
@@ -141,7 +139,7 @@ jobs:
         env:
           ARCHIVE_FILENAME: c2pa-node_${{matrix.target}}-v${{ env.PUBLISHED_VERSION || '-dev' }}.zip
         run: |
-          cd generated
+          cd generated/${{matrix.target}}
           7z a -tzip "${{ env.ARCHIVE_FILENAME }}" c2pa.node
           echo "archive=${{ env.ARCHIVE_FILENAME }}" >> "$GITHUB_OUTPUT"
 
