@@ -139,6 +139,7 @@ jobs:
         env:
           ARCHIVE_FILENAME: c2pa-node_${{matrix.target}}-v${{ env.PUBLISHED_VERSION || '-dev' }}.zip
         run: |
+          ls -lR generated
           cd generated/${{matrix.target}}
           7z a -tzip "${{ env.ARCHIVE_FILENAME }}" c2pa.node
           echo "archive=${{ env.ARCHIVE_FILENAME }}" >> "$GITHUB_OUTPUT"
