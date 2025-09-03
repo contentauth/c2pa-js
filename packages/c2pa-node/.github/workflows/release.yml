@@ -8,48 +8,48 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  release:
-    name: Release
-    runs-on: ubuntu-latest
-    outputs:
-      published: ${{ steps.changesets.outputs.published }}
-      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
-    env:
-      COREPACK_ENABLE_STRICT: 0
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
-
-      - name: Install pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@latest --activate
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install Dependencies
-        env:
-          SKIP_RUST_BUILD: 1
-        run: pnpm install
-
-      - name: Create Release Pull Request or Publish to npm
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          publish: pnpm release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Check object
-        run: |
-          cat << OBJECT
-          ${{ toJson(steps.changesets.outputs) }}
-          OBJECT
+  # release:
+  #   name: Release
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     published: ${{ steps.changesets.outputs.published }}
+  #     publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
+  #   env:
+  #     COREPACK_ENABLE_STRICT: 0
+  #   steps:
+  #     - name: Checkout Repo
+  #       uses: actions/checkout@v3
+  #
+  #     - name: Install pnpm
+  #       run: |
+  #         corepack enable
+  #         corepack prepare pnpm@latest --activate
+  #
+  #     - name: Install Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22
+  #         cache: pnpm
+  #
+  #     - name: Install Dependencies
+  #       env:
+  #         SKIP_RUST_BUILD: 1
+  #       run: pnpm install
+  #
+  #     - name: Create Release Pull Request or Publish to npm
+  #       id: changesets
+  #       uses: changesets/action@v1
+  #       with:
+  #         publish: pnpm release
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+  #
+  #     - name: Check object
+  #       run: |
+  #         cat << OBJECT
+  #         ${{ toJson(steps.changesets.outputs) }}
+  #         OBJECT
 
   release-binaries:
     needs: release
@@ -125,6 +125,7 @@ jobs:
         run: |
           mkdir -p generated/${{matrix.target}}
           pnpm run build:rust --target=${{matrix.target}}
+          cp index.node generated
 
       - name: Build library
         id: build-library
@@ -132,6 +133,7 @@ jobs:
         run: |
           mkdir -p generated/${{matrix.target}}
           pnpm run build:rust --target=${{matrix.target}}
+          cp index.node generated
 
       - name: Package artifact
         id: package-artifact
