@@ -151,7 +151,7 @@ async function rustExists() {
 	try {
 		await Promise.all([pExec('rustc --version'), pExec('cargo --version')]);
 		return true;
-	} catch (err) {
+	} catch {
 		return false;
 	}
 }

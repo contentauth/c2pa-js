@@ -61,10 +61,31 @@ module.exports = [
 		},
 	},
 	{
+		files: ['scripts/**/*.js'],
+		languageOptions: {
+			ecmaVersion: 'latest',
+			sourceType: 'commonjs',
+			globals: {
+				console: 'readonly',
+				process: 'readonly',
+				Buffer: 'readonly',
+				__dirname: 'readonly',
+				__filename: 'readonly',
+				global: 'readonly',
+				module: 'readonly',
+				require: 'readonly',
+				exports: 'readonly',
+			},
+		},
+		rules: {
+			'no-console': 'off',
+			'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+		},
+	},
+	{
 		ignores: [
 			'dist/',
 			'node_modules/',
-			'*.js',
 			'**/*.d.ts',
 			'*.config.js',
 			'*.config.mjs',
