@@ -49,13 +49,21 @@ const workerFunctions = {
   },
 
   // Reader object methods
-  reader_json(readerId: number): WorkerResponse<string> {
-    const reader = readerMap.get(readerId);
-    return { data: reader.json() };
-  },
   reader_activeLabel(readerId: number): WorkerResponse<string | null> {
     const reader = readerMap.get(readerId);
     return { data: reader.activeLabel() ?? null };
+  },
+  reader_manifestStore(readerId: number): WorkerResponse<any> {
+    const reader = readerMap.get(readerId);
+    return { data: reader.manifestStore() };
+  },
+  reader_activeManifest(readerId: number): WorkerResponse<any> {
+    const reader = readerMap.get(readerId);
+    return { data: reader.activeManifest() };
+  },
+  reader_json(readerId: number): WorkerResponse<string> {
+    const reader = readerMap.get(readerId);
+    return { data: reader.json() };
   },
   reader_resourceToBuffer(
     readerId: number,

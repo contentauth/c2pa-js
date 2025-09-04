@@ -5,7 +5,11 @@ use schemars::{schema::RootSchema, schema_for};
 
 fn main() {
     let output_dir = Path::new("./schemas");
-    fs::remove_dir_all(output_dir).expect("Could not clear existing schema directory");
+
+    if fs::exists(output_dir).unwrap() {
+        fs::remove_dir_all(output_dir).expect("Could not clear existing schema directory");
+    }
+
     fs::create_dir_all(output_dir).expect("Could not create schema directory");
 
     write_schema(&schema_for!(Reader), &"ManifestStore", output_dir);

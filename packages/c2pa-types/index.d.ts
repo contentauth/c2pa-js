@@ -10,6 +10,7 @@
 import type { Reader } from './types/ManifestStore.js';
 
 // Renames the auto-generated "Reader" type to the more appropriate "ManifestStore"
+// eslint-disable-next-line @typescript-eslint/no-empty-interface, @typescript-eslint/no-empty-object-type
 export interface ManifestStore extends Reader {}
 
 export type { Manifest } from './types/ManifestStore.js';

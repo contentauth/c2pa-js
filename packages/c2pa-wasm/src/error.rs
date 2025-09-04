@@ -15,6 +15,9 @@ pub enum WasmError {
     C2pa(#[from] c2pa::Error),
 
     #[error(transparent)]
+    Serde(#[from] serde_wasm_bindgen::Error),
+
+    #[error(transparent)]
     Other(Box<dyn Error>),
 }
 

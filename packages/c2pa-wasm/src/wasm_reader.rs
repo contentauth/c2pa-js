@@ -9,6 +9,8 @@ use std::io::{Cursor, Read, Seek};
 
 use c2pa::{identity::validator::CawgValidator, Reader};
 use js_sys::{ArrayBuffer, Error as JsError, Uint8Array};
+use serde::Serialize;
+use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 use web_sys::Blob;
 
@@ -18,6 +20,7 @@ use crate::{error::WasmError, stream::BlobStream};
 #[wasm_bindgen]
 pub struct WasmReader {
     reader: Reader,
+    serializer: Serializer,
 }
 
 #[wasm_bindgen]
@@ -33,17 +36,11 @@ impl WasmReader {
         format: &str,
         stream: impl Read + Seek + Send,
     ) -> Result<WasmReader, JsError> {
-        let mut reader = Reader::from_stream_async(format, stream)
+        let reader = Reader::from_stream_async(format, stream)
             .await
             .map_err(WasmError::from)?;
 
-        // This will be removed once CawgValidation is rolled into the reader
-        reader
-            .post_validate_async(&CawgValidator {})
-            .await
-            .map_err(WasmError::other)?;
-
-        Ok(WasmReader { reader })
+        Ok(WasmReader::from_reader(reader).await?)
     }
 
     /// Attempts to create a new `WasmReader` from an asset format, a `Blob` of the bytes of the initial segment, and a fragment `Blob`.
@@ -64,9 +61,15 @@ impl WasmReader {
         init: impl Read + Seek + Send,
         fragment: impl Read + Seek + Send,
     ) -> Result<WasmReader, JsError> {
-        let mut reader = Reader::from_fragment_async(format, init, fragment)
+        let reader = Reader::from_fragment_async(format, init, fragment)
             .await
             .map_err(WasmError::other)?;
+
+        Ok(WasmReader::from_reader(reader).await?)
+    }
+
+    async fn from_reader(mut reader: Reader) -> Result<WasmReader, JsError> {
+        let serializer = Serializer::new().serialize_maps_as_objects(true);
 
         // This will be removed once CawgValidation is rolled into the reader
         reader
@@ -74,19 +77,44 @@ impl WasmReader {
             .await
             .map_err(WasmError::other)?;
 
-        Ok(WasmReader { reader })
-    }
-
-    /// Returns a JSON representation of the asset's manifest store.
-    #[wasm_bindgen]
-    pub fn json(&self) -> String {
-        self.reader.json()
+        Ok(WasmReader { reader, serializer })
     }
 
     /// Returns the label of the asset's active manifest.
     #[wasm_bindgen(js_name = activeLabel)]
     pub fn active_label(&self) -> Option<String> {
         self.reader.active_label().map(|val| val.to_owned())
+    }
+
+    /// Returns the asset's manifest store.
+    /// NOTE: at the moment, CAWG data is not decoded via this function. Use WasmReader::json() if CAWG is a requirement.
+    #[wasm_bindgen(js_name = manifestStore)]
+    pub fn manifest_store(&self) -> Result<JsValue, JsError> {
+        let manifest_store = self
+            .reader
+            .serialize(&self.serializer)
+            .map_err(WasmError::from)?;
+
+        Ok(manifest_store)
+    }
+
+    /// Returns the asset's active manifest.
+    /// NOTE: at the moment, CAWG data is not decoded via this function. Use WasmReader::json() if CAWG is a requirement.
+    #[wasm_bindgen(js_name = activeManifest)]
+    pub fn active_manifest(&self) -> Result<JsValue, JsError> {
+        let active_manifest = self
+            .reader
+            .active_manifest()
+            .serialize(&self.serializer)
+            .map_err(WasmError::from)?;
+
+        Ok(active_manifest)
+    }
+
+    /// Returns a JSON representation of the asset's manifest store.
+    #[wasm_bindgen]
+    pub fn json(&self) -> String {
+        self.reader.json()
     }
 
     /// Accepts a URI reference to a binary object in the resource store and returns a `js_sys::ArrayBuffer` containing the resource's bytes.
