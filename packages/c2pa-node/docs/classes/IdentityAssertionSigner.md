@@ -6,11 +6,11 @@
 
 # Class: IdentityAssertionSigner
 
-Defined in: [IdentityAssertion.ts:45](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/IdentityAssertion.ts#L45)
+Defined in: [IdentityAssertion.ts:51](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L51)
 
 ## Implements
 
-- `IdentityAssertionSigner`
+- [`IdentityAssertionSignerInterface`](../interfaces/IdentityAssertionSignerInterface.md)
 
 ## Methods
 
@@ -18,7 +18,7 @@ Defined in: [IdentityAssertion.ts:45](https://github.com/contentauth/c2pa-node-v
 
 > **addIdentityAssertion**(`identityAssertionBuilder`): `void`
 
-Defined in: [IdentityAssertion.ts:53](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/IdentityAssertion.ts#L53)
+Defined in: [IdentityAssertion.ts:61](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L61)
 
 Add a IdentityAssertionBuilder  to be used when signing the
 next Manifest
@@ -38,19 +38,19 @@ IdentityAssertionBuilders will be cleared.
 
 #### Implementation of
 
-`neon.IdentityAssertionSigner.addIdentityAssertion`
+[`IdentityAssertionSignerInterface`](../interfaces/IdentityAssertionSignerInterface.md).[`addIdentityAssertion`](../interfaces/IdentityAssertionSignerInterface.md#addidentityassertion)
 
 ***
 
 ### signer()
 
-> **signer**(): `IdentityAssertionSigner`
+> **signer**(): [`IdentityAssertionSignerInterface`](../interfaces/IdentityAssertionSignerInterface.md)
 
-Defined in: [IdentityAssertion.ts:62](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/IdentityAssertion.ts#L62)
+Defined in: [IdentityAssertion.ts:70](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L70)
 
 #### Returns
 
-`IdentityAssertionSigner`
+[`IdentityAssertionSignerInterface`](../interfaces/IdentityAssertionSignerInterface.md)
 
 ***
 
@@ -58,13 +58,13 @@ Defined in: [IdentityAssertion.ts:62](https://github.com/contentauth/c2pa-node-v
 
 > `static` **new**(`signer`): `IdentityAssertionSigner`
 
-Defined in: [IdentityAssertion.ts:48](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/IdentityAssertion.ts#L48)
+Defined in: [IdentityAssertion.ts:56](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L56)
 
 #### Parameters
 
 ##### signer
 
-[`CallbackSigner`](CallbackSigner.md)
+[`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md)
 
 #### Returns
 

@@ -6,11 +6,11 @@
 
 # Class: Builder
 
-Defined in: [Builder.ts:17](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L17)
+Defined in: [Builder.ts:29](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L29)
 
 ## Implements
 
-- `Builder`
+- [`BuilderInterface`](../interfaces/BuilderInterface.md)
 
 ## Methods
 
@@ -18,7 +18,7 @@ Defined in: [Builder.ts:17](https://github.com/contentauth/c2pa-node-v2/blob/1df
 
 > **addAssertion**(`label`, `assertion`, `assertionKind?`): `void`
 
-Defined in: [Builder.ts:52](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L52)
+Defined in: [Builder.ts:64](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L64)
 
 Add CBOR assertion to the builder
 
@@ -46,7 +46,7 @@ The CBOR encoded assertion
 
 #### Implementation of
 
-`neon.Builder.addAssertion`
+[`BuilderInterface`](../interfaces/BuilderInterface.md).[`addAssertion`](../interfaces/BuilderInterface.md#addassertion)
 
 ***
 
@@ -54,7 +54,7 @@ The CBOR encoded assertion
 
 > **addIngredient**(`ingredientJson`, `ingredient`): `Promise`\<`void`\>
 
-Defined in: [Builder.ts:69](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L69)
+Defined in: [Builder.ts:81](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L81)
 
 Add an ingredient from a buffer or file
 
@@ -78,7 +78,7 @@ The source and format of the ingredient
 
 #### Implementation of
 
-`neon.Builder.addIngredient`
+[`BuilderInterface`](../interfaces/BuilderInterface.md).[`addIngredient`](../interfaces/BuilderInterface.md#addingredient)
 
 ***
 
@@ -86,7 +86,7 @@ The source and format of the ingredient
 
 > **addResource**(`uri`, `resource`): `Promise`\<`void`\>
 
-Defined in: [Builder.ts:65](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L65)
+Defined in: [Builder.ts:77](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L77)
 
 Add a resource from a buffer or file
 
@@ -110,7 +110,7 @@ The source and format of the resource
 
 #### Implementation of
 
-`neon.Builder.addResource`
+[`BuilderInterface`](../interfaces/BuilderInterface.md).[`addResource`](../interfaces/BuilderInterface.md#addresource)
 
 ***
 
@@ -118,7 +118,7 @@ The source and format of the resource
 
 > **getManifestDefinition**(): [`ManifestDefinition`](../interfaces/ManifestDefinition.md)
 
-Defined in: [Builder.ts:184](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L184)
+Defined in: [Builder.ts:196](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L196)
 
 Getter for the builder's manifest definition
 
@@ -130,7 +130,7 @@ The manifest definition
 
 #### Implementation of
 
-`neon.Builder.getManifestDefinition`
+[`BuilderInterface`](../interfaces/BuilderInterface.md).[`getManifestDefinition`](../interfaces/BuilderInterface.md#getmanifestdefinition)
 
 ***
 
@@ -138,7 +138,7 @@ The manifest definition
 
 > **identitySignAsync**(`signer`, `input`, `output`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
 
-Defined in: [Builder.ts:158](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L158)
+Defined in: [Builder.ts:170](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L170)
 
 Sign an asset from a buffer or file asynchronously, using an
 IdentityAssertionSigner
@@ -167,7 +167,7 @@ the bytes of the c2pa_manifest that was embedded
 
 #### Implementation of
 
-`neon.Builder.identitySignAsync`
+[`BuilderInterface`](../interfaces/BuilderInterface.md).[`identitySignAsync`](../interfaces/BuilderInterface.md#identitysignasync)
 
 ***
 
@@ -175,7 +175,7 @@ the bytes of the c2pa_manifest that was embedded
 
 > **setNoEmbed**(`noEmbed`): `void`
 
-Defined in: [Builder.ts:44](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L44)
+Defined in: [Builder.ts:56](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L56)
 
 Set the no embed flag of the manifest
 
@@ -193,7 +193,7 @@ The no embed flag of the manifest
 
 #### Implementation of
 
-`neon.Builder.setNoEmbed`
+[`BuilderInterface`](../interfaces/BuilderInterface.md).[`setNoEmbed`](../interfaces/BuilderInterface.md#setnoembed)
 
 ***
 
@@ -201,7 +201,7 @@ The no embed flag of the manifest
 
 > **setRemoteUrl**(`remoteUrl`): `void`
 
-Defined in: [Builder.ts:48](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L48)
+Defined in: [Builder.ts:60](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L60)
 
 Set the remote URL of the manifest
 
@@ -217,7 +217,7 @@ Set the remote URL of the manifest
 
 #### Implementation of
 
-`neon.Builder.setRemoteUrl`
+[`BuilderInterface`](../interfaces/BuilderInterface.md).[`setRemoteUrl`](../interfaces/BuilderInterface.md#setremoteurl)
 
 ***
 
@@ -225,7 +225,7 @@ Set the remote URL of the manifest
 
 > **sign**(`signer`, `input`, `output`): `Buffer`
 
-Defined in: [Builder.ts:88](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L88)
+Defined in: [Builder.ts:100](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L100)
 
 Sign an asset from a buffer or file
 
@@ -233,7 +233,7 @@ Sign an asset from a buffer or file
 
 ##### signer
 
-[`LocalSigner`](LocalSigner.md)
+[`LocalSignerInterface`](../interfaces/LocalSignerInterface.md)
 
 The local signer to use
 
@@ -253,7 +253,7 @@ the bytes of the c2pa_manifest that was embedded
 
 #### Implementation of
 
-`neon.Builder.sign`
+[`BuilderInterface`](../interfaces/BuilderInterface.md).[`sign`](../interfaces/BuilderInterface.md#sign)
 
 ***
 
@@ -261,7 +261,7 @@ the bytes of the c2pa_manifest that was embedded
 
 > **signAsync**(`signer`, `input`, `output`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
 
-Defined in: [Builder.ts:132](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L132)
+Defined in: [Builder.ts:144](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L144)
 
 Sign an asset from a buffer or file asynchronously, using a
 CallbackSigner
@@ -270,7 +270,7 @@ CallbackSigner
 
 ##### signer
 
-[`CallbackSigner`](CallbackSigner.md)
+[`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md)
 
 ##### input
 
@@ -288,7 +288,7 @@ the bytes of the c2pa_manifest that was embedded
 
 #### Implementation of
 
-`neon.Builder.signAsync`
+[`BuilderInterface`](../interfaces/BuilderInterface.md).[`signAsync`](../interfaces/BuilderInterface.md#signasync)
 
 ***
 
@@ -296,7 +296,7 @@ the bytes of the c2pa_manifest that was embedded
 
 > **signConfigAsync**(`callback`, `signerConfig`, `input`, `output`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
 
-Defined in: [Builder.ts:105](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L105)
+Defined in: [Builder.ts:117](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L117)
 
 Sign an asset from a buffer or file asynchronously, using a callback
 and not passing a private key
@@ -331,7 +331,7 @@ the bytes of the c2pa_manifest that was embedded
 
 #### Implementation of
 
-`neon.Builder.signConfigAsync`
+[`BuilderInterface`](../interfaces/BuilderInterface.md).[`signConfigAsync`](../interfaces/BuilderInterface.md#signconfigasync)
 
 ***
 
@@ -339,7 +339,7 @@ the bytes of the c2pa_manifest that was embedded
 
 > **signFile**(`signer`, `filePath`, `output`): `Buffer`
 
-Defined in: [Builder.ts:96](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L96)
+Defined in: [Builder.ts:108](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L108)
 
 Embed a signed manifest into a stream using the LocalSigner
 
@@ -347,7 +347,7 @@ Embed a signed manifest into a stream using the LocalSigner
 
 ##### signer
 
-[`LocalSigner`](LocalSigner.md)
+[`LocalSignerInterface`](../interfaces/LocalSignerInterface.md)
 
 The local signer to use
 
@@ -367,7 +367,7 @@ the bytes of the c2pa_manifest that was embedded
 
 #### Implementation of
 
-`neon.Builder.signFile`
+[`BuilderInterface`](../interfaces/BuilderInterface.md).[`signFile`](../interfaces/BuilderInterface.md#signfile)
 
 ***
 
@@ -375,7 +375,7 @@ the bytes of the c2pa_manifest that was embedded
 
 > **toArchive**(`asset`): `Promise`\<`void`\>
 
-Defined in: [Builder.ts:80](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L80)
+Defined in: [Builder.ts:92](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L92)
 
 Convert the Builder into a archive formatted buffer or file
 
@@ -393,7 +393,7 @@ The file or buffer for the archive
 
 #### Implementation of
 
-`neon.Builder.toArchive`
+[`BuilderInterface`](../interfaces/BuilderInterface.md).[`toArchive`](../interfaces/BuilderInterface.md#toarchive)
 
 ***
 
@@ -401,7 +401,7 @@ The file or buffer for the archive
 
 > **updateManifestProperty**(`property`, `value`): `void`
 
-Defined in: [Builder.ts:188](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L188)
+Defined in: [Builder.ts:200](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L200)
 
 Update a string property of the manifest
 
@@ -423,7 +423,7 @@ The manifest definition
 
 #### Implementation of
 
-`neon.Builder.updateManifestProperty`
+[`BuilderInterface`](../interfaces/BuilderInterface.md).[`updateManifestProperty`](../interfaces/BuilderInterface.md#updatemanifestproperty)
 
 ***
 
@@ -431,7 +431,7 @@ The manifest definition
 
 > `static` **fromArchive**(`asset`): `Promise`\<`Builder`\>
 
-Defined in: [Builder.ts:84](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L84)
+Defined in: [Builder.ts:96](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L96)
 
 #### Parameters
 
@@ -449,7 +449,7 @@ Defined in: [Builder.ts:84](https://github.com/contentauth/c2pa-node-v2/blob/1df
 
 > `static` **new**(): `Builder`
 
-Defined in: [Builder.ts:20](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L20)
+Defined in: [Builder.ts:32](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L32)
 
 #### Returns
 
@@ -461,7 +461,7 @@ Defined in: [Builder.ts:20](https://github.com/contentauth/c2pa-node-v2/blob/1df
 
 > `static` **withJson**(`json`): `Builder`
 
-Defined in: [Builder.ts:25](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Builder.ts#L25)
+Defined in: [Builder.ts:37](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Builder.ts#L37)
 
 #### Parameters
 
