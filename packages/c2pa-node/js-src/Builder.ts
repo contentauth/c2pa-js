@@ -11,7 +11,7 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import * as neon from "index.node";
+import * as neon from "./index.node";
 import { IdentityAssertionSigner } from "./IdentityAssertion";
 import type {
   BuilderInterface,

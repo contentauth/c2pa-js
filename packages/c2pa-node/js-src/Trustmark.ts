@@ -12,7 +12,7 @@
 // each license.
 //const neon = require("../index.node");
 
-import * as neon from "index.node";
+import * as neon from "./index.node";
 import type {
   TrustmarkInterface as TrustmarkInterface,
   TrustmarkConfig,
