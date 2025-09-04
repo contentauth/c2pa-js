@@ -30,7 +30,8 @@
     }
   },
   "dependencies": {
-    "@contentauth/c2pa-wasm": "workspace:*"
+    "@contentauth/c2pa-wasm": "workspace:*",
+    "@contentauth/c2pa-types": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
