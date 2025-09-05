@@ -13,9 +13,9 @@
     "module": "commonjs",
     "types": ["node", "jest"],
     "paths": {
-      "index.node": ["./index.node"]
+      "index.node": ["./js-src/index.node"]
     },
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
   },
   "include": [
     "js-src/*.ts"

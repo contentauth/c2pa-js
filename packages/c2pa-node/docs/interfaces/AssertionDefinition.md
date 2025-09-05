@@ -6,7 +6,7 @@
 
 # Interface: AssertionDefinition
 
-Defined in: [types.d.ts:462](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L462)
+Defined in: [types.d.ts:461](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L461)
 
 ## Indexable
 
@@ -18,7 +18,7 @@ Defined in: [types.d.ts:462](https://github.com/contentauth/c2pa-node-v2/blob/1d
 
 > **data**: `unknown`
 
-Defined in: [types.d.ts:463](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L463)
+Defined in: [types.d.ts:462](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L462)
 
 ***
 
@@ -26,4 +26,4 @@ Defined in: [types.d.ts:463](https://github.com/contentauth/c2pa-node-v2/blob/1d
 
 > **label**: `string`
 
-Defined in: [types.d.ts:464](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L464)
+Defined in: [types.d.ts:463](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L463)

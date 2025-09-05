@@ -6,7 +6,7 @@
 
 # Interface: DataSource
 
-Defined in: [types.d.ts:327](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L327)
+Defined in: [types.d.ts:326](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L326)
 
 A description of the source for assertion data
 
@@ -20,7 +20,7 @@ A description of the source for assertion data
 
 > `optional` **actors**: [`Actor`](Actor.md)[]
 
-Defined in: [types.d.ts:331](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L331)
+Defined in: [types.d.ts:330](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L330)
 
 A list of [`Actor`]s associated with this source
 
@@ -30,7 +30,7 @@ A list of [`Actor`]s associated with this source
 
 > `optional` **details**: `string`
 
-Defined in: [types.d.ts:335](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L335)
+Defined in: [types.d.ts:334](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L334)
 
 A human-readable string giving details about the source of the assertion data
 
@@ -40,6 +40,6 @@ A human-readable string giving details about the source of the assertion data
 
 > **type**: `string`
 
-Defined in: [types.d.ts:339](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L339)
+Defined in: [types.d.ts:338](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L338)
 
 A value from among the enumerated list indicating the source of the assertion

@@ -6,7 +6,7 @@
 
 # Interface: ClaimGeneratorInfo
 
-Defined in: [types.d.ts:172](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L172)
+Defined in: [types.d.ts:171](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L171)
 
 Description of the claim generator, or the software used in generating the claim
 
@@ -22,7 +22,7 @@ This structure is also used for actions softwareAgent
 
 > `optional` **icon**: [`UriOrResource`](../type-aliases/UriOrResource.md)
 
-Defined in: [types.d.ts:176](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L176)
+Defined in: [types.d.ts:175](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L175)
 
 hashed URI to the icon (either embedded or remote)
 
@@ -32,7 +32,7 @@ hashed URI to the icon (either embedded or remote)
 
 > **name**: `string`
 
-Defined in: [types.d.ts:180](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L180)
+Defined in: [types.d.ts:179](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L179)
 
 A human readable string naming the claim_generator
 
@@ -42,6 +42,6 @@ A human readable string naming the claim_generator
 
 > `optional` **version**: `string`
 
-Defined in: [types.d.ts:184](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L184)
+Defined in: [types.d.ts:183](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L183)
 
 A human readable string of the product's version

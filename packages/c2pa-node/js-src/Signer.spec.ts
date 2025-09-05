@@ -11,8 +11,8 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import { CallbackSigner } from "./index";
-import { JsCallbackSignerConfig, SigningAlg } from "index.node";
+import { CallbackSigner } from "./Signer";
+import type { JsCallbackSignerConfig, SigningAlg } from "./types";
 import * as fs from "fs-extra";
 import * as crypto from "crypto";
 

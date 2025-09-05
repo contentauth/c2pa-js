@@ -6,7 +6,7 @@
 
 # Interface: JsCallbackSignerConfig
 
-Defined in: [types.d.ts:556](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L556)
+Defined in: [types.d.ts:555](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L555)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.d.ts:556](https://github.com/contentauth/c2pa-node-v2/blob/1d
 
 > **alg**: [`SigningAlg`](../type-aliases/SigningAlg.md)
 
-Defined in: [types.d.ts:557](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L557)
+Defined in: [types.d.ts:556](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L556)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [types.d.ts:557](https://github.com/contentauth/c2pa-node-v2/blob/1d
 
 > **certs**: `Buffer`\<`ArrayBufferLike`\>[]
 
-Defined in: [types.d.ts:558](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L558)
+Defined in: [types.d.ts:557](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L557)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [types.d.ts:558](https://github.com/contentauth/c2pa-node-v2/blob/1d
 
 > **reserveSize**: `number`
 
-Defined in: [types.d.ts:559](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L559)
+Defined in: [types.d.ts:558](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L558)
 
 ***
 
@@ -38,7 +38,7 @@ Defined in: [types.d.ts:559](https://github.com/contentauth/c2pa-node-v2/blob/1d
 
 > `optional` **tsaBody**: `Buffer`\<`ArrayBufferLike`\>
 
-Defined in: [types.d.ts:562](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L562)
+Defined in: [types.d.ts:561](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L561)
 
 ***
 
@@ -46,7 +46,7 @@ Defined in: [types.d.ts:562](https://github.com/contentauth/c2pa-node-v2/blob/1d
 
 > `optional` **tsaHeaders**: \[`string`, `string`\][]
 
-Defined in: [types.d.ts:561](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L561)
+Defined in: [types.d.ts:560](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L560)
 
 ***
 
@@ -54,4 +54,4 @@ Defined in: [types.d.ts:561](https://github.com/contentauth/c2pa-node-v2/blob/1d
 
 > `optional` **tsaUrl**: `string`
 
-Defined in: [types.d.ts:560](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L560)
+Defined in: [types.d.ts:559](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L559)

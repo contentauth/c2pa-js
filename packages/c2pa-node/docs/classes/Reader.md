@@ -6,11 +6,11 @@
 
 # Class: Reader
 
-Defined in: [Reader.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Reader.ts#L16)
+Defined in: [Reader.ts:23](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L23)
 
 ## Implements
 
-- `Reader`
+- [`ReaderInterface`](../interfaces/ReaderInterface.md)
 
 ## Methods
 
@@ -18,7 +18,7 @@ Defined in: [Reader.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > **activeLabel**(): `undefined` \| `string`
 
-Defined in: [Reader.ts:56](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Reader.ts#L56)
+Defined in: [Reader.ts:60](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L60)
 
 #### Returns
 
@@ -30,7 +30,7 @@ Defined in: [Reader.ts:56](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > **getActive**(): `undefined` \| [`Manifest`](../interfaces/Manifest.md)
 
-Defined in: [Reader.ts:61](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Reader.ts#L61)
+Defined in: [Reader.ts:65](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L65)
 
 #### Returns
 
@@ -42,7 +42,7 @@ Defined in: [Reader.ts:61](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > **isEmbedded**(): `boolean`
 
-Defined in: [Reader.ts:27](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Reader.ts#L27)
+Defined in: [Reader.ts:34](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L34)
 
 Returns true if the the reader was created from an embedded manifest
 
@@ -52,7 +52,7 @@ Returns true if the the reader was created from an embedded manifest
 
 #### Implementation of
 
-`neon.Reader.isEmbedded`
+[`ReaderInterface`](../interfaces/ReaderInterface.md).[`isEmbedded`](../interfaces/ReaderInterface.md#isembedded)
 
 ***
 
@@ -60,7 +60,7 @@ Returns true if the the reader was created from an embedded manifest
 
 > **json**(): [`ManifestStore`](../interfaces/ManifestStore.md)
 
-Defined in: [Reader.ts:19](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Reader.ts#L19)
+Defined in: [Reader.ts:26](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L26)
 
 Get the JSON representation of the manifest
 
@@ -70,7 +70,7 @@ Get the JSON representation of the manifest
 
 #### Implementation of
 
-`neon.Reader.json`
+[`ReaderInterface`](../interfaces/ReaderInterface.md).[`json`](../interfaces/ReaderInterface.md#json)
 
 ***
 
@@ -78,7 +78,7 @@ Get the JSON representation of the manifest
 
 > **postValidateCawg**(): `Promise`\<`void`\>
 
-Defined in: [Reader.ts:72](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Reader.ts#L72)
+Defined in: [Reader.ts:76](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L76)
 
 Run CAWG validation
 
@@ -88,7 +88,7 @@ Run CAWG validation
 
 #### Implementation of
 
-`neon.Reader.postValidateCawg`
+[`ReaderInterface`](../interfaces/ReaderInterface.md).[`postValidateCawg`](../interfaces/ReaderInterface.md#postvalidatecawg)
 
 ***
 
@@ -96,7 +96,7 @@ Run CAWG validation
 
 > **remoteUrl**(): `string`
 
-Defined in: [Reader.ts:23](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Reader.ts#L23)
+Defined in: [Reader.ts:30](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L30)
 
 Get the remote url of the manifest if this reader obtained the manifest remotely
 
@@ -106,7 +106,7 @@ Get the remote url of the manifest if this reader obtained the manifest remotely
 
 #### Implementation of
 
-`neon.Reader.remoteUrl`
+[`ReaderInterface`](../interfaces/ReaderInterface.md).[`remoteUrl`](../interfaces/ReaderInterface.md#remoteurl)
 
 ***
 
@@ -114,7 +114,7 @@ Get the remote url of the manifest if this reader obtained the manifest remotely
 
 > **resourceToAsset**(`uri`, `asset`): `Promise`\<`number`\>
 
-Defined in: [Reader.ts:31](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Reader.ts#L31)
+Defined in: [Reader.ts:38](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L38)
 
 Write a resource to a buffer or file
 
@@ -136,7 +136,7 @@ The URI of the resource
 
 #### Implementation of
 
-`neon.Reader.resourceToAsset`
+[`ReaderInterface`](../interfaces/ReaderInterface.md).[`resourceToAsset`](../interfaces/ReaderInterface.md#resourcetoasset)
 
 ***
 
@@ -144,7 +144,7 @@ The URI of the resource
 
 > `static` **fromAsset**(`asset`): `Promise`\<`Reader`\>
 
-Defined in: [Reader.ts:38](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Reader.ts#L38)
+Defined in: [Reader.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L42)
 
 #### Parameters
 
@@ -162,7 +162,7 @@ Defined in: [Reader.ts:38](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > `static` **fromManifestDataAndAsset**(`manifestData`, `asset`): `Promise`\<`Reader`\>
 
-Defined in: [Reader.ts:43](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Reader.ts#L43)
+Defined in: [Reader.ts:47](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L47)
 
 #### Parameters
 

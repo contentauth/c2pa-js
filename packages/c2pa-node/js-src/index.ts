@@ -11,7 +11,7 @@
 // specific language governing permissions and limitations under
 // each license.
 
-export * from "index.node";
+export type * from "./types";
 export { Builder } from "./Builder";
 export { Reader } from "./Reader";
 export { LocalSigner, CallbackSigner } from "./Signer";

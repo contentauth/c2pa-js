@@ -6,11 +6,11 @@
 
 # Class: IdentityAssertionBuilder
 
-Defined in: [IdentityAssertion.ts:17](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/IdentityAssertion.ts#L17)
+Defined in: [IdentityAssertion.ts:21](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L21)
 
 ## Implements
 
-- `IdentityAssertionBuilder`
+- [`IdentityAssertionBuilderInterface`](../interfaces/IdentityAssertionBuilderInterface.md)
 
 ## Methods
 
@@ -18,7 +18,7 @@ Defined in: [IdentityAssertion.ts:17](https://github.com/contentauth/c2pa-node-v
 
 > **addReferencedAssertions**(`referencedAssertions`): `void`
 
-Defined in: [IdentityAssertion.ts:29](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/IdentityAssertion.ts#L29)
+Defined in: [IdentityAssertion.ts:35](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L35)
 
 Add assertion labels to consider as referenced_assertions.
 If any of these labels match assertions that are present in the partial
@@ -39,7 +39,7 @@ The list of assertion labels to add
 
 #### Implementation of
 
-`neon.IdentityAssertionBuilder.addReferencedAssertions`
+[`IdentityAssertionBuilderInterface`](../interfaces/IdentityAssertionBuilderInterface.md).[`addReferencedAssertions`](../interfaces/IdentityAssertionBuilderInterface.md#addreferencedassertions)
 
 ***
 
@@ -47,7 +47,7 @@ The list of assertion labels to add
 
 > **addRoles**(`roles`): `void`
 
-Defined in: [IdentityAssertion.ts:36](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/IdentityAssertion.ts#L36)
+Defined in: [IdentityAssertion.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L42)
 
 Add roles to attach to the named actor for this identity assertion.
 
@@ -65,25 +65,25 @@ Named actor roles
 
 #### Implementation of
 
-`neon.IdentityAssertionBuilder.addRoles`
+[`IdentityAssertionBuilderInterface`](../interfaces/IdentityAssertionBuilderInterface.md).[`addRoles`](../interfaces/IdentityAssertionBuilderInterface.md#addroles)
 
 ***
 
 ### builder()
 
-> **builder**(): `IdentityAssertionBuilder`
+> **builder**(): [`IdentityAssertionBuilderInterface`](../interfaces/IdentityAssertionBuilderInterface.md)
 
-Defined in: [IdentityAssertion.ts:40](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/IdentityAssertion.ts#L40)
+Defined in: [IdentityAssertion.ts:46](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L46)
 
 Get the underlying IdentityAssertionBuilder
 
 #### Returns
 
-`IdentityAssertionBuilder`
+[`IdentityAssertionBuilderInterface`](../interfaces/IdentityAssertionBuilderInterface.md)
 
 #### Implementation of
 
-`neon.IdentityAssertionBuilder.builder`
+[`IdentityAssertionBuilderInterface`](../interfaces/IdentityAssertionBuilderInterface.md).[`builder`](../interfaces/IdentityAssertionBuilderInterface.md#builder)
 
 ***
 
@@ -91,13 +91,13 @@ Get the underlying IdentityAssertionBuilder
 
 > `static` **identityBuilderForCredentialHolder**(`credentialHolder`): `Promise`\<`IdentityAssertionBuilder`\>
 
-Defined in: [IdentityAssertion.ts:20](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/IdentityAssertion.ts#L20)
+Defined in: [IdentityAssertion.ts:26](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L26)
 
 #### Parameters
 
 ##### credentialHolder
 
-[`CallbackSigner`](CallbackSigner.md)
+[`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md)
 
 #### Returns
 

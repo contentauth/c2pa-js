@@ -6,7 +6,7 @@
 
 # Interface: Actor
 
-Defined in: [types.d.ts:346](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L346)
+Defined in: [types.d.ts:345](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L345)
 
 Identifies a person responsible for an action
 
@@ -20,7 +20,7 @@ Identifies a person responsible for an action
 
 > `optional` **credentials**: [`HashedUri`](HashedUri.md)[]
 
-Defined in: [types.d.ts:350](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L350)
+Defined in: [types.d.ts:349](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L349)
 
 List of references to W3C Verifiable Credentials
 
@@ -30,6 +30,6 @@ List of references to W3C Verifiable Credentials
 
 > `optional` **identifier**: `string`
 
-Defined in: [types.d.ts:354](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L354)
+Defined in: [types.d.ts:353](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L353)
 
 An identifier for a human actor, used when the "type" is `humanEntry.identified`

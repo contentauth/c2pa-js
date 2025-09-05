@@ -6,7 +6,7 @@
 
 # Interface: FileAsset
 
-Defined in: [types.d.ts:502](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L502)
+Defined in: [types.d.ts:501](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L501)
 
 A file that can be used either the source or destination
 
@@ -16,7 +16,7 @@ A file that can be used either the source or destination
 
 > `optional` **mimeType**: `string`
 
-Defined in: [types.d.ts:507](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L507)
+Defined in: [types.d.ts:506](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L506)
 
 ***
 
@@ -24,4 +24,4 @@ Defined in: [types.d.ts:507](https://github.com/contentauth/c2pa-node-v2/blob/1d
 
 > **path**: `string`
 
-Defined in: [types.d.ts:504](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L504)
+Defined in: [types.d.ts:503](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L503)

@@ -11,15 +11,21 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import * as neon from 'index.node';
+import * as neon from "./index.node";
+import type {
+  LocalSignerInterface,
+  CallbackSignerInterface,
+  SigningAlg,
+  JsCallbackSignerConfig,
+} from "./types";
 
-export class LocalSigner implements neon.LocalSigner {
-  private constructor(private localSigner: neon.LocalSigner) {}
+export class LocalSigner implements LocalSignerInterface {
+  private constructor(private localSigner: LocalSignerInterface) {}
 
   static newSigner(
     certificate: Buffer,
     privateKey: Buffer,
-    algorithm: neon.SigningAlg,
+    algorithm: SigningAlg,
     tsaUrl?: string,
   ) {
     const signer = neon.localSignerNew(
@@ -35,7 +41,7 @@ export class LocalSigner implements neon.LocalSigner {
     return neon.localSignerSign.call(this.localSigner, data);
   }
 
-  alg(): neon.SigningAlg {
+  alg(): SigningAlg {
     return neon.localSignerAlg.call(this.localSigner);
   }
 
@@ -51,20 +57,20 @@ export class LocalSigner implements neon.LocalSigner {
     return neon.localSignerTimeAuthorityUrl.call(this.localSigner);
   }
 
-  signer(): neon.LocalSigner {
+  signer(): LocalSignerInterface {
     return this.localSigner;
   }
 }
 
-export class CallbackSigner implements neon.CallbackSigner {
-  private constructor(private callbackSigner: neon.CallbackSigner) {}
+export class CallbackSigner implements CallbackSignerInterface {
+  private constructor(private callbackSigner: CallbackSignerInterface) {}
 
-  signer(): neon.CallbackSigner {
+  signer(): CallbackSignerInterface {
     return this.callbackSigner;
   }
 
   static newSigner(
-    config: neon.JsCallbackSignerConfig,
+    config: JsCallbackSignerConfig,
     callback: (data: Buffer) => Promise<Buffer>,
   ) {
     // Convert the config object to a JsBox<CallbackSignerConfig>
@@ -77,7 +83,7 @@ export class CallbackSigner implements neon.CallbackSigner {
     return neon.callbackSignerSign.call(this.callbackSigner, data);
   }
 
-  alg(): neon.SigningAlg {
+  alg(): SigningAlg {
     return neon.callbackSignerAlg.call(this.callbackSigner);
   }
 

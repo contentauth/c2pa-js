@@ -6,11 +6,13 @@
 
 # Class: LocalSigner
 
-Defined in: [Signer.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L16)
+Defined in: [Signer.ts:22](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L22)
+
+A signer that uses a local certificate and private key to sign data
 
 ## Implements
 
-- `LocalSigner`
+- [`LocalSignerInterface`](../interfaces/LocalSignerInterface.md)
 
 ## Methods
 
@@ -18,7 +20,7 @@ Defined in: [Signer.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > **alg**(): [`SigningAlg`](../type-aliases/SigningAlg.md)
 
-Defined in: [Signer.ts:38](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L38)
+Defined in: [Signer.ts:44](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L44)
 
 #### Returns
 
@@ -26,7 +28,7 @@ Defined in: [Signer.ts:38](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 #### Implementation of
 
-`neon.LocalSigner.alg`
+[`LocalSignerInterface`](../interfaces/LocalSignerInterface.md).[`alg`](../interfaces/LocalSignerInterface.md#alg)
 
 ***
 
@@ -34,7 +36,7 @@ Defined in: [Signer.ts:38](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > **certs**(): `Buffer`\<`ArrayBufferLike`\>[]
 
-Defined in: [Signer.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L42)
+Defined in: [Signer.ts:48](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L48)
 
 #### Returns
 
@@ -42,7 +44,7 @@ Defined in: [Signer.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 #### Implementation of
 
-`neon.LocalSigner.certs`
+[`LocalSignerInterface`](../interfaces/LocalSignerInterface.md).[`certs`](../interfaces/LocalSignerInterface.md#certs)
 
 ***
 
@@ -50,7 +52,7 @@ Defined in: [Signer.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > **reserveSize**(): `number`
 
-Defined in: [Signer.ts:46](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L46)
+Defined in: [Signer.ts:52](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L52)
 
 #### Returns
 
@@ -58,7 +60,7 @@ Defined in: [Signer.ts:46](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 #### Implementation of
 
-`neon.LocalSigner.reserveSize`
+[`LocalSignerInterface`](../interfaces/LocalSignerInterface.md).[`reserveSize`](../interfaces/LocalSignerInterface.md#reservesize)
 
 ***
 
@@ -66,7 +68,7 @@ Defined in: [Signer.ts:46](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > **sign**(`data`): `Buffer`
 
-Defined in: [Signer.ts:34](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L34)
+Defined in: [Signer.ts:40](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L40)
 
 #### Parameters
 
@@ -80,23 +82,23 @@ Defined in: [Signer.ts:34](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 #### Implementation of
 
-`neon.LocalSigner.sign`
+[`LocalSignerInterface`](../interfaces/LocalSignerInterface.md).[`sign`](../interfaces/LocalSignerInterface.md#sign)
 
 ***
 
 ### signer()
 
-> **signer**(): `LocalSigner`
+> **signer**(): [`LocalSignerInterface`](../interfaces/LocalSignerInterface.md)
 
-Defined in: [Signer.ts:54](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L54)
+Defined in: [Signer.ts:60](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L60)
 
 #### Returns
 
-`LocalSigner`
+[`LocalSignerInterface`](../interfaces/LocalSignerInterface.md)
 
 #### Implementation of
 
-`neon.LocalSigner.signer`
+[`LocalSignerInterface`](../interfaces/LocalSignerInterface.md).[`signer`](../interfaces/LocalSignerInterface.md#signer)
 
 ***
 
@@ -104,7 +106,7 @@ Defined in: [Signer.ts:54](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > **timeAuthorityUrl**(): `undefined` \| `string`
 
-Defined in: [Signer.ts:50](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L50)
+Defined in: [Signer.ts:56](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L56)
 
 #### Returns
 
@@ -112,7 +114,7 @@ Defined in: [Signer.ts:50](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 #### Implementation of
 
-`neon.LocalSigner.timeAuthorityUrl`
+[`LocalSignerInterface`](../interfaces/LocalSignerInterface.md).[`timeAuthorityUrl`](../interfaces/LocalSignerInterface.md#timeauthorityurl)
 
 ***
 
@@ -120,7 +122,7 @@ Defined in: [Signer.ts:50](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > `static` **newSigner**(`certificate`, `privateKey`, `algorithm`, `tsaUrl?`): `LocalSigner`
 
-Defined in: [Signer.ts:19](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L19)
+Defined in: [Signer.ts:25](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L25)
 
 #### Parameters
 

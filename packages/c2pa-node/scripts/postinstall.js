@@ -16,7 +16,6 @@ const os = require('node:os');
 const { mkdirp } = require('mkdirp');
 const { resolve } = require('node:path');
 const { exec } = require('node:child_process');
-const downloadTestCerts = require('./lib/download-test-certs.js');
 const { promisify } = require('node:util');
 
 const pExec = promisify(exec);
@@ -183,8 +182,6 @@ async function main() {
 	const libraryOverridePath = process.env.C2PA_LIBRARY_PATH;
 	const cargoDistPathExists = await fileExists(cargoDistPath);
 	const rustToolchainExists = await rustExists();
-
-	await downloadTestCerts();
 
 	if (libraryOverridePath) {
 		console.log('Skipping Rust build since C2PA_LIBRARY_PATH is set');

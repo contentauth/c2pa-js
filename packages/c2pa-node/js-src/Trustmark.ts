@@ -10,13 +10,18 @@
 // implied. See the LICENSE-MIT and LICENSE-APACHE files for the
 // specific language governing permissions and limitations under
 // each license.
+//const neon = require("../index.node");
 
-import * as neon from "index.node";
+import * as neon from "./index.node";
+import type {
+  TrustmarkInterface as TrustmarkInterface,
+  TrustmarkConfig,
+} from "./types";
 
-export class Trustmark implements neon.Trustmark {
-  private constructor(private trustmark: neon.Trustmark) {}
+export class Trustmark implements TrustmarkInterface {
+  private constructor(private trustmark: TrustmarkInterface) {}
 
-  static async newTrustmark(config: neon.TrustmarkConfig): Promise<Trustmark> {
+  static async newTrustmark(config: TrustmarkConfig): Promise<Trustmark> {
     const trustmark = await neon.trustmarkNew(config);
     return new Trustmark(trustmark);
   }

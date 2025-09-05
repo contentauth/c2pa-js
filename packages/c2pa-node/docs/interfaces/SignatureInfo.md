@@ -6,7 +6,7 @@
 
 # Interface: SignatureInfo
 
-Defined in: [types.d.ts:396](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L396)
+Defined in: [types.d.ts:395](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L395)
 
 Holds information about a signature
 
@@ -20,7 +20,7 @@ Holds information about a signature
 
 > `optional` **alg**: [`SigningAlg`](../type-aliases/SigningAlg.md)
 
-Defined in: [types.d.ts:400](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L400)
+Defined in: [types.d.ts:399](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L399)
 
 human readable issuing authority for this signature
 
@@ -30,7 +30,7 @@ human readable issuing authority for this signature
 
 > `optional` **cert\_serial\_number**: `string`
 
-Defined in: [types.d.ts:404](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L404)
+Defined in: [types.d.ts:403](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L403)
 
 The serial number of the certificate
 
@@ -40,7 +40,7 @@ The serial number of the certificate
 
 > `optional` **issuer**: `string`
 
-Defined in: [types.d.ts:408](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L408)
+Defined in: [types.d.ts:407](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L407)
 
 human readable issuing authority for this signature
 
@@ -50,7 +50,7 @@ human readable issuing authority for this signature
 
 > `optional` **revocation\_status**: `boolean`
 
-Defined in: [types.d.ts:412](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L412)
+Defined in: [types.d.ts:411](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L411)
 
 revocation status of the certificate
 
@@ -60,6 +60,6 @@ revocation status of the certificate
 
 > `optional` **time**: `string`
 
-Defined in: [types.d.ts:416](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L416)
+Defined in: [types.d.ts:415](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L415)
 
 the time the signature was created

@@ -8,7 +8,7 @@
 
 > **DestinationAsset** = [`DestinationBufferAsset`](../interfaces/DestinationBufferAsset.md) \| [`FileAsset`](../interfaces/FileAsset.md)
 
-Defined in: [types.d.ts:520](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L520)
+Defined in: [types.d.ts:519](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L519)
 
 An destination asset that can either be in memory or on disk
 This is a workaround since Neon does not support streams

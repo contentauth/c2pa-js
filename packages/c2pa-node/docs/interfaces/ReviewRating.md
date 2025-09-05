@@ -6,7 +6,7 @@
 
 # Interface: ReviewRating
 
-Defined in: [types.d.ts:363](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L363)
+Defined in: [types.d.ts:362](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L362)
 
 A rating on an Assertion
 
@@ -22,7 +22,7 @@ See <https://c2pa.org/specifications/specifications/1.0/specs/C2PA_Specification
 
 > `optional` **code**: `string`
 
-Defined in: [types.d.ts:364](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L364)
+Defined in: [types.d.ts:363](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L363)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [types.d.ts:364](https://github.com/contentauth/c2pa-node-v2/blob/1d
 
 > **explanation**: `string`
 
-Defined in: [types.d.ts:365](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L365)
+Defined in: [types.d.ts:364](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L364)
 
 ***
 
@@ -38,4 +38,4 @@ Defined in: [types.d.ts:365](https://github.com/contentauth/c2pa-node-v2/blob/1d
 
 > **value**: `number`
 
-Defined in: [types.d.ts:366](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L366)
+Defined in: [types.d.ts:365](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L365)

@@ -6,11 +6,11 @@
 
 # Class: Trustmark
 
-Defined in: [Trustmark.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Trustmark.ts#L16)
+Defined in: [Trustmark.ts:21](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Trustmark.ts#L21)
 
 ## Implements
 
-- `Trustmark`
+- [`TrustmarkInterface`](../interfaces/TrustmarkInterface.md)
 
 ## Methods
 
@@ -18,7 +18,7 @@ Defined in: [Trustmark.ts:16](https://github.com/contentauth/c2pa-node-v2/blob/1
 
 > **decode**(`image`): `Promise`\<`string`\>
 
-Defined in: [Trustmark.ts:37](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Trustmark.ts#L37)
+Defined in: [Trustmark.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Trustmark.ts#L42)
 
 Decode a watermark from an image.
 
@@ -36,7 +36,7 @@ image to extract the watermark from (must be in a supported image format like JP
 
 #### Implementation of
 
-`neon.Trustmark.decode`
+[`TrustmarkInterface`](../interfaces/TrustmarkInterface.md).[`decode`](../interfaces/TrustmarkInterface.md#decode)
 
 ***
 
@@ -44,7 +44,7 @@ image to extract the watermark from (must be in a supported image format like JP
 
 > **encode**(`image`, `strength`, `watermark?`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
 
-Defined in: [Trustmark.ts:24](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Trustmark.ts#L24)
+Defined in: [Trustmark.ts:29](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Trustmark.ts#L29)
 
 Encode a watermark into an image.
 
@@ -76,7 +76,7 @@ raw pixel data in RGB8 format (width * height * 3 bytes)
 
 #### Implementation of
 
-`neon.Trustmark.encode`
+[`TrustmarkInterface`](../interfaces/TrustmarkInterface.md).[`encode`](../interfaces/TrustmarkInterface.md#encode)
 
 ***
 
@@ -84,7 +84,7 @@ raw pixel data in RGB8 format (width * height * 3 bytes)
 
 > `static` **newTrustmark**(`config`): `Promise`\<`Trustmark`\>
 
-Defined in: [Trustmark.ts:19](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Trustmark.ts#L19)
+Defined in: [Trustmark.ts:24](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Trustmark.ts#L24)
 
 #### Parameters
 

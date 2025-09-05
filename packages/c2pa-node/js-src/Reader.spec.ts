@@ -11,10 +11,10 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import { Reader } from "./index";
+import { Reader } from "./Reader";
 
 // import native objects from built native code
-import { ManifestStore } from "index.node";
+import type { ManifestStore } from "./types";
 import path from "path";
 import * as fs from "fs-extra";
 
@@ -147,7 +147,10 @@ describe("Reader", () => {
 
   it("should read from an ArrayBuffer", async () => {
     const buffer = await fs.readFile("./tests/fixtures/CAI.jpg");
-    const reader = await Reader.fromAsset({ buffer, mimeType: "jpeg" });
+    const reader = await Reader.fromAsset({
+      buffer,
+      mimeType: "jpeg",
+    });
 
     const json = reader.json();
     expect(json.manifests).toEqual(manifestStore.manifests);
@@ -155,7 +158,9 @@ describe("Reader", () => {
   });
 
   it("should read from a file", async () => {
-    const reader = await Reader.fromAsset({ path: "./tests/fixtures/CAI.jpg" });
+    const reader = await Reader.fromAsset({
+      path: "./tests/fixtures/CAI.jpg",
+    });
     const json = reader.json();
     expect(json.manifests).toEqual(manifestStore.manifests);
     expect(json.active_manifest).toEqual(manifestStore.active_manifest);
@@ -189,7 +194,9 @@ describe("Reader", () => {
   it("should write to a file", async () => {
     let bytesWritten = 0;
     const outputPath = path.join(tempDir, "thumbnail.jpg");
-    const reader = await Reader.fromAsset({ path: "./tests/fixtures/CAI.jpg" });
+    const reader = await Reader.fromAsset({
+      path: "./tests/fixtures/CAI.jpg",
+    });
     const activeManifest = reader.getActive();
     const uri = activeManifest?.thumbnail?.identifier;
 
@@ -203,7 +210,9 @@ describe("Reader", () => {
   });
 
   it("should report manifest is embedded", async () => {
-    const reader = await Reader.fromAsset({ path: "./tests/fixtures/CAI.jpg" });
+    const reader = await Reader.fromAsset({
+      path: "./tests/fixtures/CAI.jpg",
+    });
     expect(reader.remoteUrl()).toEqual("");
     expect(reader.isEmbedded()).toBeTruthy();
   });

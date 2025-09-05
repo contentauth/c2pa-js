@@ -6,7 +6,7 @@
 
 # Interface: Ingredient
 
-Defined in: [types.d.ts:236](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L236)
+Defined in: [types.d.ts:235](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L235)
 
 An `Ingredient` is any external asset that has been used in the creation of an image
 
@@ -20,7 +20,7 @@ An `Ingredient` is any external asset that has been used in the creation of an i
 
 > `optional` **active\_manifest**: `string`
 
-Defined in: [types.d.ts:244](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L244)
+Defined in: [types.d.ts:243](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L243)
 
 The active manifest label (if one exists)
 
@@ -34,7 +34,7 @@ If this ingredient has a [`ManifestStore`], this will hold the label of the acti
 
 > `optional` **data**: [`ResourceRef`](ResourceRef.md)
 
-Defined in: [types.d.ts:248](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L248)
+Defined in: [types.d.ts:247](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L247)
 
 A reference to the actual data of the ingredient
 
@@ -44,7 +44,7 @@ A reference to the actual data of the ingredient
 
 > `optional` **description**: `string`
 
-Defined in: [types.d.ts:252](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L252)
+Defined in: [types.d.ts:251](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L251)
 
 Additional description of the ingredient
 
@@ -54,7 +54,7 @@ Additional description of the ingredient
 
 > `optional` **document\_id**: `string`
 
-Defined in: [types.d.ts:256](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L256)
+Defined in: [types.d.ts:255](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L255)
 
 Document ID from `xmpMM:DocumentID` in XMP metadata
 
@@ -64,7 +64,7 @@ Document ID from `xmpMM:DocumentID` in XMP metadata
 
 > `optional` **format**: `string`
 
-Defined in: [types.d.ts:260](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L260)
+Defined in: [types.d.ts:259](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L259)
 
 The format of the source file as a MIME type
 
@@ -74,7 +74,7 @@ The format of the source file as a MIME type
 
 > `optional` **hash**: `string`
 
-Defined in: [types.d.ts:264](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L264)
+Defined in: [types.d.ts:263](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L263)
 
 An optional hash of the asset to prevent duplicates
 
@@ -84,7 +84,7 @@ An optional hash of the asset to prevent duplicates
 
 > `optional` **informational\_URI**: `string`
 
-Defined in: [types.d.ts:268](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L268)
+Defined in: [types.d.ts:267](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L267)
 
 URI to an informational page about the ingredient or its data
 
@@ -94,7 +94,7 @@ URI to an informational page about the ingredient or its data
 
 > `optional` **instance\_id**: `string`
 
-Defined in: [types.d.ts:272](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L272)
+Defined in: [types.d.ts:271](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L271)
 
 Instance ID from `xmpMM:InstanceID` in XMP metadata
 
@@ -104,7 +104,7 @@ Instance ID from `xmpMM:InstanceID` in XMP metadata
 
 > `optional` **manifest\_data**: [`ResourceRef`](ResourceRef.md)
 
-Defined in: [types.d.ts:278](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L278)
+Defined in: [types.d.ts:277](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L277)
 
 A [`ManifestStore`] from the source asset extracted as a binary C2PA blob
 
@@ -116,7 +116,7 @@ A [`ManifestStore`] from the source asset extracted as a binary C2PA blob
 
 > `optional` **metadata**: [`Metadata`](Metadata.md)
 
-Defined in: [types.d.ts:284](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L284)
+Defined in: [types.d.ts:283](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L283)
 
 Any additional [`Metadata`] as defined in the C2PA spec
 
@@ -128,7 +128,7 @@ Any additional [`Metadata`] as defined in the C2PA spec
 
 > `optional` **provenance**: `string`
 
-Defined in: [types.d.ts:288](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L288)
+Defined in: [types.d.ts:287](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L287)
 
 URI from `dcterms:provenance` in XMP metadata
 
@@ -136,9 +136,9 @@ URI from `dcterms:provenance` in XMP metadata
 
 ### relationship?
 
-> `optional` **relationship**: `"componentOf"` \| `"parentOf"` \| `"inputTo"`
+> `optional` **relationship**: `"parentOf"` \| `"componentOf"` \| `"inputTo"`
 
-Defined in: [types.d.ts:294](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L294)
+Defined in: [types.d.ts:293](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L293)
 
 Set to `ParentOf` if this is the parent ingredient
 
@@ -150,7 +150,7 @@ There can only be one parent ingredient in the ingredients
 
 > `optional` **resources**: [`ResourceStore`](ResourceStore.md)
 
-Defined in: [types.d.ts:295](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L295)
+Defined in: [types.d.ts:294](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L294)
 
 ***
 
@@ -158,7 +158,7 @@ Defined in: [types.d.ts:295](https://github.com/contentauth/c2pa-node-v2/blob/1d
 
 > `optional` **thumbnail**: [`ResourceRef`](ResourceRef.md)
 
-Defined in: [types.d.ts:301](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L301)
+Defined in: [types.d.ts:300](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L300)
 
 A thumbnail image capturing the visual state at the time of import
 
@@ -170,7 +170,7 @@ A tuple of thumbnail MIME format (i.e. `image/jpeg`) and binary bits of the imag
 
 > **title**: `string`
 
-Defined in: [types.d.ts:305](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L305)
+Defined in: [types.d.ts:304](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L304)
 
 A human-readable title, generally source filename
 
@@ -180,6 +180,6 @@ A human-readable title, generally source filename
 
 > `optional` **validation\_status**: [`ValidationStatus`](ValidationStatus.md)[]
 
-Defined in: [types.d.ts:309](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/types.d.ts#L309)
+Defined in: [types.d.ts:308](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L308)
 
 Validation results

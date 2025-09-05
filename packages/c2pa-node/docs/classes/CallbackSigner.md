@@ -6,11 +6,13 @@
 
 # Class: CallbackSigner
 
-Defined in: [Signer.ts:59](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L59)
+Defined in: [Signer.ts:65](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L65)
+
+A signer that uses a callback to sign data.
 
 ## Implements
 
-- `CallbackSigner`
+- [`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md)
 
 ## Methods
 
@@ -18,7 +20,7 @@ Defined in: [Signer.ts:59](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > **alg**(): [`SigningAlg`](../type-aliases/SigningAlg.md)
 
-Defined in: [Signer.ts:80](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L80)
+Defined in: [Signer.ts:86](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L86)
 
 #### Returns
 
@@ -26,7 +28,7 @@ Defined in: [Signer.ts:80](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 #### Implementation of
 
-`neon.CallbackSigner.alg`
+[`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md).[`alg`](../interfaces/CallbackSignerInterface.md#alg)
 
 ***
 
@@ -34,7 +36,7 @@ Defined in: [Signer.ts:80](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > **certs**(): `Buffer`\<`ArrayBufferLike`\>[]
 
-Defined in: [Signer.ts:84](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L84)
+Defined in: [Signer.ts:90](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L90)
 
 #### Returns
 
@@ -42,7 +44,7 @@ Defined in: [Signer.ts:84](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 #### Implementation of
 
-`neon.CallbackSigner.certs`
+[`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md).[`certs`](../interfaces/CallbackSignerInterface.md#certs)
 
 ***
 
@@ -50,7 +52,7 @@ Defined in: [Signer.ts:84](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > **reserveSize**(): `number`
 
-Defined in: [Signer.ts:88](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L88)
+Defined in: [Signer.ts:94](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L94)
 
 #### Returns
 
@@ -58,7 +60,7 @@ Defined in: [Signer.ts:88](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 #### Implementation of
 
-`neon.CallbackSigner.reserveSize`
+[`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md).[`reserveSize`](../interfaces/CallbackSignerInterface.md#reservesize)
 
 ***
 
@@ -66,7 +68,7 @@ Defined in: [Signer.ts:88](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > **sign**(`data`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
 
-Defined in: [Signer.ts:76](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L76)
+Defined in: [Signer.ts:82](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L82)
 
 #### Parameters
 
@@ -80,23 +82,23 @@ Defined in: [Signer.ts:76](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 #### Implementation of
 
-`neon.CallbackSigner.sign`
+[`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md).[`sign`](../interfaces/CallbackSignerInterface.md#sign)
 
 ***
 
 ### signer()
 
-> **signer**(): `CallbackSigner`
+> **signer**(): [`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md)
 
-Defined in: [Signer.ts:62](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L62)
+Defined in: [Signer.ts:68](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L68)
 
 #### Returns
 
-`CallbackSigner`
+[`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md)
 
 #### Implementation of
 
-`neon.CallbackSigner.signer`
+[`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md).[`signer`](../interfaces/CallbackSignerInterface.md#signer)
 
 ***
 
@@ -104,7 +106,7 @@ Defined in: [Signer.ts:62](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > **timeAuthorityUrl**(): `undefined` \| `string`
 
-Defined in: [Signer.ts:92](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L92)
+Defined in: [Signer.ts:98](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L98)
 
 #### Returns
 
@@ -112,7 +114,7 @@ Defined in: [Signer.ts:92](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 #### Implementation of
 
-`neon.CallbackSigner.timeAuthorityUrl`
+[`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md).[`timeAuthorityUrl`](../interfaces/CallbackSignerInterface.md#timeauthorityurl)
 
 ***
 
@@ -120,7 +122,7 @@ Defined in: [Signer.ts:92](https://github.com/contentauth/c2pa-node-v2/blob/1df6
 
 > `static` **newSigner**(`config`, `callback`): `CallbackSigner`
 
-Defined in: [Signer.ts:66](https://github.com/contentauth/c2pa-node-v2/blob/1df68df861d38a8c4eb7c634a613532727ec72d3/js-src/Signer.ts#L66)
+Defined in: [Signer.ts:72](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L72)
 
 #### Parameters
 
