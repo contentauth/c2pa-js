@@ -22,7 +22,7 @@ console_log = { version = "1.0.0", features = ["color"] }
 log = "0.4.27"
 js-sys = "0.3.77"
 wasm-bindgen-futures = "0.4.50"
-c2pa = { version = "0.58.0", features = ["pdf", "rust_native_crypto"], default-features = false }
+c2pa = { version = "0.62.0", features = ["pdf", "rust_native_crypto", "fetch_remote_manifests"], default-features = false }
 async-trait = "0.1.88"
 thiserror = "2.0.12"
 
