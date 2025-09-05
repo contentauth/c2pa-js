@@ -1,5 +1,11 @@
 # @contentauth/c2pa-web
 
+## 0.1.2
+
+### Patch Changes
+
+- eda667c: Added WASM binary to package.json exports
+
 ## 0.1.1
 
 ### Patch Changes
