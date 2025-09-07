@@ -1,14 +1,17 @@
 {
   "name": "@contentauth/c2pa-web",
   "version": "0.1.2",
+  "license": "MIT",
   "type": "module",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
   "exports": {
     "./package.json": "./package.json",
     "./resources/c2pa.wasm": "./dist/resources/c2pa_bg.wasm",
     ".": {
-      "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
