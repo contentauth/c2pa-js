@@ -23,9 +23,9 @@ import {
 import type {
   JsCallbackSignerConfig,
   DestinationBufferAsset,
-  ManifestDefinition,
   SigningAlg,
 } from "./types";
+import type { Manifest } from "@contentauth/toolkit";
 import * as fs from "fs-extra";
 import * as crypto from "crypto";
 
@@ -46,49 +46,49 @@ class TestSigner {
 }
 
 describe("IdentityAssertionBuilder", () => {
-  const manifestDefinition: ManifestDefinition = {
+  const manifestDefinition: Manifest = {
     vendor: "test",
-    claim_version: 2,
     claim_generator_info: [
       {
         name: "c2pa_test",
         version: "2.0.0",
       },
     ],
-    metadata: [
-      {
-        dateTime: "1985-04-12T23:20:50.52Z",
-        my_custom_metadata: "my custom metatdata value",
-      },
-    ],
+    claim_generator: "c2pa_test",
     title: "Test_Manifest",
     format: "image/jpeg",
     instance_id: "1234",
+    thumbnail: { format: "", identifier: "" },
+    resources: { resources: {} },
     ingredients: [
       {
         title: "Test",
         format: "image/jpeg",
         instance_id: "12345",
         relationship: "componentOf",
+        thumbnail: { format: "", identifier: "" },
+        resources: { resources: {} },
       },
     ],
     assertions: [
       {
         label: "c2pa.actions",
         data: {
-          actions: [
-            {
-              action: "c2pa.created",
-              digitalSourceType:
-                "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
-            },
-          ],
+          metadata: {
+            actions: [
+              {
+                action: "c2pa.created",
+                digitalSourceType:
+                  "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+              },
+            ],
+          },
         },
       },
       {
         label: "cawg.training-mining",
         data: {
-          entries: {
+          metadata: {
             "cawg.ai_inference": {
               use: "notAllowed",
             },

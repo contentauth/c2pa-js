@@ -12,16 +12,12 @@
 // each license.
 
 import * as neon from "./index.node";
-import type {
-  DestinationAsset,
-  Manifest,
-  ManifestStore,
-  ReaderInterface,
-  SourceAsset,
-} from "./types";
+import type { DestinationAsset, ReaderInterface, SourceAsset } from "./types";
+
+import type { Manifest, ManifestStore } from "@contentauth/toolkit";
 
 export class Reader implements ReaderInterface {
-  private constructor(private reader: ReaderInterface) {}
+  constructor(private reader: ReaderInterface) {}
 
   json(): ManifestStore {
     return JSON.parse(neon.readerJson.call(this.reader));

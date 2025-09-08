@@ -22,19 +22,19 @@ import type {
   JsCallbackSignerConfig,
   LocalSignerInterface,
   ManifestAssertionKind,
-  ManifestDefinition,
   SourceAsset,
 } from "./types";
+import type { Manifest } from "@contentauth/toolkit";
 
 export class Builder implements BuilderInterface {
-  private constructor(private builder: BuilderInterface) {}
+  constructor(private builder: BuilderInterface) {}
 
   static new(): Builder {
     const builder = neon.builderNew();
     return new Builder(builder);
   }
 
-  static withJson(json: ManifestDefinition): Builder {
+  static withJson(json: Manifest): Builder {
     let jsonString: string;
     try {
       jsonString = JSON.stringify(json);
@@ -193,7 +193,7 @@ export class Builder implements BuilderInterface {
       });
   }
 
-  getManifestDefinition(): ManifestDefinition {
+  getManifestDefinition(): Manifest {
     return JSON.parse(neon.builderManifestDefinition.call(this.builder));
   }
 

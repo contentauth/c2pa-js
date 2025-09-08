@@ -21,7 +21,7 @@ import type {
 export class IdentityAssertionBuilder
   implements IdentityAssertionBuilderInterface
 {
-  private constructor(private _builder: IdentityAssertionBuilderInterface) {}
+  constructor(private _builder: IdentityAssertionBuilderInterface) {}
 
   static async identityBuilderForCredentialHolder(
     credentialHolder: CallbackSignerInterface,
@@ -51,7 +51,7 @@ export class IdentityAssertionBuilder
 export class IdentityAssertionSigner
   implements IdentityAssertionSignerInterface
 {
-  private constructor(private _signer: IdentityAssertionSignerInterface) {}
+  constructor(private _signer: IdentityAssertionSignerInterface) {}
 
   static new(signer: CallbackSignerInterface): IdentityAssertionSigner {
     const identitySigner = neon.identitySignerNew(signer.signer());

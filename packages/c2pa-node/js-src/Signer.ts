@@ -20,7 +20,7 @@ import type {
 } from "./types";
 
 export class LocalSigner implements LocalSignerInterface {
-  private constructor(private localSigner: LocalSignerInterface) {}
+  constructor(private localSigner: LocalSignerInterface) {}
 
   static newSigner(
     certificate: Buffer,
@@ -63,7 +63,7 @@ export class LocalSigner implements LocalSignerInterface {
 }
 
 export class CallbackSigner implements CallbackSignerInterface {
-  private constructor(private callbackSigner: CallbackSignerInterface) {}
+  constructor(private callbackSigner: CallbackSignerInterface) {}
 
   signer(): CallbackSignerInterface {
     return this.callbackSigner;

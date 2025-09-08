@@ -19,7 +19,7 @@ import type {
 } from "./types";
 
 export class Trustmark implements TrustmarkInterface {
-  private constructor(private trustmark: TrustmarkInterface) {}
+  constructor(private trustmark: TrustmarkInterface) {}
 
   static async newTrustmark(config: TrustmarkConfig): Promise<Trustmark> {
     const trustmark = await neon.trustmarkNew(config);

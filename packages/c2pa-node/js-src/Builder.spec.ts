@@ -17,10 +17,9 @@ import type {
   BuilderInterface,
   JsCallbackSignerConfig,
   DestinationBufferAsset,
-  ManifestDefinition,
-  ResourceRef,
   SourceBufferAsset,
 } from "./types";
+import type { Manifest, ResourceReference } from "@contentauth/toolkit";
 import { CallbackSigner, LocalSigner } from "./Signer";
 import { Reader } from "./Reader";
 import { Builder } from "./Builder";
@@ -68,23 +67,18 @@ describe("Builder", () => {
             "relationship": "parentOf"
             }`;
 
-  const thumbnail_ref: ResourceRef = {
+  const thumbnail_ref: ResourceReference = {
     format: "ingredient/jpeg",
     identifier: "5678",
   };
 
-  const manifestDefinition: ManifestDefinition = {
+  const manifestDefinition: Manifest = {
     vendor: "test",
+    claim_generator: "test-generator",
     claim_generator_info: [
       {
         name: "c2pa_test",
         version: "1.0.0",
-      },
-    ],
-    metadata: [
-      {
-        dateTime: "1985-04-12T23:20:50.52Z",
-        my_custom_metadata: "my custom metatdata value",
       },
     ],
     title: "Test_Manifest",
@@ -100,14 +94,17 @@ describe("Builder", () => {
         format: "image/jpeg",
         instance_id: "12345",
         relationship: "componentOf",
+        thumbnail: { format: "image/jpeg", identifier: "ingredient-thumb.jpg" },
+        resources: { resources: {} },
       },
     ],
     assertions: [
       {
         label: "org.test.assertion",
-        data: "assertion",
+        data: {},
       },
     ],
+    resources: { resources: {} },
   };
 
   let testAssertion: string;
@@ -134,7 +131,8 @@ describe("Builder", () => {
   });
 
   it("should build a manifest store", async () => {
-    const test_definition: ManifestDefinition = {
+    const test_definition: Manifest = {
+      claim_generator: "test-generator",
       claim_generator_info: [
         {
           name: "c2pa-js tests",
@@ -147,6 +145,9 @@ describe("Builder", () => {
       vendor: "test",
       thumbnail: thumbnail_ref,
       label: "ABCDE",
+      ingredients: [],
+      assertions: [],
+      resources: { resources: {} },
     };
     const builder = Builder.withJson(test_definition);
     await builder.addIngredient(parent_json, source);
