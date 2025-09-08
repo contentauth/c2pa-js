@@ -58,7 +58,7 @@ describe("IdentityAssertionBuilder", () => {
     title: "Test_Manifest",
     format: "image/jpeg",
     instance_id: "1234",
-    thumbnail: { format: "", identifier: "" },
+    thumbnail: { format: "image/jpeg", identifier: "thumbnail.jpg" },
     resources: { resources: {} },
     ingredients: [
       {
@@ -66,24 +66,25 @@ describe("IdentityAssertionBuilder", () => {
         format: "image/jpeg",
         instance_id: "12345",
         relationship: "componentOf",
-        thumbnail: { format: "", identifier: "" },
+        thumbnail: { format: "image/jpeg", identifier: "ingredient-thumb.jpg" },
         resources: { resources: {} },
       },
     ],
     assertions: [
       {
-        label: "c2pa.actions",
+        label: "c2pa.actions.v2",
         data: {
-          metadata: {
-            actions: [
-              {
-                action: "c2pa.created",
+          actions: [
+            {
+              action: "c2pa.created",
+              parameters: {
                 digitalSourceType:
                   "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
               },
-            ],
-          },
-        },
+            },
+          ],
+        } as any,
+        kind: "Json",
       },
       {
         label: "cawg.training-mining",
@@ -155,6 +156,16 @@ describe("IdentityAssertionBuilder", () => {
 
     // Create the manifest builder
     const builder = Builder.withJson(manifestDefinition);
+
+    // Add the required resources
+    await builder.addResource("thumbnail.jpg", {
+      mimeType: "jpeg",
+      buffer: await fs.readFile("./tests/fixtures/thumbnail.jpg"),
+    });
+    await builder.addResource("ingredient-thumb.jpg", {
+      mimeType: "jpeg",
+      buffer: await fs.readFile("./tests/fixtures/thumbnail.jpg"),
+    });
 
     // Create and configure the identity assertion
     const ia_signer = IdentityAssertionSigner.new(c2paSigner);

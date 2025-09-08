@@ -185,6 +185,10 @@ describe("Builder", () => {
         mimeType: "jpeg",
         buffer: testThumbnail,
       });
+      await builder.addResource("ingredient-thumb.jpg", {
+        mimeType: "jpeg",
+        buffer: testThumbnail,
+      });
       await builder.addResource("prompt.txt", {
         buffer: Buffer.from("a random prompt"),
         mimeType: "text/plain",
