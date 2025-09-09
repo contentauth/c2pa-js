@@ -1,4 +1,3 @@
-
 /**
  * Copyright 2025 Adobe
  * All Rights Reserved.
@@ -15,15 +14,16 @@ import wasmSrc from '@contentauth/c2pa-wasm/assets/c2pa_bg.wasm?url';
 
 import C_with_CAWG_data from '../../test/fixtures/assets/C_with_CAWG_data.jpg';
 import C_with_CAWG_data_thumbnail from '../../test/fixtures/assets/C_with_CAWG_data_thumbnail.jpg';
-import C_with_CAWG_data_ManifestStore from '../../test/fixtures/assets/C_with_CAWG_data.json' with { type: "json" };
-import C_with_CAWG_data_trusted_ManifestStore from '../../test/fixtures/assets/C_with_CAWG_data_trusted.json' with { type: "json" };
-import C_with_CAWG_data_untrusted_ManifestStore from '../../test/fixtures/assets/C_with_CAWG_data_untrusted.json' with { type: "json" };
+import C_with_CAWG_data_ManifestStore from '../../test/fixtures/manifests/C_with_CAWG_data.js';
+import C_with_CAWG_data_trusted_ManifestStore from '../../test/fixtures/manifests/C_with_CAWG_data_trusted.js';
+import C_with_CAWG_data_untrusted_ManifestStore from '../../test/fixtures/manifests/C_with_CAWG_data_untrusted.js';
 import no_alg from '../../test/fixtures/assets/no_alg.jpg';
 import dashinit from '../../test/fixtures/assets/dashinit.mp4';
 import dash1 from '../../test/fixtures/assets/dash1.m4s?url';
-import dashinit_ManifestStore from '../../test/fixtures/assets/dashinit.json' with { type: "json" };
+import dashinit_ManifestStore from '../../test/fixtures/manifests/dashinit.js';
 
 import anchor_correct from '../../test/fixtures/trust/anchor-correct.pem?raw';
+import anchor_cawg from '../../test/fixtures/trust/anchor-cawg.pem?raw';
 import anchor_incorrect from '../../test/fixtures/trust/anchor-incorrect.pem?raw';
 
 describe('c2pa', () => {
@@ -33,8 +33,8 @@ describe('c2pa', () => {
 
       const blob = await getBlobForAsset(C_with_CAWG_data);
 
-      const reader = await c2pa.reader.fromBlob(blob.type, blob)
-      
+      const reader = await c2pa.reader.fromBlob(blob.type, blob);
+
       const manifestStore = await reader.manifestStore();
 
       expect(manifestStore).toEqual(C_with_CAWG_data_ManifestStore);
@@ -47,7 +47,7 @@ describe('c2pa', () => {
 
       const blob = await getBlobForAsset(C_with_CAWG_data);
 
-      const reader = await c2pa.reader.fromBlob(blob.type, blob)
+      const reader = await c2pa.reader.fromBlob(blob.type, blob);
 
       const manifestStore = await reader.manifestStore();
 
@@ -58,9 +58,7 @@ describe('c2pa', () => {
       const thumbnailBuffer = await reader.resourceToBuffer(thumbnailId);
       const thumbnail = new Uint8Array(thumbnailBuffer!);
 
-      const thumbnailBlob = await getBlobForAsset(
-        C_with_CAWG_data_thumbnail
-      );
+      const thumbnailBlob = await getBlobForAsset(C_with_CAWG_data_thumbnail);
 
       const expectedThumbnailBuffer = await thumbnailBlob.arrayBuffer();
 
@@ -78,7 +76,9 @@ describe('c2pa', () => {
 
       const readerPromise = c2pa.reader.fromBlob(blob.type, blob);
 
-      await expect(readerPromise).rejects.toThrowError('C2pa(UnknownAlgorithm)');
+      await expect(readerPromise).rejects.toThrowError(
+        'C2pa(UnknownAlgorithm)'
+      );
     });
 
     test('should report a trusted asset when when configured to verify trust', async () => {
@@ -86,10 +86,13 @@ describe('c2pa', () => {
         trust: {
           trustAnchors: anchor_correct,
         },
+        cawgTrust: {
+          trustAnchors: anchor_cawg,
+        },
         verify: {
-          verifyTrust: true
-        }
-      }
+          verifyTrust: true,
+        },
+      };
 
       const c2pa = await createC2pa({ wasmSrc, settings });
 
@@ -110,9 +113,9 @@ describe('c2pa', () => {
           trustAnchors: anchor_incorrect,
         },
         verify: {
-          verifyTrust: true
-        }
-      }
+          verifyTrust: true,
+        },
+      };
 
       const c2pa = await createC2pa({ wasmSrc, settings });
 
@@ -133,7 +136,11 @@ describe('c2pa', () => {
       const initBlob = await getBlobForAsset(dashinit);
       const fragmentBlob = await getBlobForAsset(dash1);
 
-      const reader = await c2pa.reader.fromBlobFragment(initBlob.type, initBlob, fragmentBlob);
+      const reader = await c2pa.reader.fromBlobFragment(
+        initBlob.type,
+        initBlob,
+        fragmentBlob
+      );
 
       const manifestStore = await reader.manifestStore();
 
@@ -156,7 +163,6 @@ describe('c2pa', () => {
     });
   });
 });
-
 
 async function getBlobForAsset(src: string): Promise<Blob> {
   const response = await fetch(src);
