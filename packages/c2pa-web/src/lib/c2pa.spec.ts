@@ -35,7 +35,7 @@ describe('c2pa', () => {
 
       const reader = await c2pa.reader.fromBlob(blob.type, blob);
 
-      const manifestStore = await reader.manifestStore();
+      const manifestStore = await reader.json();
 
       expect(manifestStore).toEqual(C_with_CAWG_data_ManifestStore);
 
@@ -49,11 +49,11 @@ describe('c2pa', () => {
 
       const reader = await c2pa.reader.fromBlob(blob.type, blob);
 
-      const manifestStore = await reader.manifestStore();
+      const manifestStore = await reader.json();
 
       const activeManifest =
-        manifestStore.manifests[manifestStore.active_manifest];
-      const thumbnailId = activeManifest.thumbnail.identifier;
+        manifestStore.manifests[manifestStore.active_manifest!];
+      const thumbnailId = activeManifest.thumbnail!.identifier;
 
       const thumbnailBuffer = await reader.resourceToBuffer(thumbnailId);
       const thumbnail = new Uint8Array(thumbnailBuffer!);
@@ -100,7 +100,7 @@ describe('c2pa', () => {
 
       const reader = await c2pa.reader.fromBlob(blob.type, blob);
 
-      const manifestStore = await reader.manifestStore();
+      const manifestStore = await reader.json();
 
       expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
 
@@ -123,7 +123,7 @@ describe('c2pa', () => {
 
       const reader = await c2pa.reader.fromBlob(blob.type, blob);
 
-      const manifestStore = await reader.manifestStore();
+      const manifestStore = await reader.json();
 
       expect(manifestStore).toEqual(C_with_CAWG_data_untrusted_ManifestStore);
 
@@ -142,7 +142,7 @@ describe('c2pa', () => {
         fragmentBlob
       );
 
-      const manifestStore = await reader.manifestStore();
+      const manifestStore = await reader.json();
 
       expect(manifestStore).toEqual(dashinit_ManifestStore);
 
@@ -159,7 +159,7 @@ describe('c2pa', () => {
 
       await reader.free();
 
-      await expect(reader.manifestStore()).rejects.toThrowError();
+      await expect(reader.json()).rejects.toThrowError();
     });
   });
 });

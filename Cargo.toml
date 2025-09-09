@@ -3,6 +3,7 @@
 resolver = '2'
 members = [
 	'packages/c2pa-wasm',
+	'packages/c2pa-types',
 ]
 
 [profile.release]

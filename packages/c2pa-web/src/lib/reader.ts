@@ -7,6 +7,7 @@
  * it.
  */
 
+import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
 import { AssetTooLargeError, UnsupportedFormatError } from './error.js';
 import { isSupportedReaderFormat } from './supportedFormats.js';
 import type { WorkerManager } from './worker/workerManager.js';
@@ -33,14 +34,28 @@ export interface ReaderFactory {
 
 export interface Reader {
   /**
-   * @returns The asset's full manifest store containing all its manifests, validation statuses, and the URI of the active manifest.
-   */
-  manifestStore: () => Promise<any>;
-
-  /**
    * @returns The label of the active manifest.
    */
   activeLabel: () => Promise<string | null>;
+
+  /**
+   * @returns The asset's full manifest store containing all its manifests, validation statuses, and the URI of the active manifest.
+   *
+   * NOTE: At the moment, the manifest store returned by this method will not include decoded CAWG data. Use Reader.json() if CAWG is a requirement.
+   */
+  manifestStore: () => Promise<ManifestStore>;
+
+  /**
+   * @returns The asset's active manifest.
+   *
+   * NOTE: At the moment, the manifest returned by this method will not include decoded CAWG data. Use Reader.json() if CAWG is a requirement.
+   */
+  activeManifest: () => Promise<Manifest>;
+
+  /**
+   * @returns The asset's full manifest store, including decoded CAWG data.
+   */
+  json: () => Promise<any>;
 
   /**
    * Resolves a URI reference to a binary object (e.g. a thumbnail) in the resource store.
@@ -121,20 +136,34 @@ function createReader(
   onFree: () => void
 ): Reader {
   return {
-    // TODO: manifest type
-    async manifestStore(): Promise<any> {
-      const json = await worker.execute({ method: 'reader_json', args: [id] });
-
-      const manifestStore = JSON.parse(json);
-
-      return manifestStore;
-    },
     async activeLabel(): Promise<string | null> {
       const label = await worker.execute({
         method: 'reader_activeLabel',
         args: [id],
       });
       return label;
+    },
+    async manifestStore(): Promise<ManifestStore> {
+      const manifestStore = await worker.execute({
+        method: 'reader_manifestStore',
+        args: [id],
+      });
+      return manifestStore;
+    },
+    async activeManifest(): Promise<Manifest> {
+      const activeManifest = await worker.execute({
+        method: 'reader_activeManifest',
+        args: [id],
+      });
+
+      return activeManifest;
+    },
+    async json(): Promise<any> {
+      const json = await worker.execute({ method: 'reader_json', args: [id] });
+
+      const manifestStore = JSON.parse(json);
+
+      return manifestStore;
     },
     async resourceToBuffer(uri: string): Promise<ArrayBuffer> {
       return worker.execute({

@@ -1,0 +1,9 @@
+[package]
+name = "c2pa-types"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+c2pa = { version = "0.62.0", features = ["pdf", "rust_native_crypto", "json_schema"], default-features = false }
+schemars = "0.8.21"
+serde_json = "1.0.143"

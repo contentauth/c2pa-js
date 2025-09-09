@@ -1,0 +1,17 @@
+{
+  "name": "@contentauth/c2pa-types",
+  "description": "Typescript types generated from c2pa-rs",
+  "type": "module",
+  "version": "0.1.1",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "echo \"No tests to run\" && exit 0",
+    "build": "pnpm clean && json2ts -i schemas/ -o types/",
+    "clean": "rimraf types"
+  },
+  "files": ["index.d.ts", "types/**/*"],
+  "dependencies": {
+    "json-schema-to-typescript": "^15.0.4",
+    "rimraf": "^6.0.1"
+  }
+}
