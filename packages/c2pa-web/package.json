@@ -12,9 +12,21 @@
     "./package.json": "./package.json",
     "./resources/c2pa.wasm": "./dist/resources/c2pa_bg.wasm",
     ".": {
+      "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      "./package.json": "./package.json",
+      "./resources/c2pa.wasm": "./dist/resources/c2pa_bg.wasm",
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "default": "./dist/index.js"
+      }
     }
   },
   "dependencies": {
