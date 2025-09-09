@@ -153,6 +153,7 @@
       "signature_info": {
         "alg": "Es256",
         "cert_serial_number": "231582073800106855458784768030131201943489567163",
+        "common_name": "Alice",
         "issuer": "Media Publisher Company"
       }
     }
@@ -176,6 +177,11 @@
           "code": "assertion.hashedURI.match",
           "explanation": "hashed uri matched: self#jumbf=c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.assertions/c2pa.hash.bmff.v2",
           "url": "self#jumbf=c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.assertions/c2pa.hash.bmff.v2"
+        },
+        {
+          "code": "assertion.bmffHash.match",
+          "explanation": "data hash valid",
+          "url": "self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.assertions/c2pa.hash.bmff.v2"
         }
       ]
     }

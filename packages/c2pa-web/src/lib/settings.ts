@@ -9,6 +9,7 @@
 
 export interface Settings {
   trust?: TrustSettings;
+  cawgTrust?: TrustSettings;
   verify?: VerifySettings;
 }
 
