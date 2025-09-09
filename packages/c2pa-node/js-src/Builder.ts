@@ -27,7 +27,7 @@ import type {
 import type { Manifest } from "@contentauth/toolkit";
 
 export class Builder implements BuilderInterface {
-  constructor(private builder: BuilderInterface) {}
+  private constructor(private builder: BuilderInterface) {}
 
   static new(): Builder {
     const builder = neon.builderNew();

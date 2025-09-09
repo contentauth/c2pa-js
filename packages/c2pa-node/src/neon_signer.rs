@@ -44,6 +44,7 @@ pub struct CallbackSignerConfig {
     pub tsa_url: Option<String>,
     pub tsa_headers: Option<Vec<(String, String)>>,
     pub tsa_body: Option<Vec<u8>>,
+    pub direct_cose_handling: bool,
 }
 
 impl CallbackSignerConfig {
@@ -54,6 +55,7 @@ impl CallbackSignerConfig {
         tsa_url: Option<String>,
         tsa_headers: Option<Vec<(String, String)>>,
         tsa_body: Option<Vec<u8>>,
+        direct_cose_handling: bool,
     ) -> Self {
         Self {
             alg,
@@ -62,6 +64,7 @@ impl CallbackSignerConfig {
             tsa_url,
             tsa_headers,
             tsa_body,
+            direct_cose_handling,
         }
     }
 
@@ -77,7 +80,7 @@ impl CallbackSignerConfig {
             .or_else(|_| SigningAlg::from_str(&alg_str.to_uppercase()))
             .or_else(|err| cx.throw_error(err.to_string()))?;
 
-        // Handle certs as an array of buffers
+        // Handle certs as an optional array of buffers
         let certs_array = js_config
             .get::<JsArray, _, _>(cx, "certs")?
             .downcast_or_throw::<JsArray, _>(cx)?;
@@ -95,6 +98,10 @@ impl CallbackSignerConfig {
         let tsa_url = js_config
             .get_opt::<JsString, _, _>(cx, "tsaUrl")?
             .map(|js_string| js_string.value(cx));
+        let direct_cose_handling = js_config
+            .get::<JsBoolean, _, _>(cx, "directCoseHandling")?
+            .downcast_or_throw::<JsBoolean, _>(cx)?
+            .value(cx);
         let tsa_headers =
             if let Some(js_array) = js_config.get_opt::<JsArray, _, _>(cx, "tsaHeaders")? {
                 let len = js_array.len(cx);
@@ -118,6 +125,7 @@ impl CallbackSignerConfig {
         let tsa_body = js_config
             .get_opt::<JsBuffer, _, _>(cx, "tsaBody")?
             .map(|js_buffer| js_buffer.as_slice(cx).to_vec());
+
         Ok(cx.boxed(Self::new(
             alg,
             certs,
@@ -125,6 +133,7 @@ impl CallbackSignerConfig {
             tsa_url,
             tsa_headers,
             tsa_body,
+            direct_cose_handling,
         )))
     }
 }
@@ -292,6 +301,10 @@ impl AsyncSigner for NeonCallbackSigner {
 
     fn reserve_size(&self) -> usize {
         self.config.reserve_size
+    }
+
+    fn direct_cose_handling(&self) -> bool {
+        self.config.direct_cose_handling
     }
 }
 

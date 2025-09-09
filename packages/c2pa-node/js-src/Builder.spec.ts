@@ -243,6 +243,7 @@ describe("Builder", () => {
         certs: [publicKey],
         reserveSize: 10000,
         tsaUrl: undefined,
+        directCoseHandling: false,
       };
       const signer = new TestSigner(privateKey);
 
@@ -271,6 +272,7 @@ describe("Builder", () => {
         certs: [publicKey],
         reserveSize: 10000,
         tsaUrl: undefined,
+        directCoseHandling: false,
       };
       const signer = new TestSigner(privateKey);
 
@@ -302,6 +304,7 @@ describe("Builder", () => {
         certs: [publicKey],
         reserveSize: 10000,
         tsaUrl: undefined,
+        directCoseHandling: false,
       };
       const testSigner = new TestSigner(privateKey);
       const signer = CallbackSigner.newSigner(signerConfig, testSigner.sign);

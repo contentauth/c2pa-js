@@ -54,6 +54,7 @@ describe("CallbackSigner", () => {
     tsaUrl: "https://timestamp.digicert.com",
     tsaHeaders: [["Content-Type", "application/json"]],
     tsaBody: Buffer.from('{"test": "body"}'),
+    directCoseHandling: false,
   };
 
   it("should create a new instance", () => {
@@ -99,6 +100,7 @@ describe("CallbackSigner", () => {
       tsaUrl: undefined,
       tsaHeaders: undefined,
       tsaBody: undefined,
+      directCoseHandling: false,
     };
     const signer = CallbackSigner.newSigner(config, async (data) => data);
     expect(signer.timeAuthorityUrl()).toBeUndefined();

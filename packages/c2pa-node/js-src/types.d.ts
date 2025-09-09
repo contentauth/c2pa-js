@@ -132,11 +132,12 @@ export type CallbackSignerConfig = unknown;
  */
 export interface JsCallbackSignerConfig {
   alg: SigningAlg;
-  certs: Buffer[];
+  certs?: Buffer[];
   reserveSize: number;
   tsaUrl?: string;
   tsaHeaders?: Array<[string, string]>;
   tsaBody?: Buffer;
+  directCoseHandling: boolean;
 }
 
 export interface BuilderInterface {

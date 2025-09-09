@@ -123,6 +123,7 @@ describe("IdentityAssertionBuilder", () => {
       tsaUrl: undefined,
       tsaHeaders: undefined,
       tsaBody: undefined,
+      directCoseHandling: false,
     };
 
     const cawgConfig: JsCallbackSignerConfig = {
@@ -132,6 +133,7 @@ describe("IdentityAssertionBuilder", () => {
       tsaUrl: undefined,
       tsaHeaders: undefined,
       tsaBody: undefined,
+      directCoseHandling: false,
     };
 
     // Create signers
