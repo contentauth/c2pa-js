@@ -1,5 +1,22 @@
 # @contentauth/c2pa-web
 
+## 0.2.0
+
+### Minor Changes
+
+- f21c81d: Added reader.manifestStore() and reader.activeManifest() APIs
+
+### Patch Changes
+
+- cd68747: Remove incorrect "development" field from package.json exports in published builds
+- cd68747: Update to c2pa-rs 0.62.0 and enable remote manifest fetching
+- 1c41d72: Fixed broken package.json exports field
+- Updated dependencies [f21c81d]
+- Updated dependencies [cd68747]
+- Updated dependencies [1c41d72]
+  - @contentauth/c2pa-types@0.2.0
+  - @contentauth/c2pa-wasm@0.2.0
+
 ## 0.1.2
 
 ### Patch Changes
