@@ -5,7 +5,7 @@
   "scripts": {
     "ci:release": "pnpm ci:prepublish && pnpm ci:publish",
     "ci:prepublish": "pnpm exec nx run-many -t build --projects=tag:lib",
-    "ci:publish": "pnpm publish -r"
+    "ci:publish": "pnpm publish -r --access=public"
   },
   "private": true,
   "devDependencies": {
