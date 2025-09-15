@@ -7,20 +7,44 @@
  * it.
  */
 
+/**
+ * Settings used to configure the SDK's behavior.
+ */
 export interface Settings {
+  /**
+   * Trust configuration for C2PA claim validation.
+   */
   trust?: TrustSettings;
+  /**
+   * Trust configuration for CAWG identity valdation.
+   */
   cawgTrust?: TrustSettings;
   verify?: VerifySettings;
 }
 
-interface TrustSettings {
+export interface TrustSettings {
+  /**
+   * "User" trust anchors. Any asset validated off of this trust list will will have a "signingCredential.trusted" result with an explanation noting the trust source is a "User" anchor.
+   */
   userAnchors?: string;
+  /**
+   * "System" trust anchors. Any asset validated off of this trust list will will have a "signingCredential.trusted" result with an explanation noting the trust source is a "System" anchor.
+   */
   trustAnchors?: string;
+  /**
+   * Trust store
+   */
   trustConfig?: string;
+  /**
+   * End-entity certificates.
+   */
   allowedList?: string;
 }
 
-interface VerifySettings {
+export interface VerifySettings {
+  /**
+   * Enable trust list validation.
+   */
   verifyTrust?: boolean;
 }
 
