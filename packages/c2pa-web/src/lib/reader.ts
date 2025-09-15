@@ -15,6 +15,9 @@ import type { WorkerManager } from './worker/workerManager.js';
 // 1 GB
 export const MAX_SIZE_IN_BYTES = 10 ** 9;
 
+/**
+ * A collection of functions that permit the creation of Reader objects from various sources.
+ */
 export interface ReaderFactory {
   /**
    * Create a Reader from an asset's format and a blob of its bytes.
@@ -32,6 +35,16 @@ export interface ReaderFactory {
   ) => Promise<Reader>;
 }
 
+/**
+ * Exposes methods for reading C2PA data out of an asset.
+ * 
+ * @example Getting an asset's active manifest:
+ * ```
+ * const reader = await c2pa.reader.fromBlob(blob.type, blob);
+ * 
+ * const activeManifest = await reader.activeManfiest();
+ * ```
+ */
 export interface Reader {
   /**
    * @returns The label of the active manifest.
@@ -62,6 +75,15 @@ export interface Reader {
    *
    * @param uri URI of the binary object to resolve.
    * @returns An array buffer of the resource's bytes.
+   * 
+   * @example Retrieving a thumbnail from the resource store:
+   * ```
+   * const reader = await c2pa.reader.fromBlob(blob.type, blob);
+   * 
+   * const activeManifest = await reader.activeManifest();
+   * 
+   * const thumbnailBuffer = await reader.resourceToBuffer(activeManifest.thumbnail!.identifier);
+   * ```
    */
   resourceToBuffer: (uri: string) => Promise<ArrayBuffer>;
 

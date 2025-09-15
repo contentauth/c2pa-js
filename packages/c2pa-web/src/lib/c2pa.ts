@@ -23,8 +23,15 @@ export interface Config {
   settings?: Settings;
 }
 
-interface C2paSdk {
+export interface C2paSdk {
+  /**
+   * Contains methods for creating Reader objects.
+   */
   reader: ReaderFactory;
+
+  /**
+   * Terminates the SDK's underlying web worker. 
+   */
   dispose: () => void;
 }
 

@@ -13,4 +13,4 @@ import type { Reader } from './types/ManifestStore.js';
 // eslint-disable-next-line @typescript-eslint/no-empty-interface, @typescript-eslint/no-empty-object-type
 export interface ManifestStore extends Reader {}
 
-export type { Manifest } from './types/ManifestStore.js';
+export type * from './types/ManifestStore.js';
