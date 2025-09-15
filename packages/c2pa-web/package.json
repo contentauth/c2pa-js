@@ -52,6 +52,6 @@
     "rimraf": "^6.0.1"
   },
   "scripts": {
-    "build:docs": "typedoc src/index.ts"
+    "build:docs": "typedoc src/index.ts src/inline.ts"
   }
 }
