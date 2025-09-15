@@ -1,6 +1,6 @@
 {
   "name": "@contentauth/c2pa-wasm",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "MIT",
   "type": "module",
   "module": "./pkg/c2pa.js",

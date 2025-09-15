@@ -1,5 +1,15 @@
 # @contentauth/c2pa-web
 
+## 0.2.1
+
+### Patch Changes
+
+- 866ef6c: Add additional type exports
+- Updated dependencies [866ef6c]
+- Updated dependencies [866ef6c]
+  - @contentauth/c2pa-types@0.2.1
+  - @contentauth/c2pa-wasm@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes

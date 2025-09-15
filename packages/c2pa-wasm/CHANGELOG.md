@@ -1,5 +1,11 @@
 # @contentauth/c2pa-wasm
 
+## 0.2.1
+
+### Patch Changes
+
+- 866ef6c: Update wasm-bindgen to 0.2.101
+
 ## 0.2.0
 
 ### Minor Changes
