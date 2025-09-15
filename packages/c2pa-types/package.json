@@ -2,7 +2,7 @@
   "name": "@contentauth/c2pa-types",
   "description": "Typescript types generated from c2pa-rs",
   "type": "module",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "types": "index.d.ts",
   "scripts": {
     "test": "echo \"No tests to run\" && exit 0",
