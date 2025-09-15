@@ -75,6 +75,15 @@ export interface Reader {
    *
    * @param uri URI of the binary object to resolve.
    * @returns An array buffer of the resource's bytes.
+   * 
+   * @example Retrieving a thumbnail from the resource store:
+   * ```
+   * const reader = await c2pa.reader.fromBlob(blob.type, blob);
+   * 
+   * const activeManifest = await reader.activeManifest();
+   * 
+   * const thumbnailBuffer = await reader.resourceToBuffer(activeManifest.thumbnail!.identifier);
+   * ```
    */
   resourceToBuffer: (uri: string) => Promise<ArrayBuffer>;
 
