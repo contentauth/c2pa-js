@@ -16,6 +16,12 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./inline": {
+      "development": "./src/inline.ts",
+      "types": "./dist/inline.d.ts",
+      "import": "./dist/inline.js",
+      "default": "./dist/inline.js"
     }
   },
   "publishConfig": {
@@ -26,6 +32,11 @@
         "types": "./dist/index.d.ts",
         "import": "./dist/index.js",
         "default": "./dist/index.js"
+      },
+      "./inline": {
+        "types": "./dist/inline.d.ts",
+        "import": "./dist/inline.js",
+        "default": "./dist/inline.js"
       }
     }
   },
