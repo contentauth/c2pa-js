@@ -24,6 +24,7 @@ export default [
   ...nx.configs['flat/javascript'],
   {
     ignores: [
+      '**/docs',
       '**/dist',
       '**/vite.config.*.timestamp*',
       '**/vitest.config.*.timestamp*',
