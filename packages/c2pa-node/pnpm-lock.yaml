@@ -15,9 +15,9 @@ importers:
       '@changesets/cli':
         specifier: ^2.29.5
         version: 2.29.5
-      '@contentauth/toolkit':
-        specifier: ^0.13.11
-        version: 0.13.11
+      '@contentauth/c2pa-types':
+        specifier: link:../../../github/contentauth/c2pa-js-v2/packages/c2pa-types
+        version: link:../c2pa-js-v2/packages/c2pa-types
       '@eslint/js':
         specifier: ^9.33.0
         version: 9.33.0
@@ -355,10 +355,6 @@ packages:
 
   '@changesets/write@0.4.0':
     resolution: {integrity: sha512-CdTLvIOPiCNuH71pyDu3rA+Q0n65cmAbXnwWH84rKGiFumFzkmHNT8KHTMEchcxN+Kl8I54xGUhJ7l3E7X396Q==}
-
-  '@contentauth/toolkit@0.13.11':
-    resolution: {integrity: sha512-5M6vo2QxEjZaQIV153YPzCqTHc7u5tSAczMWRdqKgUs7llgDLwncFsDX0WREkV6WhMv0IYzzIYq5Jk7Zuvvp2w==}
-    engines: {node: '>=14'}
 
   '@emnapi/runtime@1.4.5':
     resolution: {integrity: sha512-++LApOtY0pEEz1zrd9vy1/zXVaVJJ/EbAF3u0fXIzPJEDtnITsBGbbK0EkM72amhl/R5b+5xx0Y/QhcVOpuulg==}
@@ -3050,8 +3046,6 @@ snapshots:
       fs-extra: 7.0.1
       human-id: 4.1.1
       prettier: 2.8.8
-
-  '@contentauth/toolkit@0.13.11': {}
 
   '@emnapi/runtime@1.4.5':
     dependencies:

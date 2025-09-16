@@ -38,7 +38,7 @@ declare module "index.node" {
   export function builderSetRemoteUrl(url: string): void;
   export function builderAddAssertion(
     label: string,
-    assertion: string,
+    assertion: unknown,
     assertionKind?: ManifestAssertionKind,
   ): void;
   export function builderAddResource(

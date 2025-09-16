@@ -24,7 +24,7 @@ import type {
   ManifestAssertionKind,
   SourceAsset,
 } from "./types";
-import type { Manifest } from "@contentauth/toolkit";
+import type { Manifest } from "@contentauth/c2pa-types";
 
 export class Builder implements BuilderInterface {
   private constructor(private builder: BuilderInterface) {}
@@ -63,7 +63,7 @@ export class Builder implements BuilderInterface {
 
   addAssertion(
     label: string,
-    assertion: string,
+    assertion: unknown,
     assertionKind?: ManifestAssertionKind,
   ): void {
     return neon.builderAddAssertion.call(

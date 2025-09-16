@@ -12,7 +12,7 @@
 // each license.
 
 import { Buffer } from "buffer";
-import type { Manifest, ManifestStore } from "@contentauth/toolkit";
+import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
 /**
  * Describes the digital signature algorithms allowed by the C2PA spec
  *
@@ -34,13 +34,13 @@ export type ClaimVersion = 1 | 2;
 // Trustmark Versions
 export type TrustmarkVersion =
   // Tolerates 8 bit flips
-  | "BchSuper"
+  | "BCH_Super"
   // Tolerates 5 bit flips
-  | "Bch5"
+  | "BCH_5"
   // Tolerates 4 bit flips
-  | "Bch4"
+  | "BCH_4"
   // Tolerates 3 bit flips
-  | "Bch3";
+  | "BCH_3";
 
 // Trustmark Variants. See https://github.com/adobe/trustmark/blob/main/FAQ.md for more
 export type TrustmarkVariant =
@@ -154,11 +154,12 @@ export interface BuilderInterface {
   /**
    * Add CBOR assertion to the builder
    * @param label The label of the assertion
-   * @param assertion The CBOR encoded assertion
+   * @param assertion The assertion, should be a string if the type is JSON, otherwise a JS Object
+   * @param assertionKind The type of assertion
    */
   addAssertion(
     label: string,
-    assertion: string,
+    assertion: unknown,
     assertionKind?: ManifestAssertionKind,
   ): void;
   /**

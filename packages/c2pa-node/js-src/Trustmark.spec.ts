@@ -12,11 +12,7 @@
 // each license.
 
 import { Trustmark } from "./Trustmark";
-import type {
-  TrustmarkConfig,
-  TrustmarkVariant,
-  TrustmarkVersion,
-} from "./types";
+import type { TrustmarkConfig, TrustmarkVariant } from "./types";
 import path from "path";
 import * as fs from "fs-extra";
 import sharp from "sharp";
@@ -49,8 +45,8 @@ describe("Trustmark", () => {
   let testImageHeight: number;
 
   const trustmarkConfig: TrustmarkConfig = {
-    variant: "B" as TrustmarkVariant, // Original Trustmark model
-    version: "BCH_3" as TrustmarkVersion, // Tolerates 3 bit flips
+    variant: "B", // Original Trustmark model
+    version: "BCH_3", // Tolerates 3 bit flips
     modelPath: path.join(tempDir, "trustmark_models"), // Use temporary directory for model path
   };
 
@@ -85,7 +81,7 @@ describe("Trustmark", () => {
     it("should throw error with invalid config", async () => {
       const invalidConfig: TrustmarkConfig = {
         variant: "X" as TrustmarkVariant, // Invalid variant
-        version: "BCH_3" as TrustmarkVersion, // Valid version
+        version: "BCH_3", // Valid version
       };
 
       await expect(Trustmark.newTrustmark(invalidConfig)).rejects.toThrow(

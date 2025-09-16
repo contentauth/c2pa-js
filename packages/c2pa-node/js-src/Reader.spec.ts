@@ -14,7 +14,7 @@
 import { Reader } from "./Reader";
 
 // import native objects from built native code
-import type { ManifestStore } from "@contentauth/toolkit";
+import type { ManifestStore } from "@contentauth/c2pa-types";
 import path from "path";
 import * as fs from "fs-extra";
 

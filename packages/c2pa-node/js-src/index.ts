@@ -20,3 +20,4 @@ export {
   IdentityAssertionSigner,
 } from "./IdentityAssertion";
 export { Trustmark } from "./Trustmark";
+export { isActionsAssertion } from "./assertions";

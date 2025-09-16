@@ -14,7 +14,7 @@
 import * as neon from "./index.node";
 import type { DestinationAsset, ReaderInterface, SourceAsset } from "./types";
 
-import type { Manifest, ManifestStore } from "@contentauth/toolkit";
+import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
 
 export class Reader implements ReaderInterface {
   constructor(private reader: ReaderInterface) {}

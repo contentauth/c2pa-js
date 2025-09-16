@@ -18,6 +18,7 @@ use crate::neon_signer::{CallbackSignerConfig, NeonCallbackSigner, NeonLocalSign
 use crate::runtime::runtime;
 use c2pa::Builder;
 use neon::prelude::*;
+use neon_serde4;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::ops::Deref;
@@ -80,7 +81,6 @@ impl NeonBuilder {
         let rt = runtime();
         let this = cx.this::<JsBox<Self>>()?;
         let label = cx.argument::<JsString>(0)?.value(&mut cx);
-        let assertion = cx.argument::<JsString>(1)?.value(&mut cx);
         let assertion_kind = cx.argument_opt(2).and_then(|js_value| {
             js_value
                 .downcast::<JsString, _>(&mut cx)
@@ -89,11 +89,18 @@ impl NeonBuilder {
         });
 
         let mut builder = rt.block_on(async { this.builder.lock().await });
+
         if let Some("Json") = assertion_kind.as_deref() {
+            // For Json, expect the assertion as a string (JSON)
+            let assertion = cx.argument::<JsString>(1)?.value(&mut cx);
             builder
                 .add_assertion_json(&label, &assertion)
                 .or_else(|err| cx.throw_error(err.to_string()))?;
         } else {
+            // For Cbor/Binary/Uri, expect the assertion as an object and serialize to CBOR
+            let assertion_obj = cx.argument::<JsValue>(1)?;
+            let assertion: serde_json::Value = neon_serde4::from_value(&mut cx, assertion_obj)
+                .or_else(|err| cx.throw_error(err.to_string()))?;
             builder
                 .add_assertion(&label, &assertion)
                 .or_else(|err| cx.throw_error(err.to_string()))?;

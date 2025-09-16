@@ -25,7 +25,7 @@ import type {
   DestinationBufferAsset,
   SigningAlg,
 } from "./types";
-import type { Manifest } from "@contentauth/toolkit";
+import type { Manifest } from "@contentauth/c2pa-types";
 import * as fs from "fs-extra";
 import * as crypto from "crypto";
 

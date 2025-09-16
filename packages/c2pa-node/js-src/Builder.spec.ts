@@ -19,7 +19,8 @@ import type {
   DestinationBufferAsset,
   SourceBufferAsset,
 } from "./types";
-import type { Manifest, ResourceReference } from "@contentauth/toolkit";
+import { isActionsAssertion } from "./assertions";
+import type { Manifest, ResourceRef } from "@contentauth/c2pa-types";
 import { CallbackSigner, LocalSigner } from "./Signer";
 import { Reader } from "./Reader";
 import { Builder } from "./Builder";
@@ -67,7 +68,7 @@ describe("Builder", () => {
             "relationship": "parentOf"
             }`;
 
-  const thumbnail_ref: ResourceReference = {
+  const thumbnail_ref: ResourceRef = {
     format: "ingredient/jpeg",
     identifier: "5678",
   };
@@ -212,6 +213,36 @@ describe("Builder", () => {
       expect(manifestStore.validation_status).toBeUndefined();
       expect(manifestStore.active_manifest).not.toBeUndefined();
       expect(activeManifest?.title).toBe("Test_Manifest");
+    });
+
+    it("should add a CBOR assertion, sign, and verify it in the signed manifest", async () => {
+      // Add the c2pa.watermarked action as a CBOR assertion
+      const actionsAssertion = {
+        actions: [
+          {
+            action: "c2pa.watermarked",
+          },
+        ],
+      };
+      builder.addAssertion("c2pa.actions", actionsAssertion, "Cbor");
+
+      // Sign the manifest
+      const dest = { path: path.join(tempDir, "cbor_signed.jpg") };
+      const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
+      builder.sign(signer, source, dest);
+
+      // Read and verify the assertion in the signed manifest
+      const reader = await Reader.fromAsset(dest);
+      const activeManifest = reader.getActive();
+      const cborAssertion = activeManifest?.assertions?.find(
+        (a: any) => a.label === "c2pa.actions.v2",
+      );
+      expect(cborAssertion).toBeDefined();
+      if (isActionsAssertion(cborAssertion)) {
+        expect(cborAssertion.data.actions[0].action).toBe("c2pa.watermarked");
+      } else {
+        throw new Error("CBOR assertion does not have the expected structure");
+      }
     });
 
     it("should archive and construct from archive", async () => {
