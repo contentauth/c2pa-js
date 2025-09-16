@@ -1,5 +1,11 @@
 # @contentauth/c2pa-web
 
+## 0.2.2
+
+### Patch Changes
+
+- dda5680: Added @contentauth/c2pa-wasm/inline entrypoint with inlined WASM binary
+
 ## 0.2.1
 
 ### Patch Changes
