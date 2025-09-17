@@ -70,6 +70,10 @@ const manifestStore = await reader.manifestStore();
 console.log(manifestStore);
 ```
 
+## Api reference
+
+API docs are available [here](https://contentauth.github.io/c2pa-js/modules/_contentauth_c2pa-web.html).
+
 ## Development
 
 ### Prerequsities
