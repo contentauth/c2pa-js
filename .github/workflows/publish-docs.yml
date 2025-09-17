@@ -23,23 +23,18 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - uses: pnpm/action-setup@v4
-        with:
-          run_install: false
+      - uses: ./.github/actions/install-dependencies
+        name: Install dependencies
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - run: pnpm exec nx run-many -t build --projects=tag:lib
 
       - name: Build docs
         run: pnpm ci:docs
@@ -47,7 +42,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
           path: 'docs/'
 
       - name: Deploy to GitHub Pages
