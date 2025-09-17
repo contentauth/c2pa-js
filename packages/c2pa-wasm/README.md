@@ -10,9 +10,9 @@ npm install @contentauth/c2pa-wasm
 
 ## Development
 
-### Prerequsities 
+### Prerequsities
 
-Ensure the repo-wide prerequisites [NX](https://nx.dev/getting-started/intro) and [pnpm](https://pnpm.io/) are installed. 
+Ensure the repo-wide prerequisites [NX](https://nx.dev/getting-started/intro) and [pnpm](https://pnpm.io/) are installed.
 
 Then, all of the following prerequisites must be installed before `c2pa-wasm` can be built:
 
@@ -20,17 +20,18 @@ Then, all of the following prerequisites must be installed before `c2pa-wasm` ca
 
 [Installation instructions](https://www.rust-lang.org/tools/install)
 
-Minimum supported Rust version: __1.86.0__.
+Minimum supported Rust version: **1.86.0**.
 
 Additionally, the `wasm32-unknown-unknown` target must be installed:
+
 ```sh
 rustup target add wasm32-unknown-unknown
 ```
 
-
 #### wasm-bindgen-cli
 
 [Documentation](https://wasm-bindgen.github.io/wasm-bindgen/reference/cli)
+
 ```sh
 cargo install wasm-bindgen-cli@0.2.101
 ```
@@ -38,6 +39,7 @@ cargo install wasm-bindgen-cli@0.2.101
 #### wasm-opt
 
 [Documentation](https://github.com/WebAssembly/binaryen)
+
 ```sh
 cargo install wasm-opt@0.116.1
 ```
@@ -45,6 +47,7 @@ cargo install wasm-opt@0.116.1
 #### wasm-pack
 
 [Documentation](https://rustwasm.github.io/docs/wasm-pack/)
+
 ```sh
 cargo install wasm-pack@0.13.1
 ```
@@ -52,6 +55,7 @@ cargo install wasm-pack@0.13.1
 ### Building
 
 To build the library:
+
 ```sh
 nx build c2pa-wasm
 ```
@@ -60,9 +64,10 @@ This will execute the commands defined in the [nx-wasm-bindgen executor](https:/
 
 ### Testing
 
-The library relies on [`wasm-pack`]((https://rustwasm.github.io/docs/wasm-pack/)) to run its tests. As a general principle, the majority of test coverage will come from `c2pa-web`'s test suite.
+The library relies on [`wasm-pack`](https://rustwasm.github.io/docs/wasm-pack/) to run its tests. As a general principle, the majority of test coverage will come from `c2pa-web`'s test suite.
 
 To run the tests:
+
 ```
 nx test c2pa-wasm
 ```
