@@ -30,24 +30,11 @@ export interface C2paSdk {
   reader: ReaderFactory;
 
   /**
-   * Terminates the SDK's underlying web worker. 
+   * Terminates the SDK's underlying web worker.
    */
   dispose: () => void;
 }
 
-/**
- * Creates a new instance of c2pa-web by setting up a web worker and preparing a WASM binary.
- *
- * @param config - SDK configuration object.
- * @returns An object providing access to factory methods for creating new reader objects.
- *
- * @example Creating a new SDK instance and reader:
- * ```
- * const c2pa = await createC2pa({ wasmSrc: 'url/hosting/wasm/binary' });
- *
- * const reader = await c2pa.reader.fromBlob(imageBlob.type, imageBlob);
- * ```
- */
 export async function createC2pa(config: Config): Promise<C2paSdk> {
   const { wasmSrc, settings } = config;
 

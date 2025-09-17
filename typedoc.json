@@ -1,0 +1,6 @@
+{
+  "entryPoints": ["packages/*"],
+  "name": "@contentauth/c2pa-js",
+  "entryPointStrategy": "packages",
+  "includeVersion": false
+}
