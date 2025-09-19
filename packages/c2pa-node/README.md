@@ -54,7 +54,7 @@ For a platform or architecture that does not have a precompiled binary, you must
 1. [Install the Rust toolchain](https://www.rust-lang.org/tools/install).
 1. Run the following commands on the target system or VM:
   ```sh
-  cd c2pa-node
+  cd c2pa-node-v2
   pnpm install
   pnpm build:rust
   ```
@@ -62,13 +62,13 @@ For a platform or architecture that does not have a precompiled binary, you must
   ```sh
   cd /path/to/my/application
   mkdir resources
-  cp /path/to/c2pa-node/generated/c2pa.node resources/c2pa.node
+  cp /path/to/c2pa-node-v2/generated/c2pa.node resources/c2pa.node
   ```
 1. Set the the `C2PA_LIBRARY_PATH` environment variable to the path to the `c2pa.node` module by entering these commands:
   ```sh
   export C2PA_LIBRARY_PATH=resources/c2pa.node
-  npm install c2pa-node
+  npm install c2pa-node-v2
   npm start
   ```
 
-**Important:** `C2PA_LIBRARY_PATH` _must_ be set while both **installing** or **adding** `c2pa-node` to your app to avoid building the Rust code. It must _also_ be set while **running** your app so that it loads the bindings from the correct location.
+**Important:** `C2PA_LIBRARY_PATH` _must_ be set while both **installing** or **adding** `c2pa-node-v2` to your app to avoid building the Rust code. It must _also_ be set while **running** your app so that it loads the bindings from the correct location.
