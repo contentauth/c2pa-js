@@ -18,6 +18,7 @@ import type {
   JsCallbackSignerConfig,
   DestinationBufferAsset,
   SourceBufferAsset,
+  FileAsset,
 } from "./types";
 import { isActionsAssertion } from "./assertions";
 import type { Manifest, ResourceRef } from "@contentauth/c2pa-types";
@@ -83,7 +84,7 @@ describe("Builder", () => {
       },
     ],
     title: "Test_Manifest",
-    format: "image/tiff",
+    format: "image/jpeg",
     instance_id: "1234",
     thumbnail: {
       format: "image/jpeg",
@@ -176,7 +177,7 @@ describe("Builder", () => {
 
     beforeEach(() => {
       builder = Builder.withJson(manifestDefinition);
-      builder.updateManifestProperty("claim_version", 1);
+      builder.updateManifestProperty("claim_version", 2);
     });
 
     beforeEach(async () => {
@@ -239,7 +240,8 @@ describe("Builder", () => {
       );
       expect(cborAssertion).toBeDefined();
       if (isActionsAssertion(cborAssertion)) {
-        expect(cborAssertion.data.actions[0].action).toBe("c2pa.watermarked");
+        const actions = cborAssertion.data.actions.map((a: any) => a.action);
+        expect(actions).toContain("c2pa.watermarked");
       } else {
         throw new Error("CBOR assertion does not have the expected structure");
       }
@@ -260,33 +262,6 @@ describe("Builder", () => {
         buffer: dest.buffer! as Buffer,
         mimeType: "jpeg",
       });
-      const manifestStore = reader.json();
-      const activeManifest = reader.getActive();
-      expect(manifestStore.validation_status).toBeUndefined();
-      expect(manifestStore.active_manifest).not.toBeUndefined();
-      expect(activeManifest?.title).toBe("Test_Manifest");
-    });
-
-    it("should sign data with callback to file", async () => {
-      const dest = { path: path.join(tempDir, "callback_signed.jpg") };
-      const signerConfig: JsCallbackSignerConfig = {
-        alg: "es256",
-        certs: [publicKey],
-        reserveSize: 10000,
-        tsaUrl: undefined,
-        directCoseHandling: false,
-      };
-      const signer = new TestSigner(privateKey);
-
-      const bytes = await builder.signConfigAsync(
-        signer.sign,
-        signerConfig,
-        source,
-        dest,
-      );
-      expect(bytes.length).toBeGreaterThan(0);
-
-      const reader = await Reader.fromAsset(dest);
       const manifestStore = reader.json();
       const activeManifest = reader.getActive();
       expect(manifestStore.validation_status).toBeUndefined();
@@ -326,6 +301,35 @@ describe("Builder", () => {
       expect(activeManifest?.title).toBe("Test_Manifest");
     });
 
+    it("should sign data with callback to file", async () => {
+      const dest: FileAsset = {
+        path: path.join(tempDir, "callback_signed.jpg"),
+      };
+      const signerConfig: JsCallbackSignerConfig = {
+        alg: "es256",
+        certs: [publicKey],
+        reserveSize: 10000,
+        tsaUrl: undefined,
+        directCoseHandling: false,
+      };
+      const signer = new TestSigner(privateKey);
+
+      const bytes = await builder.signConfigAsync(
+        signer.sign,
+        signerConfig,
+        source,
+        dest,
+      );
+      expect(bytes.length).toBeGreaterThan(0);
+
+      const reader = await Reader.fromAsset(dest);
+      const manifestStore = reader.json();
+      const activeManifest = reader.getActive();
+      expect(manifestStore.validation_status).toBeUndefined();
+      expect(manifestStore.active_manifest).not.toBeUndefined();
+      expect(activeManifest?.title).toBe("Test_Manifest");
+    });
+
     it("should sign data with callback signer to buffer", async () => {
       const dest: DestinationBufferAsset = {
         buffer: null,
@@ -352,6 +356,65 @@ describe("Builder", () => {
       expect(manifestStore.validation_status).toBeUndefined();
       expect(manifestStore.active_manifest).not.toBeUndefined();
       expect(activeManifest?.title).toBe("Test_Manifest");
+    });
+
+    it("should archive and restore builder with ingredient thumbnail", async () => {
+      const manifestDefinition = {
+        claim_generator_info: [
+          {
+            name: "c2pa_test",
+            version: "1.0.0",
+          },
+        ],
+        title: "Test_Manifest",
+        format: "image/jpeg",
+        ingredients: [],
+        assertions: [
+          {
+            label: "c2pa.actions",
+            data: {
+              actions: [
+                {
+                  action: "c2pa.created",
+                  digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
+                },
+              ],
+            },
+          },
+        ],
+        resources: { resources: {} },
+      };
+
+      const builder = Builder.withJson(manifestDefinition);
+
+      const ingredientJson = '{"title": "Test Ingredient"}';
+      const testThumbnail = await fs.readFile("./tests/fixtures/thumbnail.jpg");
+      await builder.addIngredient(ingredientJson, {
+        buffer: testThumbnail,
+        mimeType: "jpeg",
+      });
+
+      // Archive the builder
+      const archivePath = path.join(tempDir, "ingredient_thumb_archive.zip");
+      await builder.toArchive({ path: archivePath });
+
+      // Restore from archive
+      const builder2 = await Builder.fromArchive({ path: archivePath });
+
+      // Sign with restored builder
+      const dest = { buffer: null };
+      const publicKey = await fs.readFile("./tests/fixtures/certs/es256.pub");
+      const privateKey = await fs.readFile("./tests/fixtures/certs/es256.pem");
+      const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
+      builder2.sign(signer, source, dest);
+
+      const reader = await Reader.fromAsset({
+        buffer: dest.buffer! as Buffer,
+        mimeType: "jpeg",
+      });
+      const manifestStore = reader.json();
+      expect(JSON.stringify(manifestStore)).toContain("Test Ingredient");
+      expect(JSON.stringify(manifestStore)).toContain("thumbnail.ingredient");
     });
   });
 });

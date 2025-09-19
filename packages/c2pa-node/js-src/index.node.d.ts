@@ -146,4 +146,8 @@ declare module "index.node" {
     watermark?: string,
   ): Promise<Buffer>;
   export function trustmarkDecode(image: Buffer): Promise<string>;
+
+  // Settings API
+  export function loadSettings(json: string): void;
+  export function getSettingsJson(): string;
 }

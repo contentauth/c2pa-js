@@ -16,6 +16,7 @@ use neon::prelude::*;
 mod asset;
 mod error;
 mod runtime;
+mod settings;
 mod utils;
 
 pub mod neon_builder;
@@ -159,6 +160,10 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     )?;
     cx.export_function("trustmarkEncode", neon_trustmark::NeonTrustmark::encode)?;
     cx.export_function("trustmarkDecode", neon_trustmark::NeonTrustmark::decode)?;
+
+    // Settings
+    cx.export_function("loadSettings", settings::load_settings)?;
+    cx.export_function("getSettingsJson", settings::get_settings_json)?;
 
     Ok(())
 }

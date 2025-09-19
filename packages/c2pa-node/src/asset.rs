@@ -60,6 +60,7 @@ impl Asset {
         match self {
             Asset::File(path, _) => {
                 let file = OpenOptions::new()
+                    .read(true)
                     .write(true)
                     .create(true)
                     .truncate(true)
