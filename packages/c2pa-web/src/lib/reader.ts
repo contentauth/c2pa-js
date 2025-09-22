@@ -118,11 +118,10 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
         args: [format, blob],
       });
 
-      const unregisterToken = Symbol(readerId);
       const reader = createReader(worker, readerId, () => {
-        registry.unregister(unregisterToken);
+        registry.unregister(reader);
       });
-      registry.register(reader, readerId, unregisterToken);
+      registry.register(reader, readerId, reader);
 
       return reader;
     },
@@ -141,11 +140,10 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
         args: [format, init, fragment],
       });
 
-      const unregisterToken = Symbol(readerId);
       const reader = createReader(worker, readerId, () => {
-        registry.unregister(unregisterToken);
+        registry.unregister(reader);
       });
-      registry.register(reader, readerId, unregisterToken);
+      registry.register(reader, readerId, reader);
 
       return reader;
     },
