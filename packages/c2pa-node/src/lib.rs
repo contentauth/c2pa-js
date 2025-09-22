@@ -163,7 +163,14 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
     // Settings
     cx.export_function("loadSettings", settings::load_settings)?;
+    cx.export_function("loadSettingsToml", settings::load_settings_toml)?;
     cx.export_function("getSettingsJson", settings::get_settings_json)?;
+
+    // Trust Settings
+    cx.export_function("loadTrustConfig", settings::load_trust_config)?;
+    cx.export_function("loadCawgTrustConfig", settings::load_cawg_trust_config)?;
+    cx.export_function("getTrustConfig", settings::get_trust_config)?;
+    cx.export_function("getCawgTrustConfig", settings::get_cawg_trust_config)?;
 
     Ok(())
 }

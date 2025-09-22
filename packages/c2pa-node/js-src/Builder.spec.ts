@@ -120,7 +120,7 @@ describe("Builder", () => {
     // Read all test files once
     source = {
       buffer: await fs.readFile("./tests/fixtures/CA.jpg"),
-      mimeType: "jpeg",
+      mimeType: "image/jpeg",
     };
     testThumbnail = await fs.readFile("./tests/fixtures/thumbnail.jpg");
     publicKey = await fs.readFile("./tests/fixtures/certs/es256.pub");
@@ -269,6 +269,35 @@ describe("Builder", () => {
       expect(activeManifest?.title).toBe("Test_Manifest");
     });
 
+    it("should sign data with callback to file", async () => {
+      const dest: FileAsset = {
+        path: path.join(tempDir, "callback_signed.jpg"),
+      };
+      const signerConfig: JsCallbackSignerConfig = {
+        alg: "es256",
+        certs: [publicKey],
+        reserveSize: 10000,
+        tsaUrl: undefined,
+        directCoseHandling: false,
+      };
+      const signer = new TestSigner(privateKey);
+
+      const bytes = await builder.signConfigAsync(
+        signer.sign,
+        signerConfig,
+        source,
+        dest,
+      );
+      expect(bytes.length).toBeGreaterThan(0);
+
+      const reader = await Reader.fromAsset(dest);
+      const manifestStore = reader.json();
+      const activeManifest = reader.getActive();
+      expect(manifestStore.validation_status).toBeUndefined();
+      expect(manifestStore.active_manifest).not.toBeUndefined();
+      expect(activeManifest?.title).toBe("Test_Manifest");
+    });
+
     it("should sign data with callback to buffer", async () => {
       const dest: DestinationBufferAsset = {
         buffer: null,
@@ -294,35 +323,6 @@ describe("Builder", () => {
         buffer: dest.buffer! as Buffer,
         mimeType: "jpeg",
       });
-      const manifestStore = reader.json();
-      const activeManifest = reader.getActive();
-      expect(manifestStore.validation_status).toBeUndefined();
-      expect(manifestStore.active_manifest).not.toBeUndefined();
-      expect(activeManifest?.title).toBe("Test_Manifest");
-    });
-
-    it("should sign data with callback to file", async () => {
-      const dest: FileAsset = {
-        path: path.join(tempDir, "callback_signed.jpg"),
-      };
-      const signerConfig: JsCallbackSignerConfig = {
-        alg: "es256",
-        certs: [publicKey],
-        reserveSize: 10000,
-        tsaUrl: undefined,
-        directCoseHandling: false,
-      };
-      const signer = new TestSigner(privateKey);
-
-      const bytes = await builder.signConfigAsync(
-        signer.sign,
-        signerConfig,
-        source,
-        dest,
-      );
-      expect(bytes.length).toBeGreaterThan(0);
-
-      const reader = await Reader.fromAsset(dest);
       const manifestStore = reader.json();
       const activeManifest = reader.getActive();
       expect(manifestStore.validation_status).toBeUndefined();

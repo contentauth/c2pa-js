@@ -67,7 +67,9 @@
   },
   "homepage": "https://github.com/contentauth/c2pa-node-v2#readme",
   "dependencies": {
-    "debug": "^4.4.1"
+    "debug": "^4.4.1",
+    "node-fetch": "^3.3.2",
+    "toml": "^3.0.0"
   },
   "packageManager": "pnpm@10.14.0"
 }

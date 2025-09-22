@@ -472,6 +472,7 @@ dependencies = [
  "hex-literal",
  "http",
  "id3",
+ "image",
  "img-parts",
  "iref",
  "jfifdump",

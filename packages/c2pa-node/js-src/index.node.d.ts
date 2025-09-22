@@ -14,20 +14,21 @@
 import { Buffer } from "buffer";
 import type {
   BuilderInterface,
-  ReaderInterface,
-  LocalSignerInterface,
-  CallbackSignerInterface,
-  IdentityAssertionSignerInterface,
-  IdentityAssertionBuilderInterface,
-  TrustmarkInterface,
-  TrustmarkConfig,
-  SourceAsset,
-  DestinationAsset,
-  ManifestAssertionKind,
-  SigningAlg,
-  JsCallbackSignerConfig,
   CallbackSignerConfig,
+  CallbackSignerInterface,
   ClaimVersion,
+  DestinationAsset,
+  IdentityAssertionBuilderInterface,
+  IdentityAssertionSignerInterface,
+  JsCallbackSignerConfig,
+  LocalSignerInterface,
+  ManifestAssertionKind,
+  ReaderInterface,
+  SigningAlg,
+  SourceAsset,
+  TrustConfig,
+  TrustmarkConfig,
+  TrustmarkInterface,
 } from "./types";
 
 declare module "index.node" {
@@ -149,5 +150,10 @@ declare module "index.node" {
 
   // Settings API
   export function loadSettings(json: string): void;
+  export function loadSettingsToml(toml: string): void;
   export function getSettingsJson(): string;
+  export function loadTrustConfig(trustConfigJson: string): void;
+  export function loadCawgTrustConfig(trustConfigJson: string): void;
+  export function getTrustConfig(): string;
+  export function getCawgTrustConfig(): string;
 }

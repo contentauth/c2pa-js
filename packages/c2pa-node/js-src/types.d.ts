@@ -349,3 +349,20 @@ export interface TrustmarkConfig {
   version: TrustmarkVersion;
   modelPath?: string;
 }
+
+/**
+ * Configuration for trust settings in C2PA.
+ * Controls certificate trust validation and trust anchor management.
+ */
+export interface TrustConfig {
+  /** Whether to verify against the trust list */
+  verifyTrustList: boolean;
+  /** User-provided trust anchors (PEM format or base64-encoded certificate hashes) */
+  userAnchors?: string;
+  /** Trust anchors for validation (PEM format or base64-encoded certificate hashes) */
+  trustAnchors?: string;
+  /** Trust configuration file path */
+  trustConfig?: string;
+  /** Allowed list of certificates (PEM format or base64-encoded certificate hashes) */
+  allowedList?: string;
+}
