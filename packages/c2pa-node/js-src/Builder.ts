@@ -11,7 +11,7 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import * as neon from "./index.node";
+const neon = require("./index.node");
 import { IdentityAssertionSigner } from "./IdentityAssertion";
 import type {
   BuilderInterface,
@@ -122,7 +122,7 @@ export class Builder implements BuilderInterface {
   ): Promise<Buffer> {
     return neon.builderSignConfigAsync
       .call(this.builder, callback, signerConfig, input, output)
-      .then((result) => {
+      .then((result: Buffer | { manifest: Buffer; signedAsset: Buffer }) => {
         // output is a buffer and result is the manifest and the signed asset.
         if ("buffer" in output) {
           if ("signedAsset" in result && "manifest" in result) {
@@ -136,7 +136,7 @@ export class Builder implements BuilderInterface {
           return result as Buffer;
         }
       })
-      .catch((error) => {
+      .catch((error: Error) => {
         throw error;
       });
   }
@@ -148,7 +148,7 @@ export class Builder implements BuilderInterface {
   ): Promise<Buffer> {
     return neon.builderSignAsync
       .call(this.builder, signer.signer(), input, output)
-      .then((result) => {
+      .then((result: Buffer | { manifest: Buffer; signedAsset: Buffer }) => {
         // output is a buffer and result is the manifest and the signed asset.
         if ("buffer" in output) {
           if ("signedAsset" in result && "manifest" in result) {
@@ -162,7 +162,7 @@ export class Builder implements BuilderInterface {
           return result as Buffer;
         }
       })
-      .catch((error) => {
+      .catch((error: Error) => {
         throw error;
       });
   }
@@ -174,7 +174,7 @@ export class Builder implements BuilderInterface {
   ): Promise<Buffer> {
     return neon.builderIdentitySignAsync
       .call(this.builder, signer.signer(), input, output)
-      .then((result) => {
+      .then((result: Buffer | { manifest: Buffer; signedAsset: Buffer }) => {
         // output is a buffer and result is the manifest and the signed asset.
         if ("buffer" in output) {
           if ("signedAsset" in result && "manifest" in result) {
@@ -188,7 +188,7 @@ export class Builder implements BuilderInterface {
           return result as Buffer;
         }
       })
-      .catch((error) => {
+      .catch((error: Error) => {
         throw error;
       });
   }

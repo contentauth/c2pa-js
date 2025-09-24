@@ -91,10 +91,12 @@ impl NeonBuilder {
         let mut builder = rt.block_on(async { this.builder.lock().await });
 
         if let Some("Json") = assertion_kind.as_deref() {
-            // For Json, expect the assertion as a string (JSON)
-            let assertion = cx.argument::<JsString>(1)?.value(&mut cx);
+            // For Json, expect the assertion as a string (JSON) and parse it
+            let assertion_str = cx.argument::<JsString>(1)?.value(&mut cx);
+            let assertion: serde_json::Value = serde_json::from_str(&assertion_str)
+                .or_else(|err| cx.throw_error(format!("Invalid JSON: {}", err)))?;
             builder
-                .add_assertion_json(&label, &assertion)
+                .add_assertion(&label, &assertion)
                 .or_else(|err| cx.throw_error(err.to_string()))?;
         } else {
             // For Cbor/Binary/Uri, expect the assertion as an object and serialize to CBOR

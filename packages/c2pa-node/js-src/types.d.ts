@@ -11,6 +11,7 @@
 // specific language governing permissions and limitations under
 // each license.
 
+// This file contains types not included in @contentauth/c2pa-types and not directly applicable to the neon generated code (index.node.d.ts)
 import { Buffer } from "buffer";
 import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
 /**
@@ -34,7 +35,7 @@ export type ClaimVersion = 1 | 2;
 // Trustmark Versions
 export type TrustmarkVersion =
   // Tolerates 8 bit flips
-  | "BCH_Super"
+  | "BCH_SUPER"
   // Tolerates 5 bit flips
   | "BCH_5"
   // Tolerates 4 bit flips
@@ -365,4 +366,29 @@ export interface TrustConfig {
   trustConfig?: string;
   /** Allowed list of certificates (PEM format or base64-encoded certificate hashes) */
   allowedList?: string;
+}
+
+/**
+ * Configuration for verification settings in C2PA.
+ * Controls various verification behaviors and options.
+ */
+export interface VerifyConfig {
+  /** Whether to verify after reading a manifest */
+  verifyAfterReading: boolean;
+  /** Whether to verify after signing a manifest */
+  verifyAfterSign: boolean;
+  /** Whether to verify trust during validation */
+  verifyTrust: boolean;
+  /** Whether to verify timestamp trust */
+  verifyTimestampTrust: boolean;
+  /** Whether to fetch OCSP responses */
+  ocspFetch: boolean;
+  /** Whether to fetch remote manifests */
+  remoteManifestFetch: boolean;
+  /** Whether to check ingredient trust */
+  checkIngredientTrust: boolean;
+  /** Whether to skip ingredient conflict resolution */
+  skipIngredientConflictResolution: boolean;
+  /** Whether to use strict v1 validation */
+  strictV1Validation: boolean;
 }

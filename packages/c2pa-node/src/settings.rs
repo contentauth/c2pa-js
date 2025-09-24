@@ -302,3 +302,186 @@ pub fn get_cawg_trust_config(mut cx: FunctionContext) -> JsResult<JsValue> {
         }
     }
 }
+
+/// Load verify configuration into the verify settings.
+/// Takes a JSON string representing a VerifyConfig object and applies it to the verify field.
+pub fn load_verify_config(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+    let json_arg = cx.argument::<JsString>(0)?;
+    let json_string = json_arg.value(&mut cx);
+
+    // Parse the JSON to get the verify config
+    let verify_config: serde_json::Value = match serde_json::from_str(&json_string) {
+        Ok(v) => v,
+        Err(e) => return cx.throw_error(format!("Invalid JSON: {}", e)),
+    };
+
+    // Get current settings and merge with verify config
+    let current_toml = get_global_settings_toml().unwrap_or_else(|| {
+        // If no current settings, create default settings
+        Settings::to_toml().unwrap_or_else(|_| String::new())
+    });
+
+    // Parse current settings
+    let mut current_settings: serde_json::Value = if current_toml.is_empty() {
+        serde_json::json!({
+            "version_major": 1,
+            "version_minor": 0,
+            "trust": {
+                "verify_trust_list": true,
+                "user_anchors": null,
+                "trust_anchors": null,
+                "trust_config": null,
+                "allowed_list": null
+            },
+            "cawg_trust": {
+                "verify_trust_list": true,
+                "user_anchors": null,
+                "trust_anchors": null,
+                "trust_config": null,
+                "allowed_list": null
+            },
+            "core": {
+                "debug": false,
+                "hash_alg": "sha256",
+                "salt_jumbf_boxes": true,
+                "prefer_box_hash": false,
+                "merkle_tree_max_proofs": 5,
+                "compress_manifests": true,
+                "backing_store_memory_threshold_in_mb": 512
+            },
+            "verify": {
+                "verify_after_reading": true,
+                "verify_after_sign": true,
+                "verify_trust": false,
+                "verify_timestamp_trust": true,
+                "ocsp_fetch": false,
+                "remote_manifest_fetch": true,
+                "check_ingredient_trust": true,
+                "skip_ingredient_conflict_resolution": false,
+                "strict_v1_validation": false
+            },
+            "builder": {
+                "thumbnail": {
+                    "enabled": true
+                }
+            }
+        })
+    } else {
+        // Parse existing TOML to JSON
+        let toml_val: toml::Value = match toml::from_str(&current_toml) {
+            Ok(v) => v,
+            Err(e) => return cx.throw_error(format!("Failed to parse current TOML: {}", e)),
+        };
+        match serde_json::to_value(&toml_val) {
+            Ok(v) => v,
+            Err(e) => return cx.throw_error(format!("Failed to convert TOML to JSON: {}", e)),
+        }
+    };
+
+    // Update the verify section with new values
+    if let Some(verify_section) = current_settings.get_mut("verify") {
+        if let Some(obj) = verify_section.as_object_mut() {
+            if let Some(val) = verify_config.get("verify_after_reading") {
+                obj.insert("verify_after_reading".to_string(), val.clone());
+            }
+            if let Some(val) = verify_config.get("verify_after_sign") {
+                obj.insert("verify_after_sign".to_string(), val.clone());
+            }
+            if let Some(val) = verify_config.get("verify_trust") {
+                obj.insert("verify_trust".to_string(), val.clone());
+            }
+            if let Some(val) = verify_config.get("verify_timestamp_trust") {
+                obj.insert("verify_timestamp_trust".to_string(), val.clone());
+            }
+            if let Some(val) = verify_config.get("ocsp_fetch") {
+                obj.insert("ocsp_fetch".to_string(), val.clone());
+            }
+            if let Some(val) = verify_config.get("remote_manifest_fetch") {
+                obj.insert("remote_manifest_fetch".to_string(), val.clone());
+            }
+            if let Some(val) = verify_config.get("check_ingredient_trust") {
+                obj.insert("check_ingredient_trust".to_string(), val.clone());
+            }
+            if let Some(val) = verify_config.get("skip_ingredient_conflict_resolution") {
+                obj.insert("skip_ingredient_conflict_resolution".to_string(), val.clone());
+            }
+            if let Some(val) = verify_config.get("strict_v1_validation") {
+                obj.insert("strict_v1_validation".to_string(), val.clone());
+            }
+        }
+    }
+
+    // Convert back to TOML and apply
+    let updated_toml = match toml::to_string(&current_settings) {
+        Ok(t) => t,
+        Err(e) => return cx.throw_error(format!("Failed to convert to TOML: {}", e)),
+    };
+
+    // Apply the updated settings
+    match Settings::from_toml(&updated_toml) {
+        Ok(_) => {
+            // Settings are now applied globally, save the TOML representation
+            let toml_string = Settings::to_toml()
+                .or_else(|e| cx.throw_error(format!("Failed to get settings as TOML: {}", e)))?;
+            // Save the TOML snapshot for new worker threads
+            set_global_settings_toml(Some(toml_string));
+            reload_runtime();
+            Ok(cx.undefined())
+        }
+        Err(e) => cx.throw_error(format!("Failed to apply verify settings: {}", e)),
+    }
+}
+
+/// Get the current verify configuration as JSON.
+pub fn get_verify_config(mut cx: FunctionContext) -> JsResult<JsValue> {
+    match get_global_settings_toml() {
+        Some(toml_string) => {
+            // Convert TOML -> JSON for processing
+            let toml_val: toml::Value = match toml::from_str(&toml_string) {
+                Ok(v) => v,
+                Err(e) => return cx.throw_error(format!("Failed to parse TOML: {}", e)),
+            };
+            let settings: serde_json::Value = match serde_json::to_value(&toml_val) {
+                Ok(v) => v,
+                Err(e) => return cx.throw_error(format!("Failed to convert TOML to JSON: {}", e)),
+            };
+
+            // Extract verify section
+            let default_verify_config = serde_json::json!({
+                "verify_after_reading": true,
+                "verify_after_sign": true,
+                "verify_trust": false,
+                "verify_timestamp_trust": true,
+                "ocsp_fetch": false,
+                "remote_manifest_fetch": true,
+                "check_ingredient_trust": true,
+                "skip_ingredient_conflict_resolution": false,
+                "strict_v1_validation": false
+            });
+            let verify_section = settings.get("verify").unwrap_or(&default_verify_config);
+
+            let json = match serde_json::to_string(verify_section) {
+                Ok(s) => s,
+                Err(e) => {
+                    return cx.throw_error(format!("Failed to serialize verify config: {}", e))
+                }
+            };
+            Ok(cx.string(json).upcast())
+        }
+        None => {
+            // Return default verify config
+            let default_verify = serde_json::json!({
+                "verify_after_reading": true,
+                "verify_after_sign": true,
+                "verify_trust": false,
+                "verify_timestamp_trust": true,
+                "ocsp_fetch": false,
+                "remote_manifest_fetch": true,
+                "check_ingredient_trust": true,
+                "skip_ingredient_conflict_resolution": false,
+                "strict_v1_validation": false
+            });
+            Ok(cx.string(default_verify.to_string()).upcast())
+        }
+    }
+}

@@ -21,3 +21,4 @@ export {
 } from "./IdentityAssertion";
 export { Trustmark } from "./Trustmark";
 export { isActionsAssertion } from "./assertions";
+export * from "./Settings";

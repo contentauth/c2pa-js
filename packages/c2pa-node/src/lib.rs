@@ -172,5 +172,9 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("getTrustConfig", settings::get_trust_config)?;
     cx.export_function("getCawgTrustConfig", settings::get_cawg_trust_config)?;
 
+    // Verify Settings
+    cx.export_function("loadVerifyConfig", settings::load_verify_config)?;
+    cx.export_function("getVerifyConfig", settings::get_verify_config)?;
+
     Ok(())
 }

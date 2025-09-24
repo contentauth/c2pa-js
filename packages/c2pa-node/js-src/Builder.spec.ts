@@ -358,6 +358,56 @@ describe("Builder", () => {
       expect(activeManifest?.title).toBe("Test_Manifest");
     });
 
+    it("should preserve JSON assertion characters without escaping", async () => {
+      const fingerprintAssertion = JSON.stringify({
+        alg: "sha256",
+        blocks: [
+          {
+            scope: {},
+            value: "test-fingerprint-data",
+          },
+        ],
+      });
+      builder.addAssertion(
+        "org.contentauth.fingerprint",
+        fingerprintAssertion,
+        "Json",
+      );
+
+      const dest = { path: path.join(tempDir, "json_test.jpg") };
+      const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
+      builder.sign(signer, source, dest);
+
+      const reader = await Reader.fromAsset(dest);
+      const manifest = reader.json();
+
+      // Ensure JSON parsing the manifest doesn't include any backslashes
+      const manifestJson = JSON.stringify(manifest);
+
+      // Check that our specific JSON assertion doesn't have escaped characters
+      const activeManifest = manifest.manifests[manifest.active_manifest!];
+      const fingerprintAssertionData = activeManifest?.assertions?.find(
+        (a: any) => a.label === "org.contentauth.fingerprint",
+      );
+      expect(fingerprintAssertionData).toBeDefined();
+      expect(fingerprintAssertionData?.data).toEqual({
+        alg: "sha256",
+        blocks: [
+          {
+            scope: {},
+            value: "test-fingerprint-data",
+          },
+        ],
+      });
+
+      // The assertion data should not be a string with escaped quotes
+      expect(typeof fingerprintAssertionData?.data).toBe("object");
+      expect(JSON.stringify(fingerprintAssertionData?.data)).not.toContain(
+        "\\",
+      );
+      console.log(manifestJson);
+    });
+
     it("should archive and restore builder with ingredient thumbnail", async () => {
       const manifestDefinition = {
         claim_generator_info: [
@@ -395,8 +445,14 @@ describe("Builder", () => {
       });
 
       // Archive the builder
-      const archivePath = path.join(tempDir, "ingredient_thumb_archive.zip");
+      const archivePath = path.join(
+        tempDir,
+        `ingredient_thumb_archive_${Date.now()}.zip`,
+      );
       await builder.toArchive({ path: archivePath });
+
+      // Ensure the file is written to disk before proceeding
+      await fs.access(archivePath);
 
       // Restore from archive
       const builder2 = await Builder.fromArchive({ path: archivePath });

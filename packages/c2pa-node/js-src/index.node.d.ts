@@ -26,7 +26,6 @@ import type {
   ReaderInterface,
   SigningAlg,
   SourceAsset,
-  TrustConfig,
   TrustmarkConfig,
   TrustmarkInterface,
 } from "./types";

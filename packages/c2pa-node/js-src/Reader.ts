@@ -11,7 +11,7 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import * as neon from "./index.node";
+const neon = require("./index.node");
 import type { DestinationAsset, ReaderInterface, SourceAsset } from "./types";
 
 import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
