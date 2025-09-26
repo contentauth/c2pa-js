@@ -16,7 +16,6 @@ use async_trait::async_trait;
 use c2pa::{
     create_signer,
     crypto::{
-        cose::{sign, TimeStampStorage},
         raw_signature::{AsyncRawSigner, RawSigner, RawSignerError},
         time_stamp::{AsyncTimeStampProvider, TimeStampProvider},
     },
@@ -26,7 +25,7 @@ use c2pa::{
     },
     AsyncSigner,
     Error::OtherError,
-    Signer, SigningAlg,
+    HashedUri, Signer, SigningAlg,
 };
 use neon::prelude::*;
 use neon::types::buffer::TypedArray;
@@ -319,10 +318,10 @@ impl TimeStampProvider for NeonCallbackSigner {
 
 impl AsyncTimeStampProvider for NeonCallbackSigner {
     fn time_stamp_service_url(&self) -> Option<String> {
-        TimeStampProvider::time_stamp_service_url(self)
+        self.config.tsa_url.clone()
     }
     fn time_stamp_request_headers(&self) -> Option<Vec<(String, String)>> {
-        TimeStampProvider::time_stamp_request_headers(self)
+        self.config.tsa_headers.clone()
     }
 }
 
@@ -394,7 +393,7 @@ impl AsyncRawSigner for NeonCallbackSigner {
 
 impl RawSigner for NeonCallbackSigner {
     fn sign(&self, _data: &[u8]) -> Result<Vec<u8>, RawSignerError> {
-        // Instead of blocking, we'll return an error since this is a sync context
+        // Synchronous signing is not supported; use AsyncRawSigner instead
         Err(RawSignerError::InternalError(
             "Synchronous signing not supported - use AsyncRawSigner instead".to_string(),
         ))
@@ -428,8 +427,10 @@ impl AsyncCredentialHolder for NeonCallbackSigner {
         ciborium::into_writer(signer_payload, &mut sp_cbor)
             .map_err(|e| IdentityBuilderError::CborGenerationError(e.to_string()))?;
 
-        // Create a COSE_Sign1 structure using the raw signature
-        sign(self, &sp_cbor, None, TimeStampStorage::V2_sigTst2_CTT)
+        // Package into COSE_Sign1 using library-side COSE handling via async wrapper
+        // Use AsyncSigner::sign to avoid any sync context
+        c2pa::AsyncSigner::sign(self, sp_cbor)
+            .await
             .map_err(|e| IdentityBuilderError::SignerError(e.to_string()))
     }
 }

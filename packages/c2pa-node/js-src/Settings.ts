@@ -42,7 +42,7 @@ export async function loadSettingsFromFile(filePath: string): Promise<void> {
   const ext = path.extname(filePath).toLowerCase();
   const content = await fs.readFile(filePath, "utf8");
   if (ext === ".toml") {
-    loadC2paSettings(content);
+    loadC2paSettingsToml(content);
     return;
   }
   // Assume JSON (or JSON5 that is valid JSON) otherwise

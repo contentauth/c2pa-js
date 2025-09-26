@@ -381,9 +381,6 @@ describe("Builder", () => {
       const reader = await Reader.fromAsset(dest);
       const manifest = reader.json();
 
-      // Ensure JSON parsing the manifest doesn't include any backslashes
-      const manifestJson = JSON.stringify(manifest);
-
       // Check that our specific JSON assertion doesn't have escaped characters
       const activeManifest = manifest.manifests[manifest.active_manifest!];
       const fingerprintAssertionData = activeManifest?.assertions?.find(
@@ -405,7 +402,6 @@ describe("Builder", () => {
       expect(JSON.stringify(fingerprintAssertionData?.data)).not.toContain(
         "\\",
       );
-      console.log(manifestJson);
     });
 
     it("should archive and restore builder with ingredient thumbnail", async () => {

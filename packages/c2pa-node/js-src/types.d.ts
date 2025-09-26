@@ -121,6 +121,13 @@ export interface CallbackSignerInterface {
   signer(): CallbackSignerInterface;
 }
 
+export interface CallbackCredentialHolderInterface {
+  sigType(): string;
+  reserveSize(): number;
+  sign(payload: SignerPayload): Promise<Buffer>;
+  signer(): CallbackSignerInterface;
+}
+
 /**
  * @internal
  * Internal type used for Rust/Node.js interop
@@ -139,6 +146,18 @@ export interface JsCallbackSignerConfig {
   tsaHeaders?: Array<[string, string]>;
   tsaBody?: Buffer;
   directCoseHandling: boolean;
+}
+
+export interface SignerPayload {
+  referencedAssertions: HashedUri[];
+  sigType: string;
+  roles: string[];
+}
+
+export interface HashedUri {
+  url: string;
+  hash: Uint8Array;
+  alg?: string;
 }
 
 export interface BuilderInterface {
@@ -221,7 +240,7 @@ export interface BuilderInterface {
    * @returns the bytes of the c2pa_manifest that was embedded
    */
   signAsync(
-    callbackSigner: CallbackSignerInterface,
+    callbackSigner: CallbackSignerInterface | IdentityAssertionSignerInterface,
     input: SourceAsset,
     output: DestinationAsset,
   ): Promise<Buffer>;
@@ -238,20 +257,6 @@ export interface BuilderInterface {
     filePath: string,
     output: DestinationAsset,
   ): Buffer;
-
-  /**
-   * Sign an asset from a buffer or file asynchronously, using an
-   * IdentityAssertionSigner
-   * @param signer The IdentityAssertionSigner
-   * @param source The file or buffer containing the asset
-   * @param dest The file or buffer to write the asset to
-   * @returns the bytes of the c2pa_manifest that was embedded
-   */
-  identitySignAsync(
-    callbackSigner: IdentityAssertionSignerInterface,
-    input: SourceAsset,
-    output: DestinationAsset,
-  ): Promise<Buffer>;
 
   /**
    * Getter for the builder's manifest definition

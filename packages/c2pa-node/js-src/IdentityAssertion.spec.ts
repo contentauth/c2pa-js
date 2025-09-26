@@ -150,7 +150,7 @@ describe("IdentityAssertionBuilder", () => {
 
     const source = {
       buffer: await fs.readFile("./tests/fixtures/CA.jpg"),
-      mimeType: "jpeg",
+      mimeType: "image/jpeg",
     };
     const dest: DestinationBufferAsset = {
       buffer: null,
@@ -161,30 +161,30 @@ describe("IdentityAssertionBuilder", () => {
 
     // Add the required resources
     await builder.addResource("thumbnail.jpg", {
-      mimeType: "jpeg",
+      mimeType: "image/jpeg",
       buffer: await fs.readFile("./tests/fixtures/thumbnail.jpg"),
     });
     await builder.addResource("ingredient-thumb.jpg", {
-      mimeType: "jpeg",
+      mimeType: "image/jpeg",
       buffer: await fs.readFile("./tests/fixtures/thumbnail.jpg"),
     });
 
     // Create and configure the identity assertion
-    const ia_signer = IdentityAssertionSigner.new(c2paSigner);
+    const iaSigner = IdentityAssertionSigner.new(c2paSigner.signer());
     const iab =
       await IdentityAssertionBuilder.identityBuilderForCredentialHolder(
-        cawgSigner,
+        cawgSigner.signer(),
       );
     iab.addReferencedAssertions(["cawg.training-mining"]);
-    ia_signer.addIdentityAssertion(iab);
+    iaSigner.addIdentityAssertion(iab);
 
-    // Sign the manifest
-    await builder.signAsync(c2paSigner, source, dest);
+    // Sign the manifest (standard async flow)
+    await builder.signAsync(iaSigner, source, dest);
 
     // Verify the manifest
     const reader = await Reader.fromAsset({
       buffer: dest.buffer! as Buffer,
-      mimeType: "jpeg",
+      mimeType: "image/jpeg",
     });
     await reader.postValidateCawg();
   });
