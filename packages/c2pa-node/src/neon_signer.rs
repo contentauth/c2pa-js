@@ -19,13 +19,9 @@ use c2pa::{
         raw_signature::{AsyncRawSigner, RawSigner, RawSignerError},
         time_stamp::{AsyncTimeStampProvider, TimeStampProvider},
     },
-    identity::{
-        builder::{AsyncCredentialHolder, IdentityBuilderError},
-        SignerPayload,
-    },
     AsyncSigner,
     Error::OtherError,
-    HashedUri, Signer, SigningAlg,
+    Signer, SigningAlg,
 };
 use neon::prelude::*;
 use neon::types::buffer::TypedArray;
@@ -237,6 +233,28 @@ impl NeonCallbackSigner {
     }
 }
 
+/// # Safety
+///
+/// The implementations of `Send` and `Sync` are marked as `unsafe` because the compiler cannot automatically
+/// verify that the type is safe to send or share between threads. This is because:
+/// - The type contains `RwLock` fields (`signer` and `identity_assertions`)
+/// - The type interacts with JavaScript through Neon bindings
+/// - The type contains references to JavaScript objects and callbacks
+///
+/// However, the implementation is safe because:
+/// - The `RwLock` fields provide thread-safe access to the contained data
+/// - The JavaScript interactions are properly synchronized through the Neon runtime
+/// - The type is used in a controlled environment where the JavaScript context is properly managed
+/// - The type is used in a way that ensures proper synchronization of access to its resources
+///
+/// These traits are necessary because:
+/// - `Send`: Allows the type to be transferred between threads
+/// - `Sync`: Allows the type to be shared between threads
+///
+/// The type needs these capabilities because it:
+/// - Implements `AsyncSigner` and `AsyncRawSigner` traits for asynchronous signing operations
+/// - Is used in the `identity_sign_async` function which performs asynchronous operations
+/// - Is part of a Node.js binding where async operations are common
 unsafe impl Send for NeonCallbackSigner {}
 unsafe impl Sync for NeonCallbackSigner {}
 
@@ -409,29 +427,6 @@ impl RawSigner for NeonCallbackSigner {
 
     fn reserve_size(&self) -> usize {
         AsyncRawSigner::reserve_size(self)
-    }
-}
-
-#[async_trait]
-impl AsyncCredentialHolder for NeonCallbackSigner {
-    fn sig_type(&self) -> &'static str {
-        "cawg.x509.cose"
-    }
-
-    fn reserve_size(&self) -> usize {
-        self.config.reserve_size
-    }
-
-    async fn sign(&self, signer_payload: &SignerPayload) -> Result<Vec<u8>, IdentityBuilderError> {
-        let mut sp_cbor: Vec<u8> = vec![];
-        ciborium::into_writer(signer_payload, &mut sp_cbor)
-            .map_err(|e| IdentityBuilderError::CborGenerationError(e.to_string()))?;
-
-        // Package into COSE_Sign1 using library-side COSE handling via async wrapper
-        // Use AsyncSigner::sign to avoid any sync context
-        c2pa::AsyncSigner::sign(self, sp_cbor)
-            .await
-            .map_err(|e| IdentityBuilderError::SignerError(e.to_string()))
     }
 }
 

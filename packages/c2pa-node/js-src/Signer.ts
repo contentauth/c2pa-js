@@ -14,10 +14,8 @@
 const neon = require("./index.node");
 import type {
   CallbackSignerInterface,
-  CallbackCredentialHolderInterface,
   JsCallbackSignerConfig,
   LocalSignerInterface,
-  SignerPayload,
   SigningAlg,
 } from "./types";
 
@@ -99,42 +97,5 @@ export class CallbackSigner implements CallbackSignerInterface {
 
   timeAuthorityUrl(): string | undefined {
     return neon.callbackSignerTimeAuthorityUrl.call(this.callbackSigner);
-  }
-}
-
-export class CallbackCredentialHolder
-  implements CallbackCredentialHolderInterface
-{
-  constructor(
-    private callbackCredentialHolder: CallbackSignerInterface,
-  ) {}
-
-  signer(): CallbackSignerInterface {
-    return this.callbackCredentialHolder;
-  }
-
-  static newSigner(
-    config: JsCallbackSignerConfig,
-    callback: (data: Buffer) => Promise<Buffer>,
-  ) {
-    // Convert the config object to a JsBox<CallbackSignerConfig>
-    const configBox = neon.callbackSignerConfigFromJs(config);
-    const signer = neon.callbackSignerFromConfig(configBox, callback);
-    return new CallbackCredentialHolder(signer);
-  }
-
-  async sign(payload: SignerPayload): Promise<Buffer> {
-    return neon.callbackSignerSignPayload.call(
-      this.callbackCredentialHolder,
-      payload,
-    );
-  }
-
-  reserveSize(): number {
-    return neon.callbackSignerReserveSize.call(this.callbackCredentialHolder);
-  }
-
-  sigType(): string {
-    return "cawg.x509.cose";
   }
 }

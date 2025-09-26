@@ -131,12 +131,19 @@ declare module "index.node" {
     identityAssertionBuilder: IdentityAssertionBuilderInterface,
   ): void;
   export function identityBuilderForCredentialHolder(
-    credentialHolder: CallbackSignerInterface,
+    credentialHolder: CallbackCredentialHolderInterface,
   ): IdentityAssertionBuilderInterface;
   export function identityBuilderAddReferencedAssertions(
-    referenced_assertions: Array<string>,
+    referencedAssertions: Array<string>,
   ): void;
   export function identityBuilderAddRoles(roles: Array<string>): void;
+  export function newCallbackCredentialHolder(
+    reserveSize: number,
+    sigType: string,
+    callback: (signerPayload: SignerPayload) => Promise<Buffer>,
+  ): CallbackCredentialHolderInterface;
+  export function callbackCredentialHolderReserveSize(): number;
+  export function callbackCredentialHolderSigType(): string;
 
   // Trustmark
   export function trustmarkNew(

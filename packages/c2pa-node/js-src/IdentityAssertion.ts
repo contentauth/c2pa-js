@@ -13,9 +13,11 @@
 
 const neon = require("./index.node");
 import type {
+  CallbackCredentialHolderInterface,
   CallbackSignerInterface,
   IdentityAssertionBuilderInterface,
   IdentityAssertionSignerInterface,
+  SignerPayload,
 } from "./types";
 
 export class IdentityAssertionBuilder
@@ -24,7 +26,7 @@ export class IdentityAssertionBuilder
   constructor(private _builder: IdentityAssertionBuilderInterface) {}
 
   static async identityBuilderForCredentialHolder(
-    credentialHolder: CallbackSignerInterface,
+    credentialHolder: CallbackCredentialHolderInterface,
   ): Promise<IdentityAssertionBuilder> {
     const builder = neon.identityBuilderForCredentialHolder(
       credentialHolder.signer(),
@@ -69,5 +71,49 @@ export class IdentityAssertionSigner
 
   signer(): IdentityAssertionSignerInterface {
     return this._signer;
+  }
+}
+
+export class CallbackCredentialHolder
+  implements CallbackCredentialHolderInterface
+{
+  constructor(
+    private callbackCredentialHolder: CallbackCredentialHolderInterface,
+  ) {}
+
+  signer(): CallbackCredentialHolderInterface {
+    return this.callbackCredentialHolder;
+  }
+
+  static newCallbackCredentialHolder(
+    reserveSize: number,
+    sigType: string,
+    callback: (signerPayload: SignerPayload) => Promise<Buffer>,
+  ) {
+    const credentialHolder = neon.newCallbackCredentialHolder(
+      reserveSize,
+      sigType,
+      callback,
+    );
+    return new CallbackCredentialHolder(credentialHolder);
+  }
+
+  async sign(payload: SignerPayload): Promise<Buffer> {
+    return neon.callbackSignerSignPayload.call(
+      this.callbackCredentialHolder,
+      payload,
+    );
+  }
+
+  reserveSize(): number {
+    return neon.callbackCredentialHolderReserveSize.call(
+      this.callbackCredentialHolder,
+    );
+  }
+
+  sigType(): string {
+    return neon.callbackCredentialHolderSigType.call(
+      this.callbackCredentialHolder,
+    );
   }
 }

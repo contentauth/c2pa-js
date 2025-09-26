@@ -12,13 +12,13 @@
 // each license.
 
 const neon = require("./index.node");
-import { IdentityAssertionSigner } from "./IdentityAssertion";
 import type {
   BuilderInterface,
   CallbackSignerInterface,
   ClaimVersion,
   DestinationAsset,
   FileAsset,
+  IdentityAssertionSignerInterface,
   JsCallbackSignerConfig,
   LocalSignerInterface,
   ManifestAssertionKind,
@@ -142,37 +142,11 @@ export class Builder implements BuilderInterface {
   }
 
   async signAsync(
-    signer: CallbackSignerInterface,
+    signer: CallbackSignerInterface | IdentityAssertionSignerInterface,
     input: SourceAsset,
     output: DestinationAsset,
   ): Promise<Buffer> {
     return neon.builderSignAsync
-      .call(this.builder, signer.signer(), input, output)
-      .then((result: Buffer | { manifest: Buffer; signedAsset: Buffer }) => {
-        // output is a buffer and result is the manifest and the signed asset.
-        if ("buffer" in output) {
-          if ("signedAsset" in result && "manifest" in result) {
-            output.buffer = result.signedAsset;
-            return result.manifest;
-          } else {
-            throw new Error("Unexpected result for DestinationBuffer");
-          }
-        } else {
-          // output is a file and result is the bytes of the manifest.
-          return result as Buffer;
-        }
-      })
-      .catch((error: Error) => {
-        throw error;
-      });
-  }
-
-  async identitySignAsync(
-    signer: IdentityAssertionSigner,
-    input: SourceAsset,
-    output: DestinationAsset,
-  ): Promise<Buffer> {
-    return neon.builderIdentitySignAsync
       .call(this.builder, signer.signer(), input, output)
       .then((result: Buffer | { manifest: Buffer; signedAsset: Buffer }) => {
         // output is a buffer and result is the manifest and the signed asset.

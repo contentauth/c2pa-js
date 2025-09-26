@@ -19,6 +19,7 @@ import { Builder } from "./Builder";
 import {
   IdentityAssertionBuilder,
   IdentityAssertionSigner,
+  CallbackCredentialHolder,
 } from "./IdentityAssertion";
 import type {
   JsCallbackSignerConfig,
@@ -29,7 +30,6 @@ import type { Manifest } from "@contentauth/c2pa-types";
 import * as fs from "fs-extra";
 import * as crypto from "crypto";
 
-// TODO: move to a separate test file
 class TestSigner {
   private privateKey: crypto.KeyObject;
 
@@ -123,17 +123,7 @@ describe("IdentityAssertionBuilder", () => {
       tsaUrl: undefined,
       tsaHeaders: undefined,
       tsaBody: undefined,
-      directCoseHandling: false,
-    };
-
-    const cawgConfig: JsCallbackSignerConfig = {
-      alg: "ed25519" as SigningAlg,
-      certs: [cawgPublicKey],
-      reserveSize: 10000,
-      tsaUrl: undefined,
-      tsaHeaders: undefined,
-      tsaBody: undefined,
-      directCoseHandling: false,
+      directCoseHandling: true,
     };
 
     // Create signers
@@ -143,8 +133,9 @@ describe("IdentityAssertionBuilder", () => {
       c2paConfig,
       c2paTestSigner.sign,
     );
-    const cawgSigner = CallbackSigner.newSigner(
-      cawgConfig,
+    const cawgSigner = CallbackCredentialHolder.newCallbackCredentialHolder(
+      10000,
+      "cawg.x509.cose",
       cawgTestSigner.sign,
     );
 
@@ -179,7 +170,7 @@ describe("IdentityAssertionBuilder", () => {
     iaSigner.addIdentityAssertion(iab);
 
     // Sign the manifest (standard async flow)
-    await builder.signAsync(iaSigner, source, dest);
+    await builder.signAsync(iaSigner.signer(), source, dest);
 
     // Verify the manifest
     const reader = await Reader.fromAsset({

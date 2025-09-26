@@ -125,7 +125,7 @@ export interface CallbackCredentialHolderInterface {
   sigType(): string;
   reserveSize(): number;
   sign(payload: SignerPayload): Promise<Buffer>;
-  signer(): CallbackSignerInterface;
+  signer(): CallbackCredentialHolderInterface;
 }
 
 /**
@@ -310,6 +310,8 @@ export interface IdentityAssertionSignerInterface {
   addIdentityAssertion(
     identityAssertionBuilder: IdentityAssertionBuilderInterface,
   ): void;
+
+  signer(): IdentityAssertionSignerInterface;
 }
 
 export interface IdentityAssertionBuilderInterface {

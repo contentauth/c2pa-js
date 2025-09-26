@@ -20,6 +20,7 @@ mod settings;
 mod utils;
 
 pub mod neon_builder;
+pub mod neon_credential_holder;
 pub mod neon_identity_assertion_builder;
 pub mod neon_identity_assertion_signer;
 pub mod neon_reader;
@@ -151,6 +152,10 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function(
         "identityBuilderAddRoles",
         neon_identity_assertion_builder::NeonIdentityAssertionBuilder::add_roles,
+    )?;
+    cx.export_function(
+        "callbackCredentialHolderFromConfig",
+        neon_credential_holder::NeonCallbackCredentialHolder::from_js,
     )?;
 
     // Trustmark

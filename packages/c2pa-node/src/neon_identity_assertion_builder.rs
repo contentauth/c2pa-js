@@ -11,7 +11,7 @@
 // specific language governing permissions and limitations under
 // each license.
 
-use crate::neon_signer::NeonCallbackSigner;
+use crate::neon_credential_holder::NeonCallbackCredentialHolder;
 use c2pa::{
     dynamic_assertion::{AsyncDynamicAssertion, DynamicAssertionContent},
     identity::{builder::AsyncCredentialHolder, SignerPayload},
@@ -25,7 +25,7 @@ use std::sync::RwLock;
 /// A `NeonIdentityAssertionBuilder` gathers the necessary components
 /// for an identity assertion using a Neon-based credential holder.
 pub struct NeonIdentityAssertionBuilder {
-    credential_holder: RwLock<NeonCallbackSigner>,
+    credential_holder: RwLock<NeonCallbackCredentialHolder>,
     referenced_assertions: RwLock<Vec<String>>,
     roles: RwLock<Vec<String>>,
 }
@@ -61,8 +61,8 @@ impl Clone for NeonIdentityAssertionBuilder {
 impl NeonIdentityAssertionBuilder {
     /// Create a `NeonIdentityAssertionBuilder` for the given JS credential holder.
     pub fn for_credential_holder(mut cx: FunctionContext) -> JsResult<JsBox<Self>> {
-        let credential_holder_handle = cx.argument::<JsBox<NeonCallbackSigner>>(0)?;
-        let credential_holder_ref: &NeonCallbackSigner = credential_holder_handle.deref();
+        let credential_holder_handle = cx.argument::<JsBox<NeonCallbackCredentialHolder>>(0)?;
+        let credential_holder_ref: &NeonCallbackCredentialHolder = credential_holder_handle.deref();
         Ok(cx.boxed(Self {
             credential_holder: RwLock::new(credential_holder_ref.clone()),
             referenced_assertions: RwLock::new(vec![]),
