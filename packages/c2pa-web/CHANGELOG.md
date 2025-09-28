@@ -1,5 +1,11 @@
 # @contentauth/c2pa-web
 
+## 0.2.3
+
+### Patch Changes
+
+- 2c499ef: Fix issue which crashes reader.fromBlob() and reader.fromBlobFragment() in Firefox.
+
 ## 0.2.2
 
 ### Patch Changes
