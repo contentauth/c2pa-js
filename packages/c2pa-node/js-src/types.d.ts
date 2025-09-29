@@ -153,6 +153,10 @@ export interface JsCallbackSignerConfig {
   tsaUrl?: string;
   tsaHeaders?: Array<[string, string]>;
   tsaBody?: Buffer;
+  // TODO: directCoseHandling is currently not implemented in the signing logic.
+  // The field is read from config but the actual signing implementation does not
+  // differentiate between directCoseHandling: true/false - both cases pass the
+  // same data to the JavaScript callback regardless of this setting.
   directCoseHandling: boolean;
 }
 
