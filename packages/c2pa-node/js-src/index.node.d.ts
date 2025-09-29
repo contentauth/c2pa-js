@@ -13,29 +13,31 @@
 
 import { Buffer } from "buffer";
 import type {
-  BuilderInterface,
   CallbackSignerConfig,
-  CallbackSignerInterface,
   ClaimVersion,
   DestinationAsset,
-  CallbackCredentialHolderInterface,
-  IdentityAssertionBuilderInterface,
-  IdentityAssertionSignerInterface,
   JsCallbackSignerConfig,
-  LocalSignerInterface,
   ManifestAssertionKind,
-  ReaderInterface,
   SignerPayload,
   SigningAlg,
   SourceAsset,
   TrustmarkConfig,
-  TrustmarkInterface,
+  NeonCallbackSignerHandle,
+  NeonLocalSignerHandle,
+  NeonReaderHandle,
+  NeonBuilderHandle,
+  NeonIdentityAssertionSignerHandle,
+  NeonIdentityAssertionBuilderHandle,
+  NeonCallbackCredentialHolderHandle,
+  NeonTrustmarkHandle,
 } from "./types";
+
+// These functions are not exposed directly, but are called by the Builder, Reader, and Signer, etc. classes
 
 declare module "index.node" {
   // Builder methods
-  export function builderNew(): BuilderInterface;
-  export function builderWithJson(json: string): BuilderInterface;
+  export function builderNew(): NeonBuilderHandle;
+  export function builderWithJson(json: string): NeonBuilderHandle;
   export function builderSetNoEmbed(noEmbed: boolean): void;
   export function builderSetRemoteUrl(url: string): void;
   export function builderAddAssertion(
@@ -54,9 +56,9 @@ declare module "index.node" {
   export function builderToArchive(asset: DestinationAsset): Promise<void>;
   export function builderFromArchive(
     asset: SourceAsset,
-  ): Promise<BuilderInterface>;
+  ): Promise<NeonBuilderHandle>;
   export function builderSign(
-    signer: LocalSignerInterface,
+    signer: NeonLocalSignerHandle,
     input: SourceAsset,
     output: DestinationAsset,
   ): Buffer;
@@ -67,12 +69,12 @@ declare module "index.node" {
     output: DestinationAsset,
   ): Promise<Buffer | { manifest: Buffer; signedAsset: Buffer }>;
   export function builderSignAsync(
-    signer: CallbackSignerInterface,
+    signer: NeonCallbackSignerHandle | NeonIdentityAssertionSignerHandle,
     input: SourceAsset,
     output: DestinationAsset,
   ): Promise<Buffer | { manifest: Buffer; signedAsset: Buffer }>;
   export function builderIdentitySignAsync(
-    signer: IdentityAssertionSignerInterface,
+    signer: NeonIdentityAssertionSignerHandle,
     input: SourceAsset,
     output: DestinationAsset,
   ): Promise<Buffer | { manifest: Buffer; signedAsset: Buffer }>;
@@ -83,11 +85,13 @@ declare module "index.node" {
   ): void;
 
   // Reader methods
-  export function readerFromAsset(asset: SourceAsset): Promise<ReaderInterface>;
+  export function readerFromAsset(
+    asset: SourceAsset,
+  ): Promise<NeonReaderHandle>;
   export function readerFromManifestDataAndAsset(
     manifestData: Buffer,
     asset: SourceAsset,
-  ): Promise<ReaderInterface>;
+  ): Promise<NeonReaderHandle>;
   export function readerJson(): string;
   export function readerRemoteUrl(): string;
   export function readerIsEmbedded(): boolean;
@@ -103,7 +107,7 @@ declare module "index.node" {
     pkey: Buffer,
     signingAlg: SigningAlg,
     tsaUrl?: string,
-  ): LocalSignerInterface;
+  ): NeonLocalSignerHandle;
   export function localSignerSign(data: Buffer): Buffer;
   export function localSignerAlg(): SigningAlg;
   export function localSignerCerts(): Array<Buffer>;
@@ -113,7 +117,7 @@ declare module "index.node" {
   export function callbackSignerFromConfig(
     config: CallbackSignerConfig,
     callback: (data: Buffer) => Promise<Buffer>,
-  ): CallbackSignerInterface;
+  ): NeonCallbackSignerHandle;
   export function callbackSignerConfigFromJs(
     config: JsCallbackSignerConfig,
   ): CallbackSignerConfig;
@@ -125,14 +129,14 @@ declare module "index.node" {
 
   // CAWG Identity
   export function identitySignerNew(
-    signer: CallbackSignerInterface,
-  ): IdentityAssertionSignerInterface;
+    signer: NeonCallbackSignerHandle,
+  ): NeonIdentityAssertionSignerHandle;
   export function identitySignerAddIdentityAssertion(
-    identityAssertionBuilder: IdentityAssertionBuilderInterface,
+    identityAssertionBuilder: NeonIdentityAssertionBuilderHandle,
   ): void;
   export function identityBuilderForCredentialHolder(
-    credentialHolder: CallbackCredentialHolderInterface,
-  ): IdentityAssertionBuilderInterface;
+    credentialHolder: NeonCallbackCredentialHolderHandle,
+  ): NeonIdentityAssertionBuilderHandle;
   export function identityBuilderAddReferencedAssertions(
     referencedAssertions: Array<string>,
   ): void;
@@ -141,14 +145,14 @@ declare module "index.node" {
     reserveSize: number,
     sigType: string,
     callback: (signerPayload: SignerPayload) => Promise<Buffer>,
-  ): CallbackCredentialHolderInterface;
+  ): NeonCallbackCredentialHolderHandle;
   export function callbackCredentialHolderReserveSize(): number;
   export function callbackCredentialHolderSigType(): string;
 
   // Trustmark
   export function trustmarkNew(
     config: TrustmarkConfig,
-  ): Promise<TrustmarkInterface>;
+  ): Promise<NeonTrustmarkHandle>;
   export function trustmarkEncode(
     image: Buffer,
     strength: number,

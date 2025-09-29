@@ -14,16 +14,19 @@
 const neon = require("./index.node");
 import type {
   CallbackCredentialHolderInterface,
-  CallbackSignerInterface,
   IdentityAssertionBuilderInterface,
   IdentityAssertionSignerInterface,
+  NeonCallbackCredentialHolderHandle,
+  NeonIdentityAssertionSignerHandle,
+  NeonIdentityAssertionBuilderHandle,
   SignerPayload,
+  NeonCallbackSignerHandle,
 } from "./types";
 
 export class IdentityAssertionBuilder
   implements IdentityAssertionBuilderInterface
 {
-  constructor(private _builder: IdentityAssertionBuilderInterface) {}
+  constructor(private _builder: NeonIdentityAssertionBuilderHandle) {}
 
   static async identityBuilderForCredentialHolder(
     credentialHolder: CallbackCredentialHolderInterface,
@@ -45,7 +48,7 @@ export class IdentityAssertionBuilder
     neon.identityBuilderAddRoles.call(this._builder, roles);
   }
 
-  builder(): IdentityAssertionBuilderInterface {
+  builder(): NeonIdentityAssertionBuilderHandle {
     return this._builder;
   }
 }
@@ -53,10 +56,10 @@ export class IdentityAssertionBuilder
 export class IdentityAssertionSigner
   implements IdentityAssertionSignerInterface
 {
-  constructor(private _signer: IdentityAssertionSignerInterface) {}
+  constructor(private _signer: NeonIdentityAssertionSignerHandle) {}
 
-  static new(signer: CallbackSignerInterface): IdentityAssertionSigner {
-    const identitySigner = neon.identitySignerNew(signer.signer());
+  static new(signer: NeonCallbackSignerHandle): IdentityAssertionSigner {
+    const identitySigner = neon.identitySignerNew(signer);
     return new IdentityAssertionSigner(identitySigner);
   }
 
@@ -69,7 +72,7 @@ export class IdentityAssertionSigner
     );
   }
 
-  signer(): IdentityAssertionSignerInterface {
+  signer(): NeonIdentityAssertionSignerHandle {
     return this._signer;
   }
 }
@@ -78,10 +81,10 @@ export class CallbackCredentialHolder
   implements CallbackCredentialHolderInterface
 {
   constructor(
-    private callbackCredentialHolder: CallbackCredentialHolderInterface,
+    private callbackCredentialHolder: NeonCallbackCredentialHolderHandle,
   ) {}
 
-  signer(): CallbackCredentialHolderInterface {
+  signer(): NeonCallbackCredentialHolderHandle {
     return this.callbackCredentialHolder;
   }
 

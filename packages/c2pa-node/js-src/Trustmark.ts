@@ -12,13 +12,17 @@
 // each license.
 
 const neon = require("./index.node");
-import type { TrustmarkInterface, TrustmarkConfig } from "./types";
+import type {
+  TrustmarkInterface,
+  TrustmarkConfig,
+  NeonTrustmarkHandle,
+} from "./types";
 
 export class Trustmark implements TrustmarkInterface {
-  constructor(private trustmark: TrustmarkInterface) {}
+  constructor(private trustmark: NeonTrustmarkHandle) {}
 
   static async newTrustmark(config: TrustmarkConfig): Promise<Trustmark> {
-    const trustmark = await neon.trustmarkNew(config);
+    const trustmark: NeonTrustmarkHandle = await neon.trustmarkNew(config);
     return new Trustmark(trustmark);
   }
 

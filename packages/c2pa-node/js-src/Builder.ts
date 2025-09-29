@@ -23,14 +23,16 @@ import type {
   LocalSignerInterface,
   ManifestAssertionKind,
   SourceAsset,
+  NeonBuilderHandle,
 } from "./types";
+import { IdentityAssertionSigner } from "./IdentityAssertion";
 import type { Manifest } from "@contentauth/c2pa-types";
 
 export class Builder implements BuilderInterface {
-  private constructor(private builder: BuilderInterface) {}
+  private constructor(private builder: NeonBuilderHandle) {}
 
   static new(): Builder {
-    const builder = neon.builderNew();
+    const builder: NeonBuilderHandle = neon.builderNew();
     return new Builder(builder);
   }
 
@@ -49,7 +51,7 @@ export class Builder implements BuilderInterface {
         "Failed to stringify JSON Manifest Definition: Unknown error",
       );
     }
-    const builder: BuilderInterface = neon.builderWithJson(jsonString);
+    const builder: NeonBuilderHandle = neon.builderWithJson(jsonString);
     return new Builder(builder);
   }
 
@@ -146,8 +148,13 @@ export class Builder implements BuilderInterface {
     input: SourceAsset,
     output: DestinationAsset,
   ): Promise<Buffer> {
-    return neon.builderSignAsync
-      .call(this.builder, signer.signer(), input, output)
+    const neonHandle = signer.signer();
+    const isIdentity = signer instanceof IdentityAssertionSigner;
+    const neonFn = isIdentity
+      ? neon.builderIdentitySignAsync
+      : neon.builderSignAsync;
+    return neonFn
+      .call(this.builder, neonHandle, input, output)
       .then((result: Buffer | { manifest: Buffer; signedAsset: Buffer }) => {
         // output is a buffer and result is the manifest and the signed asset.
         if ("buffer" in output) {

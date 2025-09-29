@@ -31,19 +31,23 @@ pub struct NeonIdentityAssertionBuilder {
 }
 
 #[derive(Deserialize, Serialize)]
-struct IdentityAssertion {
-    signer_payload: SignerPayload,
+pub struct IdentityAssertion {
+    pub(crate) signer_payload: SignerPayload,
 
-    signature: Vec<u8>,
+    #[serde(with = "serde_bytes")]
+    pub(crate) signature: Vec<u8>,
 
-    pad1: Vec<u8>,
+    #[serde(with = "serde_bytes")]
+    pub(crate) pad1: Vec<u8>,
 
     // Must use explicit ByteBuf here because #[serde(with = "serde_bytes")]
     // does not work with Option<Vec<u8>>.
-    pad2: Option<ByteBuf>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) pad2: Option<ByteBuf>,
 
     // Label for the assertion. Only assigned when reading from a manifest.
-    label: Option<String>,
+    #[serde(skip)]
+    pub(crate) label: Option<String>,
 }
 
 // Note: unwrap is used on read() and write() results, as poisoning only occurs as a result of a
@@ -161,6 +165,7 @@ impl AsyncDynamicAssertion for NeonIdentityAssertionBuilder {
         finalize_identity_assertion(signer_payload, size, signature)
     }
 }
+
 fn finalize_identity_assertion(
     signer_payload: SignerPayload,
     size: Option<usize>,
@@ -189,7 +194,6 @@ fn finalize_identity_assertion(
         assertion_cbor.clear();
         ciborium::into_writer(&ia, &mut assertion_cbor)
             .map_err(|e| c2pa::Error::BadParam(e.to_string()))?;
-        // TO DO: Think through how errors map into crate::Error.
 
         ia.pad2 = Some(ByteBuf::from(vec![
             0u8;
@@ -199,9 +203,6 @@ fn finalize_identity_assertion(
         assertion_cbor.clear();
         ciborium::into_writer(&ia, &mut assertion_cbor)
             .map_err(|e| c2pa::Error::BadParam(e.to_string()))?;
-        // TO DO: Think through how errors map into crate::Error.
-
-        // TO DO: See if this approach ever fails. IMHO it "should" work for all cases.
         assert_eq!(assertion_size, assertion_cbor.len());
     }
 

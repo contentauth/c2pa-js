@@ -13,22 +13,17 @@
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { CallbackSigner } from "./Signer";
-import { Reader } from "./Reader";
-import { Builder } from "./Builder";
-import {
-  IdentityAssertionBuilder,
-  IdentityAssertionSigner,
-  CallbackCredentialHolder,
-} from "./IdentityAssertion";
+// Note: We will dynamically import modules after establishing mocks
 import type {
   JsCallbackSignerConfig,
   DestinationBufferAsset,
   SigningAlg,
+  SignerPayload,
 } from "./types";
 import type { Manifest } from "@contentauth/c2pa-types";
 import * as fs from "fs-extra";
 import * as crypto from "crypto";
+import { encode } from "cbor2";
 
 class TestSigner {
   private privateKey: crypto.KeyObject;
@@ -41,7 +36,19 @@ class TestSigner {
   }
 
   sign = async (bytes: Buffer): Promise<Buffer> => {
-    return crypto.sign(null, bytes, this.privateKey);
+    const sign = crypto.createSign("SHA256");
+    sign.update(bytes);
+    sign.end();
+    return sign.sign(this.privateKey);
+  };
+}
+
+class TestCawgSigner {
+  constructor(private manifestSigner: TestSigner) {}
+
+  sign = async (payload: SignerPayload): Promise<Buffer> => {
+    const cborBytes = Buffer.from(encode(payload));
+    return this.manifestSigner.sign(cborBytes);
   };
 }
 
@@ -103,17 +110,20 @@ describe("IdentityAssertionBuilder", () => {
   };
 
   it("should build an Identity Assertion Signer", async () => {
+    const { CallbackSigner } = await import("./Signer");
+    const { Reader } = await import("./Reader");
+    const { Builder } = await import("./Builder");
+    const {
+      IdentityAssertionBuilder,
+      IdentityAssertionSigner,
+      CallbackCredentialHolder,
+    } = await import("./IdentityAssertion");
     // Read certificate files once
     const c2paPrivateKey = await fs.readFile(
       "./tests/fixtures/certs/es256.pem",
     );
     const c2paPublicKey = await fs.readFile("./tests/fixtures/certs/es256.pub");
-    const cawgPrivateKey = await fs.readFile(
-      "./tests/fixtures/certs/ed25519.pem",
-    );
-    const cawgPublicKey = await fs.readFile(
-      "./tests/fixtures/certs/ed25519.pub",
-    );
+    // Use the same signer for both C2PA manifest and COSE signing
 
     // Create signer configurations
     const c2paConfig: JsCallbackSignerConfig = {
@@ -128,11 +138,11 @@ describe("IdentityAssertionBuilder", () => {
 
     // Create signers
     const c2paTestSigner = new TestSigner(c2paPrivateKey);
-    const cawgTestSigner = new TestSigner(cawgPrivateKey);
     const c2paSigner = CallbackSigner.newSigner(
       c2paConfig,
       c2paTestSigner.sign,
     );
+    const cawgTestSigner = new TestCawgSigner(c2paTestSigner);
     const cawgSigner = CallbackCredentialHolder.newCallbackCredentialHolder(
       10000,
       "cawg.x509.cose",
@@ -164,13 +174,13 @@ describe("IdentityAssertionBuilder", () => {
     const iaSigner = IdentityAssertionSigner.new(c2paSigner.signer());
     const iab =
       await IdentityAssertionBuilder.identityBuilderForCredentialHolder(
-        cawgSigner.signer(),
+        cawgSigner,
       );
     iab.addReferencedAssertions(["cawg.training-mining"]);
     iaSigner.addIdentityAssertion(iab);
 
     // Sign the manifest (standard async flow)
-    await builder.signAsync(iaSigner.signer(), source, dest);
+    await builder.signAsync(iaSigner, source, dest);
 
     // Verify the manifest
     const reader = await Reader.fromAsset({

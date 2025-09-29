@@ -106,7 +106,7 @@ export interface LocalSignerInterface {
   certs(): Array<Buffer>;
   reserveSize(): number;
   timeAuthorityUrl(): string | undefined;
-  signer(): LocalSignerInterface;
+  signer(): NeonLocalSignerHandle;
 }
 
 /**
@@ -118,14 +118,14 @@ export interface CallbackSignerInterface {
   certs(): Array<Buffer>;
   reserveSize(): number;
   timeAuthorityUrl(): string | undefined;
-  signer(): CallbackSignerInterface;
+  signer(): NeonCallbackSignerHandle;
 }
 
 export interface CallbackCredentialHolderInterface {
   sigType(): string;
   reserveSize(): number;
   sign(payload: SignerPayload): Promise<Buffer>;
-  signer(): CallbackCredentialHolderInterface;
+  signer(): NeonCallbackCredentialHolderHandle;
 }
 
 /**
@@ -133,6 +133,14 @@ export interface CallbackCredentialHolderInterface {
  * Internal type used for Rust/Node.js interop
  */
 export type CallbackSignerConfig = unknown;
+export type NeonCallbackSignerHandle = unknown;
+export type NeonCallbackCredentialHolderHandle = unknown;
+export type NeonLocalSignerHandle = unknown;
+export type NeonBuilderHandle = unknown;
+export type NeonReaderHandle = unknown;
+export type NeonIdentityAssertionSignerHandle = unknown;
+export type NeonIdentityAssertionBuilderHandle = unknown;
+export type NeonTrustmarkHandle = unknown;
 
 /*
  * Configuration for an asynchronous signer.
@@ -311,7 +319,7 @@ export interface IdentityAssertionSignerInterface {
     identityAssertionBuilder: IdentityAssertionBuilderInterface,
   ): void;
 
-  signer(): IdentityAssertionSignerInterface;
+  signer(): NeonIdentityAssertionSignerHandle;
 }
 
 export interface IdentityAssertionBuilderInterface {
@@ -332,7 +340,7 @@ export interface IdentityAssertionBuilderInterface {
   /**
    * Get the underlying IdentityAssertionBuilder
    */
-  builder(): IdentityAssertionBuilderInterface;
+  builder(): NeonIdentityAssertionBuilderHandle;
 }
 
 export interface TrustmarkInterface {

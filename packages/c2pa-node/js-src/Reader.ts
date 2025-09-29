@@ -12,12 +12,17 @@
 // each license.
 
 const neon = require("./index.node");
-import type { DestinationAsset, ReaderInterface, SourceAsset } from "./types";
+import type {
+  DestinationAsset,
+  ReaderInterface,
+  SourceAsset,
+  NeonReaderHandle,
+} from "./types";
 
 import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
 
 export class Reader implements ReaderInterface {
-  constructor(private reader: ReaderInterface) {}
+  constructor(private reader: NeonReaderHandle) {}
 
   json(): ManifestStore {
     return JSON.parse(neon.readerJson.call(this.reader));
@@ -36,7 +41,7 @@ export class Reader implements ReaderInterface {
   }
 
   static async fromAsset(asset: SourceAsset): Promise<Reader> {
-    const reader = await neon.readerFromAsset(asset);
+    const reader: NeonReaderHandle = await neon.readerFromAsset(asset);
     return new Reader(reader);
   }
 
@@ -44,7 +49,7 @@ export class Reader implements ReaderInterface {
     manifestData: Buffer,
     asset: SourceAsset,
   ): Promise<Reader> {
-    const reader = await neon.readerFromManifestDataAndAsset(
+    const reader: NeonReaderHandle = await neon.readerFromManifestDataAndAsset(
       manifestData,
       asset,
     );

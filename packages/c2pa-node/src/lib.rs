@@ -154,7 +154,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         neon_identity_assertion_builder::NeonIdentityAssertionBuilder::add_roles,
     )?;
     cx.export_function(
-        "callbackCredentialHolderFromConfig",
+        "newCallbackCredentialHolder",
         neon_credential_holder::NeonCallbackCredentialHolder::from_js,
     )?;
 
