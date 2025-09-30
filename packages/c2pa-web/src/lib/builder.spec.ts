@@ -39,7 +39,4 @@ describe('builder', () => {
 
     await builder.free();
   });
-
-  // @TODO: signing tests
-  describe('signing', () => {});
 });

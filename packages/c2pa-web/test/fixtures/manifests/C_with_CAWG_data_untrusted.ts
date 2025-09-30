@@ -7,8 +7,6 @@
  * it.
  */
 
-import { expect } from 'vitest';
-
 export default {
   active_manifest: 'urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d',
   manifests: {
