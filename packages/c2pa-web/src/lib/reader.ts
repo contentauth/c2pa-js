@@ -20,14 +20,21 @@ export const MAX_SIZE_IN_BYTES = 10 ** 9;
  */
 export interface ReaderFactory {
   /**
-   * Create a Reader from an asset's format and a blob of its bytes.
+   * Create a {@link Reader} from an asset's format and a blob of its bytes.
    *
-   * @param format Asset format
-   * @param blob Blob of asset bytes
-   * @returns An object that provides methods for reading C2PA data from the provided asset.
+   * @param format Asset format.
+   * @param blob Blob of asset bytes.
+   * @returns A {@link Reader} object.
    */
   fromBlob: (format: string, blob: Blob) => Promise<Reader>;
 
+  /**
+   *
+   * @param format Asset format.
+   * @param init Blob of initial fragment bytes.
+   * @param fragment Blob of fragment bytes.
+   * @returns A {@link Reader} object.
+   */
   fromBlobFragment: (
     format: string,
     init: Blob,
@@ -37,11 +44,11 @@ export interface ReaderFactory {
 
 /**
  * Exposes methods for reading C2PA data out of an asset.
- * 
+ *
  * @example Getting an asset's active manifest:
  * ```
  * const reader = await c2pa.reader.fromBlob(blob.type, blob);
- * 
+ *
  * const activeManifest = await reader.activeManfiest();
  * ```
  */
@@ -52,21 +59,21 @@ export interface Reader {
   activeLabel: () => Promise<string | null>;
 
   /**
-   * @returns The asset's full manifest store containing all its manifests, validation statuses, and the URI of the active manifest.
+   * @returns The asset's full {@link ManifestStore} containing all its manifests, validation statuses, and the URI of the active manifest.
    *
    * NOTE: At the moment, the manifest store returned by this method will not include decoded CAWG data. Use Reader.json() if CAWG is a requirement.
    */
   manifestStore: () => Promise<ManifestStore>;
 
   /**
-   * @returns The asset's active manifest.
+   * @returns The asset's active {@link Manifest}.
    *
    * NOTE: At the moment, the manifest returned by this method will not include decoded CAWG data. Use Reader.json() if CAWG is a requirement.
    */
   activeManifest: () => Promise<Manifest>;
 
   /**
-   * @returns The asset's full manifest store, including decoded CAWG data.
+   * @returns The asset's full {@link Manifest} store, including decoded CAWG data.
    */
   json: () => Promise<any>;
 
@@ -75,13 +82,13 @@ export interface Reader {
    *
    * @param uri URI of the binary object to resolve.
    * @returns An array buffer of the resource's bytes.
-   * 
+   *
    * @example Retrieving a thumbnail from the resource store:
    * ```
    * const reader = await c2pa.reader.fromBlob(blob.type, blob);
-   * 
+   *
    * const activeManifest = await reader.activeManifest();
-   * 
+   *
    * const thumbnailBuffer = await reader.resourceToBuffer(activeManifest.thumbnail!.identifier);
    * ```
    */
@@ -94,13 +101,14 @@ export interface Reader {
 }
 
 /**
- *
- * @param worker - Worker (via WorkerManager) to be associated with this reader factory
- * @returns Object containing reader creation methods
+ * @param worker - Worker (via WorkerManager) to be associated with this reader factory.
+ * @returns A {@link ReaderFactory} object containing reader creation methods.
  */
 export function createReaderFactory(worker: WorkerManager): ReaderFactory {
-  const registry = new FinalizationRegistry<number>((id) => {
-    worker.execute({ method: 'reader_free', args: [id] });
+  const { tx } = worker;
+
+  const registry = new FinalizationRegistry<number>(async (id) => {
+    await tx.reader_free(id);
   });
 
   return {
@@ -113,10 +121,7 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
         throw new AssetTooLargeError(blob.size);
       }
 
-      const readerId = await worker.execute({
-        method: 'reader_fromBlob',
-        args: [format, blob],
-      });
+      const readerId = await tx.reader_fromBlob(format, blob);
 
       const reader = createReader(worker, readerId, () => {
         registry.unregister(reader);
@@ -135,10 +140,7 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
         throw new AssetTooLargeError(init.size);
       }
 
-      const readerId = await worker.execute({
-        method: 'reader_fromBlobFragment',
-        args: [format, init, fragment],
-      });
+      const readerId = await tx.reader_fromBlobFragment(format, init, fragment);
 
       const reader = createReader(worker, readerId, () => {
         registry.unregister(reader);
@@ -155,45 +157,36 @@ function createReader(
   id: number,
   onFree: () => void
 ): Reader {
+  const { tx } = worker;
+
   return {
     async activeLabel(): Promise<string | null> {
-      const label = await worker.execute({
-        method: 'reader_activeLabel',
-        args: [id],
-      });
+      const label = await tx.reader_activeLabel(id);
       return label;
     },
     async manifestStore(): Promise<ManifestStore> {
-      const manifestStore = await worker.execute({
-        method: 'reader_manifestStore',
-        args: [id],
-      });
+      const manifestStore = await tx.reader_manifestStore(id);
       return manifestStore;
     },
     async activeManifest(): Promise<Manifest> {
-      const activeManifest = await worker.execute({
-        method: 'reader_activeManifest',
-        args: [id],
-      });
+      const activeManifest = await tx.reader_activeManifest(id);
 
       return activeManifest;
     },
     async json(): Promise<any> {
-      const json = await worker.execute({ method: 'reader_json', args: [id] });
+      const json = await tx.reader_json(id);
 
       const manifestStore = JSON.parse(json);
 
       return manifestStore;
     },
     async resourceToBuffer(uri: string): Promise<ArrayBuffer> {
-      return worker.execute({
-        method: 'reader_resourceToBuffer',
-        args: [id, uri],
-      });
+      const buffer = await tx.reader_resourceToBuffer(id, uri);
+      return buffer;
     },
     async free(): Promise<void> {
       onFree();
-      return worker.execute({ method: 'reader_free', args: [id] });
+      await tx.reader_free(id);
     },
   };
 }

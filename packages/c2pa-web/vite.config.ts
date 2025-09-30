@@ -34,7 +34,7 @@ export default defineConfig(() => ({
     lib: {
       entry: {
         index: 'src/index.ts',
-        inline: 'src/inline.ts'
+        inline: 'src/inline.ts',
       },
       name: '@contentauth/c2pa-web',
       // Change this to the formats you want to support.
@@ -43,7 +43,7 @@ export default defineConfig(() => ({
     },
     rollupOptions: {
       // External packages that should not be bundled into your library.
-      external: ['@contentauth/c2pa-types'],
+      external: ['@contentauth/c2pa-types', 'highgain'],
     },
   },
   server: {

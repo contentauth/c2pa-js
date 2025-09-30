@@ -7,19 +7,14 @@
  * it.
  */
 
-import { WorkerDefinition } from '../worker.js';
+import { Signer } from '../signer.js';
+import { createTx, workerRx } from './rpc.js';
 import Worker from '../worker?worker&inline';
-import { WorkerRequest, WorkerResponse } from './setupWorker.js';
-import { handleWorkerResponse } from './workerResponse.js';
+import { transfer } from 'highgain';
 
 export interface WorkerManager {
-  execute: <T extends keyof WorkerDefinition, K extends WorkerDefinition[T]>(
-    request: WorkerRequest<T, Parameters<K>>
-  ) => Promise<
-    Awaited<ReturnType<K>> extends WorkerResponse<infer Data>
-      ? Data
-      : Awaited<ReturnType<K>>
-  >;
+  tx: ReturnType<typeof createTx>;
+  registerSignReceiver: (signFn: Signer['sign']) => number;
   terminate: () => void;
 }
 
@@ -40,25 +35,40 @@ export async function createWorkerManager(
   config: CreateWorkerManagerConfig
 ): Promise<WorkerManager> {
   const { wasm, settingsString } = config;
+  let signerRequestId = 0;
 
   const worker = new Worker();
 
-  const execute: WorkerManager['execute'] = (request) => {
-    return new Promise((resolve, reject) => {
-      handleWorkerResponse(worker, {
-        onSuccess: (data) => resolve(data),
-        onError: (error) => reject(error),
-      });
+  const tx = createTx(worker);
 
-      const { method, args, transfer } = request;
-      worker.postMessage({ method, args }, transfer ?? []);
-    });
-  };
+  const signingRequestMap = new Map<number, Signer['sign']>();
 
-  await execute({ method: 'initWorker', args: [wasm, settingsString] });
+  workerRx(
+    {
+      sign: async (id, bytes, reserveSize) => {
+        const signFn = signingRequestMap.get(id);
+        signingRequestMap.delete(id);
+        if (!signFn) {
+          throw new Error('No signer registered for request');
+        }
+        const result = await signFn(bytes, reserveSize);
+        return transfer(result, result.buffer);
+      },
+    },
+    worker
+  );
+
+  function registerSignReceiver(signFn: Signer['sign']) {
+    const id = signerRequestId++;
+    signingRequestMap.set(id, signFn);
+    return id;
+  }
+
+  await tx.initWorker(wasm, settingsString);
 
   return {
-    execute,
+    tx,
+    registerSignReceiver,
     terminate: () => worker.terminate(),
   };
 }

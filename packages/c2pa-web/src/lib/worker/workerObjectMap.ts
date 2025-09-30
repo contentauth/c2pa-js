@@ -7,7 +7,13 @@
  * it.
  */
 
-export function createWorkerObjectMap<T>() {
+export interface WorkerObjectMap<T> {
+  add(object: T): number;
+  get(id: number): T;
+  remove(id: number): boolean;
+}
+
+export function createWorkerObjectMap<T>(): WorkerObjectMap<T> {
   let objId = 0;
   const objectMap = new Map<number, T>();
 

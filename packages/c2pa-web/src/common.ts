@@ -11,6 +11,10 @@ export type * from './lib/c2pa.js';
 
 export type { Reader, ReaderFactory } from './lib/reader.js';
 
+export type { Builder, BuilderFactory } from './lib/builder.js';
+
+export type { Signer } from './lib/signer.js';
+
 export {
   isSupportedReaderFormat,
   READER_SUPPORTED_FORMATS,

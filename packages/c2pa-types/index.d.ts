@@ -14,3 +14,6 @@ import type { Reader } from './types/ManifestStore.js';
 export interface ManifestStore extends Reader {}
 
 export type * from './types/ManifestStore.js';
+export type * from './types/ManifestDefinition.js';
+export type * from './types/Ingredient.js';
+export type * from './types/Builder.js';

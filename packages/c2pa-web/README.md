@@ -68,6 +68,9 @@ const reader = await c2pa.reader.fromBlob(blob.type, blob);
 const manifestStore = await reader.manifestStore();
 
 console.log(manifestStore);
+
+// Free SDK objects when they are no longer needed to avoid memory leaks.
+await reader.free();
 ```
 
 ## Api reference
