@@ -58,10 +58,13 @@ export default {
         {
           label: 'cawg.identity',
           data: {
-            pad1: expect.any(String),
-            pad2: 'AAAAAAAAAA==',
-            signature:
-              '0oRZBIWiAScYIYJZAkwwggJIMIIB+qADAgECAhRv5oFNfUKyMnWK4wn2RG53P/uoRzAFBgMrZXAwgYwxCzAJBgNVBAYTAlVTMQswCQYDVQQIDAJDQTESMBAGA1UEBwwJU29tZXdoZXJlMScwJQYDVQQKDB5DMlBBIFRlc3QgSW50ZXJtZWRpYXRlIFJvb3QgQ0ExGTAXBgNVBAsMEEZPUiBURVNUSU5HX09OTFkxGDAWBgNVBAMMD0ludGVybWVkaWF0ZSBDQTAeFw0yMjA2MTAxODQ2NDFaFw0zMDA4MjYxODQ2NDFaMIGAMQswCQYDVQQGEwJVUzELMAkGA1UECAwCQ0ExEjAQBgNVBAcMCVNvbWV3aGVyZTEfMB0GA1UECgwWQzJQQSBUZXN0IFNpZ25pbmcgQ2VydDEZMBcGA1UECwwQRk9SIFRFU1RJTkdfT05MWTEUMBIGA1UEAwwLQzJQQSBTaWduZXIwKjAFBgMrZXADIQAynn7R7zec2BCF2EFbxGyGSPL3SxrUD0kjOQi1wOoK4qN4MHYwDAYDVR0TAQH/BAIwADAWBgNVHSUBAf8EDDAKBggrBgEFBQcDBDAOBgNVHQ8BAf8EBAMCBsAwHQYDVR0OBBYEFO4uthGpbjC7rKMgrX+Jby53t2aRMB8GA1UdIwQYMBaAFFdMB8L8nFC9GWT9sJt08wNuxJ+pMAUGAytlcANBAHZHq9sj5fwJNELniPc1O+xSPjngbX9t3NuIdWCXef5KE4AnzkUmKATsShq/tJ5d5Wc2NzxBnVSskbCAEEQ/zgZZAi0wggIpMIIB26ADAgECAhRaqDhJpQO49XLrvU8saB/NwiwczDAFBgMrZXAwdzELMAkGA1UEBhMCVVMxCzAJBgNVBAgMAkNBMRIwEAYDVQQHDAlTb21ld2hlcmUxGjAYBgNVBAoMEUMyUEEgVGVzdCBSb290IENBMRkwFwYDVQQLDBBGT1IgVEVTVElOR19PTkxZMRAwDgYDVQQDDAdSb290IENBMB4XDTIyMDYxMDE4NDY0MVoXDTMwMDgyNzE4NDY0MVowgYwxCzAJBgNVBAYTAlVTMQswCQYDVQQIDAJDQTESMBAGA1UEBwwJU29tZXdoZXJlMScwJQYDVQQKDB5DMlBBIFRlc3QgSW50ZXJtZWRpYXRlIFJvb3QgQ0ExGTAXBgNVBAsMEEZPUiBURVNUSU5HX09OTFkxGDAWBgNVBAMMD0ludGVybWVkaWF0ZSBDQTAqMAUGAytlcAMhACTN1gFm2l1Z+nTcYs5vWWYiv/QI6x9Rrdvx5u33QOiuo2MwYTAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBhjAdBgNVHQ4EFgQUV0wHwvycUL0ZZP2wm3TzA27En6kwHwYDVR0jBBgwFoAUXuZWArP1jiRMfgye6ZqRyGupTowwBQYDK2VwA0EAFdqTPm9x1+1Tw9t7wkMRwVJz6tOeilPwNdjCG053ce+jtm+/R9O7A5gibEt2a7QnW75QvE2or6NE7v+NKdy/AKD2WEBHQNY8VKPuajqPbCWEqtErxuarFWhcwuD7Y9Sai5b0r9IP8MJKt5trlbu+0QVZmhc4yZtPXAazzaadUbrOXCoO',
+            signature_info: {
+              alg: 'Ed25519',
+              cert_serial_number:
+                '638838410810235485828984295321338730070538954823',
+              issuer: 'C2PA Test Signing Cert',
+              revocation_status: true,
+            },
             signer_payload: {
               referenced_assertions: [
                 {
@@ -141,6 +144,11 @@ export default {
           code: 'assertion.dataHash.match',
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.hash.data',
           explanation: 'data hash valid',
+        },
+        {
+          code: 'cawg.identity.well-formed',
+          explanation: 'CAWG X.509 identity signature valid',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity',
         },
       ],
       informational: [
