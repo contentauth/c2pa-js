@@ -9,12 +9,20 @@
 
 /// <reference lib="webworker" />
 
-import { WasmReader, initSync, loadSettings } from '@contentauth/c2pa-wasm';
+import {
+  WasmReader,
+  initSync,
+  loadSettings,
+  WasmBuilder,
+} from '@contentauth/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
-import { rx } from './worker/rpc.js';
+import { createWorkerTx, rx } from './worker/rpc.js';
 import { transfer } from 'highgain';
 
 const readerMap = createWorkerObjectMap<WasmReader>();
+const builderMap = createWorkerObjectMap<WasmBuilder>();
+
+const tx = createWorkerTx();
 
 rx({
   async initWorker(module, settings) {
@@ -58,5 +66,47 @@ rx({
     const reader = readerMap.get(readerId);
     reader.free();
     readerMap.remove(readerId);
+  },
+  builder_fromJson(json: string) {
+    const builder = WasmBuilder.fromJson(json);
+    const builderId = builderMap.add(builder);
+    return builderId;
+  },
+  builder_addIngredientFromBlob(builderId, json, format, blob) {
+    const builder = builderMap.get(builderId);
+    builder.addIngredientFromBlob(json, format, blob);
+  },
+  builder_addResourceFromBlob(builderId, id, blob) {
+    const builder = builderMap.get(builderId);
+    builder.addResourceFromBlob(id, blob);
+  },
+  builder_getDefinition(builderId) {
+    const builder = builderMap.get(builderId);
+    return builder.getDefinition();
+  },
+  async builder_sign(builderId, requestId, payload, format, blob) {
+    const builder = builderMap.get(builderId);
+    const signedBytes = await builder.sign(
+      {
+        reserveSize: payload.reserveSize,
+        alg: payload.alg,
+        sign: async (bytes) => {
+          const result = await tx.sign(
+            requestId,
+            transfer(bytes, bytes.buffer),
+            payload.reserveSize
+          );
+          return result;
+        },
+      },
+      format,
+      blob
+    );
+    return transfer(signedBytes, signedBytes.buffer);
+  },
+  builder_free(builderId) {
+    const builder = builderMap.get(builderId);
+    builder.free();
+    builderMap.remove(builderId);
   },
 });

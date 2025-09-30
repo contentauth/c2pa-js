@@ -179,10 +179,6 @@ importers:
       '@contentauth/c2pa-web':
         specifier: workspace:*
         version: link:../../packages/c2pa-web
-    devDependencies:
-      vite-plugin-mkcert:
-        specifier: ^1.17.8
-        version: 1.17.8(vite@6.3.5(@types/node@18.16.9)(jiti@2.4.2)(terser@5.43.1)(yaml@2.8.1))
 
 packages:
 
@@ -5037,12 +5033,6 @@ packages:
       vite:
         optional: true
 
-  vite-plugin-mkcert@1.17.8:
-    resolution: {integrity: sha512-S+4tNEyGqdZQ3RLAG54ETeO2qyURHWrVjUWKYikLAbmhh/iJ+36gDEja4OWwFyXNuvyXcZwNt5TZZR9itPeG5Q==}
-    engines: {node: '>=v16.7.0'}
-    peerDependencies:
-      vite: '>=3'
-
   vite@6.3.5:
     resolution: {integrity: sha512-cZn6NDFE7wdTpINgs++ZJ4N49W2vRp8LCKrn3Ob1kYNtOo21vfDoaV5GzBfLU4MovSAB8uNRm4jgzVQZ+mBzPQ==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
@@ -8241,9 +8231,9 @@ snapshots:
 
   asynckit@0.4.0: {}
 
-  axios@1.11.0(debug@4.4.1):
+  axios@1.11.0:
     dependencies:
-      follow-redirects: 1.15.9(debug@4.4.1)
+      follow-redirects: 1.15.9
       form-data: 4.0.4
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
@@ -8974,9 +8964,7 @@ snapshots:
 
   flatted@3.3.3: {}
 
-  follow-redirects@1.15.9(debug@4.4.1):
-    optionalDependencies:
-      debug: 4.4.1
+  follow-redirects@1.15.9: {}
 
   foreground-child@3.3.1:
     dependencies:
@@ -9183,7 +9171,7 @@ snapshots:
   http-proxy@1.18.1:
     dependencies:
       eventemitter3: 4.0.7
-      follow-redirects: 1.15.9(debug@4.4.1)
+      follow-redirects: 1.15.9
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
@@ -9927,7 +9915,7 @@ snapshots:
       '@yarnpkg/lockfile': 1.1.0
       '@yarnpkg/parsers': 3.0.2
       '@zkochan/js-yaml': 0.0.7
-      axios: 1.11.0(debug@4.4.1)
+      axios: 1.11.0
       chalk: 4.1.2
       cli-cursor: 3.1.0
       cli-spinners: 2.6.1
@@ -10771,15 +10759,6 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
       - rollup
-      - supports-color
-
-  vite-plugin-mkcert@1.17.8(vite@6.3.5(@types/node@18.16.9)(jiti@2.4.2)(terser@5.43.1)(yaml@2.8.1)):
-    dependencies:
-      axios: 1.11.0(debug@4.4.1)
-      debug: 4.4.1
-      picocolors: 1.1.1
-      vite: 6.3.5(@types/node@18.16.9)(jiti@2.4.2)(terser@5.43.1)(yaml@2.8.1)
-    transitivePeerDependencies:
       - supports-color
 
   vite@6.3.5(@types/node@18.16.9)(jiti@2.4.2)(terser@5.43.1)(yaml@2.8.1):
