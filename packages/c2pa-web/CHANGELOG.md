@@ -1,5 +1,18 @@
 # @contentauth/c2pa-web
 
+## 0.3.0
+
+### Minor Changes
+
+- 1ed1ee0: Expose basic building & signing API
+
+### Patch Changes
+
+- Updated dependencies [1ed1ee0]
+- Updated dependencies [1ed1ee0]
+  - @contentauth/c2pa-types@0.3.0
+  - @contentauth/c2pa-wasm@0.3.0
+
 ## 0.2.3
 
 ### Patch Changes

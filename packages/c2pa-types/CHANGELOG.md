@@ -1,5 +1,11 @@
 # @contentauth/c2pa-types
 
+## 0.3.0
+
+### Minor Changes
+
+- 1ed1ee0: Export types for ManifestDefinition, Ingredient, and Builder
+
 ## 0.2.1
 
 ### Patch Changes

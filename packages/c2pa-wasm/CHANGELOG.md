@@ -1,5 +1,11 @@
 # @contentauth/c2pa-wasm
 
+## 0.3.0
+
+### Minor Changes
+
+- 1ed1ee0: Expose basic building & signing API
+
 ## 0.2.1
 
 ### Patch Changes
