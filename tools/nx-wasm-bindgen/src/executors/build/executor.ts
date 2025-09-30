@@ -91,8 +91,9 @@ export default runExecutor;
 
 // Install wasm-opt's node wrapper if necessary and return a path to it.
 async function getWasmOptPath(cwd: string) {
+  const basePath = path.join(cwd, 'tools/nx-wasm-bindgen');
   const downloadUrl = `https://github.com/WebAssembly/binaryen/releases/download/version_${WASM_OPT_VERSION}/binaryen-version_${WASM_OPT_VERSION}-node.tar.gz`;
-  const downloadDir = path.join(cwd, 'download/');
+  const downloadDir = path.join(basePath, 'download/');
   const downloadFilePath = path.join(downloadDir, 'wasm_opt.tar.gz');
   const outDir = path.join(downloadDir, `binaryen-version_${WASM_OPT_VERSION}`);
   const outFileCjsName = path.join(outDir, 'wasm-opt.cjs');
