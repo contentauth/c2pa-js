@@ -10,76 +10,53 @@
 /// <reference lib="webworker" />
 
 import { WasmReader, initSync, loadSettings } from '@contentauth/c2pa-wasm';
-import {
-  setupWorker,
-  WorkerFunctions,
-  WorkerResponse,
-} from './worker/setupWorker.js';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
+import { rx } from './worker/rpc.js';
+import { transfer } from 'highgain';
 
 const readerMap = createWorkerObjectMap<WasmReader>();
 
-const workerFunctions = {
-  async initWorker(module: WebAssembly.Module, settings?: string) {
+rx({
+  async initWorker(module, settings) {
     initSync(module);
-
     if (settings) {
       loadSettings(settings);
     }
   },
-
-  // Reader creation methods
-  async reader_fromBlob(
-    format: string,
-    blob: Blob
-  ): Promise<WorkerResponse<number>> {
+  async reader_fromBlob(format, blob) {
     const reader = await WasmReader.fromBlob(format, blob);
     const readerId = readerMap.add(reader);
-    return { data: readerId };
+    return readerId;
   },
-
-  async reader_fromBlobFragment(
-    format: string,
-    init: Blob,
-    fragment: Blob
-  ): Promise<WorkerResponse<number>> {
+  async reader_fromBlobFragment(format, init, fragment) {
     const reader = await WasmReader.fromBlobFragment(format, init, fragment);
     const readerId = readerMap.add(reader);
-    return { data: readerId };
+    return readerId;
   },
-
-  // Reader object methods
-  reader_activeLabel(readerId: number): WorkerResponse<string | null> {
+  reader_activeLabel(readerId) {
     const reader = readerMap.get(readerId);
-    return { data: reader.activeLabel() ?? null };
+    return reader.activeLabel() ?? null;
   },
-  reader_manifestStore(readerId: number): WorkerResponse<any> {
+  reader_manifestStore(readerId) {
     const reader = readerMap.get(readerId);
-    return { data: reader.manifestStore() };
+    return reader.manifestStore();
   },
-  reader_activeManifest(readerId: number): WorkerResponse<any> {
+  reader_activeManifest(readerId) {
     const reader = readerMap.get(readerId);
-    return { data: reader.activeManifest() };
+    return reader.activeManifest();
   },
-  reader_json(readerId: number): WorkerResponse<string> {
+  reader_json(readerId) {
     const reader = readerMap.get(readerId);
-    return { data: reader.json() };
+    return reader.json();
   },
-  reader_resourceToBuffer(
-    readerId: number,
-    uri: string
-  ): WorkerResponse<ArrayBuffer> {
+  reader_resourceToBuffer(readerId, uri) {
     const reader = readerMap.get(readerId);
     const buffer = reader.resourceToBuffer(uri);
-    return { data: buffer, transfer: [buffer] };
+    return transfer(buffer);
   },
-  reader_free(readerId: number) {
+  reader_free(readerId) {
     const reader = readerMap.get(readerId);
     reader.free();
     readerMap.remove(readerId);
   },
-} satisfies WorkerFunctions;
-
-export type WorkerDefinition = typeof workerFunctions;
-
-setupWorker(workerFunctions);
+});
