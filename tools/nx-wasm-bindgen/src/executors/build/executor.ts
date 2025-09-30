@@ -11,6 +11,11 @@ import { PromiseExecutor } from '@nx/devkit';
 import { BuildExecutorSchema } from './schema.js';
 import { fromStream } from 'ssri';
 import { $, path, fs } from 'zx';
+import { pipeline } from 'node:stream/promises';
+import got from 'got';
+import { extract } from 'tar';
+
+const WASM_OPT_VERSION = '124';
 
 const runExecutor: PromiseExecutor<BuildExecutorSchema> = async (
   options,
@@ -51,7 +56,8 @@ const runExecutor: PromiseExecutor<BuildExecutorSchema> = async (
     // Run wasm-opt on wasm-bindgen output, optimizing for size
     const wasmOptInput = path.join(outDir, `${outputWasmName}_bg.wasm`);
 
-    await $$`wasm-opt ${wasmOptInput} -o ${wasmOptInput} -Oz`;
+    const wasmOpt = getWasmOptPath(context.cwd);
+    await $$`node ${wasmOpt} ${wasmOptInput} -o ${wasmOptInput} -Oz`;
 
     // Compute SRI integrity and append it to wasm-bindgen's JS output and .d.ts as an exported const
     const wasmFileStream = fs.createReadStream(wasmOptInput);
@@ -82,3 +88,40 @@ const runExecutor: PromiseExecutor<BuildExecutorSchema> = async (
 };
 
 export default runExecutor;
+
+// Install wasm-opt's node wrapper if necessary and return a path to it.
+async function getWasmOptPath(cwd: string) {
+  const downloadUrl = `https://github.com/WebAssembly/binaryen/releases/download/version_${WASM_OPT_VERSION}/binaryen-version_${WASM_OPT_VERSION}-node.tar.gz`;
+  const downloadDir = path.join(cwd, 'download/');
+  const downloadFilePath = path.join(downloadDir, 'wasm_opt.tar.gz');
+  const outDir = path.join(downloadDir, `binaryen-version_${WASM_OPT_VERSION}`);
+  const outFileCjsName = path.join(outDir, 'wasm-opt.cjs');
+
+  if (await fs.exists(outFileCjsName)) {
+    console.log('wasm-opt is already installed');
+    return outFileCjsName;
+  }
+
+  console.log(`downloading wasm-opt version ${WASM_OPT_VERSION}`);
+
+  await fs.remove(downloadDir);
+
+  await fs.ensureDir(downloadDir);
+
+  await pipeline(
+    got.stream(downloadUrl),
+    fs.createWriteStream(downloadFilePath)
+  );
+
+  await extract({
+    f: downloadFilePath,
+    cwd: downloadDir,
+  });
+
+  const outFileJsName = path.join(outDir, 'wasm-opt.js');
+
+  // Force node to run as commonJS
+  await fs.rename(outFileJsName, outFileCjsName);
+
+  return outFileCjsName;
+}

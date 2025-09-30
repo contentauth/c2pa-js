@@ -9,77 +9,104 @@
 
 /// <reference lib="webworker" />
 
-import { WasmReader, initSync, loadSettings } from '@contentauth/c2pa-wasm';
 import {
-  setupWorker,
-  WorkerFunctions,
-  WorkerResponse,
-} from './worker/setupWorker.js';
+  WasmReader,
+  initSync,
+  loadSettings,
+  WasmBuilder,
+} from '@contentauth/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
+import { createWorkerTx, rx } from './worker/rpc.js';
+import { transfer } from 'highgain';
 
 const readerMap = createWorkerObjectMap<WasmReader>();
+const builderMap = createWorkerObjectMap<WasmBuilder>();
 
-const workerFunctions = {
-  async initWorker(module: WebAssembly.Module, settings?: string) {
+const tx = createWorkerTx();
+
+rx({
+  async initWorker(module, settings) {
     initSync(module);
-
     if (settings) {
       loadSettings(settings);
     }
   },
-
-  // Reader creation methods
-  async reader_fromBlob(
-    format: string,
-    blob: Blob
-  ): Promise<WorkerResponse<number>> {
+  async reader_fromBlob(format, blob) {
     const reader = await WasmReader.fromBlob(format, blob);
     const readerId = readerMap.add(reader);
-    return { data: readerId };
+    return readerId;
   },
-
-  async reader_fromBlobFragment(
-    format: string,
-    init: Blob,
-    fragment: Blob
-  ): Promise<WorkerResponse<number>> {
+  async reader_fromBlobFragment(format, init, fragment) {
     const reader = await WasmReader.fromBlobFragment(format, init, fragment);
     const readerId = readerMap.add(reader);
-    return { data: readerId };
+    return readerId;
   },
-
-  // Reader object methods
-  reader_activeLabel(readerId: number): WorkerResponse<string | null> {
+  reader_activeLabel(readerId) {
     const reader = readerMap.get(readerId);
-    return { data: reader.activeLabel() ?? null };
+    return reader.activeLabel() ?? null;
   },
-  reader_manifestStore(readerId: number): WorkerResponse<any> {
+  reader_manifestStore(readerId) {
     const reader = readerMap.get(readerId);
-    return { data: reader.manifestStore() };
+    return reader.manifestStore();
   },
-  reader_activeManifest(readerId: number): WorkerResponse<any> {
+  reader_activeManifest(readerId) {
     const reader = readerMap.get(readerId);
-    return { data: reader.activeManifest() };
+    return reader.activeManifest();
   },
-  reader_json(readerId: number): WorkerResponse<string> {
+  reader_json(readerId) {
     const reader = readerMap.get(readerId);
-    return { data: reader.json() };
+    return reader.json();
   },
-  reader_resourceToBuffer(
-    readerId: number,
-    uri: string
-  ): WorkerResponse<ArrayBuffer> {
+  reader_resourceToBuffer(readerId, uri) {
     const reader = readerMap.get(readerId);
     const buffer = reader.resourceToBuffer(uri);
-    return { data: buffer, transfer: [buffer] };
+    return transfer(buffer);
   },
-  reader_free(readerId: number) {
+  reader_free(readerId) {
     const reader = readerMap.get(readerId);
     reader.free();
     readerMap.remove(readerId);
   },
-} satisfies WorkerFunctions;
-
-export type WorkerDefinition = typeof workerFunctions;
-
-setupWorker(workerFunctions);
+  builder_fromJson(json: string) {
+    const builder = WasmBuilder.fromJson(json);
+    const builderId = builderMap.add(builder);
+    return builderId;
+  },
+  builder_addIngredientFromBlob(builderId, json, format, blob) {
+    const builder = builderMap.get(builderId);
+    builder.addIngredientFromBlob(json, format, blob);
+  },
+  builder_addResourceFromBlob(builderId, id, blob) {
+    const builder = builderMap.get(builderId);
+    builder.addResourceFromBlob(id, blob);
+  },
+  builder_getDefinition(builderId) {
+    const builder = builderMap.get(builderId);
+    return builder.getDefinition();
+  },
+  async builder_sign(builderId, requestId, payload, format, blob) {
+    const builder = builderMap.get(builderId);
+    const signedBytes = await builder.sign(
+      {
+        reserveSize: payload.reserveSize,
+        alg: payload.alg,
+        sign: async (bytes) => {
+          const result = await tx.sign(
+            requestId,
+            transfer(bytes, bytes.buffer),
+            payload.reserveSize
+          );
+          return result;
+        },
+      },
+      format,
+      blob
+    );
+    return transfer(signedBytes, signedBytes.buffer);
+  },
+  builder_free(builderId) {
+    const builder = builderMap.get(builderId);
+    builder.free();
+    builderMap.remove(builderId);
+  },
+});

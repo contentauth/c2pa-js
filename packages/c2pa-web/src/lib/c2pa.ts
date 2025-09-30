@@ -10,6 +10,7 @@ import { createWorkerManager } from './worker/workerManager.js';
 import { createReaderFactory, ReaderFactory } from './reader.js';
 import { WASM_SRI } from '@contentauth/c2pa-wasm';
 import { Settings, settingsToWasmJson } from './settings.js';
+import { BuilderFactory, createBuilderFactory } from './builder.js';
 
 export interface Config {
   /**
@@ -30,6 +31,11 @@ export interface C2paSdk {
   reader: ReaderFactory;
 
   /**
+   * Contains methods for creating Builder objects.
+   */
+  builder: BuilderFactory;
+
+  /**
    * Terminates the SDK's underlying web worker.
    */
   dispose: () => void;
@@ -42,11 +48,11 @@ export async function createC2pa(config: Config): Promise<C2paSdk> {
     typeof wasmSrc === 'string' ? await fetchAndCompileWasm(wasmSrc) : wasmSrc;
 
   const settingsString = settings ? settingsToWasmJson(settings) : undefined;
-
   const worker = await createWorkerManager({ wasm, settingsString });
 
   return {
     reader: createReaderFactory(worker),
+    builder: createBuilderFactory(worker),
     dispose: worker.terminate,
   };
 }

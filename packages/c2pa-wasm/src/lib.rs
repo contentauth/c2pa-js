@@ -19,6 +19,12 @@ pub mod stream;
 /// Exposes a reader API to JS via wasm-bindgen.
 pub mod wasm_reader;
 
+/// Exposes a builder API to JS via wasm-bindgen.
+pub mod wasm_builder;
+
+/// Exposes a JS Callback signer API to JS via wasm-bindgen.
+pub mod wasm_signer;
+
 /// Provides a JS interface for loading c2pa-rs settings.
 pub mod settings;
 

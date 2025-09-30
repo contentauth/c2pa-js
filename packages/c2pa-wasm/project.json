@@ -31,7 +31,8 @@
       "executor": "@monodon/rust:lint",
       "outputs": ["{options.target-dir}"],
       "options": {
-        "target-dir": "dist/target/wasm"
+        "target-dir": "dist/target/wasm",
+        "target": "wasm32-unknown-unknown"
       }
     }
   }
