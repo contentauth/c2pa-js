@@ -29,6 +29,29 @@ export interface BuilderFactory {
  */
 export interface Builder {
   /**
+   * Sets the remote URL for a remote manifest. The manifest is expected to be available at this location.
+   *
+   * @param url URL pointing to the location the remote manifest will be stored.
+   */
+  setRemoteUrl: (url: string) => Promise<void>;
+
+  /**
+   * Sets the state of the no_embed flag. To skip embedding a manifest (e.g. for the remote-only case) set this to `true`.
+   *
+   * @param noEmbed Value to set the no_embed flag.
+   * @returns
+   */
+  setNoEmbed: (noEmbed: boolean) => Promise<void>;
+
+  /**
+   * Set a thumbnail from a blob to be included in the manifest. The blob should represent the asset being signed.
+   *
+   * @param format Format of the thumbnail
+   * @param blob Blob of the thumbnail bytes
+   */
+  setThumbnailFromBlob: (format: string, blob: Blob) => Promise<void>;
+
+  /**
    * Add an ingredient to the builder from a definition, format, and blob.
    * Values specified in the ingredient definition will be merged with the ingredient, and these values take precendence.
    *
@@ -103,6 +126,18 @@ function createBuilder(
   const { tx } = worker;
 
   return {
+    async setRemoteUrl(url) {
+      await tx.builder_setRemoteUrl(id, url);
+    },
+
+    async setNoEmbed(noEmbed) {
+      await tx.builder_setNoEmbed(id, noEmbed);
+    },
+
+    async setThumbnailFromBlob(format, blob) {
+      await tx.builder_setThumbnailFromBlob(id, format, blob);
+    },
+
     async addIngredientFromBlob(
       ingredientDefinition: Ingredient,
       format: string,

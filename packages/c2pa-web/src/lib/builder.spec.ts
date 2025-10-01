@@ -10,7 +10,7 @@
 import { describe, expect, test } from 'vitest';
 import { createC2pa } from './c2pa.js';
 
-import wasmSrc from '@contentauth/c2pa-wasm/assets/c2pa_bg.wasm?url';
+import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 import { ManifestDefinition } from '@contentauth/c2pa-types';
 
 describe('builder', () => {
