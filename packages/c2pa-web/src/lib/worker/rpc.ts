@@ -7,6 +7,7 @@
  * it.
  */
 
+import { ManifestAndAssetBytes } from '../builder.js';
 import type { SerializableSigningPayload } from '../signer.js';
 
 import { channel } from 'highgain';
@@ -61,6 +62,13 @@ const { createTx, rx } = channel<{
     format: string,
     blob: Blob
   ) => Promise<Uint8Array>;
+  builder_signAndGetManifestBytes: (
+    builderId: number,
+    requestId: number,
+    payload: SerializableSigningPayload,
+    format: string,
+    blob: Blob
+  ) => Promise<ManifestAndAssetBytes>;
   builder_free: (builderId: number) => void;
 }>();
 

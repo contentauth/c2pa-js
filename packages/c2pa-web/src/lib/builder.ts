@@ -87,9 +87,24 @@ export interface Builder {
   sign: (signer: Signer, format: string, blob: Blob) => Promise<Uint8Array>;
 
   /**
+   *
+   * @returns
+   */
+  signAndGetManifestBytes: (
+    signer: Signer,
+    format: string,
+    blob: Blob
+  ) => Promise<ManifestAndAssetBytes>;
+
+  /**
    * Dispose of this Builder, freeing the memory it occupied and preventing further use. Call this whenever the Builder is no longer needed.
    */
   free: () => Promise<void>;
+}
+
+export interface ManifestAndAssetBytes {
+  manifest: Uint8Array;
+  asset: Uint8Array;
 }
 
 /**
@@ -166,6 +181,21 @@ function createBuilder(
       const requestId = worker.registerSignReceiver(signer.sign);
 
       const result = await tx.builder_sign(
+        id,
+        requestId,
+        payload,
+        format,
+        blob
+      );
+
+      return result;
+    },
+
+    async signAndGetManifestBytes(signer: Signer, format: string, blob: Blob) {
+      const payload = await getSerializablePayload(signer);
+      const requestId = worker.registerSignReceiver(signer.sign);
+
+      const result = await tx.builder_signAndGetManifestBytes(
         id,
         requestId,
         payload,
