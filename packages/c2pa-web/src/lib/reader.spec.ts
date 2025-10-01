@@ -10,7 +10,7 @@
 import { describe, expect, test } from 'vitest';
 import { createC2pa } from './c2pa.js';
 import { Settings } from './settings.js';
-import wasmSrc from '@contentauth/c2pa-wasm/assets/c2pa_bg.wasm?url';
+import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 
 import C_with_CAWG_data from '../../test/fixtures/assets/C_with_CAWG_data.jpg';
 import C_with_CAWG_data_thumbnail from '../../test/fixtures/assets/C_with_CAWG_data_thumbnail.jpg';

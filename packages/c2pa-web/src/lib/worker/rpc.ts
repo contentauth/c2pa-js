@@ -35,6 +35,13 @@ const { createTx, rx } = channel<{
   builder_fromJson: (json: string) => number;
 
   // Builder methods
+  builder_setRemoteUrl: (builderId: number, url: string) => void;
+  builder_setNoEmbed: (builderId: number, noEmbed: boolean) => void;
+  builder_setThumbnailFromBlob: (
+    builderId: number,
+    format: string,
+    blob: Blob
+  ) => void;
   builder_addIngredientFromBlob: (
     builderId: number,
     json: string,

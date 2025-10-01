@@ -46,8 +46,8 @@ impl WasmBuilder {
     /// The URL must return the manifest data and is injected into the destination asset when signing.
     /// For remote-only manifests, set the `no_embed` flag to `true`.
     #[wasm_bindgen(js_name = setRemoteUrl)]
-    pub fn set_remote_url(&mut self, format: &str) {
-        self.builder.set_remote_url(format);
+    pub fn set_remote_url(&mut self, url: &str) {
+        self.builder.set_remote_url(url);
     }
 
     /// Sets the state of the no_embed flag.

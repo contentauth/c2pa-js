@@ -72,6 +72,18 @@ rx({
     const builderId = builderMap.add(builder);
     return builderId;
   },
+  builder_setRemoteUrl(builderId, url) {
+    const builder = builderMap.get(builderId);
+    builder.setRemoteUrl(url);
+  },
+  builder_setNoEmbed(builderId, noEmbed) {
+    const builder = builderMap.get(builderId);
+    builder.setNoEmbed(noEmbed);
+  },
+  builder_setThumbnailFromBlob(builderId, format, blob) {
+    const builder = builderMap.get(builderId);
+    builder.setThumbnailFromBlob(format, blob);
+  },
   builder_addIngredientFromBlob(builderId, json, format, blob) {
     const builder = builderMap.get(builderId);
     builder.addIngredientFromBlob(json, format, blob);
