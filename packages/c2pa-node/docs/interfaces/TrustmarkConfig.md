@@ -6,7 +6,7 @@
 
 # Interface: TrustmarkConfig
 
-Defined in: [types.d.ts:767](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L767)
+Defined in: [types.d.ts:367](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L367)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.d.ts:767](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > `optional` **modelPath**: `string`
 
-Defined in: [types.d.ts:770](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L770)
+Defined in: [types.d.ts:370](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L370)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [types.d.ts:770](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > **variant**: [`TrustmarkVariant`](../type-aliases/TrustmarkVariant.md)
 
-Defined in: [types.d.ts:768](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L768)
+Defined in: [types.d.ts:368](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L368)
 
 ***
 
@@ -30,4 +30,4 @@ Defined in: [types.d.ts:768](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > **version**: [`TrustmarkVersion`](../type-aliases/TrustmarkVersion.md)
 
-Defined in: [types.d.ts:769](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L769)
+Defined in: [types.d.ts:369](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L369)

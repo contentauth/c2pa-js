@@ -6,7 +6,7 @@
 
 # Interface: LocalSignerInterface
 
-Defined in: [types.d.ts:524](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L524)
+Defined in: [types.d.ts:103](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L103)
 
 A signer that uses a local certificate and private key to sign data
 
@@ -16,7 +16,7 @@ A signer that uses a local certificate and private key to sign data
 
 > **alg**(): [`SigningAlg`](../type-aliases/SigningAlg.md)
 
-Defined in: [types.d.ts:526](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L526)
+Defined in: [types.d.ts:105](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L105)
 
 #### Returns
 
@@ -28,7 +28,7 @@ Defined in: [types.d.ts:526](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > **certs**(): `Buffer`\<`ArrayBufferLike`\>[]
 
-Defined in: [types.d.ts:527](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L527)
+Defined in: [types.d.ts:106](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L106)
 
 #### Returns
 
@@ -40,7 +40,7 @@ Defined in: [types.d.ts:527](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > **reserveSize**(): `number`
 
-Defined in: [types.d.ts:528](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L528)
+Defined in: [types.d.ts:107](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L107)
 
 #### Returns
 
@@ -52,7 +52,7 @@ Defined in: [types.d.ts:528](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > **sign**(`data`): `Buffer`
 
-Defined in: [types.d.ts:525](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L525)
+Defined in: [types.d.ts:104](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L104)
 
 #### Parameters
 
@@ -68,13 +68,13 @@ Defined in: [types.d.ts:525](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 ### signer()
 
-> **signer**(): `LocalSignerInterface`
+> **signer**(): `unknown`
 
-Defined in: [types.d.ts:530](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L530)
+Defined in: [types.d.ts:109](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L109)
 
 #### Returns
 
-`LocalSignerInterface`
+`unknown`
 
 ***
 
@@ -82,7 +82,7 @@ Defined in: [types.d.ts:530](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > **timeAuthorityUrl**(): `undefined` \| `string`
 
-Defined in: [types.d.ts:529](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L529)
+Defined in: [types.d.ts:108](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L108)
 
 #### Returns
 

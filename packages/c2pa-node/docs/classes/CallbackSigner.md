@@ -6,7 +6,7 @@
 
 # Class: CallbackSigner
 
-Defined in: [Signer.ts:65](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L65)
+Defined in: [Signer.ts:67](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L67)
 
 A signer that uses a callback to sign data.
 
@@ -14,13 +14,31 @@ A signer that uses a callback to sign data.
 
 - [`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md)
 
+## Constructors
+
+### Constructor
+
+> **new CallbackSigner**(`callbackSigner`): `CallbackSigner`
+
+Defined in: [Signer.ts:68](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L68)
+
+#### Parameters
+
+##### callbackSigner
+
+`unknown`
+
+#### Returns
+
+`CallbackSigner`
+
 ## Methods
 
 ### alg()
 
 > **alg**(): [`SigningAlg`](../type-aliases/SigningAlg.md)
 
-Defined in: [Signer.ts:86](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L86)
+Defined in: [Signer.ts:88](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L88)
 
 #### Returns
 
@@ -36,7 +54,7 @@ Defined in: [Signer.ts:86](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 > **certs**(): `Buffer`\<`ArrayBufferLike`\>[]
 
-Defined in: [Signer.ts:90](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L90)
+Defined in: [Signer.ts:92](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L92)
 
 #### Returns
 
@@ -52,7 +70,7 @@ Defined in: [Signer.ts:90](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 > **reserveSize**(): `number`
 
-Defined in: [Signer.ts:94](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L94)
+Defined in: [Signer.ts:96](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L96)
 
 #### Returns
 
@@ -68,7 +86,7 @@ Defined in: [Signer.ts:94](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 > **sign**(`data`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
 
-Defined in: [Signer.ts:82](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L82)
+Defined in: [Signer.ts:84](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L84)
 
 #### Parameters
 
@@ -88,13 +106,13 @@ Defined in: [Signer.ts:82](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 ### signer()
 
-> **signer**(): [`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md)
+> **signer**(): `unknown`
 
-Defined in: [Signer.ts:68](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L68)
+Defined in: [Signer.ts:70](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L70)
 
 #### Returns
 
-[`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md)
+`unknown`
 
 #### Implementation of
 
@@ -106,7 +124,7 @@ Defined in: [Signer.ts:68](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 > **timeAuthorityUrl**(): `undefined` \| `string`
 
-Defined in: [Signer.ts:98](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L98)
+Defined in: [Signer.ts:100](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L100)
 
 #### Returns
 
@@ -122,7 +140,7 @@ Defined in: [Signer.ts:98](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 > `static` **newSigner**(`config`, `callback`): `CallbackSigner`
 
-Defined in: [Signer.ts:72](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L72)
+Defined in: [Signer.ts:74](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L74)
 
 #### Parameters
 

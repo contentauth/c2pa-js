@@ -6,11 +6,29 @@
 
 # Class: IdentityAssertionBuilder
 
-Defined in: [IdentityAssertion.ts:21](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L21)
+Defined in: [IdentityAssertion.ts:26](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/IdentityAssertion.ts#L26)
 
 ## Implements
 
 - [`IdentityAssertionBuilderInterface`](../interfaces/IdentityAssertionBuilderInterface.md)
+
+## Constructors
+
+### Constructor
+
+> **new IdentityAssertionBuilder**(`_builder`): `IdentityAssertionBuilder`
+
+Defined in: [IdentityAssertion.ts:29](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/IdentityAssertion.ts#L29)
+
+#### Parameters
+
+##### \_builder
+
+`unknown`
+
+#### Returns
+
+`IdentityAssertionBuilder`
 
 ## Methods
 
@@ -18,7 +36,7 @@ Defined in: [IdentityAssertion.ts:21](https://github.com/contentauth/c2pa-node-v
 
 > **addReferencedAssertions**(`referencedAssertions`): `void`
 
-Defined in: [IdentityAssertion.ts:35](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L35)
+Defined in: [IdentityAssertion.ts:40](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/IdentityAssertion.ts#L40)
 
 Add assertion labels to consider as referenced_assertions.
 If any of these labels match assertions that are present in the partial
@@ -47,7 +65,7 @@ The list of assertion labels to add
 
 > **addRoles**(`roles`): `void`
 
-Defined in: [IdentityAssertion.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L42)
+Defined in: [IdentityAssertion.ts:47](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/IdentityAssertion.ts#L47)
 
 Add roles to attach to the named actor for this identity assertion.
 
@@ -71,15 +89,15 @@ Named actor roles
 
 ### builder()
 
-> **builder**(): [`IdentityAssertionBuilderInterface`](../interfaces/IdentityAssertionBuilderInterface.md)
+> **builder**(): `unknown`
 
-Defined in: [IdentityAssertion.ts:46](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L46)
+Defined in: [IdentityAssertion.ts:51](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/IdentityAssertion.ts#L51)
 
 Get the underlying IdentityAssertionBuilder
 
 #### Returns
 
-[`IdentityAssertionBuilderInterface`](../interfaces/IdentityAssertionBuilderInterface.md)
+`unknown`
 
 #### Implementation of
 
@@ -91,13 +109,13 @@ Get the underlying IdentityAssertionBuilder
 
 > `static` **identityBuilderForCredentialHolder**(`credentialHolder`): `Promise`\<`IdentityAssertionBuilder`\>
 
-Defined in: [IdentityAssertion.ts:26](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L26)
+Defined in: [IdentityAssertion.ts:31](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/IdentityAssertion.ts#L31)
 
 #### Parameters
 
 ##### credentialHolder
 
-[`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md)
+[`CallbackCredentialHolderInterface`](../interfaces/CallbackCredentialHolderInterface.md)
 
 #### Returns
 

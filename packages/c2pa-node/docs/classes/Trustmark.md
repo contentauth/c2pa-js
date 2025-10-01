@@ -6,11 +6,29 @@
 
 # Class: Trustmark
 
-Defined in: [Trustmark.ts:21](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Trustmark.ts#L21)
+Defined in: [Trustmark.ts:21](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Trustmark.ts#L21)
 
 ## Implements
 
 - [`TrustmarkInterface`](../interfaces/TrustmarkInterface.md)
+
+## Constructors
+
+### Constructor
+
+> **new Trustmark**(`trustmark`): `Trustmark`
+
+Defined in: [Trustmark.ts:22](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Trustmark.ts#L22)
+
+#### Parameters
+
+##### trustmark
+
+`unknown`
+
+#### Returns
+
+`Trustmark`
 
 ## Methods
 
@@ -18,7 +36,7 @@ Defined in: [Trustmark.ts:21](https://github.com/contentauth/c2pa-node-v2/blob/2
 
 > **decode**(`image`): `Promise`\<`string`\>
 
-Defined in: [Trustmark.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Trustmark.ts#L42)
+Defined in: [Trustmark.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Trustmark.ts#L42)
 
 Decode a watermark from an image.
 
@@ -44,7 +62,7 @@ image to extract the watermark from (must be in a supported image format like JP
 
 > **encode**(`image`, `strength`, `watermark?`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
 
-Defined in: [Trustmark.ts:29](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Trustmark.ts#L29)
+Defined in: [Trustmark.ts:29](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Trustmark.ts#L29)
 
 Encode a watermark into an image.
 
@@ -84,7 +102,7 @@ raw pixel data in RGB8 format (width * height * 3 bytes)
 
 > `static` **newTrustmark**(`config`): `Promise`\<`Trustmark`\>
 
-Defined in: [Trustmark.ts:24](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Trustmark.ts#L24)
+Defined in: [Trustmark.ts:24](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Trustmark.ts#L24)
 
 #### Parameters
 

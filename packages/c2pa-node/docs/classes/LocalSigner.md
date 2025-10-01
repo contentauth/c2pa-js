@@ -6,7 +6,7 @@
 
 # Class: LocalSigner
 
-Defined in: [Signer.ts:22](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L22)
+Defined in: [Signer.ts:24](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L24)
 
 A signer that uses a local certificate and private key to sign data
 
@@ -14,13 +14,31 @@ A signer that uses a local certificate and private key to sign data
 
 - [`LocalSignerInterface`](../interfaces/LocalSignerInterface.md)
 
+## Constructors
+
+### Constructor
+
+> **new LocalSigner**(`localSigner`): `LocalSigner`
+
+Defined in: [Signer.ts:25](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L25)
+
+#### Parameters
+
+##### localSigner
+
+`unknown`
+
+#### Returns
+
+`LocalSigner`
+
 ## Methods
 
 ### alg()
 
 > **alg**(): [`SigningAlg`](../type-aliases/SigningAlg.md)
 
-Defined in: [Signer.ts:44](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L44)
+Defined in: [Signer.ts:46](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L46)
 
 #### Returns
 
@@ -36,7 +54,7 @@ Defined in: [Signer.ts:44](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 > **certs**(): `Buffer`\<`ArrayBufferLike`\>[]
 
-Defined in: [Signer.ts:48](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L48)
+Defined in: [Signer.ts:50](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L50)
 
 #### Returns
 
@@ -52,7 +70,7 @@ Defined in: [Signer.ts:48](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 > **reserveSize**(): `number`
 
-Defined in: [Signer.ts:52](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L52)
+Defined in: [Signer.ts:54](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L54)
 
 #### Returns
 
@@ -68,7 +86,7 @@ Defined in: [Signer.ts:52](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 > **sign**(`data`): `Buffer`
 
-Defined in: [Signer.ts:40](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L40)
+Defined in: [Signer.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L42)
 
 #### Parameters
 
@@ -88,13 +106,13 @@ Defined in: [Signer.ts:40](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 ### signer()
 
-> **signer**(): [`LocalSignerInterface`](../interfaces/LocalSignerInterface.md)
+> **signer**(): `unknown`
 
-Defined in: [Signer.ts:60](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L60)
+Defined in: [Signer.ts:62](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L62)
 
 #### Returns
 
-[`LocalSignerInterface`](../interfaces/LocalSignerInterface.md)
+`unknown`
 
 #### Implementation of
 
@@ -106,7 +124,7 @@ Defined in: [Signer.ts:60](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 > **timeAuthorityUrl**(): `undefined` \| `string`
 
-Defined in: [Signer.ts:56](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L56)
+Defined in: [Signer.ts:58](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L58)
 
 #### Returns
 
@@ -122,7 +140,7 @@ Defined in: [Signer.ts:56](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 > `static` **newSigner**(`certificate`, `privateKey`, `algorithm`, `tsaUrl?`): `LocalSigner`
 
-Defined in: [Signer.ts:25](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Signer.ts#L25)
+Defined in: [Signer.ts:27](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Signer.ts#L27)
 
 #### Parameters
 

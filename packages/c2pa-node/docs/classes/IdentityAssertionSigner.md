@@ -6,11 +6,29 @@
 
 # Class: IdentityAssertionSigner
 
-Defined in: [IdentityAssertion.ts:51](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L51)
+Defined in: [IdentityAssertion.ts:56](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/IdentityAssertion.ts#L56)
 
 ## Implements
 
 - [`IdentityAssertionSignerInterface`](../interfaces/IdentityAssertionSignerInterface.md)
+
+## Constructors
+
+### Constructor
+
+> **new IdentityAssertionSigner**(`_signer`): `IdentityAssertionSigner`
+
+Defined in: [IdentityAssertion.ts:59](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/IdentityAssertion.ts#L59)
+
+#### Parameters
+
+##### \_signer
+
+`unknown`
+
+#### Returns
+
+`IdentityAssertionSigner`
 
 ## Methods
 
@@ -18,7 +36,7 @@ Defined in: [IdentityAssertion.ts:51](https://github.com/contentauth/c2pa-node-v
 
 > **addIdentityAssertion**(`identityAssertionBuilder`): `void`
 
-Defined in: [IdentityAssertion.ts:61](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L61)
+Defined in: [IdentityAssertion.ts:66](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/IdentityAssertion.ts#L66)
 
 Add a IdentityAssertionBuilder  to be used when signing the
 next Manifest
@@ -44,13 +62,17 @@ IdentityAssertionBuilders will be cleared.
 
 ### signer()
 
-> **signer**(): [`IdentityAssertionSignerInterface`](../interfaces/IdentityAssertionSignerInterface.md)
+> **signer**(): `unknown`
 
-Defined in: [IdentityAssertion.ts:70](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L70)
+Defined in: [IdentityAssertion.ts:75](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/IdentityAssertion.ts#L75)
 
 #### Returns
 
-[`IdentityAssertionSignerInterface`](../interfaces/IdentityAssertionSignerInterface.md)
+`unknown`
+
+#### Implementation of
+
+[`IdentityAssertionSignerInterface`](../interfaces/IdentityAssertionSignerInterface.md).[`signer`](../interfaces/IdentityAssertionSignerInterface.md#signer)
 
 ***
 
@@ -58,13 +80,13 @@ Defined in: [IdentityAssertion.ts:70](https://github.com/contentauth/c2pa-node-v
 
 > `static` **new**(`signer`): `IdentityAssertionSigner`
 
-Defined in: [IdentityAssertion.ts:56](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/IdentityAssertion.ts#L56)
+Defined in: [IdentityAssertion.ts:61](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/IdentityAssertion.ts#L61)
 
 #### Parameters
 
 ##### signer
 
-[`CallbackSignerInterface`](../interfaces/CallbackSignerInterface.md)
+`unknown`
 
 #### Returns
 

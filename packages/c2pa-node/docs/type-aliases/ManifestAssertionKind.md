@@ -6,8 +6,6 @@
 
 # Type Alias: ManifestAssertionKind
 
-> **ManifestAssertionKind** = `"Cbor"` \| `"Json"`
+> **ManifestAssertionKind** = `"Cbor"` \| `"Json"` \| `"Binary"` \| `"Uri"`
 
-Defined in: [types.d.ts:18](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L18)
-
-Assertions in C2PA can be stored in several formats
+Defined in: [types.d.ts:57](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L57)

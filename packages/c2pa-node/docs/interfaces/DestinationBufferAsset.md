@@ -6,7 +6,7 @@
 
 # Interface: DestinationBufferAsset
 
-Defined in: [types.d.ts:493](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L493)
+Defined in: [types.d.ts:72](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L72)
 
 A buffer for the destination asset
 
@@ -16,4 +16,4 @@ A buffer for the destination asset
 
 > **buffer**: `null` \| `Buffer`\<`ArrayBufferLike`\>
 
-Defined in: [types.d.ts:495](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L495)
+Defined in: [types.d.ts:74](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L74)
