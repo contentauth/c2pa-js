@@ -56,7 +56,7 @@ const runExecutor: PromiseExecutor<BuildExecutorSchema> = async (
     // Run wasm-opt on wasm-bindgen output, optimizing for size
     const wasmOptInput = path.join(outDir, `${outputWasmName}_bg.wasm`);
 
-    const wasmOpt = getWasmOptPath(context.cwd);
+    const wasmOpt = getWasmOptPath(context.root);
     await $$`node ${wasmOpt} ${wasmOptInput} -o ${wasmOptInput} -Oz`;
 
     // Compute SRI integrity and append it to wasm-bindgen's JS output and .d.ts as an exported const
@@ -90,8 +90,8 @@ const runExecutor: PromiseExecutor<BuildExecutorSchema> = async (
 export default runExecutor;
 
 // Install wasm-opt's node wrapper if necessary and return a path to it.
-async function getWasmOptPath(cwd: string) {
-  const basePath = path.join(cwd, 'tools/nx-wasm-bindgen');
+async function getWasmOptPath(rootDir: string) {
+  const basePath = path.join(rootDir, 'tools/nx-wasm-bindgen');
   const downloadUrl = `https://github.com/WebAssembly/binaryen/releases/download/version_${WASM_OPT_VERSION}/binaryen-version_${WASM_OPT_VERSION}-node.tar.gz`;
   const downloadDir = path.join(basePath, 'download/');
   const downloadFilePath = path.join(downloadDir, 'wasm_opt.tar.gz');
