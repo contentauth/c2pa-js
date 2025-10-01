@@ -1,5 +1,11 @@
 # @contentauth/c2pa-wasm
 
+## 0.3.1
+
+### Patch Changes
+
+- 6f34d30: Add builder methods: setRemoteUrl, setNoEmbed, and setThumbnailFromBlob
+
 ## 0.3.0
 
 ### Minor Changes
