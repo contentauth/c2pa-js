@@ -15,11 +15,14 @@
 
 export function isActionsAssertion(
   obj: unknown,
-): obj is { data: { actions: Array<{ action: string }> } } {
+): obj is { label: string; data: { actions: Array<{ action: string }> } } {
   return (
     typeof obj === "object" &&
     obj !== null &&
+    "label" in obj &&
     "data" in obj &&
+    typeof (obj as any).label === "string" &&
+    ((obj as any).label === "c2pa.actions" || (obj as any).label === "c2pa.actions.v2") &&
     typeof (obj as any).data === "object" &&
     (obj as any).data !== null &&
     Array.isArray((obj as any).data.actions)

@@ -88,16 +88,16 @@ export function getSettingsJson(): string {
  * @param trustConfig The trust configuration object
  */
 export function loadTrustConfig(trustConfig: TrustConfig): void {
-  // Convert camelCase to snake_case for Rust compatibility
+  // Convert settings to snake_case for the neon Rust code.
   // Explicitly set undefined fields to null to ensure they are cleared
-  const rustConfig = {
+  const config = {
     verify_trust_list: trustConfig.verifyTrustList,
     user_anchors: trustConfig.userAnchors ?? null,
     trust_anchors: trustConfig.trustAnchors ?? null,
     trust_config: trustConfig.trustConfig ?? null,
     allowed_list: trustConfig.allowedList ?? null,
   };
-  neon.loadTrustConfig(JSON.stringify(rustConfig));
+  neon.loadTrustConfig(JSON.stringify(config));
 }
 
 /**
@@ -105,16 +105,16 @@ export function loadTrustConfig(trustConfig: TrustConfig): void {
  * @param trustConfig The trust configuration object
  */
 export function loadCawgTrustConfig(trustConfig: TrustConfig): void {
-  // Convert camelCase to snake_case for Rust compatibility
+  // Convert settings to snake_case for the neon Rust code
   // Explicitly set undefined fields to null to ensure they are cleared
-  const rustConfig = {
+  const config = {
     verify_trust_list: trustConfig.verifyTrustList,
     user_anchors: trustConfig.userAnchors ?? null,
     trust_anchors: trustConfig.trustAnchors ?? null,
     trust_config: trustConfig.trustConfig ?? null,
     allowed_list: trustConfig.allowedList ?? null,
   };
-  neon.loadCawgTrustConfig(JSON.stringify(rustConfig));
+  neon.loadCawgTrustConfig(JSON.stringify(config));
 }
 
 /**
@@ -160,8 +160,8 @@ export function getCawgTrustConfig(): TrustConfig {
  * @param verifyConfig The verify configuration object
  */
 export function loadVerifyConfig(verifyConfig: VerifyConfig): void {
-  // Convert camelCase to snake_case for Rust compatibility
-  const rustConfig = {
+  // Convert camelCase to snake_case for the neon Rust code
+  const config = {
     verify_after_reading: verifyConfig.verifyAfterReading,
     verify_after_sign: verifyConfig.verifyAfterSign,
     verify_trust: verifyConfig.verifyTrust,
@@ -173,7 +173,7 @@ export function loadVerifyConfig(verifyConfig: VerifyConfig): void {
       verifyConfig.skipIngredientConflictResolution,
     strict_v1_validation: verifyConfig.strictV1Validation,
   };
-  neon.loadVerifyConfig(JSON.stringify(rustConfig));
+  neon.loadVerifyConfig(JSON.stringify(config));
 }
 
 /**

@@ -47,29 +47,6 @@ This command will download precompiled binaries for the following systems:
 
 ## Components
 
-### Builder
-
-The `Builder` class is the main component for creating and signing C2PA manifests. It provides methods to add assertions, resources, and ingredients to manifests, and handles the signing process.
-
-```javascript
-import { Builder } from '@contentauth/c2pa-node';
-
-// Create a new builder
-const builder = Builder.new();
-
-// Or create from an existing manifest definition
-const builder = Builder.withJson(manifestDefinition);
-
-// Add assertions to the manifest
-builder.addAssertion('c2pa.actions', actionsAssertion);
-
-// Add resources
-await builder.addResource('resource://example', resourceAsset);
-
-// Sign the manifest
-const manifest = builder.sign(signer, inputAsset, outputAsset);
-```
-
 ### Reader
 
 The `Reader` class is used to read and validate C2PA manifests from media files. It can parse embedded manifests or fetch remote manifests.
@@ -94,6 +71,29 @@ const isEmbedded = reader.isEmbedded();
 
 // Get remote URL if applicable
 const remoteUrl = reader.remoteUrl();
+```
+
+### Builder
+
+The `Builder` class is the main component for creating and signing C2PA manifests. It provides methods to add assertions, resources, and ingredients to manifests, and handles the signing process. Use the `Signer` class to sign the manifests.
+
+```javascript
+import { Builder } from '@contentauth/c2pa-node';
+
+// Create a new builder
+const builder = Builder.new();
+
+// Or create from an existing manifest definition
+const builder = Builder.withJson(manifestDefinition);
+
+// Add assertions to the manifest
+builder.addAssertion('c2pa.actions', actionsAssertion);
+
+// Add resources
+await builder.addResource('resource://example', resourceAsset);
+
+// Sign the manifest
+const manifest = builder.sign(signer, inputAsset, outputAsset);
 ```
 
 ### Signers
@@ -131,7 +131,7 @@ const signer = CallbackSigner.newSigner(
   {
     alg: 'es256',
     certs: [certificateBuffer],
-    reserveSize: 1024,
+    reserveSize: 1024, // Reserved size in bytes for the C2PA Claim Signature box.
     tsaUrl: 'https://timestamp.example.com'
   },
   async (data) => {
@@ -154,8 +154,8 @@ import { IdentityAssertionBuilder, CallbackCredentialHolder } from '@contentauth
 
 // Create a credential holder
 const credentialHolder = CallbackCredentialHolder.newCallbackCredentialHolder(
-  1024,
-  'es256',
+  1024,     // reserveSize
+  'es256',  // sigType
   async (payload) => {
     // Custom signing logic for identity assertions
     return await signIdentityPayload(payload);
