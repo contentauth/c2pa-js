@@ -11,30 +11,32 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import * as neon from "./index.node";
-import { IdentityAssertionSigner } from "./IdentityAssertion";
+const neon = require("./index.node");
 import type {
   BuilderInterface,
   CallbackSignerInterface,
   ClaimVersion,
   DestinationAsset,
   FileAsset,
+  IdentityAssertionSignerInterface,
   JsCallbackSignerConfig,
   LocalSignerInterface,
   ManifestAssertionKind,
-  ManifestDefinition,
   SourceAsset,
+  NeonBuilderHandle,
 } from "./types";
+import { IdentityAssertionSigner } from "./IdentityAssertion";
+import type { Manifest } from "@contentauth/c2pa-types";
 
 export class Builder implements BuilderInterface {
-  private constructor(private builder: BuilderInterface) {}
+  private constructor(private builder: NeonBuilderHandle) {}
 
   static new(): Builder {
-    const builder = neon.builderNew();
+    const builder: NeonBuilderHandle = neon.builderNew();
     return new Builder(builder);
   }
 
-  static withJson(json: ManifestDefinition): Builder {
+  static withJson(json: Manifest): Builder {
     let jsonString: string;
     try {
       jsonString = JSON.stringify(json);
@@ -49,7 +51,7 @@ export class Builder implements BuilderInterface {
         "Failed to stringify JSON Manifest Definition: Unknown error",
       );
     }
-    const builder: BuilderInterface = neon.builderWithJson(jsonString);
+    const builder: NeonBuilderHandle = neon.builderWithJson(jsonString);
     return new Builder(builder);
   }
 
@@ -63,7 +65,7 @@ export class Builder implements BuilderInterface {
 
   addAssertion(
     label: string,
-    assertion: string,
+    assertion: unknown,
     assertionKind?: ManifestAssertionKind,
   ): void {
     return neon.builderAddAssertion.call(
@@ -122,7 +124,7 @@ export class Builder implements BuilderInterface {
   ): Promise<Buffer> {
     return neon.builderSignConfigAsync
       .call(this.builder, callback, signerConfig, input, output)
-      .then((result) => {
+      .then((result: Buffer | { manifest: Buffer; signedAsset: Buffer }) => {
         // output is a buffer and result is the manifest and the signed asset.
         if ("buffer" in output) {
           if ("signedAsset" in result && "manifest" in result) {
@@ -136,19 +138,24 @@ export class Builder implements BuilderInterface {
           return result as Buffer;
         }
       })
-      .catch((error) => {
+      .catch((error: Error) => {
         throw error;
       });
   }
 
   async signAsync(
-    signer: CallbackSignerInterface,
+    signer: CallbackSignerInterface | IdentityAssertionSignerInterface,
     input: SourceAsset,
     output: DestinationAsset,
   ): Promise<Buffer> {
-    return neon.builderSignAsync
-      .call(this.builder, signer.signer(), input, output)
-      .then((result) => {
+    const neonHandle = signer.signer();
+    const isIdentity = signer instanceof IdentityAssertionSigner;
+    const neonFn = isIdentity
+      ? neon.builderIdentitySignAsync
+      : neon.builderSignAsync;
+    return neonFn
+      .call(this.builder, neonHandle, input, output)
+      .then((result: Buffer | { manifest: Buffer; signedAsset: Buffer }) => {
         // output is a buffer and result is the manifest and the signed asset.
         if ("buffer" in output) {
           if ("signedAsset" in result && "manifest" in result) {
@@ -162,38 +169,12 @@ export class Builder implements BuilderInterface {
           return result as Buffer;
         }
       })
-      .catch((error) => {
+      .catch((error: Error) => {
         throw error;
       });
   }
 
-  async identitySignAsync(
-    signer: IdentityAssertionSigner,
-    input: SourceAsset,
-    output: DestinationAsset,
-  ): Promise<Buffer> {
-    return neon.builderIdentitySignAsync
-      .call(this.builder, signer.signer(), input, output)
-      .then((result) => {
-        // output is a buffer and result is the manifest and the signed asset.
-        if ("buffer" in output) {
-          if ("signedAsset" in result && "manifest" in result) {
-            output.buffer = result.signedAsset;
-            return result.manifest;
-          } else {
-            throw new Error("Unexpected result for DestinationBuffer");
-          }
-        } else {
-          // output is a file and result is the bytes of the manifest.
-          return result as Buffer;
-        }
-      })
-      .catch((error) => {
-        throw error;
-      });
-  }
-
-  getManifestDefinition(): ManifestDefinition {
+  getManifestDefinition(): Manifest {
     return JSON.parse(neon.builderManifestDefinition.call(this.builder));
   }
 

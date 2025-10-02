@@ -17,10 +17,11 @@ import type {
   BuilderInterface,
   JsCallbackSignerConfig,
   DestinationBufferAsset,
-  ManifestDefinition,
-  ResourceRef,
   SourceBufferAsset,
+  FileAsset,
 } from "./types";
+import { isActionsAssertion } from "./assertions";
+import type { Manifest, ResourceRef } from "@contentauth/c2pa-types";
 import { CallbackSigner, LocalSigner } from "./Signer";
 import { Reader } from "./Reader";
 import { Builder } from "./Builder";
@@ -73,22 +74,17 @@ describe("Builder", () => {
     identifier: "5678",
   };
 
-  const manifestDefinition: ManifestDefinition = {
+  const manifestDefinition: Manifest = {
     vendor: "test",
+    claim_generator: "test-generator",
     claim_generator_info: [
       {
         name: "c2pa_test",
         version: "1.0.0",
       },
     ],
-    metadata: [
-      {
-        dateTime: "1985-04-12T23:20:50.52Z",
-        my_custom_metadata: "my custom metatdata value",
-      },
-    ],
     title: "Test_Manifest",
-    format: "image/tiff",
+    format: "image/jpeg",
     instance_id: "1234",
     thumbnail: {
       format: "image/jpeg",
@@ -100,14 +96,17 @@ describe("Builder", () => {
         format: "image/jpeg",
         instance_id: "12345",
         relationship: "componentOf",
+        thumbnail: { format: "image/jpeg", identifier: "ingredient-thumb.jpg" },
+        resources: { resources: {} },
       },
     ],
     assertions: [
       {
         label: "org.test.assertion",
-        data: "assertion",
+        data: {},
       },
     ],
+    resources: { resources: {} },
   };
 
   let testAssertion: string;
@@ -121,7 +120,7 @@ describe("Builder", () => {
     // Read all test files once
     source = {
       buffer: await fs.readFile("./tests/fixtures/CA.jpg"),
-      mimeType: "jpeg",
+      mimeType: "image/jpeg",
     };
     testThumbnail = await fs.readFile("./tests/fixtures/thumbnail.jpg");
     publicKey = await fs.readFile("./tests/fixtures/certs/es256.pub");
@@ -134,7 +133,8 @@ describe("Builder", () => {
   });
 
   it("should build a manifest store", async () => {
-    const test_definition: ManifestDefinition = {
+    const test_definition: Manifest = {
+      claim_generator: "test-generator",
       claim_generator_info: [
         {
           name: "c2pa-js tests",
@@ -147,6 +147,9 @@ describe("Builder", () => {
       vendor: "test",
       thumbnail: thumbnail_ref,
       label: "ABCDE",
+      ingredients: [],
+      assertions: [],
+      resources: { resources: {} },
     };
     const builder = Builder.withJson(test_definition);
     await builder.addIngredient(parent_json, source);
@@ -174,13 +177,17 @@ describe("Builder", () => {
 
     beforeEach(() => {
       builder = Builder.withJson(manifestDefinition);
-      builder.updateManifestProperty("claim_version", 1);
+      builder.updateManifestProperty("claim_version", 2);
     });
 
     beforeEach(async () => {
       // Add ingredients and resources after builder is initialized
       await builder.addIngredient(parent_json, source);
       await builder.addResource("thumbnail.jpg", {
+        mimeType: "jpeg",
+        buffer: testThumbnail,
+      });
+      await builder.addResource("ingredient-thumb.jpg", {
         mimeType: "jpeg",
         buffer: testThumbnail,
       });
@@ -209,6 +216,37 @@ describe("Builder", () => {
       expect(activeManifest?.title).toBe("Test_Manifest");
     });
 
+    it("should add a CBOR assertion, sign, and verify it in the signed manifest", async () => {
+      // Add the c2pa.watermarked action as a CBOR assertion
+      const actionsAssertion = {
+        actions: [
+          {
+            action: "c2pa.watermarked",
+          },
+        ],
+      };
+      builder.addAssertion("c2pa.actions", actionsAssertion, "Cbor");
+
+      // Sign the manifest
+      const dest = { path: path.join(tempDir, "cbor_signed.jpg") };
+      const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
+      builder.sign(signer, source, dest);
+
+      // Read and verify the assertion in the signed manifest
+      const reader = await Reader.fromAsset(dest);
+      const activeManifest = reader.getActive();
+      const cborAssertion = activeManifest?.assertions?.find(
+        (a: any) => a.label === "c2pa.actions.v2",
+      );
+      expect(cborAssertion).toBeDefined();
+      if (isActionsAssertion(cborAssertion)) {
+        const actions = cborAssertion.data.actions.map((a: any) => a.action);
+        expect(actions).toContain("c2pa.watermarked");
+      } else {
+        throw new Error("CBOR assertion does not have the expected structure");
+      }
+    });
+
     it("should archive and construct from archive", async () => {
       const dest: DestinationBufferAsset = {
         buffer: null,
@@ -232,12 +270,15 @@ describe("Builder", () => {
     });
 
     it("should sign data with callback to file", async () => {
-      const dest = { path: path.join(tempDir, "callback_signed.jpg") };
+      const dest: FileAsset = {
+        path: path.join(tempDir, "callback_signed.jpg"),
+      };
       const signerConfig: JsCallbackSignerConfig = {
         alg: "es256",
         certs: [publicKey],
         reserveSize: 10000,
         tsaUrl: undefined,
+        directCoseHandling: false,
       };
       const signer = new TestSigner(privateKey);
 
@@ -266,6 +307,7 @@ describe("Builder", () => {
         certs: [publicKey],
         reserveSize: 10000,
         tsaUrl: undefined,
+        directCoseHandling: false,
       };
       const signer = new TestSigner(privateKey);
 
@@ -297,6 +339,7 @@ describe("Builder", () => {
         certs: [publicKey],
         reserveSize: 10000,
         tsaUrl: undefined,
+        directCoseHandling: false,
       };
       const testSigner = new TestSigner(privateKey);
       const signer = CallbackSigner.newSigner(signerConfig, testSigner.sign);
@@ -313,6 +356,117 @@ describe("Builder", () => {
       expect(manifestStore.validation_status).toBeUndefined();
       expect(manifestStore.active_manifest).not.toBeUndefined();
       expect(activeManifest?.title).toBe("Test_Manifest");
+    });
+
+    it("should preserve JSON assertion characters without escaping", async () => {
+      const fingerprintAssertion = JSON.stringify({
+        alg: "sha256",
+        blocks: [
+          {
+            scope: {},
+            value: "test-fingerprint-data",
+          },
+        ],
+      });
+      builder.addAssertion(
+        "org.contentauth.fingerprint",
+        fingerprintAssertion,
+        "Json",
+      );
+
+      const dest = { path: path.join(tempDir, "json_test.jpg") };
+      const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
+      builder.sign(signer, source, dest);
+
+      const reader = await Reader.fromAsset(dest);
+      const manifest = reader.json();
+
+      // Check that our specific JSON assertion doesn't have escaped characters
+      const activeManifest = manifest.manifests[manifest.active_manifest!];
+      const fingerprintAssertionData = activeManifest?.assertions?.find(
+        (a: any) => a.label === "org.contentauth.fingerprint",
+      );
+      expect(fingerprintAssertionData).toBeDefined();
+      expect(fingerprintAssertionData?.data).toEqual({
+        alg: "sha256",
+        blocks: [
+          {
+            scope: {},
+            value: "test-fingerprint-data",
+          },
+        ],
+      });
+
+      // The assertion data should not be a string with escaped quotes
+      expect(typeof fingerprintAssertionData?.data).toBe("object");
+      expect(JSON.stringify(fingerprintAssertionData?.data)).not.toContain(
+        "\\",
+      );
+    });
+
+    it("should archive and restore builder with ingredient thumbnail", async () => {
+      const manifestDefinition = {
+        claim_generator_info: [
+          {
+            name: "c2pa_test",
+            version: "1.0.0",
+          },
+        ],
+        title: "Test_Manifest",
+        format: "image/jpeg",
+        ingredients: [],
+        assertions: [
+          {
+            label: "c2pa.actions",
+            data: {
+              actions: [
+                {
+                  action: "c2pa.created",
+                  digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
+                },
+              ],
+            },
+          },
+        ],
+        resources: { resources: {} },
+      };
+
+      const builder = Builder.withJson(manifestDefinition);
+
+      const ingredientJson = '{"title": "Test Ingredient"}';
+      const testThumbnail = await fs.readFile("./tests/fixtures/thumbnail.jpg");
+      await builder.addIngredient(ingredientJson, {
+        buffer: testThumbnail,
+        mimeType: "jpeg",
+      });
+
+      // Archive the builder
+      const archivePath = path.join(
+        tempDir,
+        `ingredient_thumb_archive_${Date.now()}.zip`,
+      );
+      await builder.toArchive({ path: archivePath });
+
+      // Ensure the file is written to disk before proceeding
+      await fs.access(archivePath);
+
+      // Restore from archive
+      const builder2 = await Builder.fromArchive({ path: archivePath });
+
+      // Sign with restored builder
+      const dest = { buffer: null };
+      const publicKey = await fs.readFile("./tests/fixtures/certs/es256.pub");
+      const privateKey = await fs.readFile("./tests/fixtures/certs/es256.pem");
+      const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
+      builder2.sign(signer, source, dest);
+
+      const reader = await Reader.fromAsset({
+        buffer: dest.buffer! as Buffer,
+        mimeType: "jpeg",
+      });
+      const manifestStore = reader.json();
+      expect(JSON.stringify(manifestStore)).toContain("Test Ingredient");
+      expect(JSON.stringify(manifestStore)).toContain("thumbnail.ingredient");
     });
   });
 });

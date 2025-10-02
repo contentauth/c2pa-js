@@ -6,7 +6,7 @@
 
 # Interface: IdentityAssertionBuilderInterface
 
-Defined in: [types.d.ts:729](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L729)
+Defined in: [types.d.ts:329](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L329)
 
 ## Methods
 
@@ -14,7 +14,7 @@ Defined in: [types.d.ts:729](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > **addReferencedAssertions**(`referencedAssertions`): `void`
 
-Defined in: [types.d.ts:737](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L737)
+Defined in: [types.d.ts:337](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L337)
 
 Add assertion labels to consider as referenced_assertions.
 If any of these labels match assertions that are present in the partial
@@ -39,7 +39,7 @@ The list of assertion labels to add
 
 > **addRoles**(`roles`): `void`
 
-Defined in: [types.d.ts:742](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L742)
+Defined in: [types.d.ts:342](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L342)
 
 Add roles to attach to the named actor for this identity assertion.
 
@@ -59,12 +59,12 @@ Named actor roles
 
 ### builder()
 
-> **builder**(): `IdentityAssertionBuilderInterface`
+> **builder**(): `unknown`
 
-Defined in: [types.d.ts:747](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L747)
+Defined in: [types.d.ts:347](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L347)
 
 Get the underlying IdentityAssertionBuilder
 
 #### Returns
 
-`IdentityAssertionBuilderInterface`
+`unknown`

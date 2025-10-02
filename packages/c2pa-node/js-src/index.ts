@@ -18,5 +18,8 @@ export { LocalSigner, CallbackSigner } from "./Signer";
 export {
   IdentityAssertionBuilder,
   IdentityAssertionSigner,
+  CallbackCredentialHolder,
 } from "./IdentityAssertion";
 export { Trustmark } from "./Trustmark";
+export { isActionsAssertion } from "./assertions";
+export * from "./Settings";

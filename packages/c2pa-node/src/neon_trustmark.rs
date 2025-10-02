@@ -85,7 +85,8 @@ pub fn parse_watermark_config(
 }
 
 /// Generate a random watermark with as many bits as specified by `bits`.
-pub fn gen_watermark(bits: usize) -> String {
+pub fn gen_watermark(version: Version) -> String {
+    let bits = version.data_bits() as usize;
     let mut rng = rand::thread_rng();
     let v: Vec<bool> = Standard.sample_iter(&mut rng).take(bits).collect();
     v.into_iter()
@@ -136,8 +137,7 @@ impl NeonTrustmark {
             .task(move || {
                 let trustmark = trustmark.lock()?;
                 let image = image::load_from_memory(&image_bytes)?;
-                let watermark =
-                    watermark.unwrap_or_else(|| gen_watermark(version.data_bits().into()));
+                let watermark = watermark.unwrap_or_else(|| gen_watermark(version));
                 let watermarked_image = trustmark
                     .encode(watermark, image, strength)
                     .map_err(Error::Watermark)?;

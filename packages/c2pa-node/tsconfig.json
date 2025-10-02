@@ -1,21 +1,21 @@
 {
   "compilerOptions": {
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "outDir": "./dist",
     "declaration": true,
     "declarationDir": "./dist/types",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "outDir": "./dist",
+    "resolveJsonModule": true,
     "rootDir": "./js-src",
     "strict": true,
     "target": "es6",
-    "module": "commonjs",
-    "types": ["node", "jest"],
+    "types": ["node", "vitest/globals"],
     "paths": {
       "index.node": ["./js-src/index.node"]
     },
-    "forceConsistentCasingInFileNames": true,
   },
   "include": [
     "js-src/*.ts"

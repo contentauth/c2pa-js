@@ -11,14 +11,9 @@
 // specific language governing permissions and limitations under
 // each license.
 
+// This file contains types not included in @contentauth/c2pa-types and not directly applicable to the neon generated code (index.node.d.ts)
 import { Buffer } from "buffer";
-/**
- * Assertions in C2PA can be stored in several formats
- */
-export type ManifestAssertionKind = "Cbor" | "Json";
-export type UriOrResource = ResourceRef | HashedUri;
-export type DateT = string;
-export type Relationship = "parentOf" | "componentOf" | "inputTo";
+import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
 /**
  * Describes the digital signature algorithms allowed by the C2PA spec
  *
@@ -35,19 +30,18 @@ export type SigningAlg =
   | "ps512"
   | "ed25519";
 
-// A claim_version field is now allowed in a manifest definition for Builder and, if set to 2 will generate v2 claims
 export type ClaimVersion = 1 | 2;
 
 // Trustmark Versions
 export type TrustmarkVersion =
   // Tolerates 8 bit flips
-  | "BchSuper"
+  | "BCH_SUPER"
   // Tolerates 5 bit flips
-  | "Bch5"
+  | "BCH_5"
   // Tolerates 4 bit flips
-  | "Bch4"
+  | "BCH_4"
   // Tolerates 3 bit flips
-  | "Bch3";
+  | "BCH_3";
 
 // Trustmark Variants. See https://github.com/adobe/trustmark/blob/main/FAQ.md for more
 export type TrustmarkVariant =
@@ -60,422 +54,7 @@ export type TrustmarkVariant =
   // Quality Trustmark model
   | "Q";
 
-/**
- * A Container for a set of Manifests and a ValidationStatus list
- */
-export interface ManifestStore {
-  /**
-   * A label for the active (most recent) manifest in the store
-   */
-  active_manifest?: string | undefined;
-  /**
-   * A HashMap of Manifests
-   */
-  manifests: {
-    [k: string]: Manifest;
-  };
-  /**
-   * ValidationStatus generated when loading the ManifestStore from an asset
-   */
-  validation_status?: ValidationStatus[] | undefined;
-  [k: string]: unknown;
-}
-
-/**
- * A Manifest represents all the information in a c2pa manifest
- */
-export interface Manifest {
-  /**
-   * A list of assertions
-   */
-  assertions?: ManifestAssertion[];
-  /**
-   * A User Agent formatted string identifying the software/hardware/system produced this claim Spaces are not allowed in names, versions can be specified with product/1.0 syntax
-   */
-  claim_generator?: string;
-  claim_generator_hints?:
-    | {
-        [k: string]: unknown;
-      }
-    | undefined;
-  /**
-   * A list of claim generator info data identifying the software/hardware/system produced this claim
-   */
-  claim_generator_info?: ClaimGeneratorInfo[] | undefined;
-  /**
-   * A List of verified credentials
-   */
-  credentials?: unknown[] | undefined;
-  /**
-   * The format of the source file as a MIME type
-   */
-  format?: string;
-  /**
-   * A List of ingredients
-   */
-  ingredients?: Ingredient[];
-  /**
-   * Instance ID from `xmpMM:InstanceID` in XMP metadata
-   */
-  instance_id?: string;
-  label?: string | undefined;
-  /**
-   * A list of redactions - URIs to a redacted assertions
-   */
-  redactions?: string[] | undefined;
-  /**
-   * container for binary assets (like thumbnails)
-   */
-  resources?: ResourceStore;
-  /**
-   * Signature data (only used for reporting)
-   */
-  signature_info?: SignatureInfo | undefined;
-  thumbnail?: ResourceRef | undefined;
-  /**
-   * A human-readable title, generally source filename
-   */
-  title?: string | undefined;
-  /**
-   * Optional prefix added to the generated Manifest Label This is typically Internet domain name for the vendor (i.e. `adobe`)
-   */
-  vendor?: string | undefined;
-  [k: string]: unknown;
-}
-
-/**
- * A labeled container for an Assertion value in a Manifest
- */
-export interface ManifestAssertion {
-  data: unknown;
-  /**
-   * There can be more than one assertion for any label
-   */
-  instance?: number | undefined;
-  /**
-   * The [ManifestAssertionKind] for this assertion (as stored in c2pa content)
-   */
-  kind?: ManifestAssertionKind | undefined;
-  /**
-   * An assertion label in reverse domain format
-   */
-  label: string;
-  [k: string]: unknown;
-}
-
-/**
- * Description of the claim generator, or the software used in generating the claim
- *
- * This structure is also used for actions softwareAgent
- */
-export interface ClaimGeneratorInfo {
-  /**
-   * hashed URI to the icon (either embedded or remote)
-   */
-  icon?: UriOrResource | undefined;
-  /**
-   * A human readable string naming the claim_generator
-   */
-  name: string;
-  /**
-   * A human readable string of the product's version
-   */
-  version?: string | undefined;
-  [k: string]: unknown;
-}
-
-/**
- * A reference to a resource to be used in JSON serialization
- */
-export interface ResourceRef {
-  /**
-   * The algorithm used to hash the resource (if applicable)
-   */
-  alg?: string | undefined;
-  /**
-   * More detailed data types as defined in the C2PA spec
-   */
-  data_types?: AssetType[] | undefined;
-  /**
-   * The mime type of the referenced resource
-   */
-  format: string;
-  /**
-   * The hash of the resource (if applicable)
-   */
-  hash?: string | undefined;
-  /**
-   * A URI that identifies the resource as referenced from the manifest
-   *
-   * This may be a JUMBF URI, a file path, a URL or any other string. Relative JUMBF URIs will be resolved with the manifest label. Relative file paths will be resolved with the base path if provided
-   */
-  identifier: string;
-  [k: string]: unknown;
-}
-
-export interface AssetType {
-  type: string;
-  version?: string | undefined;
-  [k: string]: unknown;
-}
-
-/**
- * Hashed Uri structure as defined by C2PA spec It is annotated to produce the correctly tagged cbor serialization
- */
-export interface HashedUri {
-  alg?: string | undefined;
-  hash: number[];
-  url: string;
-  [k: string]: unknown;
-}
-
-/**
- * An `Ingredient` is any external asset that has been used in the creation of an image
- */
-export interface Ingredient {
-  /**
-   * The active manifest label (if one exists)
-   *
-   * If this ingredient has a [`ManifestStore`], this will hold the label of the active [`Manifest`]
-   *
-   * [`Manifest`]: crate::Manifest [`ManifestStore`]: crate::ManifestStore
-   */
-  active_manifest?: string | undefined;
-  /**
-   * A reference to the actual data of the ingredient
-   */
-  data?: ResourceRef | undefined;
-  /**
-   * Additional description of the ingredient
-   */
-  description?: string | undefined;
-  /**
-   * Document ID from `xmpMM:DocumentID` in XMP metadata
-   */
-  document_id?: string | undefined;
-  /**
-   * The format of the source file as a MIME type
-   */
-  format?: string;
-  /**
-   * An optional hash of the asset to prevent duplicates
-   */
-  hash?: string | undefined;
-  /**
-   * URI to an informational page about the ingredient or its data
-   */
-  informational_URI?: string | undefined;
-  /**
-   * Instance ID from `xmpMM:InstanceID` in XMP metadata
-   */
-  instance_id?: string | undefined;
-  /**
-   * A [`ManifestStore`] from the source asset extracted as a binary C2PA blob
-   *
-   * [`ManifestStore`]: crate::ManifestStore
-   */
-  manifest_data?: ResourceRef | undefined;
-  /**
-   * Any additional [`Metadata`] as defined in the C2PA spec
-   *
-   * [`Manifest`]: crate::Manifest
-   */
-  metadata?: Metadata | undefined;
-  /**
-   * URI from `dcterms:provenance` in XMP metadata
-   */
-  provenance?: string | undefined;
-  /**
-   * Set to `ParentOf` if this is the parent ingredient
-   *
-   * There can only be one parent ingredient in the ingredients
-   */
-  relationship?: Relationship & string;
-  resources?: ResourceStore;
-  /**
-   * A thumbnail image capturing the visual state at the time of import
-   *
-   * A tuple of thumbnail MIME format (i.e. `image/jpeg`) and binary bits of the image
-   */
-  thumbnail?: ResourceRef | undefined;
-  /**
-   * A human-readable title, generally source filename
-   */
-  title: string;
-  /**
-   * Validation results
-   */
-  validation_status?: ValidationStatus[] | undefined;
-  [k: string]: unknown;
-}
-
-/**
- * The Metadata structure can be used as part of other assertions or on its own to reference others
- */
-export interface Metadata {
-  data_source?: DataSource | undefined;
-  dateTime?: DateT | undefined;
-  reference?: HashedUri | undefined;
-  reviewRatings?: ReviewRating[] | undefined;
-  [k: string]: unknown;
-}
-
-/**
- * A description of the source for assertion data
- */
-export interface DataSource {
-  /**
-   * A list of [`Actor`]s associated with this source
-   */
-  actors?: Actor[] | undefined;
-  /**
-   * A human-readable string giving details about the source of the assertion data
-   */
-  details?: string | undefined;
-  /**
-   * A value from among the enumerated list indicating the source of the assertion
-   */
-  type: string;
-  [k: string]: unknown;
-}
-
-/**
- * Identifies a person responsible for an action
- */
-export interface Actor {
-  /**
-   * List of references to W3C Verifiable Credentials
-   */
-  credentials?: HashedUri[] | undefined;
-  /**
-   * An identifier for a human actor, used when the "type" is `humanEntry.identified`
-   */
-  identifier?: string | undefined;
-  [k: string]: unknown;
-}
-
-/**
- * A rating on an Assertion
- *
- * See <https://c2pa.org/specifications/specifications/1.0/specs/C2PA_Specification.html#_claim_review>
- */
-export interface ReviewRating {
-  code?: string | undefined;
-  explanation: string;
-  value: number;
-  [k: string]: unknown;
-}
-
-/**
- * Resource store to contain binary objects referenced from JSON serializable structures
- */
-export interface ResourceStore {
-  label?: string | undefined;
-  resources: {
-    [k: string]: number[];
-  };
-  [k: string]: unknown;
-}
-
-/**
- * A `ValidationStatus` struct describes the validation status of a specific part of a manifest
- *
- * See <https://c2pa.org/specifications/specifications/1.0/specs/C2PA_Specification.html#_existing_manifests>
- */
-export interface ValidationStatus {
-  code: string;
-  explanation?: string | undefined;
-  url?: string | undefined;
-  [k: string]: unknown;
-}
-
-/**
- * Holds information about a signature
- */
-export interface SignatureInfo {
-  /**
-   * human readable issuing authority for this signature
-   */
-  alg?: SigningAlg | undefined;
-  /**
-   * The serial number of the certificate
-   */
-  cert_serial_number?: string | undefined;
-  /**
-   * human readable issuing authority for this signature
-   */
-  issuer?: string | undefined;
-  /**
-   * revocation status of the certificate
-   */
-  revocation_status?: boolean | undefined;
-  /**
-   * the time the signature was created
-   */
-  time?: string | undefined;
-  [k: string]: unknown;
-}
-
-/**
- * From ManifestDefinition.d.ts
- * A Manifest Definition This is used to define a manifest and is used to build a ManifestStore A Manifest is a collection of ingredients and assertions It is used to define a claim that can be signed and embedded into a file
- */
-export interface ManifestDefinition {
-  /**
-   * A list of assertions
-   */
-  assertions?: AssertionDefinition[];
-  /**
-   * Clam Generator Info is always required with at least one entry
-   */
-  claim_generator_info?: ClaimGeneratorInfo[];
-  /**
-   * The format of the source file as a MIME type
-   */
-  format?: string;
-  /**
-   * A List of ingredients
-   */
-  ingredients?: Ingredient[];
-  /**
-   * Instance ID from `xmpMM:InstanceID` in XMP metadata
-   */
-  instance_id?: string;
-  label?: string | undefined;
-  /**
-   * A list of redactions - URIs to a redacted assertions
-   */
-  redactions?: string[] | undefined;
-  thumbnail?: ResourceRef | undefined;
-  /**
-   * A human-readable title, generally source filename
-   */
-  title?: string | undefined;
-  /**
-   * Optional prefix added to the generated Manifest Label This is typically Internet domain name for the vendor (i.e. `adobe`)
-   */
-  vendor?: string | undefined;
-  [k: string]: unknown;
-}
-
-export interface AssertionDefinition {
-  data: unknown;
-  label: string;
-  [k: string]: unknown;
-}
-
-/**
- * Types unique to index.node
- */
-export interface IngredientThumbnail {
-  format: string;
-  data: Uint8Array;
-}
-
-export interface IngredientOptions {
-  isParent: boolean;
-  thumbnail?: IngredientThumbnail;
-}
+type ManifestAssertionKind = "Cbor" | "Json" | "Binary" | "Uri";
 
 /**
  * A buffer for the source asset
@@ -527,7 +106,7 @@ export interface LocalSignerInterface {
   certs(): Array<Buffer>;
   reserveSize(): number;
   timeAuthorityUrl(): string | undefined;
-  signer(): LocalSignerInterface;
+  signer(): NeonLocalSignerHandle;
 }
 
 /**
@@ -539,7 +118,14 @@ export interface CallbackSignerInterface {
   certs(): Array<Buffer>;
   reserveSize(): number;
   timeAuthorityUrl(): string | undefined;
-  signer(): CallbackSignerInterface;
+  signer(): NeonCallbackSignerHandle;
+}
+
+export interface CallbackCredentialHolderInterface {
+  sigType(): string;
+  reserveSize(): number;
+  sign(payload: SignerPayload): Promise<Buffer>;
+  signer(): NeonCallbackCredentialHolderHandle;
 }
 
 /**
@@ -547,6 +133,14 @@ export interface CallbackSignerInterface {
  * Internal type used for Rust/Node.js interop
  */
 export type CallbackSignerConfig = unknown;
+export type NeonCallbackSignerHandle = unknown;
+export type NeonCallbackCredentialHolderHandle = unknown;
+export type NeonLocalSignerHandle = unknown;
+export type NeonBuilderHandle = unknown;
+export type NeonReaderHandle = unknown;
+export type NeonIdentityAssertionSignerHandle = unknown;
+export type NeonIdentityAssertionBuilderHandle = unknown;
+export type NeonTrustmarkHandle = unknown;
 
 /*
  * Configuration for an asynchronous signer.
@@ -554,11 +148,28 @@ export type CallbackSignerConfig = unknown;
  */
 export interface JsCallbackSignerConfig {
   alg: SigningAlg;
-  certs: Buffer[];
+  certs?: Buffer[];
   reserveSize: number;
   tsaUrl?: string;
   tsaHeaders?: Array<[string, string]>;
   tsaBody?: Buffer;
+  // TODO: directCoseHandling is currently not implemented in the signing logic.
+  // The field is read from config but the actual signing implementation does not
+  // differentiate between directCoseHandling: true/false - both cases pass the
+  // same data to the JavaScript callback regardless of this setting.
+  directCoseHandling: boolean;
+}
+
+export interface SignerPayload {
+  referencedAssertions: HashedUri[];
+  sigType: string;
+  roles: string[];
+}
+
+export interface HashedUri {
+  url: string;
+  hash: Uint8Array;
+  alg?: string;
 }
 
 export interface BuilderInterface {
@@ -575,11 +186,12 @@ export interface BuilderInterface {
   /**
    * Add CBOR assertion to the builder
    * @param label The label of the assertion
-   * @param assertion The CBOR encoded assertion
+   * @param assertion The assertion, should be a string if the type is JSON, otherwise a JS Object
+   * @param assertionKind The type of assertion
    */
   addAssertion(
     label: string,
-    assertion: string,
+    assertion: unknown,
     assertionKind?: ManifestAssertionKind,
   ): void;
   /**
@@ -640,7 +252,7 @@ export interface BuilderInterface {
    * @returns the bytes of the c2pa_manifest that was embedded
    */
   signAsync(
-    callbackSigner: CallbackSignerInterface,
+    callbackSigner: CallbackSignerInterface | IdentityAssertionSignerInterface,
     input: SourceAsset,
     output: DestinationAsset,
   ): Promise<Buffer>;
@@ -659,24 +271,10 @@ export interface BuilderInterface {
   ): Buffer;
 
   /**
-   * Sign an asset from a buffer or file asynchronously, using an
-   * IdentityAssertionSigner
-   * @param signer The IdentityAssertionSigner
-   * @param source The file or buffer containing the asset
-   * @param dest The file or buffer to write the asset to
-   * @returns the bytes of the c2pa_manifest that was embedded
-   */
-  identitySignAsync(
-    callbackSigner: IdentityAssertionSignerInterface,
-    input: SourceAsset,
-    output: DestinationAsset,
-  ): Promise<Buffer>;
-
-  /**
    * Getter for the builder's manifest definition
    * @returns The manifest definition
    */
-  getManifestDefinition(): ManifestDefinition;
+  getManifestDefinition(): Manifest;
 
   /**
    * Update a string property of the manifest
@@ -724,6 +322,8 @@ export interface IdentityAssertionSignerInterface {
   addIdentityAssertion(
     identityAssertionBuilder: IdentityAssertionBuilderInterface,
   ): void;
+
+  signer(): NeonIdentityAssertionSignerHandle;
 }
 
 export interface IdentityAssertionBuilderInterface {
@@ -744,7 +344,7 @@ export interface IdentityAssertionBuilderInterface {
   /**
    * Get the underlying IdentityAssertionBuilder
    */
-  builder(): IdentityAssertionBuilderInterface;
+  builder(): NeonIdentityAssertionBuilderHandle;
 }
 
 export interface TrustmarkInterface {
@@ -768,4 +368,46 @@ export interface TrustmarkConfig {
   variant: TrustmarkVariant;
   version: TrustmarkVersion;
   modelPath?: string;
+}
+
+/**
+ * Configuration for trust settings in C2PA.
+ * Controls certificate trust validation and trust anchor management.
+ */
+export interface TrustConfig {
+  /** Whether to verify against the trust list */
+  verifyTrustList: boolean;
+  /** User-provided trust anchors (PEM format or base64-encoded certificate hashes) */
+  userAnchors?: string;
+  /** Trust anchors for validation (PEM format or base64-encoded certificate hashes) */
+  trustAnchors?: string;
+  /** Trust configuration file path */
+  trustConfig?: string;
+  /** Allowed list of certificates (PEM format or base64-encoded certificate hashes) */
+  allowedList?: string;
+}
+
+/**
+ * Configuration for verification settings in C2PA.
+ * Controls various verification behaviors and options.
+ */
+export interface VerifyConfig {
+  /** Whether to verify after reading a manifest */
+  verifyAfterReading: boolean;
+  /** Whether to verify after signing a manifest */
+  verifyAfterSign: boolean;
+  /** Whether to verify trust during validation */
+  verifyTrust: boolean;
+  /** Whether to verify timestamp trust */
+  verifyTimestampTrust: boolean;
+  /** Whether to fetch OCSP responses */
+  ocspFetch: boolean;
+  /** Whether to fetch remote manifests */
+  remoteManifestFetch: boolean;
+  /** Whether to check ingredient trust */
+  checkIngredientTrust: boolean;
+  /** Whether to skip ingredient conflict resolution */
+  skipIngredientConflictResolution: boolean;
+  /** Whether to use strict v1 validation */
+  strictV1Validation: boolean;
 }

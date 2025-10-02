@@ -11,16 +11,18 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import * as neon from "./index.node";
+const neon = require("./index.node");
 import type {
-  LocalSignerInterface,
   CallbackSignerInterface,
-  SigningAlg,
   JsCallbackSignerConfig,
+  NeonCallbackSignerHandle,
+  NeonLocalSignerHandle,
+  LocalSignerInterface,
+  SigningAlg,
 } from "./types";
 
 export class LocalSigner implements LocalSignerInterface {
-  private constructor(private localSigner: LocalSignerInterface) {}
+  constructor(private localSigner: NeonLocalSignerHandle) {}
 
   static newSigner(
     certificate: Buffer,
@@ -57,15 +59,15 @@ export class LocalSigner implements LocalSignerInterface {
     return neon.localSignerTimeAuthorityUrl.call(this.localSigner);
   }
 
-  signer(): LocalSignerInterface {
+  signer(): NeonLocalSignerHandle {
     return this.localSigner;
   }
 }
 
 export class CallbackSigner implements CallbackSignerInterface {
-  private constructor(private callbackSigner: CallbackSignerInterface) {}
+  constructor(private callbackSigner: NeonCallbackSignerHandle) {}
 
-  signer(): CallbackSignerInterface {
+  signer(): NeonCallbackSignerHandle {
     return this.callbackSigner;
   }
 

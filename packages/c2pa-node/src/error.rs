@@ -48,6 +48,9 @@ pub enum Error {
     #[error(transparent)]
     RemoteManifestFetch(#[from] reqwest::Error),
 
+    #[error("Settings handling failed: {0}")]
+    Settings(String),
+
     #[error("Signing failed: {0}")]
     Signing(String),
 

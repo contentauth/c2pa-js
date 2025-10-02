@@ -6,6 +6,6 @@
 
 # Type Alias: TrustmarkVersion
 
-> **TrustmarkVersion** = `"BchSuper"` \| `"Bch5"` \| `"Bch4"` \| `"Bch3"`
+> **TrustmarkVersion** = `"BCH_SUPER"` \| `"BCH_5"` \| `"BCH_4"` \| `"BCH_3"`
 
-Defined in: [types.d.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L42)
+Defined in: [types.d.ts:36](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L36)

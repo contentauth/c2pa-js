@@ -6,7 +6,7 @@
 
 # Interface: CallbackSignerInterface
 
-Defined in: [types.d.ts:536](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L536)
+Defined in: [types.d.ts:115](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L115)
 
 A signer that uses a callback to sign data.
 
@@ -16,7 +16,7 @@ A signer that uses a callback to sign data.
 
 > **alg**(): [`SigningAlg`](../type-aliases/SigningAlg.md)
 
-Defined in: [types.d.ts:538](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L538)
+Defined in: [types.d.ts:117](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L117)
 
 #### Returns
 
@@ -28,7 +28,7 @@ Defined in: [types.d.ts:538](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > **certs**(): `Buffer`\<`ArrayBufferLike`\>[]
 
-Defined in: [types.d.ts:539](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L539)
+Defined in: [types.d.ts:118](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L118)
 
 #### Returns
 
@@ -40,7 +40,7 @@ Defined in: [types.d.ts:539](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > **reserveSize**(): `number`
 
-Defined in: [types.d.ts:540](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L540)
+Defined in: [types.d.ts:119](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L119)
 
 #### Returns
 
@@ -52,7 +52,7 @@ Defined in: [types.d.ts:540](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > **sign**(`data`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
 
-Defined in: [types.d.ts:537](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L537)
+Defined in: [types.d.ts:116](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L116)
 
 #### Parameters
 
@@ -68,13 +68,13 @@ Defined in: [types.d.ts:537](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 ### signer()
 
-> **signer**(): `CallbackSignerInterface`
+> **signer**(): `unknown`
 
-Defined in: [types.d.ts:542](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L542)
+Defined in: [types.d.ts:121](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L121)
 
 #### Returns
 
-`CallbackSignerInterface`
+`unknown`
 
 ***
 
@@ -82,7 +82,7 @@ Defined in: [types.d.ts:542](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > **timeAuthorityUrl**(): `undefined` \| `string`
 
-Defined in: [types.d.ts:541](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L541)
+Defined in: [types.d.ts:120](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L120)
 
 #### Returns
 

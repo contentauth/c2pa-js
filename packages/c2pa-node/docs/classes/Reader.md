@@ -6,11 +6,29 @@
 
 # Class: Reader
 
-Defined in: [Reader.ts:23](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L23)
+Defined in: [Reader.ts:24](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Reader.ts#L24)
 
 ## Implements
 
 - [`ReaderInterface`](../interfaces/ReaderInterface.md)
+
+## Constructors
+
+### Constructor
+
+> **new Reader**(`reader`): `Reader`
+
+Defined in: [Reader.ts:25](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Reader.ts#L25)
+
+#### Parameters
+
+##### reader
+
+`unknown`
+
+#### Returns
+
+`Reader`
 
 ## Methods
 
@@ -18,7 +36,7 @@ Defined in: [Reader.ts:23](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 > **activeLabel**(): `undefined` \| `string`
 
-Defined in: [Reader.ts:60](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L60)
+Defined in: [Reader.ts:61](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Reader.ts#L61)
 
 #### Returns
 
@@ -28,13 +46,13 @@ Defined in: [Reader.ts:60](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 ### getActive()
 
-> **getActive**(): `undefined` \| [`Manifest`](../interfaces/Manifest.md)
+> **getActive**(): `undefined` \| `Manifest`
 
-Defined in: [Reader.ts:65](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L65)
+Defined in: [Reader.ts:66](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Reader.ts#L66)
 
 #### Returns
 
-`undefined` \| [`Manifest`](../interfaces/Manifest.md)
+`undefined` \| `Manifest`
 
 ***
 
@@ -42,7 +60,7 @@ Defined in: [Reader.ts:65](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 > **isEmbedded**(): `boolean`
 
-Defined in: [Reader.ts:34](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L34)
+Defined in: [Reader.ts:35](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Reader.ts#L35)
 
 Returns true if the the reader was created from an embedded manifest
 
@@ -58,15 +76,15 @@ Returns true if the the reader was created from an embedded manifest
 
 ### json()
 
-> **json**(): [`ManifestStore`](../interfaces/ManifestStore.md)
+> **json**(): `ManifestStore`
 
-Defined in: [Reader.ts:26](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L26)
+Defined in: [Reader.ts:27](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Reader.ts#L27)
 
 Get the JSON representation of the manifest
 
 #### Returns
 
-[`ManifestStore`](../interfaces/ManifestStore.md)
+`ManifestStore`
 
 #### Implementation of
 
@@ -78,7 +96,7 @@ Get the JSON representation of the manifest
 
 > **postValidateCawg**(): `Promise`\<`void`\>
 
-Defined in: [Reader.ts:76](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L76)
+Defined in: [Reader.ts:77](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Reader.ts#L77)
 
 Run CAWG validation
 
@@ -96,7 +114,7 @@ Run CAWG validation
 
 > **remoteUrl**(): `string`
 
-Defined in: [Reader.ts:30](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L30)
+Defined in: [Reader.ts:31](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Reader.ts#L31)
 
 Get the remote url of the manifest if this reader obtained the manifest remotely
 
@@ -114,7 +132,7 @@ Get the remote url of the manifest if this reader obtained the manifest remotely
 
 > **resourceToAsset**(`uri`, `asset`): `Promise`\<`number`\>
 
-Defined in: [Reader.ts:38](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L38)
+Defined in: [Reader.ts:39](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Reader.ts#L39)
 
 Write a resource to a buffer or file
 
@@ -144,7 +162,7 @@ The URI of the resource
 
 > `static` **fromAsset**(`asset`): `Promise`\<`Reader`\>
 
-Defined in: [Reader.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L42)
+Defined in: [Reader.ts:43](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Reader.ts#L43)
 
 #### Parameters
 
@@ -162,7 +180,7 @@ Defined in: [Reader.ts:42](https://github.com/contentauth/c2pa-node-v2/blob/280e
 
 > `static` **fromManifestDataAndAsset**(`manifestData`, `asset`): `Promise`\<`Reader`\>
 
-Defined in: [Reader.ts:47](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/Reader.ts#L47)
+Defined in: [Reader.ts:48](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/Reader.ts#L48)
 
 #### Parameters
 

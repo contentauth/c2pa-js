@@ -11,21 +11,43 @@
 // specific language governing permissions and limitations under
 // each license.
 
-use crate::neon_signer::NeonCallbackSigner;
+use crate::neon_credential_holder::NeonCallbackCredentialHolder;
 use c2pa::{
     dynamic_assertion::{AsyncDynamicAssertion, DynamicAssertionContent},
     identity::{builder::AsyncCredentialHolder, SignerPayload},
 };
 use neon::prelude::*;
+use serde::{Deserialize, Serialize};
+use serde_bytes::ByteBuf;
 use std::ops::Deref;
 use std::sync::RwLock;
 
 /// A `NeonIdentityAssertionBuilder` gathers the necessary components
 /// for an identity assertion using a Neon-based credential holder.
 pub struct NeonIdentityAssertionBuilder {
-    credential_holder: RwLock<NeonCallbackSigner>,
+    credential_holder: RwLock<NeonCallbackCredentialHolder>,
     referenced_assertions: RwLock<Vec<String>>,
     roles: RwLock<Vec<String>>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct IdentityAssertion {
+    pub(crate) signer_payload: SignerPayload,
+
+    #[serde(with = "serde_bytes")]
+    pub(crate) signature: Vec<u8>,
+
+    #[serde(with = "serde_bytes")]
+    pub(crate) pad1: Vec<u8>,
+
+    // Must use explicit ByteBuf here because #[serde(with = "serde_bytes")]
+    // does not work with Option<Vec<u8>>.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) pad2: Option<ByteBuf>,
+
+    // Label for the assertion. Only assigned when reading from a manifest.
+    #[serde(skip)]
+    pub(crate) label: Option<String>,
 }
 
 // Note: unwrap is used on read() and write() results, as poisoning only occurs as a result of a
@@ -43,8 +65,8 @@ impl Clone for NeonIdentityAssertionBuilder {
 impl NeonIdentityAssertionBuilder {
     /// Create a `NeonIdentityAssertionBuilder` for the given JS credential holder.
     pub fn for_credential_holder(mut cx: FunctionContext) -> JsResult<JsBox<Self>> {
-        let credential_holder_handle = cx.argument::<JsBox<NeonCallbackSigner>>(0)?;
-        let credential_holder_ref: &NeonCallbackSigner = credential_holder_handle.deref();
+        let credential_holder_handle = cx.argument::<JsBox<NeonCallbackCredentialHolder>>(0)?;
+        let credential_holder_ref: &NeonCallbackCredentialHolder = credential_holder_handle.deref();
         Ok(cx.boxed(Self {
             credential_holder: RwLock::new(credential_holder_ref.clone()),
             referenced_assertions: RwLock::new(vec![]),
@@ -108,9 +130,11 @@ impl AsyncDynamicAssertion for NeonIdentityAssertionBuilder {
         let referenced_assertions = claim
             .assertions()
             .filter(|a| {
+                // Always include hash data assertions
                 if a.url().contains("c2pa.assertions/c2pa.hash.") {
                     return true;
                 }
+                // Otherwise include if user-added label matches
                 let label = if let Some((_, label)) = a.url().rsplit_once('/') {
                     label.to_string()
                 } else {
@@ -138,20 +162,49 @@ impl AsyncDynamicAssertion for NeonIdentityAssertionBuilder {
             .await
             .map_err(|e| c2pa::Error::OtherError(Box::new(e)))?;
 
-        let mut assertion_cbor: Vec<u8> = vec![];
-        ciborium::into_writer(&(signer_payload, signature), &mut assertion_cbor)
-            .map_err(|e| c2pa::Error::BadParam(e.to_string()))?;
+        finalize_identity_assertion(signer_payload, size, signature)
+    }
+}
 
-        if let Some(assertion_size) = size {
-            if assertion_cbor.len() > assertion_size {
-                return Err(c2pa::Error::BadParam(format!(
-                    "Serialized assertion is {} bytes, which exceeds the planned size of {} bytes",
-                    assertion_cbor.len(),
-                    assertion_size
-                )));
-            }
+fn finalize_identity_assertion(
+    signer_payload: SignerPayload,
+    size: Option<usize>,
+    signature: Vec<u8>,
+) -> c2pa::Result<DynamicAssertionContent> {
+    let mut ia = IdentityAssertion {
+        signer_payload,
+        signature,
+        pad1: vec![],
+        pad2: None,
+        label: None,
+    };
+
+    let mut assertion_cbor: Vec<u8> = vec![];
+    ciborium::into_writer(&ia, &mut assertion_cbor)
+        .map_err(|e| c2pa::Error::BadParam(e.to_string()))?;
+    // TO DO: Think through how errors map into crate::Error.
+
+    if let Some(assertion_size) = size {
+        if assertion_cbor.len() > assertion_size {
+            return Err(c2pa::Error::BadParam(format!("Serialized assertion is {len} bytes, which exceeds the planned size of {assertion_size} bytes", len = assertion_cbor.len())));
         }
 
-        Ok(DynamicAssertionContent::Cbor(assertion_cbor))
+        ia.pad1 = vec![0u8; assertion_size - assertion_cbor.len() - 15];
+
+        assertion_cbor.clear();
+        ciborium::into_writer(&ia, &mut assertion_cbor)
+            .map_err(|e| c2pa::Error::BadParam(e.to_string()))?;
+
+        ia.pad2 = Some(ByteBuf::from(vec![
+            0u8;
+            assertion_size - assertion_cbor.len() - 6
+        ]));
+
+        assertion_cbor.clear();
+        ciborium::into_writer(&ia, &mut assertion_cbor)
+            .map_err(|e| c2pa::Error::BadParam(e.to_string()))?;
+        assert_eq!(assertion_size, assertion_cbor.len());
     }
+
+    Ok(DynamicAssertionContent::Cbor(assertion_cbor))
 }

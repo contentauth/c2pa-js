@@ -35,6 +35,8 @@ module.exports = [
 			'@typescript-eslint/explicit-module-boundary-types': 'off',
 			'@typescript-eslint/no-explicit-any': 'warn',
 			'@typescript-eslint/no-non-null-assertion': 'warn',
+			'@typescript-eslint/no-var-requires': 'off', // Allow require() for native modules
+			'@typescript-eslint/no-require-imports': 'off', // Allow require() for native modules
 			'prefer-const': 'error',
 			'no-var': 'error',
 			'no-console': 'warn',
@@ -89,6 +91,8 @@ module.exports = [
 			'**/*.d.ts',
 			'*.config.js',
 			'*.config.mjs',
+			'vitest.config.ts',
+			'example_*.js',
 		],
 	},
 ]; 

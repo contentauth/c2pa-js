@@ -14,7 +14,7 @@
 import { Reader } from "./Reader";
 
 // import native objects from built native code
-import type { ManifestStore } from "./types";
+import type { ManifestStore } from "@contentauth/c2pa-types";
 import path from "path";
 import * as fs from "fs-extra";
 
@@ -129,6 +129,7 @@ describe("Reader", () => {
       "signature_info": {
         "alg": "Ps256",
         "issuer": "C2PA Test Signing Cert",
+        "common_name": "C2PA Signer",
         "cert_serial_number": "720724073027128164015125666832722375746636448153",
         "time": "2025-02-04T17:38:01+00:00"
       },

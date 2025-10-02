@@ -6,7 +6,7 @@
 
 # Interface: TrustmarkInterface
 
-Defined in: [types.d.ts:750](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L750)
+Defined in: [types.d.ts:350](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L350)
 
 ## Methods
 
@@ -14,7 +14,7 @@ Defined in: [types.d.ts:750](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > **decode**(`image`): `Promise`\<`string`\>
 
-Defined in: [types.d.ts:764](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L764)
+Defined in: [types.d.ts:364](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L364)
 
 Decode a watermark from an image.
 
@@ -36,7 +36,7 @@ image to extract the watermark from (must be in a supported image format like JP
 
 > **encode**(`image`, `strength`, `watermark?`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
 
-Defined in: [types.d.ts:758](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L758)
+Defined in: [types.d.ts:358](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L358)
 
 Encode a watermark into an image.
 

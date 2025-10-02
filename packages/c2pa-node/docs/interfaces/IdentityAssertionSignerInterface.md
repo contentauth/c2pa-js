@@ -6,7 +6,7 @@
 
 # Interface: IdentityAssertionSignerInterface
 
-Defined in: [types.d.ts:717](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L717)
+Defined in: [types.d.ts:315](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L315)
 
 ## Methods
 
@@ -14,7 +14,7 @@ Defined in: [types.d.ts:717](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > **addIdentityAssertion**(`identityAssertionBuilder`): `void`
 
-Defined in: [types.d.ts:724](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L724)
+Defined in: [types.d.ts:322](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L322)
 
 Add a IdentityAssertionBuilder  to be used when signing the
 next Manifest
@@ -31,3 +31,15 @@ IdentityAssertionBuilders will be cleared.
 #### Returns
 
 `void`
+
+***
+
+### signer()
+
+> **signer**(): `unknown`
+
+Defined in: [types.d.ts:326](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L326)
+
+#### Returns
+
+`unknown`

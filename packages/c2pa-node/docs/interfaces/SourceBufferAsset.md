@@ -6,7 +6,7 @@
 
 # Interface: SourceBufferAsset
 
-Defined in: [types.d.ts:483](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L483)
+Defined in: [types.d.ts:62](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L62)
 
 A buffer for the source asset
 
@@ -16,7 +16,7 @@ A buffer for the source asset
 
 > **buffer**: `Buffer`
 
-Defined in: [types.d.ts:485](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L485)
+Defined in: [types.d.ts:64](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L64)
 
 ***
 
@@ -24,4 +24,4 @@ Defined in: [types.d.ts:485](https://github.com/contentauth/c2pa-node-v2/blob/28
 
 > **mimeType**: `string`
 
-Defined in: [types.d.ts:487](https://github.com/contentauth/c2pa-node-v2/blob/280e70a4878b95c480efb475988df1206fe5da39/js-src/types.d.ts#L487)
+Defined in: [types.d.ts:66](https://github.com/contentauth/c2pa-node-v2/blob/5fc86ffc8659a51143dea77869309236a097edcc/js-src/types.d.ts#L66)

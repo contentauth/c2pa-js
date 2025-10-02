@@ -13,23 +13,18 @@
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { CallbackSigner } from "./Signer";
-import { Reader } from "./Reader";
-import { Builder } from "./Builder";
-import {
-  IdentityAssertionBuilder,
-  IdentityAssertionSigner,
-} from "./IdentityAssertion";
+// Note: We will dynamically import modules after establishing mocks
 import type {
   JsCallbackSignerConfig,
   DestinationBufferAsset,
-  ManifestDefinition,
   SigningAlg,
+  SignerPayload,
 } from "./types";
+import type { Manifest } from "@contentauth/c2pa-types";
 import * as fs from "fs-extra";
 import * as crypto from "crypto";
+import { encode } from "cbor2";
 
-// TODO: move to a separate test file
 class TestSigner {
   private privateKey: crypto.KeyObject;
 
@@ -41,54 +36,67 @@ class TestSigner {
   }
 
   sign = async (bytes: Buffer): Promise<Buffer> => {
-    return crypto.sign(null, bytes, this.privateKey);
+    const sign = crypto.createSign("SHA256");
+    sign.update(bytes);
+    sign.end();
+    return sign.sign(this.privateKey);
+  };
+}
+
+class TestCawgSigner {
+  constructor(private manifestSigner: TestSigner) {}
+
+  sign = async (payload: SignerPayload): Promise<Buffer> => {
+    const cborBytes = Buffer.from(encode(payload));
+    return this.manifestSigner.sign(cborBytes);
   };
 }
 
 describe("IdentityAssertionBuilder", () => {
-  const manifestDefinition: ManifestDefinition = {
+  const manifestDefinition: Manifest = {
     vendor: "test",
-    claim_version: 2,
     claim_generator_info: [
       {
         name: "c2pa_test",
         version: "2.0.0",
       },
     ],
-    metadata: [
-      {
-        dateTime: "1985-04-12T23:20:50.52Z",
-        my_custom_metadata: "my custom metatdata value",
-      },
-    ],
+    claim_generator: "c2pa_test",
     title: "Test_Manifest",
     format: "image/jpeg",
     instance_id: "1234",
+    thumbnail: { format: "image/jpeg", identifier: "thumbnail.jpg" },
+    resources: { resources: {} },
     ingredients: [
       {
         title: "Test",
         format: "image/jpeg",
         instance_id: "12345",
         relationship: "componentOf",
+        thumbnail: { format: "image/jpeg", identifier: "ingredient-thumb.jpg" },
+        resources: { resources: {} },
       },
     ],
     assertions: [
       {
-        label: "c2pa.actions",
+        label: "c2pa.actions.v2",
         data: {
           actions: [
             {
               action: "c2pa.created",
-              digitalSourceType:
-                "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+              parameters: {
+                digitalSourceType:
+                  "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+              },
             },
           ],
-        },
+        } as any,
+        kind: "Json",
       },
       {
         label: "cawg.training-mining",
         data: {
-          entries: {
+          metadata: {
             "cawg.ai_inference": {
               use: "notAllowed",
             },
@@ -102,17 +110,20 @@ describe("IdentityAssertionBuilder", () => {
   };
 
   it("should build an Identity Assertion Signer", async () => {
+    const { CallbackSigner } = await import("./Signer");
+    const { Reader } = await import("./Reader");
+    const { Builder } = await import("./Builder");
+    const {
+      IdentityAssertionBuilder,
+      IdentityAssertionSigner,
+      CallbackCredentialHolder,
+    } = await import("./IdentityAssertion");
     // Read certificate files once
     const c2paPrivateKey = await fs.readFile(
       "./tests/fixtures/certs/es256.pem",
     );
     const c2paPublicKey = await fs.readFile("./tests/fixtures/certs/es256.pub");
-    const cawgPrivateKey = await fs.readFile(
-      "./tests/fixtures/certs/ed25519.pem",
-    );
-    const cawgPublicKey = await fs.readFile(
-      "./tests/fixtures/certs/ed25519.pub",
-    );
+    // Use the same signer for both C2PA manifest and COSE signing
 
     // Create signer configurations
     const c2paConfig: JsCallbackSignerConfig = {
@@ -122,32 +133,25 @@ describe("IdentityAssertionBuilder", () => {
       tsaUrl: undefined,
       tsaHeaders: undefined,
       tsaBody: undefined,
-    };
-
-    const cawgConfig: JsCallbackSignerConfig = {
-      alg: "ed25519" as SigningAlg,
-      certs: [cawgPublicKey],
-      reserveSize: 10000,
-      tsaUrl: undefined,
-      tsaHeaders: undefined,
-      tsaBody: undefined,
+      directCoseHandling: true,
     };
 
     // Create signers
     const c2paTestSigner = new TestSigner(c2paPrivateKey);
-    const cawgTestSigner = new TestSigner(cawgPrivateKey);
     const c2paSigner = CallbackSigner.newSigner(
       c2paConfig,
       c2paTestSigner.sign,
     );
-    const cawgSigner = CallbackSigner.newSigner(
-      cawgConfig,
+    const cawgTestSigner = new TestCawgSigner(c2paTestSigner);
+    const cawgSigner = CallbackCredentialHolder.newCallbackCredentialHolder(
+      10000,
+      "cawg.x509.cose",
       cawgTestSigner.sign,
     );
 
     const source = {
       buffer: await fs.readFile("./tests/fixtures/CA.jpg"),
-      mimeType: "jpeg",
+      mimeType: "image/jpeg",
     };
     const dest: DestinationBufferAsset = {
       buffer: null,
@@ -156,22 +160,32 @@ describe("IdentityAssertionBuilder", () => {
     // Create the manifest builder
     const builder = Builder.withJson(manifestDefinition);
 
+    // Add the required resources
+    await builder.addResource("thumbnail.jpg", {
+      mimeType: "image/jpeg",
+      buffer: await fs.readFile("./tests/fixtures/thumbnail.jpg"),
+    });
+    await builder.addResource("ingredient-thumb.jpg", {
+      mimeType: "image/jpeg",
+      buffer: await fs.readFile("./tests/fixtures/thumbnail.jpg"),
+    });
+
     // Create and configure the identity assertion
-    const ia_signer = IdentityAssertionSigner.new(c2paSigner);
+    const iaSigner = IdentityAssertionSigner.new(c2paSigner.signer());
     const iab =
       await IdentityAssertionBuilder.identityBuilderForCredentialHolder(
         cawgSigner,
       );
     iab.addReferencedAssertions(["cawg.training-mining"]);
-    ia_signer.addIdentityAssertion(iab);
+    iaSigner.addIdentityAssertion(iab);
 
-    // Sign the manifest
-    await builder.signAsync(c2paSigner, source, dest);
+    // Sign the manifest (standard async flow)
+    await builder.signAsync(iaSigner, source, dest);
 
     // Verify the manifest
     const reader = await Reader.fromAsset({
       buffer: dest.buffer! as Buffer,
-      mimeType: "jpeg",
+      mimeType: "image/jpeg",
     });
     await reader.postValidateCawg();
   });

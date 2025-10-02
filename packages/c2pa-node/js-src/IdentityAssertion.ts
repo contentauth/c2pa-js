@@ -11,20 +11,25 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import * as neon from "./index.node";
+const neon = require("./index.node");
 import type {
-  CallbackSignerInterface,
+  CallbackCredentialHolderInterface,
   IdentityAssertionBuilderInterface,
   IdentityAssertionSignerInterface,
+  NeonCallbackCredentialHolderHandle,
+  NeonIdentityAssertionSignerHandle,
+  NeonIdentityAssertionBuilderHandle,
+  SignerPayload,
+  NeonCallbackSignerHandle,
 } from "./types";
 
 export class IdentityAssertionBuilder
   implements IdentityAssertionBuilderInterface
 {
-  private constructor(private _builder: IdentityAssertionBuilderInterface) {}
+  constructor(private _builder: NeonIdentityAssertionBuilderHandle) {}
 
   static async identityBuilderForCredentialHolder(
-    credentialHolder: CallbackSignerInterface,
+    credentialHolder: CallbackCredentialHolderInterface,
   ): Promise<IdentityAssertionBuilder> {
     const builder = neon.identityBuilderForCredentialHolder(
       credentialHolder.signer(),
@@ -43,7 +48,7 @@ export class IdentityAssertionBuilder
     neon.identityBuilderAddRoles.call(this._builder, roles);
   }
 
-  builder(): IdentityAssertionBuilderInterface {
+  builder(): NeonIdentityAssertionBuilderHandle {
     return this._builder;
   }
 }
@@ -51,10 +56,10 @@ export class IdentityAssertionBuilder
 export class IdentityAssertionSigner
   implements IdentityAssertionSignerInterface
 {
-  private constructor(private _signer: IdentityAssertionSignerInterface) {}
+  constructor(private _signer: NeonIdentityAssertionSignerHandle) {}
 
-  static new(signer: CallbackSignerInterface): IdentityAssertionSigner {
-    const identitySigner = neon.identitySignerNew(signer.signer());
+  static new(signer: NeonCallbackSignerHandle): IdentityAssertionSigner {
+    const identitySigner = neon.identitySignerNew(signer);
     return new IdentityAssertionSigner(identitySigner);
   }
 
@@ -67,7 +72,51 @@ export class IdentityAssertionSigner
     );
   }
 
-  signer(): IdentityAssertionSignerInterface {
+  signer(): NeonIdentityAssertionSignerHandle {
     return this._signer;
+  }
+}
+
+export class CallbackCredentialHolder
+  implements CallbackCredentialHolderInterface
+{
+  constructor(
+    private callbackCredentialHolder: NeonCallbackCredentialHolderHandle,
+  ) {}
+
+  signer(): NeonCallbackCredentialHolderHandle {
+    return this.callbackCredentialHolder;
+  }
+
+  static newCallbackCredentialHolder(
+    reserveSize: number,
+    sigType: string,
+    callback: (signerPayload: SignerPayload) => Promise<Buffer>,
+  ) {
+    const credentialHolder = neon.newCallbackCredentialHolder(
+      reserveSize,
+      sigType,
+      callback,
+    );
+    return new CallbackCredentialHolder(credentialHolder);
+  }
+
+  async sign(payload: SignerPayload): Promise<Buffer> {
+    return neon.callbackSignerSignPayload.call(
+      this.callbackCredentialHolder,
+      payload,
+    );
+  }
+
+  reserveSize(): number {
+    return neon.callbackCredentialHolderReserveSize.call(
+      this.callbackCredentialHolder,
+    );
+  }
+
+  sigType(): string {
+    return neon.callbackCredentialHolderSigType.call(
+      this.callbackCredentialHolder,
+    );
   }
 }

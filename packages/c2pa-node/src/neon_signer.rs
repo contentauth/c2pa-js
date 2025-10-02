@@ -16,13 +16,8 @@ use async_trait::async_trait;
 use c2pa::{
     create_signer,
     crypto::{
-        cose::{sign, TimeStampStorage},
         raw_signature::{AsyncRawSigner, RawSigner, RawSignerError},
         time_stamp::{AsyncTimeStampProvider, TimeStampProvider},
-    },
-    identity::{
-        builder::{AsyncCredentialHolder, IdentityBuilderError},
-        SignerPayload,
     },
     AsyncSigner,
     Error::OtherError,
@@ -44,6 +39,7 @@ pub struct CallbackSignerConfig {
     pub tsa_url: Option<String>,
     pub tsa_headers: Option<Vec<(String, String)>>,
     pub tsa_body: Option<Vec<u8>>,
+    pub direct_cose_handling: bool,
 }
 
 impl CallbackSignerConfig {
@@ -54,6 +50,7 @@ impl CallbackSignerConfig {
         tsa_url: Option<String>,
         tsa_headers: Option<Vec<(String, String)>>,
         tsa_body: Option<Vec<u8>>,
+        direct_cose_handling: bool,
     ) -> Self {
         Self {
             alg,
@@ -62,6 +59,7 @@ impl CallbackSignerConfig {
             tsa_url,
             tsa_headers,
             tsa_body,
+            direct_cose_handling,
         }
     }
 
@@ -77,7 +75,7 @@ impl CallbackSignerConfig {
             .or_else(|_| SigningAlg::from_str(&alg_str.to_uppercase()))
             .or_else(|err| cx.throw_error(err.to_string()))?;
 
-        // Handle certs as an array of buffers
+        // Handle certs as an optional array of buffers
         let certs_array = js_config
             .get::<JsArray, _, _>(cx, "certs")?
             .downcast_or_throw::<JsArray, _>(cx)?;
@@ -95,6 +93,10 @@ impl CallbackSignerConfig {
         let tsa_url = js_config
             .get_opt::<JsString, _, _>(cx, "tsaUrl")?
             .map(|js_string| js_string.value(cx));
+        let direct_cose_handling = js_config
+            .get::<JsBoolean, _, _>(cx, "directCoseHandling")?
+            .downcast_or_throw::<JsBoolean, _>(cx)?
+            .value(cx);
         let tsa_headers =
             if let Some(js_array) = js_config.get_opt::<JsArray, _, _>(cx, "tsaHeaders")? {
                 let len = js_array.len(cx);
@@ -118,6 +120,7 @@ impl CallbackSignerConfig {
         let tsa_body = js_config
             .get_opt::<JsBuffer, _, _>(cx, "tsaBody")?
             .map(|js_buffer| js_buffer.as_slice(cx).to_vec());
+
         Ok(cx.boxed(Self::new(
             alg,
             certs,
@@ -125,6 +128,7 @@ impl CallbackSignerConfig {
             tsa_url,
             tsa_headers,
             tsa_body,
+            direct_cose_handling,
         )))
     }
 }
@@ -229,6 +233,28 @@ impl NeonCallbackSigner {
     }
 }
 
+/// # Safety
+///
+/// The implementations of `Send` and `Sync` are marked as `unsafe` because the compiler cannot automatically
+/// verify that the type is safe to send or share between threads. This is because:
+/// - The type contains `RwLock` fields (`signer` and `identity_assertions`)
+/// - The type interacts with JavaScript through Neon bindings
+/// - The type contains references to JavaScript objects and callbacks
+///
+/// However, the implementation is safe because:
+/// - The `RwLock` fields provide thread-safe access to the contained data
+/// - The JavaScript interactions are properly synchronized through the Neon runtime
+/// - The type is used in a controlled environment where the JavaScript context is properly managed
+/// - The type is used in a way that ensures proper synchronization of access to its resources
+///
+/// These traits are necessary because:
+/// - `Send`: Allows the type to be transferred between threads
+/// - `Sync`: Allows the type to be shared between threads
+///
+/// The type needs these capabilities because it:
+/// - Implements `AsyncSigner` and `AsyncRawSigner` traits for asynchronous signing operations
+/// - Is used in the `identity_sign_async` function which performs asynchronous operations
+/// - Is part of a Node.js binding where async operations are common
 unsafe impl Send for NeonCallbackSigner {}
 unsafe impl Sync for NeonCallbackSigner {}
 
@@ -293,6 +319,14 @@ impl AsyncSigner for NeonCallbackSigner {
     fn reserve_size(&self) -> usize {
         self.config.reserve_size
     }
+
+    fn direct_cose_handling(&self) -> bool {
+        // TODO: The direct_cose_handling field is currently not used in the signing logic.
+        // The field is read from config and exposed via this getter, but the actual signing
+        // implementation does not differentiate between directCoseHandling: true/false.
+        // Both cases pass the same data to the JavaScript callback regardless of this setting.
+        self.config.direct_cose_handling
+    }
 }
 
 impl TimeStampProvider for NeonCallbackSigner {
@@ -306,10 +340,10 @@ impl TimeStampProvider for NeonCallbackSigner {
 
 impl AsyncTimeStampProvider for NeonCallbackSigner {
     fn time_stamp_service_url(&self) -> Option<String> {
-        TimeStampProvider::time_stamp_service_url(self)
+        self.config.tsa_url.clone()
     }
     fn time_stamp_request_headers(&self) -> Option<Vec<(String, String)>> {
-        TimeStampProvider::time_stamp_request_headers(self)
+        self.config.tsa_headers.clone()
     }
 }
 
@@ -381,7 +415,7 @@ impl AsyncRawSigner for NeonCallbackSigner {
 
 impl RawSigner for NeonCallbackSigner {
     fn sign(&self, _data: &[u8]) -> Result<Vec<u8>, RawSignerError> {
-        // Instead of blocking, we'll return an error since this is a sync context
+        // Synchronous signing is not supported; use AsyncRawSigner instead
         Err(RawSignerError::InternalError(
             "Synchronous signing not supported - use AsyncRawSigner instead".to_string(),
         ))
@@ -397,27 +431,6 @@ impl RawSigner for NeonCallbackSigner {
 
     fn reserve_size(&self) -> usize {
         AsyncRawSigner::reserve_size(self)
-    }
-}
-
-#[async_trait]
-impl AsyncCredentialHolder for NeonCallbackSigner {
-    fn sig_type(&self) -> &'static str {
-        "cawg.x509.cose"
-    }
-
-    fn reserve_size(&self) -> usize {
-        self.config.reserve_size
-    }
-
-    async fn sign(&self, signer_payload: &SignerPayload) -> Result<Vec<u8>, IdentityBuilderError> {
-        let mut sp_cbor: Vec<u8> = vec![];
-        ciborium::into_writer(signer_payload, &mut sp_cbor)
-            .map_err(|e| IdentityBuilderError::CborGenerationError(e.to_string()))?;
-
-        // Create a COSE_Sign1 structure using the raw signature
-        sign(self, &sp_cbor, None, TimeStampStorage::V2_sigTst2_CTT)
-            .map_err(|e| IdentityBuilderError::SignerError(e.to_string()))
     }
 }
 
