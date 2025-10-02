@@ -39,7 +39,6 @@ export interface Builder {
    * Sets the state of the no_embed flag. To skip embedding a manifest (e.g. for the remote-only case) set this to `true`.
    *
    * @param noEmbed Value to set the no_embed flag.
-   * @returns
    */
   setNoEmbed: (noEmbed: boolean) => Promise<void>;
 
@@ -87,8 +86,9 @@ export interface Builder {
   sign: (signer: Signer, format: string, blob: Blob) => Promise<Uint8Array>;
 
   /**
+   * Sign an asset and get both the signed asset bytes and the manifest bytes.
    *
-   * @returns
+   * @todo Docs coming soon
    */
   signAndGetManifestBytes: (
     signer: Signer,
