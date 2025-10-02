@@ -116,6 +116,39 @@ rx({
     );
     return transfer(signedBytes, signedBytes.buffer);
   },
+  async builder_signAndGetManifestBytes(
+    builderId,
+    requestId,
+    payload,
+    format,
+    blob
+  ) {
+    const builder = builderMap.get(builderId);
+    const { manifest, asset } = await builder.signAndGetManifestBytes(
+      {
+        reserveSize: payload.reserveSize,
+        alg: payload.alg,
+        sign: async (bytes) => {
+          const result = await tx.sign(
+            requestId,
+            transfer(bytes, bytes.buffer),
+            payload.reserveSize
+          );
+          return result;
+        },
+      },
+      format,
+      blob
+    );
+
+    return transfer(
+      {
+        manifest,
+        asset,
+      },
+      [manifest.buffer, asset.buffer]
+    );
+  },
   builder_free(builderId) {
     const builder = builderMap.get(builderId);
     builder.free();

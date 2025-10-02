@@ -9,7 +9,7 @@ use std::io::Cursor;
 
 use c2pa::Builder;
 use js_sys::{Error as JsError, JsString};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 use web_sys::Blob;
@@ -25,6 +25,15 @@ use crate::{
 pub struct WasmBuilder {
     builder: Builder,
     serializer: Serializer,
+}
+
+/// Holds the bytes of an asset and manifest.
+#[derive(Deserialize, Serialize)]
+struct AssetAndManifestBytes {
+    #[serde(with = "serde_bytes")]
+    pub asset: Vec<u8>,
+    #[serde(with = "serde_bytes")]
+    pub manifest: Vec<u8>,
 }
 
 #[wasm_bindgen]
@@ -120,17 +129,54 @@ impl WasmBuilder {
         format: &str,
         source: &Blob,
     ) -> Result<Vec<u8>, JsError> {
+        let mut asset: Vec<u8> = Vec::new();
+
+        self.sign_internal(signer_definition, format, source, &mut asset)
+            .await?;
+
+        Ok(asset)
+    }
+
+    /// Sign an asset using the provided SignerDefinition, format, and source Blob.
+    /// Use this method to get both the manifest bytes and the bytes of the signed asset.
+    #[wasm_bindgen(js_name = signAndGetManifestBytes)]
+    pub async fn sign_and_get_manifest_bytes(
+        &mut self,
+        signer_definition: &SignerDefinition,
+        format: &str,
+        source: &Blob,
+    ) -> Result<JsValue, JsError> {
+        let mut asset: Vec<u8> = Vec::new();
+
+        let manifest = self
+            .sign_internal(signer_definition, format, source, &mut asset)
+            .await?;
+
+        let result = AssetAndManifestBytes { manifest, asset }
+            .serialize(&self.serializer)
+            .map_err(WasmError::from)?;
+
+        Ok(result)
+    }
+
+    async fn sign_internal(
+        &mut self,
+        signer_definition: &SignerDefinition,
+        format: &str,
+        source: &Blob,
+        dest: &mut Vec<u8>,
+    ) -> Result<Vec<u8>, JsError> {
         let signer = WasmSigner::from_definition(&signer_definition)?;
         let mut stream = BlobStream::new(source);
 
-        let mut bytes: Vec<u8> = Vec::new();
-        let mut cursor = Cursor::new(&mut bytes);
+        let mut cursor = Cursor::new(dest);
 
-        self.builder
+        let manifest = self
+            .builder
             .sign_async(&signer, format, &mut stream, &mut cursor)
             .await
-            .unwrap();
+            .map_err(WasmError::from)?;
 
-        Ok(bytes)
+        Ok(manifest)
     }
 }

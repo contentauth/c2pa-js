@@ -39,7 +39,6 @@ export interface Builder {
    * Sets the state of the no_embed flag. To skip embedding a manifest (e.g. for the remote-only case) set this to `true`.
    *
    * @param noEmbed Value to set the no_embed flag.
-   * @returns
    */
   setNoEmbed: (noEmbed: boolean) => Promise<void>;
 
@@ -87,9 +86,25 @@ export interface Builder {
   sign: (signer: Signer, format: string, blob: Blob) => Promise<Uint8Array>;
 
   /**
+   * Sign an asset and get both the signed asset bytes and the manifest bytes.
+   *
+   * @todo Docs coming soon
+   */
+  signAndGetManifestBytes: (
+    signer: Signer,
+    format: string,
+    blob: Blob
+  ) => Promise<ManifestAndAssetBytes>;
+
+  /**
    * Dispose of this Builder, freeing the memory it occupied and preventing further use. Call this whenever the Builder is no longer needed.
    */
   free: () => Promise<void>;
+}
+
+export interface ManifestAndAssetBytes {
+  manifest: Uint8Array;
+  asset: Uint8Array;
 }
 
 /**
@@ -166,6 +181,21 @@ function createBuilder(
       const requestId = worker.registerSignReceiver(signer.sign);
 
       const result = await tx.builder_sign(
+        id,
+        requestId,
+        payload,
+        format,
+        blob
+      );
+
+      return result;
+    },
+
+    async signAndGetManifestBytes(signer: Signer, format: string, blob: Blob) {
+      const payload = await getSerializablePayload(signer);
+      const requestId = worker.registerSignReceiver(signer.sign);
+
+      const result = await tx.builder_signAndGetManifestBytes(
         id,
         requestId,
         payload,
