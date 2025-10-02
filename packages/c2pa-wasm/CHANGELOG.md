@@ -1,5 +1,11 @@
 # @contentauth/c2pa-wasm
 
+## 0.3.2
+
+### Patch Changes
+
+- 4b08cdc: Add signAndGetManifestBytes() method
+
 ## 0.3.1
 
 ### Patch Changes
