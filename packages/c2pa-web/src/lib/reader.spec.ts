@@ -34,11 +34,23 @@ describe('reader', () => {
 
     const reader = await c2pa.reader.fromBlob(blob.type, blob);
 
-    const manifestStore = await reader.json();
+    expect(reader).not.toBeNull();
+
+    const manifestStore = await reader!.json();
 
     expect(manifestStore).toEqual(C_with_CAWG_data_ManifestStore);
 
-    await reader.free();
+    await reader!.free();
+  });
+
+  test('should return null when reading an asset with no C2PA data', async () => {
+    const c2pa = await createC2pa({ wasmSrc });
+
+    const blob = await getBlobForAsset(C_with_CAWG_data_thumbnail);
+
+    const reader = await c2pa.reader.fromBlob(blob.type, blob);
+
+    expect(reader).toBeNull();
   });
 
   test('should return an embedded thumbnail', async () => {
@@ -48,13 +60,15 @@ describe('reader', () => {
 
     const reader = await c2pa.reader.fromBlob(blob.type, blob);
 
-    const manifestStore = await reader.json();
+    expect(reader).not.toBeNull();
+
+    const manifestStore = await reader!.json();
 
     const activeManifest =
       manifestStore.manifests[manifestStore.active_manifest!];
     const thumbnailId = activeManifest.thumbnail!.identifier;
 
-    const thumbnailBuffer = await reader.resourceToBuffer(thumbnailId);
+    const thumbnailBuffer = await reader!.resourceToBuffer(thumbnailId);
     const thumbnail = new Uint8Array(thumbnailBuffer!);
 
     const thumbnailBlob = await getBlobForAsset(C_with_CAWG_data_thumbnail);
@@ -65,7 +79,7 @@ describe('reader', () => {
 
     expect(thumbnail).toEqual(expectedThumbnail);
 
-    await reader.free();
+    await reader!.free();
   });
 
   test('should report c2pa-rs errors correctly', async () => {
@@ -97,11 +111,13 @@ describe('reader', () => {
 
     const reader = await c2pa.reader.fromBlob(blob.type, blob);
 
-    const manifestStore = await reader.json();
+    expect(reader).not.toBeNull();
+
+    const manifestStore = await reader!.json();
 
     expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
 
-    await reader.free();
+    await reader!.free();
   });
 
   test('should report an untrusted asset when configured to verify trust', async () => {
@@ -120,11 +136,13 @@ describe('reader', () => {
 
     const reader = await c2pa.reader.fromBlob(blob.type, blob);
 
-    const manifestStore = await reader.json();
+    expect(reader).not.toBeNull();
+
+    const manifestStore = await reader!.json();
 
     expect(manifestStore).toEqual(C_with_CAWG_data_untrusted_ManifestStore);
 
-    await reader.free();
+    await reader!.free();
   });
 
   test('should work when created from an initial segment and fragment', async () => {
@@ -139,11 +157,13 @@ describe('reader', () => {
       fragmentBlob
     );
 
-    const manifestStore = await reader.json();
+    expect(reader).not.toBeNull();
+
+    const manifestStore = await reader!.json();
 
     expect(manifestStore).toEqual(dashinit_ManifestStore);
 
-    await reader.free();
+    await reader!.free();
   });
 
   // TODO: can this test be written to track the status of the underlying object instead of checking for an error?
@@ -154,9 +174,11 @@ describe('reader', () => {
 
     const reader = await c2pa.reader.fromBlob(blob.type, blob);
 
-    await reader.free();
+    expect(reader).not.toBeNull();
 
-    await expect(reader.json()).rejects.toThrowError();
+    await reader!.free();
+
+    await expect(reader!.json()).rejects.toThrowError();
   });
 });
 

@@ -24,22 +24,22 @@ export interface ReaderFactory {
    *
    * @param format Asset format.
    * @param blob Blob of asset bytes.
-   * @returns A {@link Reader} object.
+   * @returns A {@link Reader} object or null if no C2PA metadata was found.
    */
-  fromBlob: (format: string, blob: Blob) => Promise<Reader>;
+  fromBlob: (format: string, blob: Blob) => Promise<Reader | null>;
 
   /**
    *
    * @param format Asset format.
    * @param init Blob of initial fragment bytes.
    * @param fragment Blob of fragment bytes.
-   * @returns A {@link Reader} object.
+   * @returns A {@link Reader} object or null if no C2PA metadata was found.
    */
   fromBlobFragment: (
     format: string,
     init: Blob,
     fragment: Blob
-  ) => Promise<Reader>;
+  ) => Promise<Reader | null>;
 }
 
 /**
@@ -112,7 +112,7 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
   });
 
   return {
-    async fromBlob(format: string, blob: Blob): Promise<Reader> {
+    async fromBlob(format: string, blob: Blob): Promise<Reader | null> {
       if (!isSupportedReaderFormat(format)) {
         throw new UnsupportedFormatError(format);
       }
@@ -121,14 +121,18 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
         throw new AssetTooLargeError(blob.size);
       }
 
-      const readerId = await tx.reader_fromBlob(format, blob);
+      try {
+        const readerId = await tx.reader_fromBlob(format, blob);
 
-      const reader = createReader(worker, readerId, () => {
-        registry.unregister(reader);
-      });
-      registry.register(reader, readerId, reader);
+        const reader = createReader(worker, readerId, () => {
+          registry.unregister(reader);
+        });
+        registry.register(reader, readerId, reader);
 
-      return reader;
+        return reader;
+      } catch (e: unknown) {
+        return handleReaderCreationError(e);
+      }
     },
 
     async fromBlobFragment(format: string, init: Blob, fragment: Blob) {
@@ -140,16 +144,35 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
         throw new AssetTooLargeError(init.size);
       }
 
-      const readerId = await tx.reader_fromBlobFragment(format, init, fragment);
+      try {
+        const readerId = await tx.reader_fromBlobFragment(
+          format,
+          init,
+          fragment
+        );
 
-      const reader = createReader(worker, readerId, () => {
-        registry.unregister(reader);
-      });
-      registry.register(reader, readerId, reader);
+        const reader = createReader(worker, readerId, () => {
+          registry.unregister(reader);
+        });
+        registry.register(reader, readerId, reader);
 
-      return reader;
+        return reader;
+      } catch (e: unknown) {
+        return handleReaderCreationError(e);
+      }
     },
   };
+}
+
+function handleReaderCreationError(maybeError: unknown): null {
+  if (
+    maybeError instanceof Error &&
+    maybeError.message === 'C2pa(JumbfNotFound)'
+  ) {
+    return null;
+  }
+
+  throw maybeError;
 }
 
 function createReader(
