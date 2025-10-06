@@ -15,6 +15,9 @@ jobs:
       COREPACK_ENABLE_STRICT: 0
     steps:
       - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -22,10 +25,10 @@ jobs:
           toolchain: 1.88.0
           components: clippy
 
-      - name: Install pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@latest --activate
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -39,7 +42,7 @@ jobs:
       - name: Install dependencies
         env:
           SKIP_RUST_BUILD: 1
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - run: pnpm run ci
 

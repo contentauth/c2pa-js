@@ -23,6 +23,7 @@
     "build:ts": "tsc -b && cpy index.node dist && cpy index.node js-src && cpy --flat js-src/types.d.ts dist/types",
     "changeset:publish": "changeset publish",
     "ci": "run-s build:rust-debug build:ts test",
+    "ci:release": "pnpm run build && changeset tag && pnpm publish --access=public",
     "clean": "rimraf dist generated target",
     "cross": "pnpm run cross-build --release",
     "cross-build": "cross build --message-format=json-render-diagnostics > cross.log",
@@ -38,7 +39,7 @@
   "author": "Colin Murphy <colmurph@adobe.com>",
   "license": "MIT",
   "devDependencies": {
-    "@changesets/cli": "^2.29.5",
+    "@changesets/cli": "^2.29.6",
     "@contentauth/c2pa-types": "^0.2.1",
     "@eslint/js": "^9.33.0",
     "@neon-rs/cli": "0.1.82",

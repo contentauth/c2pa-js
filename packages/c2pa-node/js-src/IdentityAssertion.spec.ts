@@ -13,7 +13,6 @@
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-// Note: We will dynamically import modules after establishing mocks
 import type {
   JsCallbackSignerConfig,
   DestinationBufferAsset,
