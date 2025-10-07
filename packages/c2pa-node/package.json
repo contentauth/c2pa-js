@@ -10,7 +10,10 @@
   "types": "dist/types/index.d.ts",
   "files": [
     "dist",
-    "scripts"
+    "scripts",
+    "src",
+    "Cargo.toml",
+    "Cargo.lock"
   ],
   "engines": {
     "node": ">=18.20.2"
