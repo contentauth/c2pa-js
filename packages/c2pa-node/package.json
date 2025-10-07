@@ -9,7 +9,8 @@
   "main": "dist/index.js",
   "types": "dist/types/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "scripts"
   ],
   "engines": {
     "node": ">=18.20.2"
@@ -31,6 +32,7 @@
     "lint": "cargo clippy && pnpm eslint",
     "postbuild:rust-debug": "neon dist < cargo.log",
     "postcross-build": "neon dist -m /target < cross.log",
+    "postinstall": "node scripts/postinstall.js",
     "release": "run-s build changeset:publish",
     "test": "pnpm build:debug && vitest run",
     "test:watch": "pnpm build:debug && vitest",
@@ -71,8 +73,14 @@
   },
   "homepage": "https://github.com/contentauth/c2pa-node-v2#readme",
   "dependencies": {
+    "cargo-cp-artifact": "^0.1.0",
+    "cli-progress": "^3.2.0",
     "debug": "^4.4.1",
-    "node-fetch": "^3.3.2"
+    "mkdirp": "^3.0.0",
+    "node-fetch": "^3.3.2",
+    "pkg-dir": "^8.0.0",
+    "pretty-bytes": "^6.0.0",
+    "unzipper": "^0.10.0"
   },
   "packageManager": "pnpm@10.14.0"
 }
