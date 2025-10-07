@@ -20,7 +20,7 @@ neon = { version = "1.0.0", default-features = false, features = [
 ] }
 neon-serde4 = "1.0.0"
 pem = "3.0.4"
-reqwest = { version = "0.12.2", features = [
+reqwest = { version = "0.12.2", default-features = false, features = [
     "blocking",
     "brotli",
     "deflate",
