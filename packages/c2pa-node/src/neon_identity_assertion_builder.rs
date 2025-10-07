@@ -46,6 +46,7 @@ pub struct IdentityAssertion {
     pub(crate) pad2: Option<ByteBuf>,
 
     // Label for the assertion. Only assigned when reading from a manifest.
+    #[allow(dead_code)]
     #[serde(skip)]
     pub(crate) label: Option<String>,
 }
