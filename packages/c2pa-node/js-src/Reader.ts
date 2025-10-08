@@ -13,7 +13,7 @@
 
 import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
 
-const neon = require("./index.node");
+import { getNeonBinary } from "./binary.js";
 import type {
   DestinationAsset,
   ReaderInterface,
@@ -25,23 +25,24 @@ export class Reader implements ReaderInterface {
   constructor(private reader: NeonReaderHandle) {}
 
   json(): ManifestStore {
-    return JSON.parse(neon.readerJson.call(this.reader));
+    return JSON.parse(getNeonBinary().readerJson.call(this.reader));
   }
 
   remoteUrl(): string {
-    return neon.readerRemoteUrl.call(this.reader);
+    return getNeonBinary().readerRemoteUrl.call(this.reader);
   }
 
   isEmbedded(): boolean {
-    return neon.readerIsEmbedded.call(this.reader);
+    return getNeonBinary().readerIsEmbedded.call(this.reader);
   }
 
   async resourceToAsset(uri: string, asset: DestinationAsset): Promise<number> {
-    return neon.readerResourceToAsset.call(this.reader, uri, asset);
+    return getNeonBinary().readerResourceToAsset.call(this.reader, uri, asset);
   }
 
   static async fromAsset(asset: SourceAsset): Promise<Reader> {
-    const reader: NeonReaderHandle = await neon.readerFromAsset(asset);
+    const reader: NeonReaderHandle =
+      await getNeonBinary().readerFromAsset(asset);
     return new Reader(reader);
   }
 
@@ -49,10 +50,8 @@ export class Reader implements ReaderInterface {
     manifestData: Buffer,
     asset: SourceAsset,
   ): Promise<Reader> {
-    const reader: NeonReaderHandle = await neon.readerFromManifestDataAndAsset(
-      manifestData,
-      asset,
-    );
+    const reader: NeonReaderHandle =
+      await getNeonBinary().readerFromManifestDataAndAsset(manifestData, asset);
     return new Reader(reader);
   }
 
@@ -75,6 +74,6 @@ export class Reader implements ReaderInterface {
   }
 
   async postValidateCawg(): Promise<void> {
-    return neon.readerPostValidateCawg.call(this.reader);
+    return getNeonBinary().readerPostValidateCawg.call(this.reader);
   }
 }

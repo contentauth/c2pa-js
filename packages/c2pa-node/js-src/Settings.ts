@@ -15,7 +15,7 @@ import * as fs from "fs-extra";
 import path from "path";
 import fetch from "node-fetch";
 
-const neon = require("./index.node");
+import { getNeonBinary } from "./binary.js";
 import type { TrustConfig, VerifyConfig } from "./types.d.ts";
 
 /**
@@ -23,7 +23,7 @@ import type { TrustConfig, VerifyConfig } from "./types.d.ts";
  * @param json The JSON string containing the settings configuration
  */
 export function loadC2paSettings(json: string): void {
-  neon.loadSettings(json);
+  getNeonBinary().loadSettings(json);
 }
 
 /**
@@ -31,7 +31,7 @@ export function loadC2paSettings(json: string): void {
  * @param toml The TOML string containing the settings configuration
  */
 export function loadC2paSettingsToml(toml: string): void {
-  neon.loadSettingsToml(toml);
+  getNeonBinary().loadSettingsToml(toml);
 }
 
 /**
@@ -81,7 +81,7 @@ export async function loadSettingsFromUrl(url: string): Promise<void> {
  * @returns The JSON representation of the current settings
  */
 export function getSettingsJson(): string {
-  return neon.getSettingsJson();
+  return getNeonBinary().getSettingsJson();
 }
 
 /**
@@ -98,7 +98,7 @@ export function loadTrustConfig(trustConfig: TrustConfig): void {
     trust_config: trustConfig.trustConfig ?? null,
     allowed_list: trustConfig.allowedList ?? null,
   };
-  neon.loadTrustConfig(JSON.stringify(config));
+  getNeonBinary().loadTrustConfig(JSON.stringify(config));
 }
 
 /**
@@ -115,7 +115,7 @@ export function loadCawgTrustConfig(trustConfig: TrustConfig): void {
     trust_config: trustConfig.trustConfig ?? null,
     allowed_list: trustConfig.allowedList ?? null,
   };
-  neon.loadCawgTrustConfig(JSON.stringify(config));
+  getNeonBinary().loadCawgTrustConfig(JSON.stringify(config));
 }
 
 /**
@@ -123,7 +123,7 @@ export function loadCawgTrustConfig(trustConfig: TrustConfig): void {
  * @returns The current trust configuration object
  */
 export function getTrustConfig(): TrustConfig {
-  const json = neon.getTrustConfig();
+  const json = getNeonBinary().getTrustConfig();
   const parsed = JSON.parse(json);
 
   // Convert snake_case to camelCase to match TrustConfig interface
@@ -142,7 +142,7 @@ export function getTrustConfig(): TrustConfig {
  * @returns The current CAWG trust configuration object
  */
 export function getCawgTrustConfig(): TrustConfig {
-  const json = neon.getCawgTrustConfig();
+  const json = getNeonBinary().getCawgTrustConfig();
   const parsed = JSON.parse(json);
 
   // Convert snake_case to camelCase to match TrustConfig interface
@@ -174,7 +174,7 @@ export function loadVerifyConfig(verifyConfig: VerifyConfig): void {
       verifyConfig.skipIngredientConflictResolution,
     strict_v1_validation: verifyConfig.strictV1Validation,
   };
-  neon.loadVerifyConfig(JSON.stringify(config));
+  getNeonBinary().loadVerifyConfig(JSON.stringify(config));
 }
 
 /**
@@ -192,7 +192,7 @@ export function patchVerifyConfig(patch: Partial<VerifyConfig>): void {
  * @returns The current verify configuration object
  */
 export function getVerifyConfig(): VerifyConfig {
-  const json = neon.getVerifyConfig();
+  const json = getNeonBinary().getVerifyConfig();
   const parsed = JSON.parse(json);
 
   // Convert snake_case to camelCase to match VerifyConfig interface
