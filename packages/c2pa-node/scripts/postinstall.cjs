@@ -7,19 +7,19 @@
  * it.
  */
 
-import { stat, readFile } from 'node:fs/promises';
-import { createWriteStream } from 'node:fs';
-import { PassThrough } from 'node:stream';
-import cliProgress from 'cli-progress';
-import unzipper from 'unzipper';
-import os from 'node:os';
-import { mkdirp } from 'mkdirp';
-import { resolve } from 'node:path';
-import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
-import fetch from 'node-fetch';
-import prettyBytes from 'pretty-bytes';
-import { packageDirectory } from 'pkg-dir';
+const { stat, readFile } = require('node:fs/promises');
+const { createWriteStream } = require('node:fs');
+const { PassThrough } = require('node:stream');
+const cliProgress = require('cli-progress');
+const unzipper = require('unzipper');
+const os = require('node:os');
+const { mkdirp } = require('mkdirp');
+const { resolve } = require('node:path');
+const { exec } = require('node:child_process');
+const { promisify } = require('node:util');
+// node-fetch v3 is ES module only, so we'll import it dynamically
+// pretty-bytes is ES module only, so we'll import it dynamically
+// pkg-dir is ES module only, so we'll import it dynamically
 
 const pExec = promisify(exec);
 
@@ -72,6 +72,8 @@ function getPlatform() {
 
 async function downloadFromUrl(appRoot, url) {
 	console.log(`Checking for a release at: ${url}`);
+	const { default: fetch } = await import('node-fetch');
+	const { default: prettyBytes } = await import('pretty-bytes');
 	const res = await fetch(url);
 
 	if (res.ok) {
@@ -171,7 +173,8 @@ async function buildRust(root) {
 }
 
 async function main() {
-	const appRoot = await packageDirectory(import.meta.url);
+	const { packageDirectory } = await import('pkg-dir');
+	const appRoot = await packageDirectory(__filename);
 	const distRoot = resolve(appRoot, 'dist');
 	const cargoDistPath = resolve(distRoot, 'Cargo.toml');
 	const libraryOverridePath = process.env.C2PA_LIBRARY_PATH;

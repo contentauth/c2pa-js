@@ -36,7 +36,7 @@
     "lint": "cargo clippy && pnpm eslint",
     "postbuild:rust-debug": "neon dist < cargo.log",
     "postcross-build": "neon dist -m /target < cross.log",
-    "postinstall": "node scripts/postinstall.js",
+    "postinstall": "node scripts/postinstall.cjs",
     "release": "run-s build changeset:publish",
     "test": "pnpm build:debug && vitest run",
     "test:watch": "pnpm build:debug && vitest",
