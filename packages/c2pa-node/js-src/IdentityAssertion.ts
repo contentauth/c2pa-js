@@ -21,7 +21,7 @@ import type {
   NeonIdentityAssertionBuilderHandle,
   SignerPayload,
   NeonCallbackSignerHandle,
-} from "./types";
+} from "./types.d.ts";
 
 export class IdentityAssertionBuilder
   implements IdentityAssertionBuilderInterface

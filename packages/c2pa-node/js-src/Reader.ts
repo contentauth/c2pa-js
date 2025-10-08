@@ -11,15 +11,15 @@
 // specific language governing permissions and limitations under
 // each license.
 
+import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
+
 const neon = require("./index.node");
 import type {
   DestinationAsset,
   ReaderInterface,
   SourceAsset,
   NeonReaderHandle,
-} from "./types";
-
-import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
+} from "./types.d.ts";
 
 export class Reader implements ReaderInterface {
   constructor(private reader: NeonReaderHandle) {}

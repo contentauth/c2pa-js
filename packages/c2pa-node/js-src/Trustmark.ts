@@ -16,7 +16,7 @@ import type {
   TrustmarkInterface,
   TrustmarkConfig,
   NeonTrustmarkHandle,
-} from "./types";
+} from "./types.d.ts";
 
 export class Trustmark implements TrustmarkInterface {
   constructor(private trustmark: NeonTrustmarkHandle) {}

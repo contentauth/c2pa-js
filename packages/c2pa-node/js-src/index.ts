@@ -11,15 +11,15 @@
 // specific language governing permissions and limitations under
 // each license.
 
-export type * from "./types";
-export { Builder } from "./Builder";
-export { Reader } from "./Reader";
-export { LocalSigner, CallbackSigner } from "./Signer";
+export type * from "./types.d.ts";
+export { Builder } from "./Builder.js";
+export { Reader } from "./Reader.js";
+export { LocalSigner, CallbackSigner } from "./Signer.js";
 export {
   IdentityAssertionBuilder,
   IdentityAssertionSigner,
   CallbackCredentialHolder,
-} from "./IdentityAssertion";
-export { Trustmark } from "./Trustmark";
-export { isActionsAssertion } from "./assertions";
-export * from "./Settings";
+} from "./IdentityAssertion.js";
+export { Trustmark } from "./Trustmark.js";
+export { isActionsAssertion } from "./assertions.js";
+export * from "./Settings.js";

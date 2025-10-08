@@ -11,10 +11,11 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import { CallbackSigner } from "./Signer";
-import type { JsCallbackSignerConfig, SigningAlg } from "./types";
 import * as fs from "fs-extra";
 import * as crypto from "crypto";
+
+import { CallbackSigner } from "./Signer.js";
+import type { JsCallbackSignerConfig, SigningAlg } from "./types.d.ts";
 
 class TestSigner {
   private privateKey: crypto.KeyObject;

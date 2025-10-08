@@ -11,11 +11,12 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import { Trustmark } from "./Trustmark";
-import type { TrustmarkConfig, TrustmarkVariant } from "./types";
 import path from "path";
 import * as fs from "fs-extra";
 import sharp from "sharp";
+
+import { Trustmark } from "./Trustmark.js";
+import type { TrustmarkConfig, TrustmarkVariant } from "./types.d.ts";
 
 const tempDir = path.join(__dirname, "..", "tmp");
 

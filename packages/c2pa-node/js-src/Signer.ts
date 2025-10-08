@@ -19,7 +19,7 @@ import type {
   NeonLocalSignerHandle,
   LocalSignerInterface,
   SigningAlg,
-} from "./types";
+} from "./types.d.ts";
 
 export class LocalSigner implements LocalSignerInterface {
   constructor(private localSigner: NeonLocalSignerHandle) {}

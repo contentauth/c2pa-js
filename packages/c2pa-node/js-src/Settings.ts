@@ -11,11 +11,12 @@
 // specific language governing permissions and limitations under
 // each license.
 
-const neon = require("./index.node");
 import * as fs from "fs-extra";
 import path from "path";
 import fetch from "node-fetch";
-import type { TrustConfig, VerifyConfig } from "./types";
+
+const neon = require("./index.node");
+import type { TrustConfig, VerifyConfig } from "./types.d.ts";
 
 /**
  * Load settings from a JSON string and apply them globally.

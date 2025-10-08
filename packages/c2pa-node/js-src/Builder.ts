@@ -11,6 +11,8 @@
 // specific language governing permissions and limitations under
 // each license.
 
+import type { Manifest } from "@contentauth/c2pa-types";
+
 const neon = require("./index.node");
 import type {
   BuilderInterface,
@@ -24,9 +26,8 @@ import type {
   ManifestAssertionKind,
   SourceAsset,
   NeonBuilderHandle,
-} from "./types";
-import { IdentityAssertionSigner } from "./IdentityAssertion";
-import type { Manifest } from "@contentauth/c2pa-types";
+} from "./types.d.ts";
+import { IdentityAssertionSigner } from "./IdentityAssertion.js";
 
 export class Builder implements BuilderInterface {
   private constructor(private builder: NeonBuilderHandle) {}
