@@ -11,15 +11,20 @@
 // specific language governing permissions and limitations under
 // each license.
 
-export type * from "./types.d.ts";
-export { Builder } from "./Builder.js";
-export { Reader } from "./Reader.js";
-export { LocalSigner, CallbackSigner } from "./Signer.js";
-export {
-  IdentityAssertionBuilder,
-  IdentityAssertionSigner,
-  CallbackCredentialHolder,
-} from "./IdentityAssertion.js";
-export { Trustmark } from "./Trustmark.js";
-export { isActionsAssertion } from "./assertions.js";
-export * from "./Settings.js";
+import { createRequire } from "module";
+
+// Create a require function for the current module to load the .node file
+const require = createRequire(import.meta.url);
+
+// Dynamically import the binary module
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let neon: any = null;
+
+// Get the binary module (loads synchronously on first access)
+export function getNeonBinary() {
+  if (neon === null) {
+    neon = require("./index.node");
+  }
+  return neon;
+}
+

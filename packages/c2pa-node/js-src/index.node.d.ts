@@ -12,6 +12,7 @@
 // each license.
 
 import { Buffer } from "buffer";
+
 import type {
   CallbackSignerConfig,
   ClaimVersion,
@@ -30,7 +31,7 @@ import type {
   NeonIdentityAssertionBuilderHandle,
   NeonCallbackCredentialHolderHandle,
   NeonTrustmarkHandle,
-} from "./types";
+} from "./types.d.ts";
 
 // These functions are not exposed directly, but are called by the Builder, Reader, and Signer, etc. classes
 

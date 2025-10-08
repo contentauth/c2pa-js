@@ -4,7 +4,7 @@
 // or the MIT license (http://opensource.org/licenses/MIT),
 // at your option.
 
-import type { TrustConfig, VerifyConfig } from "./types";
+import type { TrustConfig, VerifyConfig } from "./types.d.ts";
 import {
   loadC2paSettings,
   loadTrustConfig,
@@ -15,7 +15,7 @@ import {
   loadVerifyConfig,
   getVerifyConfig,
   patchVerifyConfig,
-} from "./Settings";
+} from "./Settings.js";
 
 describe("Settings", () => {
   it("loads a trustlist-shaped JSON and returns JSON via getSettingsJson", () => {
@@ -247,7 +247,9 @@ describe("Settings", () => {
       expect(finalSettings.verify.ocsp_fetch).toBe(false);
       expect(finalSettings.verify.remote_manifest_fetch).toBe(true);
       expect(finalSettings.verify.check_ingredient_trust).toBe(false);
-      expect(finalSettings.verify.skip_ingredient_conflict_resolution).toBe(true);
+      expect(finalSettings.verify.skip_ingredient_conflict_resolution).toBe(
+        true,
+      );
       expect(finalSettings.verify.strict_v1_validation).toBe(false);
 
       // Verify that trust settings are not affected by verify settings
@@ -316,7 +318,9 @@ describe("Settings", () => {
       expect(finalSettings.verify.ocsp_fetch).toBe(false);
       expect(finalSettings.verify.remote_manifest_fetch).toBe(true);
       expect(finalSettings.verify.check_ingredient_trust).toBe(false);
-      expect(finalSettings.verify.skip_ingredient_conflict_resolution).toBe(true);
+      expect(finalSettings.verify.skip_ingredient_conflict_resolution).toBe(
+        true,
+      );
       expect(finalSettings.verify.strict_v1_validation).toBe(false);
     });
 
@@ -358,7 +362,9 @@ describe("Settings", () => {
       expect(patchedRetrievedConfig.ocspFetch).toBe(true); // patched
       expect(patchedRetrievedConfig.remoteManifestFetch).toBe(true); // unchanged
       expect(patchedRetrievedConfig.checkIngredientTrust).toBe(true); // unchanged
-      expect(patchedRetrievedConfig.skipIngredientConflictResolution).toBe(false); // unchanged
+      expect(patchedRetrievedConfig.skipIngredientConflictResolution).toBe(
+        false,
+      ); // unchanged
       expect(patchedRetrievedConfig.strictV1Validation).toBe(true); // patched
 
       // Verify the changes are reflected in getSettingsJson()

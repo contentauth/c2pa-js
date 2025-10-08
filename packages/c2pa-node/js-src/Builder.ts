@@ -11,7 +11,9 @@
 // specific language governing permissions and limitations under
 // each license.
 
-const neon = require("./index.node");
+import type { Manifest } from "@contentauth/c2pa-types";
+
+import { getNeonBinary } from "./binary.js";
 import type {
   BuilderInterface,
   CallbackSignerInterface,
@@ -24,15 +26,14 @@ import type {
   ManifestAssertionKind,
   SourceAsset,
   NeonBuilderHandle,
-} from "./types";
-import { IdentityAssertionSigner } from "./IdentityAssertion";
-import type { Manifest } from "@contentauth/c2pa-types";
+} from "./types.d.ts";
+import { IdentityAssertionSigner } from "./IdentityAssertion.js";
 
 export class Builder implements BuilderInterface {
   private constructor(private builder: NeonBuilderHandle) {}
 
   static new(): Builder {
-    const builder: NeonBuilderHandle = neon.builderNew();
+    const builder: NeonBuilderHandle = getNeonBinary().builderNew();
     return new Builder(builder);
   }
 
@@ -51,16 +52,17 @@ export class Builder implements BuilderInterface {
         "Failed to stringify JSON Manifest Definition: Unknown error",
       );
     }
-    const builder: NeonBuilderHandle = neon.builderWithJson(jsonString);
+    const builder: NeonBuilderHandle =
+      getNeonBinary().builderWithJson(jsonString);
     return new Builder(builder);
   }
 
   setNoEmbed(noEmbed = true): void {
-    neon.builderSetNoEmbed.call(this.builder, noEmbed);
+    getNeonBinary().builderSetNoEmbed.call(this.builder, noEmbed);
   }
 
   setRemoteUrl(remoteUrl: string): void {
-    neon.builderSetRemoteUrl.call(this.builder, remoteUrl);
+    getNeonBinary().builderSetRemoteUrl.call(this.builder, remoteUrl);
   }
 
   addAssertion(
@@ -68,7 +70,7 @@ export class Builder implements BuilderInterface {
     assertion: unknown,
     assertionKind?: ManifestAssertionKind,
   ): void {
-    return neon.builderAddAssertion.call(
+    return getNeonBinary().builderAddAssertion.call(
       this.builder,
       label,
       assertion,
@@ -77,14 +79,14 @@ export class Builder implements BuilderInterface {
   }
 
   async addResource(uri: string, resource: SourceAsset): Promise<void> {
-    return neon.builderAddResource.call(this.builder, uri, resource);
+    return getNeonBinary().builderAddResource.call(this.builder, uri, resource);
   }
 
   async addIngredient(
     ingredientJson: string,
     ingredient: SourceAsset,
   ): Promise<void> {
-    return neon.builderAddIngredient.call(
+    return getNeonBinary().builderAddIngredient.call(
       this.builder,
       ingredientJson,
       ingredient,
@@ -92,11 +94,11 @@ export class Builder implements BuilderInterface {
   }
 
   async toArchive(asset: DestinationAsset): Promise<void> {
-    return neon.builderToArchive.call(this.builder, asset);
+    return getNeonBinary().builderToArchive.call(this.builder, asset);
   }
 
   static async fromArchive(asset: SourceAsset): Promise<Builder> {
-    return new Builder(await neon.builderFromArchive(asset));
+    return new Builder(await getNeonBinary().builderFromArchive(asset));
   }
 
   sign(
@@ -104,7 +106,12 @@ export class Builder implements BuilderInterface {
     input: SourceAsset,
     output: DestinationAsset,
   ): Buffer {
-    return neon.builderSign.call(this.builder, signer.signer(), input, output);
+    return getNeonBinary().builderSign.call(
+      this.builder,
+      signer.signer(),
+      input,
+      output,
+    );
   }
 
   signFile(
@@ -113,7 +120,12 @@ export class Builder implements BuilderInterface {
     output: DestinationAsset,
   ): Buffer {
     const input: FileAsset = { path: filePath };
-    return neon.builderSign.call(this.builder, signer.signer(), input, output);
+    return getNeonBinary().builderSign.call(
+      this.builder,
+      signer.signer(),
+      input,
+      output,
+    );
   }
 
   async signConfigAsync(
@@ -122,8 +134,14 @@ export class Builder implements BuilderInterface {
     input: SourceAsset,
     output: DestinationAsset,
   ): Promise<Buffer> {
-    return neon.builderSignConfigAsync
-      .call(this.builder, callback, signerConfig, input, output)
+    return getNeonBinary()
+      .builderSignConfigAsync.call(
+        this.builder,
+        callback,
+        signerConfig,
+        input,
+        output,
+      )
       .then((result: Buffer | { manifest: Buffer; signedAsset: Buffer }) => {
         // output is a buffer and result is the manifest and the signed asset.
         if ("buffer" in output) {
@@ -151,8 +169,8 @@ export class Builder implements BuilderInterface {
     const neonHandle = signer.signer();
     const isIdentity = signer instanceof IdentityAssertionSigner;
     const neonFn = isIdentity
-      ? neon.builderIdentitySignAsync
-      : neon.builderSignAsync;
+      ? getNeonBinary().builderIdentitySignAsync
+      : getNeonBinary().builderSignAsync;
     return neonFn
       .call(this.builder, neonHandle, input, output)
       .then((result: Buffer | { manifest: Buffer; signedAsset: Buffer }) => {
@@ -175,10 +193,16 @@ export class Builder implements BuilderInterface {
   }
 
   getManifestDefinition(): Manifest {
-    return JSON.parse(neon.builderManifestDefinition.call(this.builder));
+    return JSON.parse(
+      getNeonBinary().builderManifestDefinition.call(this.builder),
+    );
   }
 
   updateManifestProperty(property: string, value: ClaimVersion): void {
-    neon.builderUpdateManifestProperty.call(this.builder, property, value);
+    getNeonBinary().builderUpdateManifestProperty.call(
+      this.builder,
+      property,
+      value,
+    );
   }
 }

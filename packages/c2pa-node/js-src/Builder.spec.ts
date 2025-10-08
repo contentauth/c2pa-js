@@ -13,21 +13,22 @@
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
+import type { Manifest, ResourceRef } from "@contentauth/c2pa-types";
+import * as fs from "fs-extra";
+import path from "path";
+import * as crypto from "crypto";
+
 import type {
   BuilderInterface,
   JsCallbackSignerConfig,
   DestinationBufferAsset,
   SourceBufferAsset,
   FileAsset,
-} from "./types";
-import { isActionsAssertion } from "./assertions";
-import type { Manifest, ResourceRef } from "@contentauth/c2pa-types";
-import { CallbackSigner, LocalSigner } from "./Signer";
-import { Reader } from "./Reader";
-import { Builder } from "./Builder";
-import * as fs from "fs-extra";
-import path from "path";
-import * as crypto from "crypto";
+} from "./types.d.ts";
+import { isActionsAssertion } from "./assertions.js";
+import { CallbackSigner, LocalSigner } from "./Signer.js";
+import { Reader } from "./Reader.js";
+import { Builder } from "./Builder.js";
 
 const tempDir = path.join(__dirname, "tmp");
 

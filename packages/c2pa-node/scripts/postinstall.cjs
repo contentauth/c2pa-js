@@ -17,6 +17,9 @@ const { mkdirp } = require('mkdirp');
 const { resolve } = require('node:path');
 const { exec } = require('node:child_process');
 const { promisify } = require('node:util');
+// node-fetch v3 is ES module only, so we'll import it dynamically
+// pretty-bytes is ES module only, so we'll import it dynamically
+// pkg-dir is ES module only, so we'll import it dynamically
 
 const pExec = promisify(exec);
 
@@ -69,19 +72,16 @@ function getPlatform() {
 
 async function downloadFromUrl(appRoot, url) {
 	console.log(`Checking for a release at: ${url}`);
-	// Dynamic import for ES modules
-	const fetchModule = await import('node-fetch');
-	const fetch = fetchModule.default;
+	const { default: fetch } = await import('node-fetch');
+	const { default: prettyBytes } = await import('pretty-bytes');
 	const res = await fetch(url);
 
 	if (res.ok) {
-		// Dynamic import for ES module
-		const { default: prettyBytes } = await import('pretty-bytes');
 
-		const destDir = resolve(appRoot, 'dist', 'generated');
+		const destDir = resolve(appRoot, 'dist');
 		const totalSize = parseInt(res.headers.get('Content-Length'), 10);
 		await mkdirp(destDir);
-		const destPath = resolve(destDir, 'c2pa.node');
+		const destPath = resolve(destDir, 'index.node');
 		const destStream = createWriteStream(destPath);
 		const progress = new PassThrough();
 		const bar = new cliProgress.SingleBar(
@@ -157,10 +157,10 @@ async function rustExists() {
 
 async function buildRust(root) {
 	console.log('🦀 Building Rust...');
-	const generatedDir = resolve(root, 'generated');
-	const bindingsPath = resolve(generatedDir, 'c2pa.node');
+	const distDir = resolve(root, 'dist');
+	const bindingsPath = resolve(distDir, 'index.node');
 	const cargoPath = resolve(root, 'Cargo.toml');
-	await mkdirp(generatedDir);
+	await mkdirp(distDir);
 	return new Promise((resolve, reject) => {
 		const result = exec(
 			`npx cargo-cp-artifact -nc "${bindingsPath}" -- cargo build --message-format=json-render-diagnostics --release --manifest-path="${cargoPath}"`,
@@ -173,10 +173,8 @@ async function buildRust(root) {
 }
 
 async function main() {
-	// Dynamic import for ES module
-	const pkgDirModule = await import('pkg-dir');
-	const pkgDir = pkgDirModule.packageDirectory;
-	const appRoot = await pkgDir(__dirname);
+	const { packageDirectory } = await import('pkg-dir');
+	const appRoot = await packageDirectory(__filename);
 	const distRoot = resolve(appRoot, 'dist');
 	const cargoDistPath = resolve(distRoot, 'Cargo.toml');
 	const libraryOverridePath = process.env.C2PA_LIBRARY_PATH;

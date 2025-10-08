@@ -11,7 +11,7 @@
 // specific language governing permissions and limitations under
 // each license.
 
-const neon = require("./index.node");
+import { getNeonBinary } from "./binary.js";
 import type {
   CallbackSignerInterface,
   JsCallbackSignerConfig,
@@ -19,7 +19,7 @@ import type {
   NeonLocalSignerHandle,
   LocalSignerInterface,
   SigningAlg,
-} from "./types";
+} from "./types.d.ts";
 
 export class LocalSigner implements LocalSignerInterface {
   constructor(private localSigner: NeonLocalSignerHandle) {}
@@ -30,7 +30,7 @@ export class LocalSigner implements LocalSignerInterface {
     algorithm: SigningAlg,
     tsaUrl?: string,
   ) {
-    const signer = neon.localSignerNew(
+    const signer = getNeonBinary().localSignerNew(
       certificate,
       privateKey,
       algorithm,
@@ -40,23 +40,23 @@ export class LocalSigner implements LocalSignerInterface {
   }
 
   sign(data: Buffer): Buffer {
-    return neon.localSignerSign.call(this.localSigner, data);
+    return getNeonBinary().localSignerSign.call(this.localSigner, data);
   }
 
   alg(): SigningAlg {
-    return neon.localSignerAlg.call(this.localSigner);
+    return getNeonBinary().localSignerAlg.call(this.localSigner);
   }
 
   certs(): Array<Buffer> {
-    return neon.localSignerCerts.call(this.localSigner);
+    return getNeonBinary().localSignerCerts.call(this.localSigner);
   }
 
   reserveSize(): number {
-    return neon.localSignerReserveSize.call(this.localSigner);
+    return getNeonBinary().localSignerReserveSize.call(this.localSigner);
   }
 
   timeAuthorityUrl(): string | undefined {
-    return neon.localSignerTimeAuthorityUrl.call(this.localSigner);
+    return getNeonBinary().localSignerTimeAuthorityUrl.call(this.localSigner);
   }
 
   signer(): NeonLocalSignerHandle {
@@ -76,28 +76,33 @@ export class CallbackSigner implements CallbackSignerInterface {
     callback: (data: Buffer) => Promise<Buffer>,
   ) {
     // Convert the config object to a JsBox<CallbackSignerConfig>
-    const configBox = neon.callbackSignerConfigFromJs(config);
-    const signer = neon.callbackSignerFromConfig(configBox, callback);
+    const configBox = getNeonBinary().callbackSignerConfigFromJs(config);
+    const signer = getNeonBinary().callbackSignerFromConfig(
+      configBox,
+      callback,
+    );
     return new CallbackSigner(signer);
   }
 
   async sign(data: Buffer): Promise<Buffer> {
-    return neon.callbackSignerSign.call(this.callbackSigner, data);
+    return getNeonBinary().callbackSignerSign.call(this.callbackSigner, data);
   }
 
   alg(): SigningAlg {
-    return neon.callbackSignerAlg.call(this.callbackSigner);
+    return getNeonBinary().callbackSignerAlg.call(this.callbackSigner);
   }
 
   certs(): Array<Buffer> {
-    return neon.callbackSignerCerts.call(this.callbackSigner);
+    return getNeonBinary().callbackSignerCerts.call(this.callbackSigner);
   }
 
   reserveSize(): number {
-    return neon.callbackSignerReserveSize.call(this.callbackSigner);
+    return getNeonBinary().callbackSignerReserveSize.call(this.callbackSigner);
   }
 
   timeAuthorityUrl(): string | undefined {
-    return neon.callbackSignerTimeAuthorityUrl.call(this.callbackSigner);
+    return getNeonBinary().callbackSignerTimeAuthorityUrl.call(
+      this.callbackSigner,
+    );
   }
 }

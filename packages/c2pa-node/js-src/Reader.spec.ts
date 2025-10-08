@@ -11,12 +11,12 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import { Reader } from "./Reader";
-
 // import native objects from built native code
 import type { ManifestStore } from "@contentauth/c2pa-types";
 import path from "path";
 import * as fs from "fs-extra";
+
+import { Reader } from "./Reader.js";
 
 const tempDir = path.join(__dirname, "tmp");
 

@@ -11,18 +11,19 @@
 // specific language governing permissions and limitations under
 // each license.
 
-const neon = require("./index.node");
+import { getNeonBinary } from "./binary.js";
 import type {
   TrustmarkInterface,
   TrustmarkConfig,
   NeonTrustmarkHandle,
-} from "./types";
+} from "./types.d.ts";
 
 export class Trustmark implements TrustmarkInterface {
   constructor(private trustmark: NeonTrustmarkHandle) {}
 
   static async newTrustmark(config: TrustmarkConfig): Promise<Trustmark> {
-    const trustmark: NeonTrustmarkHandle = await neon.trustmarkNew(config);
+    const trustmark: NeonTrustmarkHandle =
+      await getNeonBinary().trustmarkNew(config);
     return new Trustmark(trustmark);
   }
 
@@ -31,7 +32,7 @@ export class Trustmark implements TrustmarkInterface {
     strength: number,
     watermark?: string,
   ): Promise<Buffer> {
-    return neon.trustmarkEncode.call(
+    return getNeonBinary().trustmarkEncode.call(
       this.trustmark,
       image,
       strength,
@@ -40,6 +41,6 @@ export class Trustmark implements TrustmarkInterface {
   }
 
   async decode(image: Buffer): Promise<string> {
-    return neon.trustmarkDecode.call(this.trustmark, image);
+    return getNeonBinary().trustmarkDecode.call(this.trustmark, image);
   }
 }
