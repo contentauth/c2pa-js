@@ -1,5 +1,11 @@
 # @contentauth/c2pa-web
 
+## 0.4.0
+
+### Minor Changes
+
+- e0e9b89: Reader now returns null (instead of throwing an error) when no content credentials are found
+
 ## 0.3.2
 
 ### Patch Changes
