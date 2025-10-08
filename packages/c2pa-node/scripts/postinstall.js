@@ -7,16 +7,19 @@
  * it.
  */
 
-const { stat, readFile } = require('node:fs/promises');
-const { createWriteStream } = require('node:fs');
-const { PassThrough } = require('node:stream');
-const cliProgress = require('cli-progress');
-const unzipper = require('unzipper');
-const os = require('node:os');
-const { mkdirp } = require('mkdirp');
-const { resolve } = require('node:path');
-const { exec } = require('node:child_process');
-const { promisify } = require('node:util');
+import { stat, readFile } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { PassThrough } from 'node:stream';
+import cliProgress from 'cli-progress';
+import unzipper from 'unzipper';
+import os from 'node:os';
+import { mkdirp } from 'mkdirp';
+import { resolve } from 'node:path';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+import fetch from 'node-fetch';
+import prettyBytes from 'pretty-bytes';
+import { packageDirectory } from 'pkg-dir';
 
 const pExec = promisify(exec);
 
@@ -69,19 +72,14 @@ function getPlatform() {
 
 async function downloadFromUrl(appRoot, url) {
 	console.log(`Checking for a release at: ${url}`);
-	// Dynamic import for ES modules
-	const fetchModule = await import('node-fetch');
-	const fetch = fetchModule.default;
 	const res = await fetch(url);
 
 	if (res.ok) {
-		// Dynamic import for ES module
-		const { default: prettyBytes } = await import('pretty-bytes');
 
-		const destDir = resolve(appRoot, 'dist', 'generated');
+		const destDir = resolve(appRoot, 'dist');
 		const totalSize = parseInt(res.headers.get('Content-Length'), 10);
 		await mkdirp(destDir);
-		const destPath = resolve(destDir, 'c2pa.node');
+		const destPath = resolve(destDir, 'index.node');
 		const destStream = createWriteStream(destPath);
 		const progress = new PassThrough();
 		const bar = new cliProgress.SingleBar(
@@ -157,10 +155,10 @@ async function rustExists() {
 
 async function buildRust(root) {
 	console.log('🦀 Building Rust...');
-	const generatedDir = resolve(root, 'generated');
-	const bindingsPath = resolve(generatedDir, 'c2pa.node');
+	const distDir = resolve(root, 'dist');
+	const bindingsPath = resolve(distDir, 'index.node');
 	const cargoPath = resolve(root, 'Cargo.toml');
-	await mkdirp(generatedDir);
+	await mkdirp(distDir);
 	return new Promise((resolve, reject) => {
 		const result = exec(
 			`npx cargo-cp-artifact -nc "${bindingsPath}" -- cargo build --message-format=json-render-diagnostics --release --manifest-path="${cargoPath}"`,
@@ -173,10 +171,7 @@ async function buildRust(root) {
 }
 
 async function main() {
-	// Dynamic import for ES module
-	const pkgDirModule = await import('pkg-dir');
-	const pkgDir = pkgDirModule.packageDirectory;
-	const appRoot = await pkgDir(__dirname);
+	const appRoot = await packageDirectory(import.meta.url);
 	const distRoot = resolve(appRoot, 'dist');
 	const cargoDistPath = resolve(distRoot, 'Cargo.toml');
 	const libraryOverridePath = process.env.C2PA_LIBRARY_PATH;
