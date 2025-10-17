@@ -131,6 +131,10 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         "callbackSignerTimeAuthorityUrl",
         neon_signer::NeonCallbackSigner::time_authority_url,
     )?;
+    cx.export_function(
+        "callbackSignerDirectCoseHandling",
+        neon_signer::NeonCallbackSigner::direct_cose_handling,
+    )?;
 
     // Identity Assertions
     cx.export_function(

@@ -118,6 +118,7 @@ export interface CallbackSignerInterface {
   certs(): Array<Buffer>;
   reserveSize(): number;
   timeAuthorityUrl(): string | undefined;
+  directCoseHandling(): boolean;
   signer(): NeonCallbackSignerHandle;
 }
 
@@ -153,10 +154,8 @@ export interface JsCallbackSignerConfig {
   tsaUrl?: string;
   tsaHeaders?: Array<[string, string]>;
   tsaBody?: Buffer;
-  // TODO: directCoseHandling is currently not implemented in the signing logic.
-  // The field is read from config but the actual signing implementation does not
-  // differentiate between directCoseHandling: true/false - both cases pass the
-  // same data to the JavaScript callback regardless of this setting.
+  // When true, the callback function should return fully-formed COSE data.
+  // When false, the callback function should return raw signature data and the c2pa SDK will handle COSE wrapping.
   directCoseHandling: boolean;
 }
 

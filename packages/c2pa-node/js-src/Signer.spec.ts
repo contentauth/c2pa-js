@@ -15,7 +15,10 @@ import * as fs from "fs-extra";
 import * as crypto from "crypto";
 
 import { CallbackSigner } from "./Signer.js";
+import { Builder } from "./Builder.js";
+import { Reader } from "./Reader.js";
 import type { JsCallbackSignerConfig, SigningAlg } from "./types.d.ts";
+import type { Manifest } from "@contentauth/c2pa-types";
 
 class TestSigner {
   private privateKey: crypto.KeyObject;
@@ -105,5 +108,76 @@ describe("CallbackSigner", () => {
     };
     const signer = CallbackSigner.newSigner(config, async (data) => data);
     expect(signer.timeAuthorityUrl()).toBeUndefined();
+  });
+
+  it("should create valid COSE signature with buffer output", async () => {
+    const testSigner = new TestSigner(
+      await fs.readFile("./tests/fixtures/certs/es256.pem"),
+    );
+
+    const createRawSignatureCallback = () => {
+      return async (data: Buffer): Promise<Buffer> => {
+        // For directCoseHandling: false, return raw signature data
+        // The c2pa SDK will handle COSE wrapping internally
+        return await testSigner.sign(data);
+      };
+    };
+
+    // Create a simple manifest
+    const manifestDefinition: Manifest = {
+      vendor: "test",
+      claim_generator: "test-generator",
+      claim_generator_info: [
+        {
+          name: "c2pa_test",
+          version: "1.0.0",
+        },
+      ],
+      title: "Test_Manifest_Buffer",
+      format: "image/jpeg",
+      instance_id: "5678",
+      assertions: [
+        {
+          label: "org.test.assertion",
+          data: { message: "Buffer test with directCoseHandling: false" },
+        },
+      ],
+      resources: { resources: {} },
+    };
+
+    const builder = Builder.withJson(manifestDefinition);
+    const source = {
+      buffer: await fs.readFile("./tests/fixtures/CA.jpg"),
+      mimeType: "image/jpeg",
+    };
+
+    const config: JsCallbackSignerConfig = {
+      alg: "es256" as SigningAlg,
+      certs: [fs.readFileSync("./tests/fixtures/certs/es256.pub")],
+      reserveSize: 10000,
+      tsaUrl: undefined,
+      directCoseHandling: false,
+    };
+
+    const callback = createRawSignatureCallback();
+    const signer = CallbackSigner.newSigner(config, callback);
+
+    // Sign the manifest to buffer
+    const dest = { buffer: null };
+    await builder.signAsync(signer, source, dest);
+
+    // Read the signed manifest back and verify signature is valid
+    const reader = await Reader.fromAsset({
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      buffer: dest.buffer! as Buffer,
+      mimeType: "image/jpeg",
+    });
+    const manifestStore = reader.json();
+    const activeManifest = reader.getActive();
+
+    // If validation_status is undefined, the signature is valid
+    expect(manifestStore.validation_status).toBeUndefined();
+    expect(manifestStore.active_manifest).not.toBeUndefined();
+    expect(activeManifest?.title).toBe("Test_Manifest_Buffer");
   });
 });

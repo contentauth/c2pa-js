@@ -201,6 +201,11 @@ impl NeonCallbackSigner {
         }
     }
 
+    pub fn direct_cose_handling(mut cx: FunctionContext) -> JsResult<JsBoolean> {
+        let this = cx.this::<JsBox<Self>>()?;
+        Ok(cx.boolean(this.config.direct_cose_handling))
+    }
+
     pub fn sign(mut cx: FunctionContext) -> JsResult<JsPromise> {
         let rt = runtime();
         let this = cx.this::<JsBox<Self>>()?;
@@ -321,11 +326,15 @@ impl AsyncSigner for NeonCallbackSigner {
     }
 
     fn direct_cose_handling(&self) -> bool {
-        // TODO: The direct_cose_handling field is currently not used in the signing logic.
-        // The field is read from config and exposed via this getter, but the actual signing
-        // implementation does not differentiate between directCoseHandling: true/false.
-        // Both cases pass the same data to the JavaScript callback regardless of this setting.
         self.config.direct_cose_handling
+    }
+
+    fn async_raw_signer(&self) -> Option<Box<&dyn AsyncRawSigner>> {
+        if self.config.direct_cose_handling {
+            None
+        } else {
+            Some(Box::new(self))
+        }
     }
 }
 

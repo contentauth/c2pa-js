@@ -105,4 +105,10 @@ export class CallbackSigner implements CallbackSignerInterface {
       this.callbackSigner,
     );
   }
+
+  directCoseHandling(): boolean {
+    return getNeonBinary().callbackSignerDirectCoseHandling.call(
+      this.callbackSigner,
+    );
+  }
 }
