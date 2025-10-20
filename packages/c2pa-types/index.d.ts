@@ -13,7 +13,55 @@ import type { Reader } from './types/ManifestStore.js';
 // eslint-disable-next-line @typescript-eslint/no-empty-interface, @typescript-eslint/no-empty-object-type
 export interface ManifestStore extends Reader {}
 
-export type * from './types/ManifestStore.js';
-export type * from './types/ManifestDefinition.js';
-export type * from './types/Ingredient.js';
-export type * from './types/Builder.js';
+export type {
+  Actor,
+  AssertionMetadata,
+  AssetType,
+  ClaimGeneratorInfo,
+  Coordinate,
+  DataSource,
+  DateT,
+  Frame,
+  HashedUri,
+  Ingredient,
+  IngredientDeltaValidationResult,
+  Item,
+  Manifest,
+  ManifestAssertion,
+  ManifestAssertionKind,
+  Range,
+  RangeType,
+  Reader,
+  RegionOfInterest,
+  Relationship,
+  ResourceRef,
+  ResourceStore,
+  ReviewRating,
+  Role,
+  Shape,
+  ShapeType,
+  SignatureInfo,
+  SigningAlg,
+  StatusCodes,
+  Text,
+  TextSelector,
+  TextSelectorRange,
+  Time,
+  TimeType,
+  UnitType,
+  UriOrResource,
+  ValidationResults,
+  ValidationState,
+  ValidationStatus,
+} from './types/ManifestStore.js';
+
+export type {
+  AssertionDefinition,
+  ManifestDefinition,
+} from './types/ManifestDefinition.js';
+
+export type {
+  Builder,
+  BuilderIntent,
+  DigitalSourceType,
+} from './types/Builder.js';
