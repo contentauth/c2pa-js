@@ -11,7 +11,7 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import type { Manifest } from "@contentauth/c2pa-types";
+import type { BuilderIntent, Manifest } from "@contentauth/c2pa-types";
 
 import { getNeonBinary } from "./binary.js";
 import type {
@@ -55,6 +55,11 @@ export class Builder implements BuilderInterface {
     const builder: NeonBuilderHandle =
       getNeonBinary().builderWithJson(jsonString);
     return new Builder(builder);
+  }
+
+  setIntent(intent: BuilderIntent): void {
+    const intentString = JSON.stringify(intent);
+    getNeonBinary().builderSetIntent.call(this.builder, intentString);
   }
 
   setNoEmbed(noEmbed = true): void {

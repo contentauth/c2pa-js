@@ -330,11 +330,7 @@ impl AsyncSigner for NeonCallbackSigner {
     }
 
     fn async_raw_signer(&self) -> Option<Box<&dyn AsyncRawSigner>> {
-        if self.config.direct_cose_handling {
-            None
-        } else {
-            Some(Box::new(self))
-        }
+        Some(Box::new(self))
     }
 }
 

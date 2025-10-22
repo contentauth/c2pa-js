@@ -32,9 +32,10 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     // Builder
     cx.export_function("builderNew", neon_builder::NeonBuilder::new)?;
     cx.export_function("builderWithJson", neon_builder::NeonBuilder::with_json)?;
+    cx.export_function("builderSetIntent", neon_builder::NeonBuilder::set_intent)?;
     cx.export_function("builderSetNoEmbed", neon_builder::NeonBuilder::set_no_embed)?;
     cx.export_function(
-        "builderSetRemote_url",
+        "builderSetRemoteUrl",
         neon_builder::NeonBuilder::set_remote_url,
     )?;
     cx.export_function(

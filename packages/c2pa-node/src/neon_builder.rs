@@ -16,7 +16,7 @@ use crate::error::{as_js_error, Error};
 use crate::neon_identity_assertion_signer::NeonIdentityAssertionSigner;
 use crate::neon_signer::{CallbackSignerConfig, NeonCallbackSigner, NeonLocalSigner};
 use crate::runtime::runtime;
-use c2pa::Builder;
+use c2pa::{Builder, BuilderIntent};
 use neon::prelude::*;
 use neon_serde4;
 use serde::{Deserialize, Serialize};
@@ -57,6 +57,17 @@ impl NeonBuilder {
         Ok(cx.boxed(Self {
             builder: Arc::new(Mutex::new(builder)),
         }))
+    }
+
+    pub fn set_intent(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<Self>>()?;
+        let intent_str = cx.argument::<JsString>(0)?.value(&mut cx);
+        let intent: BuilderIntent = serde_json::from_str(&intent_str)
+            .or_else(|_| cx.throw_error(format!("Invalid intent: {}", intent_str)))?;
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+        builder.set_intent(intent);
+        Ok(cx.undefined())
     }
 
     pub fn set_no_embed(mut cx: FunctionContext) -> JsResult<JsUndefined> {

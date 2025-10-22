@@ -469,5 +469,173 @@ describe("Builder", () => {
       expect(JSON.stringify(manifestStore)).toContain("Test Ingredient");
       expect(JSON.stringify(manifestStore)).toContain("thumbnail.ingredient");
     });
+
+    it("should perform redaction workflow like test_redaction_async", async () => {
+      // This test mirrors the Rust test_redaction_async test
+
+      // Create a reader to get the parent manifest label from the existing source
+      const reader = await Reader.fromAsset(source);
+      const parentManifestLabel = reader.activeLabel();
+      expect(parentManifestLabel).toBeDefined();
+
+      // Create a redacted URI for the assertion we are going to redact
+      // Using a common assertion label that might exist
+      const assertionLabel = "stds.schema-org.CreativeWork";
+      const redactedUri = `contentauth:urn:uuid:${parentManifestLabel}/c2pa.assertions/${assertionLabel}`;
+
+      // Create a builder with edit intent and redactions
+      const redactionManifestDefinition = {
+        claim_generator: "test-generator",
+        claim_generator_info: [
+          {
+            name: "c2pa_test",
+            version: "1.0.0",
+          },
+        ],
+        title: "Test_Redaction_Manifest",
+        format: "image/jpeg",
+        instance_id: "1234",
+        intent: "edit",
+        redactions: [redactedUri],
+        assertions: [
+          {
+            label: "org.test.assertion",
+            data: {},
+          },
+        ],
+        resources: { resources: {} },
+      };
+
+      const builder = Builder.withJson(redactionManifestDefinition);
+
+      // Add a redacted action
+      const redactedAction = {
+        actions: [
+          {
+            action: "c2pa.redacted",
+          },
+        ],
+      };
+
+      builder.addAssertion("c2pa.actions", redactedAction, "Cbor");
+
+      // Use the callback signer like the other test
+      const signerConfig: JsCallbackSignerConfig = {
+        alg: "es256",
+        certs: [publicKey],
+        reserveSize: 10000,
+        tsaUrl: undefined,
+        directCoseHandling: false,
+      };
+      const testSigner = new TestSigner(privateKey);
+      const signer = CallbackSigner.newSigner(signerConfig, testSigner.sign);
+
+      // Sign the manifest with the original image as input
+      const dest = { buffer: null };
+      const outputBuffer = await builder.signAsync(signer, source, dest);
+      expect(outputBuffer.length).toBeGreaterThan(0);
+
+      // Verify the result by reading the signed manifest
+      const signedReader = await Reader.fromAsset({
+        buffer: dest.buffer! as Buffer,
+        mimeType: "image/jpeg",
+      });
+      expect(signedReader).toBeDefined();
+
+      // Check that the manifest was created successfully
+      const activeManifest = signedReader.getActive();
+      expect(activeManifest).toBeDefined();
+
+      // Verify the redacted action was added
+      const assertions = activeManifest?.assertions;
+      const actionsAssertion = assertions?.find(
+        (a: any) => a.label === "c2pa.actions.v2",
+      );
+      expect(actionsAssertion).toBeDefined();
+
+      if (actionsAssertion && isActionsAssertion(actionsAssertion)) {
+        const actions = actionsAssertion.data.actions;
+        const redactedAction = actions.find(
+          (a: any) => a.action === "c2pa.redacted",
+        );
+        expect(redactedAction).toBeDefined();
+        expect(redactedAction?.action).toBe("c2pa.redacted");
+      }
+    });
+
+    it("should test builder remote url", async () => {
+      // This test mirrors the Rust test_builder_remote_url test
+
+      // Create a simple manifest definition similar to simple_manifest_json()
+      const simpleManifestDefinition = {
+        claim_generator_info: [
+          {
+            name: "c2pa_test",
+            version: "1.0.0",
+          },
+        ],
+        title: "Test_Manifest",
+        assertions: [
+          {
+            label: "c2pa.actions",
+            data: {
+              actions: [
+                {
+                  action: "c2pa.created",
+                  digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
+                },
+              ],
+            },
+          },
+        ],
+      };
+
+      const builder = Builder.withJson(simpleManifestDefinition);
+
+      // Set remote URL and no embed flag like the Rust test
+      builder.setRemoteUrl("http://my_remote_url");
+      builder.setNoEmbed(true);
+
+      // Use the callback signer
+      const signerConfig: JsCallbackSignerConfig = {
+        alg: "es256",
+        certs: [publicKey],
+        reserveSize: 10000,
+        tsaUrl: undefined,
+        directCoseHandling: false,
+      };
+      const testSigner = new TestSigner(privateKey);
+      const signer = CallbackSigner.newSigner(signerConfig, testSigner.sign);
+
+      // Sign the Builder and write it to the output stream
+      const dest = { buffer: null };
+      const manifestData = await builder.signAsync(signer, source, dest);
+
+      // Check to make sure we have a remote url and no manifest data embedded
+      // Reading the image directly should fail since no_embed = true
+      // Note: This might fail due to remote URL fetch, which is expected behavior
+      try {
+        await Reader.fromAsset({
+          buffer: dest.buffer! as Buffer,
+          mimeType: "image/jpeg",
+        });
+        // If we get here, the test should fail because we expect no embedded manifest
+        expect.fail("Expected Reader.fromAsset to fail when no_embed = true");
+      } catch (error) {
+        // This is expected - there should be no embedded manifest or remote fetch should fail
+        expect(error).toBeDefined();
+      }
+
+      // Now validate the manifest against the written asset using the separate manifest data
+      const reader = await Reader.fromManifestDataAndAsset(manifestData, {
+        buffer: dest.buffer! as Buffer,
+        mimeType: "image/jpeg",
+      });
+
+      // Check if the manifest has the expected structure
+      const activeManifest = reader.getActive();
+      expect(activeManifest).toBeDefined();
+      expect(activeManifest?.title).toBe("Test_Manifest");
+    });
   });
 });

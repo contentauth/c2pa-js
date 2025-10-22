@@ -13,7 +13,11 @@
 
 // This file contains types not included in @contentauth/c2pa-types and not directly applicable to the neon generated code (index.node.d.ts)
 import { Buffer } from "buffer";
-import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
+import type {
+  BuilderIntent,
+  Manifest,
+  ManifestStore,
+} from "@contentauth/c2pa-types";
 /**
  * Describes the digital signature algorithms allowed by the C2PA spec
  *
@@ -172,6 +176,7 @@ export interface HashedUri {
 }
 
 export interface BuilderInterface {
+  setIntent(intent: BuilderIntent): void;
   /**
    * Set the no embed flag of the manifest
    * @param noEmbed The no embed flag of the manifest

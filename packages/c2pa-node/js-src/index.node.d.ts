@@ -39,6 +39,7 @@ declare module "index.node" {
   // Builder methods
   export function builderNew(): NeonBuilderHandle;
   export function builderWithJson(json: string): NeonBuilderHandle;
+  export function builderSetIntent(intent: string): void;
   export function builderSetNoEmbed(noEmbed: boolean): void;
   export function builderSetRemoteUrl(url: string): void;
   export function builderAddAssertion(
