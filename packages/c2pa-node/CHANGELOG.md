@@ -1,5 +1,16 @@
 # @contentauth/c2pa-node
 
+## 0.3.0
+
+### Minor Changes
+
+- 595304e: Implement AsyncRawSigner so that the rust SDK will handle COSE signing if directCoseHandling is true.
+
+### Patch Changes
+
+- 58defa2: Add setIntent
+- fcf2f0f: CAWG reader validation improvements
+
 ## 0.2.3
 
 ### Patch Changes
