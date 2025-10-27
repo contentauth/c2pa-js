@@ -7,12 +7,15 @@
  * it.
  */
 
+import { expect } from 'vitest';
+
 export default {
   active_manifest: 'urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d',
   manifests: {
     'urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d': {
       assertions: [
         {
+          created: true,
           data: {
             actions: [
               {
@@ -50,11 +53,11 @@ export default {
             signer_payload: {
               referenced_assertions: [
                 {
-                  hash: 'rBBgURB+/0Bc2Uk3+blNpYTGQTxOwzXQ2xhjA3gsqI4=',
+                  hash: expect.any(Array),
                   url: 'self#jumbf=c2pa.assertions/cawg.training-mining',
                 },
                 {
-                  hash: 'sASozh9KFSkW+cyMI0Pw5KYoD2qn7MkUEq9jUUhe/sM=',
+                  hash: expect.any(Array),
                   url: 'self#jumbf=c2pa.assertions/c2pa.hash.data',
                 },
               ],

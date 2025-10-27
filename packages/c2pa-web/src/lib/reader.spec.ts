@@ -15,6 +15,7 @@ import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 import C_with_CAWG_data from '../../test/fixtures/assets/C_with_CAWG_data.jpg';
 import C_with_CAWG_data_thumbnail from '../../test/fixtures/assets/C_with_CAWG_data_thumbnail.jpg';
 import C_with_CAWG_data_ManifestStore from '../../test/fixtures/manifests/C_with_CAWG_data.js';
+
 import C_with_CAWG_data_trusted_ManifestStore from '../../test/fixtures/manifests/C_with_CAWG_data_trusted.js';
 import C_with_CAWG_data_untrusted_ManifestStore from '../../test/fixtures/manifests/C_with_CAWG_data_untrusted.js';
 import no_alg from '../../test/fixtures/assets/no_alg.jpg';
@@ -28,7 +29,9 @@ import anchor_incorrect from '../../test/fixtures/trust/anchor-incorrect.pem?raw
 
 describe('reader', () => {
   test('should work when created from a blob', async () => {
-    const c2pa = await createC2pa({ wasmSrc });
+    const c2pa = await createC2pa({
+      wasmSrc,
+    });
 
     const blob = await getBlobForAsset(C_with_CAWG_data);
 
@@ -36,9 +39,9 @@ describe('reader', () => {
 
     expect(reader).not.toBeNull();
 
-    const manifestStore = await reader!.json();
+    const manifestStore = await reader!.manifestStore();
 
-    expect(manifestStore).toEqual(C_with_CAWG_data_ManifestStore);
+    expect(manifestStore).toEqual(C_with_CAWG_data_untrusted_ManifestStore);
 
     await reader!.free();
   });
@@ -62,7 +65,7 @@ describe('reader', () => {
 
     expect(reader).not.toBeNull();
 
-    const manifestStore = await reader!.json();
+    const manifestStore = await reader!.manifestStore();
 
     const activeManifest =
       manifestStore.manifests[manifestStore.active_manifest!];
@@ -113,7 +116,7 @@ describe('reader', () => {
 
     expect(reader).not.toBeNull();
 
-    const manifestStore = await reader!.json();
+    const manifestStore = await reader!.manifestStore();
 
     expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
 
@@ -138,9 +141,34 @@ describe('reader', () => {
 
     expect(reader).not.toBeNull();
 
-    const manifestStore = await reader!.json();
+    const manifestStore = await reader!.manifestStore();
 
     expect(manifestStore).toEqual(C_with_CAWG_data_untrusted_ManifestStore);
+
+    await reader!.free();
+  });
+
+  test('should report a "valid" (not "trusted") asset when trust settings are disabled', async () => {
+    const settings: Settings = {
+      verify: {
+        verifyTrust: false,
+      },
+      cawgTrust: {
+        verifyTrustList: false,
+      },
+    };
+
+    const c2pa = await createC2pa({ wasmSrc, settings });
+
+    const blob = await getBlobForAsset(C_with_CAWG_data);
+
+    const reader = await c2pa.reader.fromBlob(blob.type, blob);
+
+    expect(reader).not.toBeNull();
+
+    const manifestStore = await reader!.manifestStore();
+
+    expect(manifestStore).toEqual(C_with_CAWG_data_ManifestStore);
 
     await reader!.free();
   });
@@ -159,7 +187,7 @@ describe('reader', () => {
 
     expect(reader).not.toBeNull();
 
-    const manifestStore = await reader!.json();
+    const manifestStore = await reader!.manifestStore();
 
     expect(manifestStore).toEqual(dashinit_ManifestStore);
 
@@ -178,7 +206,7 @@ describe('reader', () => {
 
     await reader!.free();
 
-    await expect(reader!.json()).rejects.toThrowError();
+    await expect(reader!.manifestStore()).rejects.toThrowError();
   });
 });
 

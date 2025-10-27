@@ -8,7 +8,7 @@
 use std::{fs, path::Path};
 
 use c2pa::{Builder, Ingredient, ManifestDefinition, Reader};
-use schemars::{schema::RootSchema, schema_for};
+use schemars::{Schema, schema_for};
 
 fn main() {
     let output_dir = Path::new("./schemas");
@@ -29,7 +29,7 @@ fn main() {
     write_schema(&schema_for!(Builder), &"Builder", output_dir)
 }
 
-fn write_schema(schema: &RootSchema, name: &str, output_dir: &Path) {
+fn write_schema(schema: &Schema, name: &str, output_dir: &Path) {
     println!("Exporting JSON schema for {name}");
     let output_path = output_dir.join(format!("{name}.json"));
     let output = serde_json::to_string_pretty(schema).expect("Failed to serialize schema");

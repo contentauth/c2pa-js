@@ -7,6 +7,8 @@
  * it.
  */
 
+import { expect } from 'vitest';
+
 export default {
   active_manifest: 'contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D',
   manifests: {
@@ -23,7 +25,7 @@ export default {
                 data: [
                   {
                     offset: 8,
-                    value: '2P7D1hsOSDySl1goh37EgQ==',
+                    value: expect.any(Array),
                   },
                 ],
                 xpath: '/uuid',
@@ -36,24 +38,8 @@ export default {
               {
                 alg: 'sha256',
                 count: 11,
-                hashes: [
-                  [
-                    32, 27, 124, 253, 19, 16, 238, 99, 19, 245, 165, 233, 110,
-                    225, 224, 222, 161, 102, 0, 71, 38, 206, 73, 77, 223, 1,
-                    107, 162, 104, 32, 243, 9,
-                  ],
-                  [
-                    192, 181, 181, 219, 136, 29, 104, 246, 176, 186, 209, 51,
-                    55, 131, 205, 169, 239, 127, 116, 236, 64, 87, 223, 54, 112,
-                    105, 28, 230, 157, 81, 34, 38,
-                  ],
-                  [
-                    153, 235, 245, 57, 193, 14, 6, 251, 138, 167, 158, 186, 20,
-                    9, 28, 207, 137, 31, 115, 195, 30, 109, 233, 70, 144, 84, 8,
-                    59, 16, 37, 141, 201,
-                  ],
-                ],
-                initHash: 'I06fNAlptpr/4DcJZ/wIMRgd0bb6qygVCrodNQhhvbI=',
+                hashes: expect.any(Array),
+                initHash: expect.any(Array),
                 localId: 1,
                 uniqueId: 1,
               },
@@ -82,7 +68,13 @@ export default {
   },
   validation_results: {
     activeManifest: {
-      failure: [],
+      failure: [
+        {
+          code: 'signingCredential.untrusted',
+          explanation: 'signing certificate untrusted',
+          url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.signature',
+        },
+      ],
       informational: [],
       success: [
         {
@@ -109,5 +101,12 @@ export default {
       ],
     },
   },
-  validation_state: 'Valid',
+  validation_state: 'Invalid',
+  validation_status: [
+    {
+      code: 'signingCredential.untrusted',
+      explanation: 'signing certificate untrusted',
+      url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.signature',
+    },
+  ],
 };

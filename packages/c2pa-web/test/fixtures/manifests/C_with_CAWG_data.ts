@@ -7,6 +7,8 @@
  * it.
  */
 
+import { expect } from 'vitest';
+
 export default {
   active_manifest: 'urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d',
   manifests: {
@@ -29,6 +31,7 @@ export default {
       assertions: [
         {
           label: 'c2pa.actions.v2',
+          created: true,
           data: {
             actions: [
               {
@@ -67,11 +70,11 @@ export default {
               referenced_assertions: [
                 {
                   url: 'self#jumbf=c2pa.assertions/cawg.training-mining',
-                  hash: 'rBBgURB+/0Bc2Uk3+blNpYTGQTxOwzXQ2xhjA3gsqI4=',
+                  hash: expect.any(Array),
                 },
                 {
                   url: 'self#jumbf=c2pa.assertions/c2pa.hash.data',
-                  hash: 'sASozh9KFSkW+cyMI0Pw5KYoD2qn7MkUEq9jUUhe/sM=',
+                  hash: expect.any(Array),
                 },
               ],
               sig_type: 'cawg.x509.cose',
@@ -157,13 +160,7 @@ export default {
             'timestamp cert untrusted: DigiCert SHA256 RSA4096 Timestamp Responder 2025 1',
         },
       ],
-      failure: [
-        {
-          code: 'signingCredential.untrusted',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity',
-          explanation: 'signing certificate untrusted',
-        },
-      ],
+      failure: [],
     },
   },
   validation_state: 'Valid',

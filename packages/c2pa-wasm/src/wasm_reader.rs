@@ -71,12 +71,6 @@ impl WasmReader {
     async fn from_reader(mut reader: Reader) -> Result<WasmReader, JsError> {
         let serializer = Serializer::new().serialize_maps_as_objects(true);
 
-        // This will be removed once CawgValidation is rolled into the reader
-        reader
-            .post_validate_async(&CawgValidator {})
-            .await
-            .map_err(WasmError::other)?;
-
         Ok(WasmReader { reader, serializer })
     }
 
@@ -87,7 +81,6 @@ impl WasmReader {
     }
 
     /// Returns the asset's manifest store.
-    /// NOTE: at the moment, CAWG data is not decoded via this function. Use WasmReader::json() if CAWG is a requirement.
     #[wasm_bindgen(js_name = manifestStore)]
     pub fn manifest_store(&self) -> Result<JsValue, JsError> {
         let manifest_store = self
@@ -99,7 +92,6 @@ impl WasmReader {
     }
 
     /// Returns the asset's active manifest.
-    /// NOTE: at the moment, CAWG data is not decoded via this function. Use WasmReader::json() if CAWG is a requirement.
     #[wasm_bindgen(js_name = activeManifest)]
     pub fn active_manifest(&self) -> Result<JsValue, JsError> {
         let active_manifest = self

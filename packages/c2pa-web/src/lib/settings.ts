@@ -18,7 +18,7 @@ export interface Settings {
   /**
    * Trust configuration for CAWG identity valdation.
    */
-  cawgTrust?: TrustSettings;
+  cawgTrust?: CawgTrustSettings;
   verify?: VerifySettings;
 }
 
@@ -41,9 +41,16 @@ export interface TrustSettings {
   allowedList?: string;
 }
 
+export interface CawgTrustSettings extends TrustSettings {
+  /**
+   * Enable CAWG trust validation. The default value is "true."
+   */
+  verifyTrustList?: boolean;
+}
+
 export interface VerifySettings {
   /**
-   * Enable trust list validation.
+   * Enable trust validation. The default value is "true."
    */
   verifyTrust?: boolean;
 }

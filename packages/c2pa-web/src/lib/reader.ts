@@ -60,20 +60,18 @@ export interface Reader {
 
   /**
    * @returns The asset's full {@link ManifestStore} containing all its manifests, validation statuses, and the URI of the active manifest.
-   *
-   * NOTE: At the moment, the manifest store returned by this method will not include decoded CAWG data. Use Reader.json() if CAWG is a requirement.
    */
   manifestStore: () => Promise<ManifestStore>;
 
   /**
    * @returns The asset's active {@link Manifest}.
-   *
-   * NOTE: At the moment, the manifest returned by this method will not include decoded CAWG data. Use Reader.json() if CAWG is a requirement.
    */
   activeManifest: () => Promise<Manifest>;
 
   /**
-   * @returns The asset's full {@link Manifest} store, including decoded CAWG data.
+   * @returns The asset's full {@link ManifestStore}.
+   *
+   * @deprecated Use {@link Reader.manifestStore} instead.
    */
   json: () => Promise<any>;
 
