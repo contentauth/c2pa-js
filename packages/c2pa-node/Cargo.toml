@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 [dependencies]
 async-trait = "0.1.77"
 ciborium = "0.2.2"
-c2pa = { version = "0.67", default-features = false, features = ["file_io", "pdf", "fetch_remote_manifests", "add_thumbnails", "rust_native_crypto"] }
+c2pa = { version = "0.68", default-features = false, features = ["file_io", "pdf", "fetch_remote_manifests", "add_thumbnails", "rust_native_crypto"] }
 futures = "0.3"
 image = "0.25.6"
 neon = { version = "1.0.0", default-features = false, features = [
@@ -29,7 +29,7 @@ reqwest = { version = "0.12.2", default-features = false, features = [
 ] }
 serde = { version = "1.0.203", features = ["derive"] }
 serde_bytes = "0.11.15"
-serde_json = "1.0.117"
+serde_json = "1.0.145"
 toml = "0.8"
 thiserror = "1.0.61"
 tokio = { version = "1.43.0", features = ["rt-multi-thread"] }

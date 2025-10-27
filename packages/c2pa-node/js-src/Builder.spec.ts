@@ -212,7 +212,9 @@ describe("Builder", () => {
       const reader = await Reader.fromAsset(dest);
       const manifestStore = reader.json();
       const activeManifest = reader.getActive();
-      expect(manifestStore.validation_status).toBeUndefined();
+      expect(manifestStore.validation_status![0].code).toBe(
+        "signingCredential.untrusted",
+      );
       expect(manifestStore.active_manifest).not.toBeUndefined();
       expect(activeManifest?.title).toBe("Test_Manifest");
     });
@@ -265,7 +267,9 @@ describe("Builder", () => {
       });
       const manifestStore = reader.json();
       const activeManifest = reader.getActive();
-      expect(manifestStore.validation_status).toBeUndefined();
+      expect(manifestStore.validation_status![0].code).toBe(
+        "signingCredential.untrusted",
+      );
       expect(manifestStore.active_manifest).not.toBeUndefined();
       expect(activeManifest?.title).toBe("Test_Manifest");
     });
@@ -294,7 +298,9 @@ describe("Builder", () => {
       const reader = await Reader.fromAsset(dest);
       const manifestStore = reader.json();
       const activeManifest = reader.getActive();
-      expect(manifestStore.validation_status).toBeUndefined();
+      expect(manifestStore.validation_status![0].code).toBe(
+        "signingCredential.untrusted",
+      );
       expect(manifestStore.active_manifest).not.toBeUndefined();
       expect(activeManifest?.title).toBe("Test_Manifest");
     });
@@ -326,7 +332,9 @@ describe("Builder", () => {
       });
       const manifestStore = reader.json();
       const activeManifest = reader.getActive();
-      expect(manifestStore.validation_status).toBeUndefined();
+      expect(manifestStore.validation_status![0].code).toBe(
+        "signingCredential.untrusted",
+      );
       expect(manifestStore.active_manifest).not.toBeUndefined();
       expect(activeManifest?.title).toBe("Test_Manifest");
     });
@@ -354,7 +362,9 @@ describe("Builder", () => {
       });
       const manifestStore = reader.json();
       const activeManifest = reader.getActive();
-      expect(manifestStore.validation_status).toBeUndefined();
+      expect(manifestStore.validation_status![0].code).toBe(
+        "signingCredential.untrusted",
+      );
       expect(manifestStore.active_manifest).not.toBeUndefined();
       expect(activeManifest?.title).toBe("Test_Manifest");
     });

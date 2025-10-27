@@ -128,7 +128,7 @@ describe("Settings", () => {
 
       // Verify settings are still intact
       const currentSettings = JSON.parse(getSettingsJson());
-      expect(currentSettings.core.hash_alg).toBe("sha256");
+      expect(currentSettings.core.merkle_tree_max_proofs).toBe(5);
       expect(currentSettings.verify.verify_trust).toBe(true);
       expect(currentSettings.trust.verify_trust_list).toBe(true);
     });

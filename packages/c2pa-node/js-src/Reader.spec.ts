@@ -198,4 +198,50 @@ describe("Reader", () => {
     );
     expect(reader.isEmbedded()).toBeFalsy();
   });
+
+  it("should decode CAWG identity assertion with signature_info", async () => {
+    // This test verifies that postValidateCawg() properly decodes CAWG assertions
+    // and extracts signature_info from the signature data, matching c2pa-js behavior
+    const reader = await Reader.fromAsset({
+      path: "./tests/fixtures/C_with_CAWG_data.jpg",
+    });
+
+    // Call postValidateCawg to decode CAWG assertions
+    await reader.postValidateCawg();
+
+    const activeManifest = reader.getActive();
+
+    // Find the cawg.identity assertion
+    const cawgIdentityAssertion = activeManifest?.assertions?.find(
+      (assertion: any) => assertion.label === "cawg.identity",
+    ) as any;
+
+    expect(cawgIdentityAssertion).toBeDefined();
+    expect(cawgIdentityAssertion?.data).toBeDefined();
+    expect(cawgIdentityAssertion?.data.signature_info).toBeDefined();
+
+    // Verify signature_info structure matches c2pa-js behavior
+    const signatureInfo = cawgIdentityAssertion?.data.signature_info;
+    const signerPayload = cawgIdentityAssertion?.data.signer_payload;
+
+    // Verify signature_info values
+    expect(signatureInfo.alg).toBe("Ed25519");
+    expect(signatureInfo.issuer).toBe("C2PA Test Signing Cert");
+    expect(signatureInfo.cert_serial_number).toBe(
+      "638838410810235485828984295321338730070538954823",
+    );
+    expect(signatureInfo.revocation_status).toBe(true);
+
+    // Verify signer_payload values
+    expect(signerPayload.sig_type).toBe("cawg.x509.cose");
+    expect(signerPayload.referenced_assertions).toHaveLength(2);
+    expect(signerPayload.referenced_assertions[0]).toEqual({
+      url: "self#jumbf=c2pa.assertions/cawg.training-mining",
+      hash: "rBBgURB+/0Bc2Uk3+blNpYTGQTxOwzXQ2xhjA3gsqI4=",
+    });
+    expect(signerPayload.referenced_assertions[1]).toEqual({
+      url: "self#jumbf=c2pa.assertions/c2pa.hash.data",
+      hash: "sASozh9KFSkW+cyMI0Pw5KYoD2qn7MkUEq9jUUhe/sM=",
+    });
+  });
 });

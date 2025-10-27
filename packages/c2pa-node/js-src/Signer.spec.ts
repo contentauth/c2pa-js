@@ -176,7 +176,10 @@ describe("CallbackSigner", () => {
     const activeManifest = reader.getActive();
 
     // If validation_status is undefined, the signature is valid
-    expect(manifestStore.validation_status).toBeUndefined();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    expect(manifestStore.validation_status![0].code).toBe(
+      "signingCredential.untrusted",
+    );
     expect(manifestStore.active_manifest).not.toBeUndefined();
     expect(activeManifest?.title).toBe("Test_Manifest_Buffer");
   });
