@@ -6,18 +6,23 @@
 
 import type { TrustConfig, VerifyConfig } from "./types.d.ts";
 import {
-  loadC2paSettings,
-  loadTrustConfig,
-  loadCawgTrustConfig,
+  getCawgTrustConfig,
   getSettingsJson,
   getTrustConfig,
-  getCawgTrustConfig,
-  loadVerifyConfig,
   getVerifyConfig,
+  loadC2paSettings,
+  loadCawgTrustConfig,
+  loadTrustConfig,
+  loadVerifyConfig,
   patchVerifyConfig,
+  resetSettings,
 } from "./Settings.js";
 
 describe("Settings", () => {
+  afterAll(() => {
+    resetSettings();
+  });
+
   it("loads a trustlist-shaped JSON and returns JSON via getSettingsJson", () => {
     // Matches c2pa-rs settings structure: trust + verify
     // trust.allowed_list accepts base64 lines or PEMs; provide a simple base64 line
@@ -37,6 +42,7 @@ describe("Settings", () => {
     expect(obj.trust?.allowed_list).toBe("Zm9v\n");
     expect(obj.verify?.verify_trust).toBe(true);
   });
+
   describe("loadTrustConfig", () => {
     it("preserves other settings when loading trust config", () => {
       // First, load basic settings that work with c2pa-rs
@@ -128,7 +134,7 @@ describe("Settings", () => {
 
       // Verify settings are still intact
       const currentSettings = JSON.parse(getSettingsJson());
-      expect(currentSettings.core.merkle_tree_max_proofs).toBe(5);
+      expect(currentSettings.core.decode_identity_assertions).toBe(true);
       expect(currentSettings.verify.verify_trust).toBe(true);
       expect(currentSettings.trust.verify_trust_list).toBe(true);
     });

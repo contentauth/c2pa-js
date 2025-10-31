@@ -123,7 +123,6 @@ impl NeonBuilder {
     }
 
     pub fn add_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
-        let rt = runtime();
         let this = cx.this::<JsBox<Self>>()?;
         let uri = cx.argument::<JsString>(0)?.value(&mut cx);
         let resource = cx
@@ -131,22 +130,21 @@ impl NeonBuilder {
             .and_then(|obj| parse_asset(&mut cx, obj))?;
         let builder = Arc::clone(&this.builder);
 
-        let channel = cx.channel();
-        let (deferred, promise) = cx.promise();
+        let promise = cx
+            .task(move || {
+                // Block on acquiring the async mutex lock
+                let rt = runtime();
+                let mut builder = rt.block_on(async { builder.lock().await });
 
-        rt.spawn(async move {
-            let mut builder = builder.lock().await;
-
-            let result = resource.into_read_stream().and_then(|mut resource_stream| {
-                builder.add_resource(&uri, &mut resource_stream)?;
-                Ok(())
-            });
-
-            deferred.settle_with(&channel, |mut cx| match result {
+                resource.into_read_stream().and_then(|mut resource_stream| {
+                    builder.add_resource(&uri, &mut resource_stream)?;
+                    Ok(())
+                })
+            })
+            .promise(move |mut cx, result: Result<(), Error>| match result {
                 Ok(_) => Ok(cx.undefined()),
                 Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
             });
-        });
 
         Ok(promise)
     }
@@ -167,18 +165,24 @@ impl NeonBuilder {
         rt.spawn(async move {
             let mut builder = builder.lock().await;
 
-            let result = ingredient
-                .mime_type()
-                .ok_or_else(|| Error::Signing("Ingredient asset must have a mime type".to_string()))
-                .and_then(|format| {
-                    let mut ingredient_stream = ingredient.into_read_stream()?;
-                    builder.add_ingredient_from_stream(
+            let result = async {
+                let format = ingredient
+                    .mime_type()
+                    .ok_or_else(|| {
+                        Error::Signing("Ingredient asset must have a mime type".to_string())
+                    })?
+                    .to_owned();
+                let mut ingredient_stream = ingredient.into_read_stream()?;
+                builder
+                    .add_ingredient_from_stream_async(
                         &ingredient_json,
                         &format,
                         &mut ingredient_stream,
-                    )?;
-                    Ok(())
-                });
+                    )
+                    .await?;
+                Ok(())
+            }
+            .await;
 
             deferred.settle_with(&channel, move |mut cx| match result {
                 Ok(_) => Ok(cx.undefined()),
@@ -190,53 +194,47 @@ impl NeonBuilder {
     }
 
     pub fn to_archive(mut cx: FunctionContext) -> JsResult<JsPromise> {
-        let rt = runtime();
         let this = cx.this::<JsBox<Self>>()?;
         let dest = cx
             .argument::<JsObject>(0)
             .and_then(|obj| parse_asset(&mut cx, obj))?;
         let builder = Arc::clone(&this.builder);
 
-        let channel = cx.channel();
-        let (deferred, promise) = cx.promise();
+        let promise = cx
+            .task(move || {
+                // Block on acquiring the async mutex lock
+                let rt = runtime();
+                let mut builder = rt.block_on(async { builder.lock().await });
 
-        rt.spawn(async move {
-            let mut builder = builder.lock().await;
-            let result = dest.write_stream().and_then(|dest_stream| {
-                builder.to_archive(dest_stream)?;
-                Ok(())
-            });
-
-            deferred.settle_with(&channel, move |mut cx| match result {
+                dest.write_stream().and_then(|dest_stream| {
+                    builder.to_archive(dest_stream)?;
+                    Ok(())
+                })
+            })
+            .promise(move |mut cx, result: Result<(), Error>| match result {
                 Ok(_) => Ok(cx.undefined()),
                 Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
             });
-        });
         Ok(promise)
     }
 
     pub fn from_archive(mut cx: FunctionContext) -> JsResult<JsPromise> {
-        let rt = runtime();
         let source = cx
             .argument::<JsObject>(0)
             .and_then(|obj| parse_asset(&mut cx, obj))?;
 
-        let channel = cx.channel();
-        let (deferred, promise) = cx.promise();
-
-        rt.spawn(async move {
-            let result = source.into_read_stream().and_then(|source_stream| {
+        let promise = cx
+            .task(move || {
+                let source_stream = source.into_read_stream()?;
                 let builder = Builder::from_archive(source_stream)?;
                 Ok(builder)
-            });
-
-            deferred.settle_with(&channel, move |mut cx| match result {
+            })
+            .promise(move |mut cx, result: Result<Builder, Error>| match result {
                 Ok(builder) => Ok(cx.boxed(Self {
                     builder: Arc::new(Mutex::new(builder)),
                 })),
                 Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
             });
-        });
         Ok(promise)
     }
 

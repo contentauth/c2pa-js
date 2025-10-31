@@ -309,11 +309,6 @@ export interface ReaderInterface {
    * @param filePath The path to the file
    */
   resourceToAsset(uri: string, output: DestinationAsset): Promise<number>;
-
-  /**
-   * Run CAWG validation
-   */
-  postValidateCawg(): Promise<void>;
 }
 
 export interface IdentityAssertionSignerInterface {

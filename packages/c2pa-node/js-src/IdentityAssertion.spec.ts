@@ -183,10 +183,9 @@ describe("IdentityAssertionBuilder", () => {
     await builder.signAsync(iaSigner, source, dest);
 
     // Verify the manifest
-    const reader = await Reader.fromAsset({
+    await Reader.fromAsset({
       buffer: dest.buffer! as Buffer,
       mimeType: "image/jpeg",
     });
-    await reader.postValidateCawg();
   });
 });

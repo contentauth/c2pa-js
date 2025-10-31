@@ -14,7 +14,7 @@
 use crate::asset::parse_asset;
 use crate::error::{as_js_error, Error};
 use crate::runtime::runtime;
-use c2pa::{identity::validator::CawgValidator, Reader};
+use c2pa::Reader;
 use neon::prelude::*;
 use neon::types::buffer::TypedArray;
 use std::sync::Arc;
@@ -35,23 +35,29 @@ impl NeonReader {
     }
 
     pub fn from_stream(mut cx: FunctionContext) -> JsResult<JsPromise> {
+        let rt = runtime();
+        let channel = cx.channel();
         let source = cx
             .argument::<JsObject>(0)
             .and_then(|obj| parse_asset(&mut cx, obj))?;
 
-        let promise = cx
-            .task(move || {
+        let (deferred, promise) = cx.promise();
+        rt.spawn(async move {
+            let result = async {
                 let format = source
                     .mime_type()
                     .ok_or_else(|| {
                         Error::Signing("Ingredient asset must have a mime type".to_string())
                     })?
                     .to_owned();
+
                 let stream = source.into_read_stream()?;
-                let reader = Reader::from_stream(&format, stream)?;
+                let reader = Reader::from_stream_async(&format, stream).await?;
                 Ok(reader)
-            })
-            .promise(move |mut cx, result: Result<Reader, Error>| match result {
+            }
+            .await;
+
+            deferred.settle_with(&channel, move |mut cx| match result {
                 Ok(reader) => {
                     let boxed_reader = cx.boxed(Self {
                         reader: Arc::new(Mutex::new(reader)),
@@ -60,30 +66,37 @@ impl NeonReader {
                 }
                 Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
             });
+        });
         Ok(promise)
     }
 
     pub fn from_manifest_data_and_asset(mut cx: FunctionContext) -> JsResult<JsPromise> {
+        let rt = runtime();
+        let channel = cx.channel();
         let manifest_data = cx.argument::<JsBuffer>(0)?;
         let asset = cx
             .argument::<JsObject>(1)
             .and_then(|obj| parse_asset(&mut cx, obj))?;
 
         let c2pa_data = manifest_data.as_slice(&cx).to_vec();
-        let promise = cx
-            .task(move || {
+        let (deferred, promise) = cx.promise();
+        rt.spawn(async move {
+            let result = async {
                 let format = asset
                     .mime_type()
                     .ok_or_else(|| {
                         Error::Signing("Ingredient asset must have a mime type".to_string())
                     })?
                     .to_owned();
-                let mut stream = asset.into_read_stream()?;
+                let stream = asset.into_read_stream()?;
                 let reader =
-                    Reader::from_manifest_data_and_stream(&c2pa_data, &format, &mut stream)?;
+                    Reader::from_manifest_data_and_stream_async(&c2pa_data, &format, stream)
+                        .await?;
                 Ok(reader)
-            })
-            .promise(move |mut cx, result: Result<Reader, Error>| match result {
+            }
+            .await;
+
+            deferred.settle_with(&channel, move |mut cx| match result {
                 Ok(reader) => {
                     let boxed_reader = cx.boxed(Self {
                         reader: Arc::new(Mutex::new(reader)),
@@ -92,7 +105,7 @@ impl NeonReader {
                 }
                 Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
             });
-
+        });
         Ok(promise)
     }
 
@@ -165,30 +178,6 @@ impl NeonReader {
                         Ok(cx.number(bytes_written as f64).upcast::<JsValue>())
                     }
                 }
-                Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
-            });
-        });
-        Ok(promise)
-    }
-
-    pub fn post_validate_cawg(mut cx: FunctionContext) -> JsResult<JsPromise> {
-        let rt = runtime();
-        let this = cx.this::<JsBox<Self>>()?;
-        let reader = Arc::clone(&this.reader);
-
-        let channel = cx.channel();
-        let (deferred, promise) = cx.promise();
-
-        rt.spawn(async move {
-            let result = reader
-                .lock()
-                .await
-                .post_validate_async(&CawgValidator {})
-                .await
-                .map_err(Error::from);
-
-            deferred.settle_with(&channel, move |mut cx| match result {
-                Ok(_) => Ok(cx.undefined()),
                 Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
             });
         });

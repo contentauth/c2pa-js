@@ -17,7 +17,6 @@ import path from "path";
 import * as fs from "fs-extra";
 
 import { Reader } from "./Reader.js";
-import { patchVerifyConfig } from "./Settings.js";
 
 const tempDir = path.join(__dirname, "tmp");
 
@@ -109,7 +108,6 @@ describe("Reader", () => {
 }`);
 
   beforeAll(async () => {
-    patchVerifyConfig({ verifyTrust: false });
     await fs.ensureDir(tempDir);
   });
 
@@ -205,9 +203,6 @@ describe("Reader", () => {
     const reader = await Reader.fromAsset({
       path: "./tests/fixtures/C_with_CAWG_data.jpg",
     });
-
-    // Call postValidateCawg to decode CAWG assertions
-    await reader.postValidateCawg();
 
     const activeManifest = reader.getActive();
 

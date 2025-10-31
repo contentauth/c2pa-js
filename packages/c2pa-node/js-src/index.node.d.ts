@@ -170,4 +170,7 @@ declare module "index.node" {
   export function loadCawgTrustConfig(trustConfigJson: string): void;
   export function getTrustConfig(): string;
   export function getCawgTrustConfig(): string;
+  export function loadVerifyConfig(verifyConfigJson: string): void;
+  export function getVerifyConfig(): string;
+  export function resetSettings(): void;
 }

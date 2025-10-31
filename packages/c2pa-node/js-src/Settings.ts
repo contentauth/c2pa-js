@@ -209,3 +209,11 @@ export function getVerifyConfig(): VerifyConfig {
     strictV1Validation: parsed.strict_v1_validation,
   };
 }
+
+/**
+ * Reset settings to their default values.
+ * This clears any custom settings and restores the default configuration.
+ */
+export function resetSettings(): void {
+  getNeonBinary().resetSettings();
+}

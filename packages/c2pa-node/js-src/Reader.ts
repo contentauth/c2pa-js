@@ -72,8 +72,4 @@ export class Reader implements ReaderInterface {
 
     return manifestStore.manifests[activeManifest];
   }
-
-  async postValidateCawg(): Promise<void> {
-    return getNeonBinary().readerPostValidateCawg.call(this.reader);
-  }
 }

@@ -92,10 +92,6 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         "readerResourceToAsset",
         neon_reader::NeonReader::resource_to_asset,
     )?;
-    cx.export_function(
-        "readerPostValidateCawg",
-        neon_reader::NeonReader::post_validate_cawg,
-    )?;
 
     // Signers
     cx.export_function("localSignerNew", neon_signer::NeonLocalSigner::new)?;
@@ -185,6 +181,9 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     // Verify Settings
     cx.export_function("loadVerifyConfig", settings::load_verify_config)?;
     cx.export_function("getVerifyConfig", settings::get_verify_config)?;
+
+    // Reset Settings
+    cx.export_function("resetSettings", settings::reset_settings)?;
 
     Ok(())
 }

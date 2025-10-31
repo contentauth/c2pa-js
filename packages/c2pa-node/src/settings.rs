@@ -403,7 +403,10 @@ pub fn load_verify_config(mut cx: FunctionContext) -> JsResult<JsUndefined> {
                 obj.insert("check_ingredient_trust".to_string(), val.clone());
             }
             if let Some(val) = verify_config.get("skip_ingredient_conflict_resolution") {
-                obj.insert("skip_ingredient_conflict_resolution".to_string(), val.clone());
+                obj.insert(
+                    "skip_ingredient_conflict_resolution".to_string(),
+                    val.clone(),
+                );
             }
             if let Some(val) = verify_config.get("strict_v1_validation") {
                 obj.insert("strict_v1_validation".to_string(), val.clone());
@@ -483,5 +486,25 @@ pub fn get_verify_config(mut cx: FunctionContext) -> JsResult<JsValue> {
             });
             Ok(cx.string(default_verify.to_string()).upcast())
         }
+    }
+}
+
+/// Reset settings to their default values.
+/// This replicates the private reset() function from c2pa-rs Settings.
+pub fn reset_settings(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+    // Create default settings and get their TOML representation
+    let default_settings = Settings::default();
+    let default_toml = toml::to_string(&default_settings)
+        .or_else(|e| cx.throw_error(format!("Failed to serialize default settings: {}", e)))?;
+
+    // Apply the default settings
+    match Settings::from_toml(&default_toml) {
+        Ok(_) => {
+            // Store the default TOML for worker threads
+            set_global_settings_toml(Some(default_toml));
+            reload_runtime();
+            Ok(cx.undefined())
+        }
+        Err(e) => cx.throw_error(format!("Failed to apply default settings: {}", e)),
     }
 }
