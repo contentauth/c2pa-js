@@ -1,0 +1,11 @@
+{%- assign readme_page = site.pages | where: "path", "README.md" | first -%}
+{%- if readme_page -%}
+  <nav class="sidebar-content">
+    {%- assign _c = readme_page.content -%}
+    {%- assign _c = _c | replace: "This is API documentation for the C2PA Node.js library.", "" -%}
+    {%- assign _c = _c | replace: "# @contentauth/c2pa-node", "" -%}
+    {{ _c | strip | markdownify }}
+  </nav>
+{%- endif -%}
+
+
