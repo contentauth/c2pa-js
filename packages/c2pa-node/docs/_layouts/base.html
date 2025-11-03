@@ -8,7 +8,7 @@
     {%- include header.html -%}
 
     <main class="page-content" aria-label="Content">
-      {%- if page.layout != 'home' -%}
+
       <div class="wrapper site-layout">
         <aside class="sidebar">
           {%- include sidebar.html -%}
@@ -17,11 +17,7 @@
           {{ content }}
         </div>
       </div>
-      {%- else -%}
-      <div class="wrapper">
-        {{ content }}
-      </div>
-      {%- endif -%}
+
     </main>
 
     {%- include footer.html -%}

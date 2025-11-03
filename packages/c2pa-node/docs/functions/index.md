@@ -1,0 +1,15 @@
+# Functions
+
+- [getCawgTrustConfig](getCawgTrustConfig.md)
+- [getSettingsJson](getSettingsJson.md)
+- [getTrustConfig](getTrustConfig.md)
+- [getVerifyConfig](getVerifyConfig.md)
+- [isActionsAssertion](isActionsAssertion.md)
+- [loadC2paSettings](loadC2paSettings.md)
+- [loadC2paSettingsToml](loadC2paSettingsToml.md)
+- [loadCawgTrustConfig](loadCawgTrustConfig.md)
+- [loadSettingsFromFile](loadSettingsFromFile.md)
+- [loadSettingsFromUrl](loadSettingsFromUrl.md)
+- [loadTrustConfig](loadTrustConfig.md)
+- [loadVerifyConfig](loadVerifyConfig.md)
+- [patchVerifyConfig](patchVerifyConfig.md)
