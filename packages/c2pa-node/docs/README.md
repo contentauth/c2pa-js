@@ -4,7 +4,7 @@
 
 # @contentauth/c2pa-node
 
-## Classes
+## [Classes](classes/index.md)
 
 - [Builder](classes/Builder.md)
 - [CallbackCredentialHolder](classes/CallbackCredentialHolder.md)
@@ -15,7 +15,7 @@
 - [Reader](classes/Reader.md)
 - [Trustmark](classes/Trustmark.md)
 
-## Interfaces
+## [Interfaces](interfaces/index.md)
 
 - [BuilderInterface](interfaces/BuilderInterface.md)
 - [CallbackCredentialHolderInterface](interfaces/CallbackCredentialHolderInterface.md)
@@ -35,7 +35,7 @@
 - [TrustmarkInterface](interfaces/TrustmarkInterface.md)
 - [VerifyConfig](interfaces/VerifyConfig.md)
 
-## Type Aliases
+## [Type Aliases](type-aliases/index.md)
 
 - [CallbackSignerConfig](type-aliases/CallbackSignerConfig.md)
 - [ClaimVersion](type-aliases/ClaimVersion.md)
@@ -54,7 +54,7 @@
 - [TrustmarkVariant](type-aliases/TrustmarkVariant.md)
 - [TrustmarkVersion](type-aliases/TrustmarkVersion.md)
 
-## Functions
+## [Functions](functions/index.md)
 
 - [getCawgTrustConfig](functions/getCawgTrustConfig.md)
 - [getSettingsJson](functions/getSettingsJson.md)
