@@ -14,8 +14,7 @@
   max-width: 320px;
 }
 .sidebar-content { font-size: 0.95em; line-height: 1.45; }
-.sidebar-content h1 { font-size: 1.1rem; margin-top: 1rem; }
-.sidebar-content h2 { font-size: 1rem; margin-top: 0.9rem; }
+.sidebar-content h2 { font-size: 1.5rem; margin-top: 0.9rem; } 
 .sidebar-content h3 { font-size: 0.95rem; margin-top: 0.8rem; }
 .sidebar-content ul { list-style: none; padding-left: 0; }
 .sidebar-content li { margin: 0.25rem 0; }
@@ -46,6 +45,8 @@
 
 .sidebar-content > p:first-child { display: none; }
 .sidebar-content hr { display: none; }
+.sidebar-content h1 { display: none; }
+
 
 @media (max-width: 900px) {
   .site-layout { grid-template-columns: 1fr; }

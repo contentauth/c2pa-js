@@ -1,3 +1,8 @@
+---
+title: README
+layout: none
+---
+
 **@contentauth/c2pa-node**
 
 ***
