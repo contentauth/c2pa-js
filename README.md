@@ -1,6 +1,6 @@
 # c2pa-js
 
-> [!NOTE]  
+> [!NOTE]
 > Looking for the old `c2pa-js` repo? It's available [here](https://github.com/contentauth/c2pa-js-legacy) as `c2pa-js-legacy`. Those packages are now deprecated and implementors wishing to interact with C2PA metadata on the web should use the libraries in this repo instead.
 
 A collection of libraries and tools that enable interaction with [C2PA metadata](https://c2pa.org/) in JavaScript. Part of the [Content Authenticity Initiative](https://contentauthenticity.org/).
@@ -11,7 +11,7 @@ This monorepo is managed by [NX](https://nx.dev/getting-started/intro) and [pnpm
 
 ```sh
 npm install -g pnpm
-pnpm install -g nx
+pnpm install
 ```
 
 Commands are run in the following format: `nx [target] [project]`, e.g.:
