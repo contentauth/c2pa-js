@@ -1,18 +1,17 @@
 # Type Aliases
 
-- [CallbackSignerConfig](CallbackSignerConfig.md)
-- [ClaimVersion](ClaimVersion.md)
-- [DestinationAsset](DestinationAsset.md)
-- [ManifestAssertionKind](ManifestAssertionKind.md)
-- [NeonBuilderHandle](NeonBuilderHandle.md)
-- [NeonCallbackCredentialHolderHandle](NeonCallbackCredentialHolderHandle.md)
-- [NeonCallbackSignerHandle](NeonCallbackSignerHandle.md)
-- [NeonIdentityAssertionBuilderHandle](NeonIdentityAssertionBuilderHandle.md)
-- [NeonIdentityAssertionSignerHandle](NeonIdentityAssertionSignerHandle.md)
-- [NeonLocalSignerHandle](NeonLocalSignerHandle.md)
-- [NeonReaderHandle](NeonReaderHandle.md)
-- [NeonTrustmarkHandle](NeonTrustmarkHandle.md)
-- [SigningAlg](SigningAlg.md)
-- [SourceAsset](SourceAsset.md)
-- [TrustmarkVariant](TrustmarkVariant.md)
-- [TrustmarkVersion](TrustmarkVersion.md)
+{%- assign type_aliases_root = site.baseurl | append: '/type-aliases/' -%}
+{%- assign type_aliases_pages = site.pages | where_exp: 'p', "p.url contains '/type-aliases/'" -%}
+{%- assign type_aliases_pages = type_aliases_pages | reject: 'url', type_aliaseses_root -%}
+{% assign type_aliases_pages = type_aliases_pages | sort: 'name' %}
+
+{% if type_aliases_pages and type_aliases_pages.size > 0 %}
+{%- for p in type_aliases_pages -%}
+{% assign label = p.name | replace: '.md','' | replace: '.html','' %}
+{%- unless p.name=="index.md" %}
+- <a href="{{ p.url | relative_url }}">{{ label }}</a> 
+{%- endunless -%}
+{%- endfor -%}
+{%- else -%}
+No type aliases found.
+{%- endif -%}
