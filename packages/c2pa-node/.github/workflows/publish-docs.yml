@@ -41,13 +41,17 @@ jobs:
           SKIP_RUST_BUILD: 1
         run: pnpm install --frozen-lockfile
 
-      - name: Build docs
-        run: npm run build:docs
+      - name: Generate TypeDoc markdown (without modifying repo)
+        run: |
+          pnpm typedoc --plugin typedoc-plugin-markdown --readme none --out docs-typedoc js-src/index.ts
+          pnpm cpy "docs-typedoc/**" docs --parents --overwrite --ignore="docs-typedoc/classes/index.md" --ignore="docs-typedoc/README.md"
+          rm -rf docs-typedoc
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'docs/_site/'
+          # Upload the Jekyll source; GitHub Pages will build it on deploy
+          path: 'docs'
 
       - name: Deploy to GitHub Pages
         id: deployment
