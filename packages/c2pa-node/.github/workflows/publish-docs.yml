@@ -1,15 +1,14 @@
 name: Build and publish docs
 
 on:
-
-pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - labeled
+  pull_request:
+      types:
+        - opened
+        - reopened
+        - synchronize
+        - labeled
 # release:
-#   types: [published]
+# types: [published]
 
   workflow_dispatch:
 
