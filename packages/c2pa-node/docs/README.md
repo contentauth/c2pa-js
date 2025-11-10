@@ -5,10 +5,6 @@ layout: none
 
 **@contentauth/c2pa-node**
 
-***
-
-TEST TEST
-
 # @contentauth/c2pa-node
 
 ## [Classes](classes/index.md)
