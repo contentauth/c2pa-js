@@ -51,11 +51,19 @@ jobs:
           pnpm run build:docs
           rm -rf docs-typedoc
 
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload the Jekyll source; GitHub Pages will build it on deploy
-          path: 'docs'
+          # Upload the built site for deployment
+          path: '_site'
 
       - name: Deploy to GitHub Pages
         id: deployment
