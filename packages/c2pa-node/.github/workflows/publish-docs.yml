@@ -1,8 +1,15 @@
 name: Build and publish docs
 
 on:
-  release:
-    types: [published]
+
+pull_request:
+      types:
+        - opened
+        - reopened
+        - synchronize
+        - labeled
+# release:
+#   types: [published]
 
   workflow_dispatch:
 
