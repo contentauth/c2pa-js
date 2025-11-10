@@ -3,11 +3,11 @@ name: Build and publish docs
 on:
 
 pull_request:
-      types:
-        - opened
-        - reopened
-        - synchronize
-        - labeled
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
 # release:
 #   types: [published]
 
@@ -30,9 +30,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          filter: tree:0
-          fetch-depth: 0
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -50,8 +47,7 @@ jobs:
 
       - name: Generate TypeDoc markdown (without modifying repo)
         run: |
-          pnpm typedoc --plugin typedoc-plugin-markdown --readme none --out docs-typedoc js-src/index.ts
-          pnpm cpy "docs-typedoc/**" docs --parents --overwrite --ignore="docs-typedoc/classes/index.md" --ignore="docs-typedoc/README.md"
+          pnpm run build:docs
           rm -rf docs-typedoc
 
       - name: Upload artifact
