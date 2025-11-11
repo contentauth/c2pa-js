@@ -1,24 +1,9 @@
-{% for p in site.pages %}
-  {% if p.title == "README_docs" %}
-    {%- assign readme_page = p -%}
-  {% endif %}
-{% endfor %}
+{%- assign sidebar = site.pages | where: "name", "globals.md" | first -%}
 
-  <nav class="sidebar-content">
-<br/> Title = {{readme_page.title}}
-<br/> Name = {{readme_page.name}}
-<br/> Path = {{readme_page.path}}
-<br/> URL = {{readme_page.url}}
-<br/> Relative URL = {{readme_page.relative_url}}
-<br/> Absolute URL = {{readme_page.absolute_url}}
+<nav class="sidebar-content">
+  {{ sidebar.content | strip | markdownify }}
+</nav>
 
-    {%- if readme_page.title == "README_docs" -%}    
-      {{ readme_page.content | strip | markdownify }}
-    {%- else -%}
-      No README found.
-     {%- endif -%}
-
-  </nav>
 
 
 
