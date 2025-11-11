@@ -1,4 +1,8 @@
-{%- assign readme_page = site.pages | where: "title", "README_docs" | first -%}
+{% for p in site.pages %}
+  {% if p.title == "README_docs" %}
+    {%- assign readme_page = p -%}
+  {% endif %}
+{% endfor %}
 
   <nav class="sidebar-content">
 <br/> Title = {{readme_page.title}}
