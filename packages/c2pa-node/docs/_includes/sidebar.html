@@ -1,9 +1,10 @@
-{%- assign readme_page = site.pages | where: "name", "README.md" | first -%}
+{%- assign sidebar = site.pages | where: "name", "globals.md" | first -%}
 
-{%- if readme_page -%}
-  <nav class="sidebar-content">
-    {{ readme_page.content | strip | markdownify }}
-  </nav>
-{%- endif -%}
+<nav class="sidebar-content">
+  {{ sidebar.content | strip | markdownify }}
+</nav>
+
+
+
 
 
