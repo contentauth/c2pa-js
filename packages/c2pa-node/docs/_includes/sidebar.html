@@ -1,10 +1,13 @@
-{%- assign readme_page = site.pages | where: "title", "README" | first -%}
+{%- assign readme_page = site.pages | where: "title", "README_docs" | first -%}
 
-{%- if readme_page -%}
   <nav class="sidebar-content">
-    {{ readme_page.content | strip | markdownify }}
+    {%- if readme_page.title == "README_docs" -%}    
+      {{ readme_page.content | strip | markdownify }}
+    {%- else -%}
+      No README found.
+    {%- endif -%}
   </nav>
-{%- endif -%}
+
 
 
 
