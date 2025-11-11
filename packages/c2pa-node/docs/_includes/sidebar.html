@@ -1,11 +1,19 @@
 {%- assign readme_page = site.pages | where: "title", "README_docs" | first -%}
 
   <nav class="sidebar-content">
+<br/> Title = {{readme_page.title}}
+<br/> Name = {{readme_page.name}}
+<br/> Path = {{readme_page.path}}
+<br/> URL = {{readme_page.url}}
+<br/> Relative URL = {{readme_page.relative_url}}
+<br/> Absolute URL = {{readme_page.absolute_url}}
+
     {%- if readme_page.title == "README_docs" -%}    
       {{ readme_page.content | strip | markdownify }}
     {%- else -%}
       No README found.
-    {%- endif -%}
+     {%- endif -%}
+
   </nav>
 
 
