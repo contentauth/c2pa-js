@@ -1,5 +1,11 @@
 # @contentauth/c2pa-types
 
+## 0.4.0
+
+### Minor Changes
+
+- 88b9dfd: Export Actions interface
+
 ## 0.3.1
 
 ### Patch Changes
