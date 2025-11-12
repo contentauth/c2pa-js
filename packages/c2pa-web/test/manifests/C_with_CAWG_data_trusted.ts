@@ -7,6 +7,7 @@
  * it.
  */
 
+import { ManifestStore } from '@contentauth/c2pa-types';
 import { expect } from 'vitest';
 
 export default {
@@ -176,4 +177,4 @@ export default {
     },
   },
   validation_state: 'Trusted',
-};
+} satisfies ManifestStore;

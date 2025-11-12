@@ -7,6 +7,8 @@
  * it.
  */
 
+import { merge } from 'ts-deepmerge';
+
 /**
  * Settings used to configure the SDK's behavior.
  */
@@ -20,6 +22,7 @@ export interface Settings {
    */
   cawgTrust?: CawgTrustSettings;
   verify?: VerifySettings;
+  builder?: BuilderSettings;
 }
 
 export interface TrustSettings {
@@ -55,15 +58,27 @@ export interface VerifySettings {
   verifyTrust?: boolean;
 }
 
+export interface BuilderSettings {
+  generateC2paArchive: boolean;
+}
+
 type SettingsObjectType = {
   [k: string]: string | boolean | SettingsObjectType;
+};
+
+const DEFAULT_SETTINGS: Settings = {
+  builder: {
+    generateC2paArchive: true,
+  },
 };
 
 /**
  * Converts a settings object to a JSON string of the structure expected by c2pa-rs.
  */
 export function settingsToWasmJson(settings: Settings) {
-  return JSON.stringify(snakeCaseify(settings as SettingsObjectType));
+  const finalSettings: Settings = merge(DEFAULT_SETTINGS, settings);
+
+  return JSON.stringify(snakeCaseify(finalSettings as SettingsObjectType));
 }
 
 function snakeCaseify(object: SettingsObjectType): SettingsObjectType {

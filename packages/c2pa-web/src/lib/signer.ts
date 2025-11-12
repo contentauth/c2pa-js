@@ -17,7 +17,10 @@ export type SigningAlg =
   | 'ed25519';
 
 export interface Signer {
-  sign: (data: Uint8Array, reserveSize: number) => Promise<Uint8Array>;
+  sign: (
+    data: Uint8Array<ArrayBuffer>,
+    reserveSize: number
+  ) => Promise<Uint8Array<ArrayBuffer>>;
   reserveSize: () => Promise<number>;
   alg: SigningAlg;
 }

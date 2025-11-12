@@ -71,7 +71,7 @@ export interface Reader {
   /**
    * @returns The asset's full {@link ManifestStore}.
    *
-   * @deprecated Use {@link Reader.manifestStore} instead.
+   * @deprecated Use {@link manifestStore} instead.
    */
   json: () => Promise<any>;
 
@@ -79,7 +79,7 @@ export interface Reader {
    * Resolves a URI reference to a binary object (e.g. a thumbnail) in the resource store.
    *
    * @param uri URI of the binary object to resolve.
-   * @returns An array buffer of the resource's bytes.
+   * @returns A Uint8Array of the resource's bytes.
    *
    * @example Retrieving a thumbnail from the resource store:
    * ```
@@ -90,7 +90,7 @@ export interface Reader {
    * const thumbnailBuffer = await reader.resourceToBuffer(activeManifest.thumbnail!.identifier);
    * ```
    */
-  resourceToBuffer: (uri: string) => Promise<ArrayBuffer>;
+  resourceToBuffer: (uri: string) => Promise<Uint8Array>;
 
   /**
    * Dispose of this Reader, freeing the memory it occupied and preventing further use. Call this whenever the Reader is no longer needed.
@@ -201,7 +201,7 @@ function createReader(
 
       return manifestStore;
     },
-    async resourceToBuffer(uri: string): Promise<ArrayBuffer> {
+    async resourceToBuffer(uri: string): Promise<Uint8Array<ArrayBuffer>> {
       const buffer = await tx.reader_resourceToBuffer(id, uri);
       return buffer;
     },

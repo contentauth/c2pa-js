@@ -7,6 +7,7 @@
  * it.
  */
 
+import { ManifestStore } from '@contentauth/c2pa-types';
 import { expect } from 'vitest';
 
 export default {
@@ -92,6 +93,18 @@ export default {
       label: 'urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d',
     },
   },
+  validation_status: [
+    {
+      code: 'signingCredential.untrusted',
+      url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
+      explanation: 'signing certificate untrusted',
+    },
+    {
+      code: 'signingCredential.untrusted',
+      explanation: 'signing certificate untrusted',
+      url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity',
+    },
+  ],
   validation_results: {
     activeManifest: {
       success: [
@@ -103,13 +116,13 @@ export default {
         },
         {
           code: 'claimSignature.insideValidity',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
           explanation: 'claim signature valid',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
         },
         {
           code: 'claimSignature.validated',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
           explanation: 'claim signature valid',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
         },
         {
           code: 'assertion.hashedURI.match',
@@ -160,8 +173,19 @@ export default {
             'timestamp cert untrusted: DigiCert SHA256 RSA4096 Timestamp Responder 2025 1',
         },
       ],
-      failure: [],
+      failure: [
+        {
+          code: 'signingCredential.untrusted',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
+          explanation: 'signing certificate untrusted',
+        },
+        {
+          code: 'signingCredential.untrusted',
+          explanation: 'signing certificate untrusted',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity',
+        },
+      ],
     },
   },
-  validation_state: 'Valid',
-};
+  validation_state: 'Invalid',
+} satisfies ManifestStore;

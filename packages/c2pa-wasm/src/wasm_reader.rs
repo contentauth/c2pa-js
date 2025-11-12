@@ -7,14 +7,14 @@
 
 use std::io::{Cursor, Read, Seek};
 
-use c2pa::{identity::validator::CawgValidator, Reader};
-use js_sys::{ArrayBuffer, Error as JsError, Uint8Array};
+use c2pa::Reader;
+use js_sys::{Error as JsError, Uint8Array};
 use serde::Serialize;
 use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 use web_sys::Blob;
 
-use crate::{error::WasmError, stream::BlobStream};
+use crate::{error::WasmError, stream::BlobStream, utils::cursor_to_u8array};
 
 /// Wraps a `c2pa::Reader`.
 #[wasm_bindgen]
@@ -40,7 +40,7 @@ impl WasmReader {
             .await
             .map_err(WasmError::from)?;
 
-        Ok(WasmReader::from_reader(reader).await?)
+        Ok(WasmReader::from_reader(reader).await)
     }
 
     /// Attempts to create a new `WasmReader` from an asset format, a `Blob` of the bytes of the initial segment, and a fragment `Blob`.
@@ -63,15 +63,15 @@ impl WasmReader {
     ) -> Result<WasmReader, JsError> {
         let reader = Reader::from_fragment_async(format, init, fragment)
             .await
-            .map_err(WasmError::other)?;
+            .map_err(WasmError::from)?;
 
-        Ok(WasmReader::from_reader(reader).await?)
+        Ok(WasmReader::from_reader(reader).await)
     }
 
-    async fn from_reader(mut reader: Reader) -> Result<WasmReader, JsError> {
+    async fn from_reader(reader: Reader) -> WasmReader {
         let serializer = Serializer::new().serialize_maps_as_objects(true);
 
-        Ok(WasmReader { reader, serializer })
+        WasmReader { reader, serializer }
     }
 
     /// Returns the label of the asset's active manifest.
@@ -109,18 +109,16 @@ impl WasmReader {
         self.reader.json()
     }
 
-    /// Accepts a URI reference to a binary object in the resource store and returns a `js_sys::ArrayBuffer` containing the resource's bytes.
+    /// Accepts a URI reference to a binary object in the resource store and returns a `js_sys::Uint8Array` containing the resource's bytes.
     #[wasm_bindgen(js_name = resourceToBuffer)]
-    pub fn resource_to_buffer(&self, uri: &str) -> Result<ArrayBuffer, JsError> {
-        let mut data = Vec::new();
+    pub fn resource_to_buffer(&self, uri: &str) -> Result<Uint8Array, JsError> {
+        let data = Vec::new();
         let mut stream = Cursor::new(data);
+
         self.reader
             .resource_to_stream(uri, &mut stream)
             .map_err(WasmError::from)?;
-        data = stream.into_inner();
-        let data_len: u32 = data.len().try_into().map_err(WasmError::other)?;
-        let uint8array = Uint8Array::new_with_length(data_len);
-        uint8array.copy_from(&data);
-        Ok(uint8array.buffer())
+
+        cursor_to_u8array(stream)
     }
 }

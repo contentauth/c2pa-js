@@ -40,20 +40,17 @@ fn get_vec_u8_from_blob(blob: &Blob, offset: usize, len: usize) -> IoResult<Vec<
     let slice = blob
         .slice_with_f64_and_f64(offset as f64, end as f64)
         .map_err(|err| {
-            IoError::new(
-                IoErrorKind::Other,
-                format!("Failed to create slice from blob. Details: {:?}", err),
-            )
+            IoError::other(format!(
+                "Failed to create slice from blob. Details: {:?}",
+                err
+            ))
         })?;
 
     let reader_sync = FileReaderSync::new().map_err(|err| {
-        IoError::new(
-            IoErrorKind::Other,
-            format!(
-                "Failed to create FileReaderSync on blob slice. Details: {:?}",
-                err
-            ),
-        )
+        IoError::other(format!(
+            "Failed to create FileReaderSync on blob slice. Details: {:?}",
+            err
+        ))
     })?;
 
     let slice_u8array = reader_sync

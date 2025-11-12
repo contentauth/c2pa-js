@@ -65,3 +65,5 @@ export type {
   BuilderIntent,
   DigitalSourceType,
 } from './types/Builder.js';
+
+export type { Action } from './types/Action.js';

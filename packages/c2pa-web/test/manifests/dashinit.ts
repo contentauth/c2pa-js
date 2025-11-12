@@ -7,6 +7,7 @@
  * it.
  */
 
+import { ManifestStore } from '@contentauth/c2pa-types';
 import { expect } from 'vitest';
 
 export default {
@@ -109,4 +110,4 @@ export default {
       url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.signature',
     },
   ],
-};
+} satisfies ManifestStore;

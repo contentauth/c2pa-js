@@ -6,6 +6,9 @@ members = [
 	'packages/c2pa-types',
 ]
 
+[workspace.dependencies]
+c2pa = { version = "0.71.0", features = ["pdf", "rust_native_crypto", "fetch_remote_manifests", "json_schema", "http_reqwest"], default-features = false }
+
 [profile.release]
 opt-level = "s"
 lto = true

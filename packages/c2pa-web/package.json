@@ -43,14 +43,16 @@
   "dependencies": {
     "@contentauth/c2pa-types": "workspace:*",
     "@contentauth/c2pa-wasm": "workspace:*",
-    "highgain": "^0.1.0"
+    "highgain": "^0.1.0",
+    "ts-deepmerge": "^7.0.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
     "@types/ssri": "^7.1.5",
     "@vitest/browser": "^3.2.4",
+    "rimraf": "^6.0.1",
     "typedoc": "^0.28.12",
-    "rimraf": "^6.0.1"
+    "vite-tsconfig-paths": "^5.1.4"
   },
   "scripts": {
     "build:docs": "typedoc src/index.ts src/inline.ts"

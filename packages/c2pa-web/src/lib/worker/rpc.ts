@@ -7,6 +7,7 @@
  * it.
  */
 
+import { Action, BuilderIntent } from '@contentauth/c2pa-types';
 import { ManifestAndAssetBytes } from '../builder.js';
 import type { SerializableSigningPayload } from '../signer.js';
 
@@ -29,13 +30,20 @@ const { createTx, rx } = channel<{
   reader_manifestStore: (readerId: number) => any;
   reader_activeManifest: (readerId: number) => any;
   reader_json: (readerId: number) => string;
-  reader_resourceToBuffer: (readerId: number, uri: string) => ArrayBuffer;
+  reader_resourceToBuffer: (
+    readerId: number,
+    uri: string
+  ) => Uint8Array<ArrayBuffer>;
   reader_free: (readerId: number) => void;
 
   // Builder construction methods
+  builder_new: () => number;
   builder_fromJson: (json: string) => number;
+  builder_fromArchive: (archive: Blob) => number;
 
   // Builder methods
+  builder_setIntent: (builderId: number, intent: BuilderIntent) => void;
+  builder_addAction: (builderId: number, action: Action) => void;
   builder_setRemoteUrl: (builderId: number, url: string) => void;
   builder_setNoEmbed: (builderId: number, noEmbed: boolean) => void;
   builder_setThumbnailFromBlob: (
@@ -55,13 +63,14 @@ const { createTx, rx } = channel<{
     blob: Blob
   ) => void;
   builder_getDefinition: (builderId: number) => any;
+  builder_toArchive: (builderId: number) => Uint8Array<ArrayBuffer>;
   builder_sign: (
     builderId: number,
     requestId: number,
     payload: SerializableSigningPayload,
     format: string,
     blob: Blob
-  ) => Promise<Uint8Array>;
+  ) => Promise<Uint8Array<ArrayBuffer>>;
   builder_signAndGetManifestBytes: (
     builderId: number,
     requestId: number,
@@ -76,9 +85,9 @@ const { createTx, rx } = channel<{
 const { createTx: createWorkerTx, rx: workerRx } = channel<{
   sign: (
     requestId: number,
-    bytes: Uint8Array,
+    bytes: Uint8Array<ArrayBuffer>,
     reserveSize: number
-  ) => Promise<Uint8Array>;
+  ) => Promise<Uint8Array<ArrayBuffer>>;
 }>('worker');
 
 export { createTx, rx, createWorkerTx, workerRx };

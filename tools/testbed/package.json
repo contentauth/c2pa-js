@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@contentauth/c2pa-web": "workspace:*",
-    "@contentauth/c2pa-wasm": "workspace:*"
+    "@contentauth/c2pa-wasm": "workspace:*",
+    "@contentauth/c2pa-web": "workspace:*"
+  },
+  "devDependencies": {
+    "vite-plugin-mkcert": "^1.17.9"
   }
 }

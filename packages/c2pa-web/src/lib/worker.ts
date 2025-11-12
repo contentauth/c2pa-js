@@ -26,7 +26,7 @@ const tx = createWorkerTx();
 
 rx({
   async initWorker(module, settings) {
-    initSync(module);
+    initSync({ module });
     if (settings) {
       loadSettings(settings);
     }
@@ -59,18 +59,36 @@ rx({
   },
   reader_resourceToBuffer(readerId, uri) {
     const reader = readerMap.get(readerId);
-    const buffer = reader.resourceToBuffer(uri);
-    return transfer(buffer);
+    const buffer = reader.resourceToBuffer(uri) as Uint8Array<ArrayBuffer>;
+    return transfer(buffer, buffer.buffer);
   },
   reader_free(readerId) {
     const reader = readerMap.get(readerId);
     reader.free();
     readerMap.remove(readerId);
   },
+  builder_new() {
+    const builder = WasmBuilder.new();
+    const builderId = builderMap.add(builder);
+    return builderId;
+  },
   builder_fromJson(json: string) {
     const builder = WasmBuilder.fromJson(json);
     const builderId = builderMap.add(builder);
     return builderId;
+  },
+  builder_fromArchive(archive) {
+    const builder = WasmBuilder.fromArchive(archive);
+    const builderId = builderMap.add(builder);
+    return builderId;
+  },
+  builder_setIntent(builderId, intent) {
+    const builder = builderMap.get(builderId);
+    builder.setIntent(intent);
+  },
+  builder_addAction(builderId, action) {
+    const builder = builderMap.get(builderId);
+    builder.addAction(action);
   },
   builder_setRemoteUrl(builderId, url) {
     const builder = builderMap.get(builderId);
@@ -96,9 +114,14 @@ rx({
     const builder = builderMap.get(builderId);
     return builder.getDefinition();
   },
+  builder_toArchive(builderId) {
+    const builder = builderMap.get(builderId);
+    const archive = builder.toArchive() as Uint8Array<ArrayBuffer>;
+    return transfer(archive, archive.buffer);
+  },
   async builder_sign(builderId, requestId, payload, format, blob) {
     const builder = builderMap.get(builderId);
-    const signedBytes = await builder.sign(
+    const signedBytes = (await builder.sign(
       {
         reserveSize: payload.reserveSize,
         alg: payload.alg,
@@ -113,7 +136,7 @@ rx({
       },
       format,
       blob
-    );
+    )) as Uint8Array<ArrayBuffer>;
     return transfer(signedBytes, signedBytes.buffer);
   },
   async builder_signAndGetManifestBytes(

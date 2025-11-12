@@ -28,6 +28,9 @@ pub mod wasm_signer;
 /// Provides a JS interface for loading c2pa-rs settings.
 pub mod settings;
 
+/// Internal utility functions
+pub(crate) mod utils;
+
 /// Called when the WASM binary is initialized.
 #[wasm_bindgen(start)]
 pub fn run() {

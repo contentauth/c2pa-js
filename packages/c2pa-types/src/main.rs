@@ -7,7 +7,7 @@
 
 use std::{fs, path::Path};
 
-use c2pa::{Builder, Ingredient, ManifestDefinition, Reader};
+use c2pa::{Builder, Ingredient, ManifestDefinition, Reader, assertions::Action};
 use schemars::{Schema, schema_for};
 
 fn main() {
@@ -19,14 +19,15 @@ fn main() {
 
     fs::create_dir_all(output_dir).expect("Could not create schema directory");
 
-    write_schema(&schema_for!(Reader), &"ManifestStore", output_dir);
+    write_schema(&schema_for!(Reader), "ManifestStore", output_dir);
     write_schema(
         &schema_for!(ManifestDefinition),
-        &"ManifestDefinition",
+        "ManifestDefinition",
         output_dir,
     );
-    write_schema(&schema_for!(Ingredient), &"Ingredient", output_dir);
-    write_schema(&schema_for!(Builder), &"Builder", output_dir)
+    write_schema(&schema_for!(Ingredient), "Ingredient", output_dir);
+    write_schema(&schema_for!(Builder), "Builder", output_dir);
+    write_schema(&schema_for!(Action), "Action", output_dir);
 }
 
 fn write_schema(schema: &Schema, name: &str, output_dir: &Path) {

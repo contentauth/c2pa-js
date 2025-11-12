@@ -7,8 +7,8 @@
 
 use std::io::Cursor;
 
-use c2pa::Builder;
-use js_sys::{Error as JsError, JsString};
+use c2pa::{assertions::Action, Builder, BuilderIntent};
+use js_sys::{Error as JsError, JsString, Uint8Array};
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
@@ -17,6 +17,7 @@ use web_sys::Blob;
 use crate::{
     error::WasmError,
     stream::BlobStream,
+    utils::cursor_to_u8array,
     wasm_signer::{SignerDefinition, WasmSigner},
 };
 
@@ -38,16 +39,58 @@ struct AssetAndManifestBytes {
 
 #[wasm_bindgen]
 impl WasmBuilder {
+    /// Creates a new `WasmBuilder` with a minimal manifest definition.
+    #[wasm_bindgen(js_name = new)]
+    pub fn new() -> Result<WasmBuilder, JsError> {
+        let builder = Builder::new();
+
+        Ok(WasmBuilder::from_builder(builder))
+    }
+
+    /// Sets the builder "intent."
+    #[wasm_bindgen(js_name = setIntent)]
+    pub fn set_intent(&mut self, json_intent: JsValue) -> Result<(), JsError> {
+        let intent: BuilderIntent =
+            serde_wasm_bindgen::from_value(json_intent).map_err(WasmError::from)?;
+        self.builder.set_intent(intent);
+
+        Ok(())
+    }
+
     /// Attempts to create a new `WasmBuilder` from a JSON ManifestDefinition string.
     #[wasm_bindgen(js_name = fromJson)]
     pub fn from_json(json: &str) -> Result<WasmBuilder, JsError> {
-        let serializer = Serializer::new().serialize_maps_as_objects(true);
         let builder = Builder::from_json(json).map_err(WasmError::from)?;
 
-        Ok(WasmBuilder {
+        Ok(WasmBuilder::from_builder(builder))
+    }
+
+    /// Attempts to create a new `WasmBuilder` from a builder archive.
+    #[wasm_bindgen(js_name = fromArchive)]
+    pub fn from_archive(archive: &Blob) -> Result<WasmBuilder, JsError> {
+        let stream = BlobStream::new(archive);
+        let builder = Builder::from_archive(stream).map_err(WasmError::from)?;
+
+        Ok(WasmBuilder::from_builder(builder))
+    }
+
+    fn from_builder(builder: Builder) -> WasmBuilder {
+        let serializer = Serializer::new().serialize_maps_as_objects(true);
+
+        WasmBuilder {
             builder,
             serializer,
-        })
+        }
+    }
+
+    /// Add an action to the manifest's `Actions` assertion.
+    #[wasm_bindgen(js_name = addAction)]
+    pub fn add_action(&mut self, action: JsValue) -> Result<(), JsError> {
+        let action: Action = serde_wasm_bindgen::from_value(action).map_err(WasmError::from)?;
+
+        self.builder.add_action(action).map_err(WasmError::from)?;
+
+        Ok(())
     }
 
     /// Sets the remote_url for a remote manifest.
@@ -119,6 +162,19 @@ impl WasmBuilder {
             .into();
 
         Ok(manifest_definition)
+    }
+
+    /// "Save" a builder to an archive.
+    #[wasm_bindgen(js_name = toArchive)]
+    pub fn to_archive(&mut self) -> Result<Uint8Array, JsError> {
+        let data = Vec::new();
+        let mut stream = Cursor::new(data);
+
+        self.builder
+            .to_archive(&mut stream)
+            .map_err(WasmError::from)?;
+
+        cursor_to_u8array(stream)
     }
 
     /// Sign an asset using the provided SignerDefinition, format, and source Blob.
