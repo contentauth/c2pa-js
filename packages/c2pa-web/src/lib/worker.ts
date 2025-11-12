@@ -57,9 +57,9 @@ rx({
     const reader = readerMap.get(readerId);
     return reader.json();
   },
-  reader_resourceToBuffer(readerId, uri) {
+  reader_resourceToBytes(readerId, uri) {
     const reader = readerMap.get(readerId);
-    const buffer = reader.resourceToBuffer(uri) as Uint8Array<ArrayBuffer>;
+    const buffer = reader.resourceToBytes(uri) as Uint8Array<ArrayBuffer>;
     return transfer(buffer, buffer.buffer);
   },
   reader_free(readerId) {

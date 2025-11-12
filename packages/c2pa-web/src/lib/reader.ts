@@ -87,10 +87,10 @@ export interface Reader {
    *
    * const activeManifest = await reader.activeManifest();
    *
-   * const thumbnailBuffer = await reader.resourceToBuffer(activeManifest.thumbnail!.identifier);
+   * const thumbnailBuffer = await reader.resourceToBytes(activeManifest.thumbnail!.identifier);
    * ```
    */
-  resourceToBuffer: (uri: string) => Promise<Uint8Array>;
+  resourceToBytes: (uri: string) => Promise<Uint8Array>;
 
   /**
    * Dispose of this Reader, freeing the memory it occupied and preventing further use. Call this whenever the Reader is no longer needed.
@@ -201,8 +201,8 @@ function createReader(
 
       return manifestStore;
     },
-    async resourceToBuffer(uri: string): Promise<Uint8Array<ArrayBuffer>> {
-      const buffer = await tx.reader_resourceToBuffer(id, uri);
+    async resourceToBytes(uri: string): Promise<Uint8Array<ArrayBuffer>> {
+      const buffer = await tx.reader_resourceToBytes(id, uri);
       return buffer;
     },
     async free(): Promise<void> {

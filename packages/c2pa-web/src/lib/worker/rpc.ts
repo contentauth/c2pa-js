@@ -30,7 +30,7 @@ const { createTx, rx } = channel<{
   reader_manifestStore: (readerId: number) => any;
   reader_activeManifest: (readerId: number) => any;
   reader_json: (readerId: number) => string;
-  reader_resourceToBuffer: (
+  reader_resourceToBytes: (
     readerId: number,
     uri: string
   ) => Uint8Array<ArrayBuffer>;

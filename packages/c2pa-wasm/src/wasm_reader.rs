@@ -110,8 +110,8 @@ impl WasmReader {
     }
 
     /// Accepts a URI reference to a binary object in the resource store and returns a `js_sys::Uint8Array` containing the resource's bytes.
-    #[wasm_bindgen(js_name = resourceToBuffer)]
-    pub fn resource_to_buffer(&self, uri: &str) -> Result<Uint8Array, JsError> {
+    #[wasm_bindgen(js_name = resourceToBytes)]
+    pub fn resource_to_bytes(&self, uri: &str) -> Result<Uint8Array, JsError> {
         let data = Vec::new();
         let mut stream = Cursor::new(data);
 

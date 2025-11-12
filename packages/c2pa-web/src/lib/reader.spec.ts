@@ -96,7 +96,7 @@ describe('reader', () => {
   });
 
   describe('methods', () => {
-    describe('resourceToBuffer', () => {
+    describe('resourceToBytes', () => {
       test('should return an embedded thumbnail', async ({ c2pa }) => {
         const blob = await getBlobForAsset(C_with_CAWG_data);
 
@@ -110,7 +110,7 @@ describe('reader', () => {
           manifestStore.manifests[manifestStore.active_manifest!];
         const thumbnailId = activeManifest.thumbnail!.identifier;
 
-        const thumbnailBuffer = await reader!.resourceToBuffer(thumbnailId);
+        const thumbnailBuffer = await reader!.resourceToBytes(thumbnailId);
         const thumbnail = new Uint8Array(thumbnailBuffer!);
 
         const thumbnailBlob = await getBlobForAsset(C_with_CAWG_data_thumbnail);

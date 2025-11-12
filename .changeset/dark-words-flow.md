@@ -11,4 +11,7 @@ Added builder.new()
 Added builder.toArchve() & builder.fromArchive()
 Added builder.setIntent()
 Added builder.addAction()
+Made binary data return types consistent: Uint8Array<ArrayBuffer>
+Renamed reader.resourceToBuffer() to reader.resourceToBytes()
 Fixed bug where reader.fromBlobFragment would throw an error when reading an initial fragment without c2pa data
+
