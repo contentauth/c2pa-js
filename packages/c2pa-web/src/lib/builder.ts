@@ -9,12 +9,23 @@
 
 import { WorkerManager } from './worker/workerManager.js';
 import { getSerializablePayload, type Signer } from './signer.js';
-import type { Ingredient, ManifestDefinition } from '@contentauth/c2pa-types';
+import type {
+  Action,
+  BuilderIntent,
+  Ingredient,
+  ManifestDefinition,
+} from '@contentauth/c2pa-types';
 
 /**
  * Functions that permit the creation of Builder objects.
  */
 export interface BuilderFactory {
+  /**
+   * Create a {@link Builder} with a minimal manifest definition as its initial state.
+   * @returns A {@link Builder} object.
+   */
+  new: () => Promise<Builder>;
+
   /**
    * Create a {@link Builder} from a {@link ManifestDefinition}.
    *
@@ -22,12 +33,36 @@ export interface BuilderFactory {
    * @returns A {@link Builder} object.
    */
   fromDefinition: (definition: ManifestDefinition) => Promise<Builder>;
+
+  /**
+   * Create a {@link Builder} from a builder archive (created from {@link Builder.toArchive}).
+   *
+   * @param archive Builder archive as a blob.
+   * @returns A {@link Builder} object.
+   */
+  fromArchive: (archive: Blob) => Promise<Builder>;
 }
 
 /**
  * Exposes methods for building C2PA manifests and signing assets.
  */
 export interface Builder {
+  /**
+   * Sets the builder "intent."
+   *
+   * @todo Additional documentation coming soon.
+   *
+   * @param intent
+   */
+  setIntent: (intent: BuilderIntent) => Promise<void>;
+
+  /**
+   * Add an action to the manifest's actions assertion.
+   *
+   * @param action Object representing the action to be added.
+   */
+  addAction: (action: Action) => Promise<void>;
+
   /**
    * Sets the remote URL for a remote manifest. The manifest is expected to be available at this location.
    *
@@ -65,7 +100,8 @@ export interface Builder {
   ) => Promise<void>;
 
   /**
-   *  Add a resource to the builder's resource store with an ID and blob of the resource's bytes.
+   * Add a resource to the builder's resource store with an ID and blob of the resource's bytes.
+   *
    * @param resourceId ID associated with the resource being added.
    * @param blob Blob of the resource's bytes.
    */
@@ -79,11 +115,23 @@ export interface Builder {
   getDefinition: () => Promise<ManifestDefinition>;
 
   /**
+   * Save the builder into .c2pa format.
+   * This "archive" can be added to as an ingredient with {@link addIngredientFromBlob}
+   *
+   * @returns A builder archive in application/c2pa format.
+   */
+  toArchive: () => Promise<Uint8Array<ArrayBuffer>>;
+
+  /**
    * Sign an asset.
    *
    * @todo Docs coming soon
    */
-  sign: (signer: Signer, format: string, blob: Blob) => Promise<Uint8Array>;
+  sign: (
+    signer: Signer,
+    format: string,
+    blob: Blob
+  ) => Promise<Uint8Array<ArrayBuffer>>;
 
   /**
    * Sign an asset and get both the signed asset bytes and the manifest bytes.
@@ -103,8 +151,8 @@ export interface Builder {
 }
 
 export interface ManifestAndAssetBytes {
-  manifest: Uint8Array;
-  asset: Uint8Array;
+  manifest: Uint8Array<ArrayBuffer>;
+  asset: Uint8Array<ArrayBuffer>;
 }
 
 /**
@@ -119,9 +167,31 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
   });
 
   return {
+    async new() {
+      const builderId = await tx.builder_new();
+
+      const builder = createBuilder(worker, builderId, () => {
+        registry.unregister(builder);
+      });
+      registry.register(builder, builderId, builder);
+
+      return builder;
+    },
+
     async fromDefinition(definition: ManifestDefinition) {
       const json = JSON.stringify(definition);
       const builderId = await tx.builder_fromJson(json);
+
+      const builder = createBuilder(worker, builderId, () => {
+        registry.unregister(builder);
+      });
+      registry.register(builder, builderId, builder);
+
+      return builder;
+    },
+
+    async fromArchive(archive: Blob) {
+      const builderId = await tx.builder_fromArchive(archive);
 
       const builder = createBuilder(worker, builderId, () => {
         registry.unregister(builder);
@@ -141,6 +211,14 @@ function createBuilder(
   const { tx } = worker;
 
   return {
+    async setIntent(intent) {
+      await tx.builder_setIntent(id, intent);
+    },
+
+    async addAction(action) {
+      await tx.builder_addAction(id, action);
+    },
+
     async setRemoteUrl(url) {
       await tx.builder_setRemoteUrl(id, url);
     },
@@ -172,11 +250,17 @@ function createBuilder(
       return definition;
     },
 
+    async toArchive(): Promise<Uint8Array<ArrayBuffer>> {
+      const archive = await tx.builder_toArchive(id);
+
+      return archive;
+    },
+
     async sign(
       signer: Signer,
       format: string,
       blob: Blob
-    ): Promise<Uint8Array> {
+    ): Promise<Uint8Array<ArrayBuffer>> {
       const payload = await getSerializablePayload(signer);
       const requestId = worker.registerSignReceiver(signer.sign);
 

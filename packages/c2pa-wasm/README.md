@@ -33,7 +33,7 @@ rustup target add wasm32-unknown-unknown
 [Documentation](https://wasm-bindgen.github.io/wasm-bindgen/reference/cli)
 
 ```sh
-cargo install wasm-bindgen-cli@0.2.103
+cargo install wasm-bindgen-cli@0.2.105
 ```
 
 #### wasm-pack

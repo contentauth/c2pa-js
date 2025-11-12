@@ -11,6 +11,9 @@
     "lib": ["DOM", "ES2023"],
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    "paths": {
+      "test/*": ["./test/*"]
+    }
   },
   "include": [
     "vite.config.ts",

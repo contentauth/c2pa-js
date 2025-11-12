@@ -60,20 +60,18 @@ export interface Reader {
 
   /**
    * @returns The asset's full {@link ManifestStore} containing all its manifests, validation statuses, and the URI of the active manifest.
-   *
-   * NOTE: At the moment, the manifest store returned by this method will not include decoded CAWG data. Use Reader.json() if CAWG is a requirement.
    */
   manifestStore: () => Promise<ManifestStore>;
 
   /**
    * @returns The asset's active {@link Manifest}.
-   *
-   * NOTE: At the moment, the manifest returned by this method will not include decoded CAWG data. Use Reader.json() if CAWG is a requirement.
    */
   activeManifest: () => Promise<Manifest>;
 
   /**
-   * @returns The asset's full {@link Manifest} store, including decoded CAWG data.
+   * @returns The asset's full {@link ManifestStore}.
+   *
+   * @deprecated Use {@link manifestStore} instead.
    */
   json: () => Promise<any>;
 
@@ -81,7 +79,7 @@ export interface Reader {
    * Resolves a URI reference to a binary object (e.g. a thumbnail) in the resource store.
    *
    * @param uri URI of the binary object to resolve.
-   * @returns An array buffer of the resource's bytes.
+   * @returns A Uint8Array of the resource's bytes.
    *
    * @example Retrieving a thumbnail from the resource store:
    * ```
@@ -89,10 +87,10 @@ export interface Reader {
    *
    * const activeManifest = await reader.activeManifest();
    *
-   * const thumbnailBuffer = await reader.resourceToBuffer(activeManifest.thumbnail!.identifier);
+   * const thumbnailBuffer = await reader.resourceToBytes(activeManifest.thumbnail!.identifier);
    * ```
    */
-  resourceToBuffer: (uri: string) => Promise<ArrayBuffer>;
+  resourceToBytes: (uri: string) => Promise<Uint8Array>;
 
   /**
    * Dispose of this Reader, freeing the memory it occupied and preventing further use. Call this whenever the Reader is no longer needed.
@@ -203,8 +201,8 @@ function createReader(
 
       return manifestStore;
     },
-    async resourceToBuffer(uri: string): Promise<ArrayBuffer> {
-      const buffer = await tx.reader_resourceToBuffer(id, uri);
+    async resourceToBytes(uri: string): Promise<Uint8Array<ArrayBuffer>> {
+      const buffer = await tx.reader_resourceToBytes(id, uri);
       return buffer;
     },
     async free(): Promise<void> {

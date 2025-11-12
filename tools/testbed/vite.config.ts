@@ -8,6 +8,7 @@
  */
 
 import { defineConfig } from 'vite';
+import mkcert from 'vite-plugin-mkcert';
 
 export default defineConfig(() => ({
   root: __dirname,
@@ -20,7 +21,7 @@ export default defineConfig(() => ({
     port: 4300,
     host: 'localhost',
   },
-  plugins: [],
+  plugins: [mkcert()],
   build: {
     outDir: './dist',
     emptyOutDir: true,

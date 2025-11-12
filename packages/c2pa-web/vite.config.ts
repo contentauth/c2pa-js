@@ -8,10 +8,12 @@
  */
 import { defineConfig, Plugin } from 'vite';
 import dts from 'vite-plugin-dts';
+import tsconfigPaths from 'vite-tsconfig-paths';
 import { workspaceRoot } from '@nx/devkit';
 import { rimrafSync } from 'rimraf';
 import { join } from 'path';
 import { mkdirSync, linkSync } from 'fs';
+
 export default defineConfig(() => ({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/packages/web',
@@ -20,6 +22,7 @@ export default defineConfig(() => ({
       entryRoot: 'src',
       tsconfigPath: join(__dirname, 'tsconfig.lib.json'),
     }),
+    tsconfigPaths(),
     createBuildPlugin(),
   ],
   // Configuration for building your library.
@@ -43,7 +46,7 @@ export default defineConfig(() => ({
     },
     rollupOptions: {
       // External packages that should not be bundled into your library.
-      external: ['@contentauth/c2pa-types', 'highgain'],
+      external: ['@contentauth/c2pa-types', 'highgain', 'ts-deepmerge'],
     },
   },
   server: {

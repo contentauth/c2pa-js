@@ -19,7 +19,7 @@ use wasm_bindgen_futures::JsFuture;
 #[wasm_bindgen(typescript_custom_section)]
 const SIGNER_DEFINITION: &'static str = r#"
 interface SignerDefinition {
-    sign: (bytes: Uint8Array) => Promise<Uint8Array>;
+    sign: (bytes: Uint8Array<ArrayBuffer>) => Promise<Uint8Array<ArrayBuffer>>;
     reserveSize: number;
     alg: string;
 "#;

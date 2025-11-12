@@ -7,10 +7,11 @@
  * it.
  */
 
-import { describe, expect, test } from 'vitest';
+import { test, describe, expect } from 'test/methods.js';
 import { createC2pa } from './inline.js';
-import C_with_CAWG_data from '../test/fixtures/assets/C_with_CAWG_data.jpg';
-import C_with_CAWG_data_ManifestStore from '../test/fixtures/manifests/C_with_CAWG_data.js';
+import { getBlobForAsset } from 'test/utils.js';
+import C_with_CAWG_data from 'test/assets/C_with_CAWG_data.jpg';
+import C_with_CAWG_data_untrusted_ManifestStore from 'test/manifests/C_with_CAWG_data_untrusted.js';
 
 describe('inline entrypoint', () => {
   test('should work', async () => {
@@ -22,17 +23,10 @@ describe('inline entrypoint', () => {
 
     expect(reader).not.toBeNull();
 
-    const manifestStore = await reader!.json();
+    const manifestStore = await reader!.manifestStore();
 
-    expect(manifestStore).toEqual(C_with_CAWG_data_ManifestStore);
+    expect(manifestStore).toEqual(C_with_CAWG_data_untrusted_ManifestStore);
 
-    await reader!.free();
+    c2pa.dispose();
   });
 });
-
-async function getBlobForAsset(src: string): Promise<Blob> {
-  const response = await fetch(src);
-  const blob = await response.blob();
-
-  return blob;
-}

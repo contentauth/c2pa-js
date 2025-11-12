@@ -7,12 +7,32 @@
  * it.
  */
 
+import { ManifestStore } from '@contentauth/c2pa-types';
+import { expect } from 'vitest';
+
 export default {
   active_manifest: 'urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d',
   manifests: {
     'urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d': {
+      claim_generator_info: [
+        {
+          name: 'c2pa cawg test',
+          version: '0.58.0',
+          'org.contentauth.c2pa_rs': '0.58.0',
+        },
+      ],
+      title: 'C_with_CAWG_data.jpg',
+      instance_id: 'xmp:iid:855872d9-5358-497e-b7b4-afca591277e1',
+      thumbnail: {
+        format: 'image/jpeg',
+        identifier:
+          'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.thumbnail.claim',
+      },
+      ingredients: [],
       assertions: [
         {
+          label: 'c2pa.actions.v2',
+          created: true,
           data: {
             actions: [
               {
@@ -23,22 +43,22 @@ export default {
             ],
             allActionsIncluded: true,
           },
-          label: 'c2pa.actions.v2',
         },
         {
+          label: 'cawg.training-mining',
           data: {
             entries: {
-              'cawg.ai_generative_training': {
+              'cawg.ai_inference': {
                 use: 'notAllowed',
               },
-              'cawg.ai_inference': {
+              'cawg.ai_generative_training': {
                 use: 'notAllowed',
               },
             },
           },
-          label: 'cawg.training-mining',
         },
         {
+          label: 'cawg.identity',
           data: {
             signature_info: {
               alg: 'Ed25519',
@@ -50,119 +70,82 @@ export default {
             signer_payload: {
               referenced_assertions: [
                 {
-                  hash: 'rBBgURB+/0Bc2Uk3+blNpYTGQTxOwzXQ2xhjA3gsqI4=',
                   url: 'self#jumbf=c2pa.assertions/cawg.training-mining',
+                  hash: expect.any(Array),
                 },
                 {
-                  hash: 'sASozh9KFSkW+cyMI0Pw5KYoD2qn7MkUEq9jUUhe/sM=',
                   url: 'self#jumbf=c2pa.assertions/c2pa.hash.data',
+                  hash: expect.any(Array),
                 },
               ],
               sig_type: 'cawg.x509.cose',
             },
           },
-          label: 'cawg.identity',
         },
       ],
-      claim_generator_info: [
-        {
-          name: 'c2pa cawg test',
-          'org.contentauth.c2pa_rs': '0.58.0',
-          version: '0.58.0',
-        },
-      ],
-      ingredients: [],
-      instance_id: 'xmp:iid:855872d9-5358-497e-b7b4-afca591277e1',
-      label: 'urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d',
       signature_info: {
         alg: 'Es256',
+        issuer: 'C2PA Test Signing Cert',
         cert_serial_number: '640229841392226413189608867977836244731148734950',
         common_name: 'C2PA Signer',
-        issuer: 'C2PA Test Signing Cert',
         time: '2025-07-29T23:13:49+00:00',
       },
-      thumbnail: {
-        format: 'image/jpeg',
-        identifier:
-          'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.thumbnail.claim',
-      },
-      title: 'C_with_CAWG_data.jpg',
+      label: 'urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d',
     },
   },
   validation_results: {
     activeManifest: {
-      failure: [],
-      informational: [
-        {
-          code: 'timeStamp.untrusted',
-          explanation:
-            'timestamp cert untrusted: DigiCert SHA256 RSA4096 Timestamp Responder 2025 1',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
-        },
-      ],
       success: [
         {
           code: 'timeStamp.validated',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
           explanation:
             'timestamp message digest matched: DigiCert SHA256 RSA4096 Timestamp Responder 2025 1',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
-        },
-        {
-          code: 'signingCredential.trusted',
-          explanation:
-            'signing certificate trusted, found in System trust anchors',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
         },
         {
           code: 'claimSignature.insideValidity',
-          explanation: 'claim signature valid',
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
+          explanation: 'claim signature valid',
         },
         {
           code: 'claimSignature.validated',
-          explanation: 'claim signature valid',
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
+          explanation: 'claim signature valid',
         },
         {
           code: 'assertion.hashedURI.match',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.thumbnail.claim',
           explanation:
             'hashed uri matched: self#jumbf=c2pa.assertions/c2pa.thumbnail.claim',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.thumbnail.claim',
         },
         {
           code: 'assertion.hashedURI.match',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.actions.v2',
           explanation:
             'hashed uri matched: self#jumbf=c2pa.assertions/c2pa.actions.v2',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.actions.v2',
         },
         {
           code: 'assertion.hashedURI.match',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.hash.data',
           explanation:
             'hashed uri matched: self#jumbf=c2pa.assertions/c2pa.hash.data',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.hash.data',
         },
         {
           code: 'assertion.hashedURI.match',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.training-mining',
           explanation:
             'hashed uri matched: self#jumbf=c2pa.assertions/cawg.training-mining',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.training-mining',
         },
         {
           code: 'assertion.hashedURI.match',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity',
           explanation:
             'hashed uri matched: self#jumbf=c2pa.assertions/cawg.identity',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity',
         },
         {
           code: 'assertion.dataHash.match',
-          explanation: 'data hash valid',
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.hash.data',
-        },
-        {
-          code: 'signingCredential.trusted',
-          explanation:
-            'signing certificate trusted, found in System trust anchors',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity',
+          explanation: 'data hash valid',
         },
         {
           code: 'cawg.identity.well-formed',
@@ -170,7 +153,16 @@ export default {
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity',
         },
       ],
+      informational: [
+        {
+          code: 'timeStamp.untrusted',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
+          explanation:
+            'timestamp cert untrusted: DigiCert SHA256 RSA4096 Timestamp Responder 2025 1',
+        },
+      ],
+      failure: [],
     },
   },
-  validation_state: 'Trusted',
-};
+  validation_state: 'Valid',
+} satisfies ManifestStore;

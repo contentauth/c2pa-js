@@ -11,8 +11,6 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-wasm-bindgen = "0.2.103"
-
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
@@ -22,7 +20,7 @@ console_log = { version = "1.0.0", features = ["color"] }
 log = "0.4.27"
 js-sys = "0.3.77"
 wasm-bindgen-futures = "0.4.50"
-c2pa = { version = "0.66.0", features = ["pdf", "rust_native_crypto", "fetch_remote_manifests"], default-features = false }
+c2pa = { workspace = true }
 async-trait = "0.1.88"
 thiserror = "2.0.12"
 serde-wasm-bindgen = "0.6.5"
@@ -36,6 +34,10 @@ features = [
 	'Blob',
 	'FileReaderSync',
 ]
+
+[dependencies.wasm-bindgen]
+# Keep this version in sync with the version installed in .github/actions/install-dependencies
+version = "0.2.105" 
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.50"
