@@ -50,6 +50,7 @@
     "@playwright/test": "^1.55.0",
     "@types/ssri": "^7.1.5",
     "@vitest/browser": "^3.2.4",
+    "msw": "^2.12.1",
     "rimraf": "^6.0.1",
     "typedoc": "^0.28.12",
     "vite-tsconfig-paths": "^5.1.4"

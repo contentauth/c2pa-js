@@ -47,7 +47,9 @@ export async function createC2pa(config: Config): Promise<C2paSdk> {
   const wasm =
     typeof wasmSrc === 'string' ? await fetchAndCompileWasm(wasmSrc) : wasmSrc;
 
-  const settingsString = settings ? settingsToWasmJson(settings) : undefined;
+  const settingsString = settings
+    ? await settingsToWasmJson(settings)
+    : undefined;
   const worker = await createWorkerManager({ wasm, settingsString });
 
   return {
