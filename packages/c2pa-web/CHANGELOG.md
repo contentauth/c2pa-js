@@ -1,5 +1,11 @@
 # @contentauth/c2pa-web
 
+## 0.5.1
+
+### Patch Changes
+
+- cc6049c: Allow trust resources to be specified as a URL in settings, to be fetched on SDK initialization.
+
 ## 0.5.0
 
 ### Minor Changes
