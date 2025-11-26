@@ -356,7 +356,6 @@ pub fn load_verify_config(mut cx: FunctionContext) -> JsResult<JsUndefined> {
                 "verify_timestamp_trust": true,
                 "ocsp_fetch": false,
                 "remote_manifest_fetch": true,
-                "check_ingredient_trust": true,
                 "skip_ingredient_conflict_resolution": false,
                 "strict_v1_validation": false
             },
@@ -398,9 +397,6 @@ pub fn load_verify_config(mut cx: FunctionContext) -> JsResult<JsUndefined> {
             }
             if let Some(val) = verify_config.get("remote_manifest_fetch") {
                 obj.insert("remote_manifest_fetch".to_string(), val.clone());
-            }
-            if let Some(val) = verify_config.get("check_ingredient_trust") {
-                obj.insert("check_ingredient_trust".to_string(), val.clone());
             }
             if let Some(val) = verify_config.get("skip_ingredient_conflict_resolution") {
                 obj.insert(
@@ -457,7 +453,6 @@ pub fn get_verify_config(mut cx: FunctionContext) -> JsResult<JsValue> {
                 "verify_timestamp_trust": true,
                 "ocsp_fetch": false,
                 "remote_manifest_fetch": true,
-                "check_ingredient_trust": true,
                 "skip_ingredient_conflict_resolution": false,
                 "strict_v1_validation": false
             });
@@ -480,7 +475,6 @@ pub fn get_verify_config(mut cx: FunctionContext) -> JsResult<JsValue> {
                 "verify_timestamp_trust": true,
                 "ocsp_fetch": false,
                 "remote_manifest_fetch": true,
-                "check_ingredient_trust": true,
                 "skip_ingredient_conflict_resolution": false,
                 "strict_v1_validation": false
             });

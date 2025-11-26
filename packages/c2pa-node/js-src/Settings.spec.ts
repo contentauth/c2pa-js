@@ -228,7 +228,6 @@ describe("Settings", () => {
         verifyTimestampTrust: true,
         ocspFetch: false,
         remoteManifestFetch: true, // This should not affect trust settings
-        checkIngredientTrust: false,
         skipIngredientConflictResolution: true,
         strictV1Validation: false,
       };
@@ -252,7 +251,6 @@ describe("Settings", () => {
       expect(finalSettings.verify.verify_timestamp_trust).toBe(true);
       expect(finalSettings.verify.ocsp_fetch).toBe(false);
       expect(finalSettings.verify.remote_manifest_fetch).toBe(true);
-      expect(finalSettings.verify.check_ingredient_trust).toBe(false);
       expect(finalSettings.verify.skip_ingredient_conflict_resolution).toBe(
         true,
       );
@@ -276,7 +274,6 @@ describe("Settings", () => {
         verifyTimestampTrust: false,
         ocspFetch: true,
         remoteManifestFetch: false,
-        checkIngredientTrust: true,
         skipIngredientConflictResolution: false,
         strictV1Validation: true,
       };
@@ -308,7 +305,6 @@ describe("Settings", () => {
         verifyTimestampTrust: true,
         ocspFetch: false,
         remoteManifestFetch: true,
-        checkIngredientTrust: false,
         skipIngredientConflictResolution: true,
         strictV1Validation: false,
       };
@@ -323,7 +319,6 @@ describe("Settings", () => {
       expect(finalSettings.verify.verify_timestamp_trust).toBe(true);
       expect(finalSettings.verify.ocsp_fetch).toBe(false);
       expect(finalSettings.verify.remote_manifest_fetch).toBe(true);
-      expect(finalSettings.verify.check_ingredient_trust).toBe(false);
       expect(finalSettings.verify.skip_ingredient_conflict_resolution).toBe(
         true,
       );
@@ -339,7 +334,6 @@ describe("Settings", () => {
         verifyTimestampTrust: true,
         ocspFetch: false,
         remoteManifestFetch: true,
-        checkIngredientTrust: true,
         skipIngredientConflictResolution: false,
         strictV1Validation: false,
       };
@@ -367,7 +361,6 @@ describe("Settings", () => {
       expect(patchedRetrievedConfig.verifyTimestampTrust).toBe(true); // unchanged
       expect(patchedRetrievedConfig.ocspFetch).toBe(true); // patched
       expect(patchedRetrievedConfig.remoteManifestFetch).toBe(true); // unchanged
-      expect(patchedRetrievedConfig.checkIngredientTrust).toBe(true); // unchanged
       expect(patchedRetrievedConfig.skipIngredientConflictResolution).toBe(
         false,
       ); // unchanged
@@ -383,7 +376,6 @@ describe("Settings", () => {
       expect(settings.verify.verify_after_sign).toBe(true);
       expect(settings.verify.verify_timestamp_trust).toBe(true);
       expect(settings.verify.remote_manifest_fetch).toBe(true);
-      expect(settings.verify.check_ingredient_trust).toBe(true);
       expect(settings.verify.skip_ingredient_conflict_resolution).toBe(false);
     });
   });

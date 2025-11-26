@@ -38,6 +38,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         "builderSetRemoteUrl",
         neon_builder::NeonBuilder::set_remote_url,
     )?;
+    cx.export_function("builderAddAction", neon_builder::NeonBuilder::add_action)?;
     cx.export_function(
         "builderAddAssertion",
         neon_builder::NeonBuilder::add_assertion,
@@ -49,6 +50,10 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function(
         "builderAddIngredient",
         neon_builder::NeonBuilder::add_ingredient,
+    )?;
+    cx.export_function(
+        "builderAddIngredientFromAsset",
+        neon_builder::NeonBuilder::add_ingredient_from_asset,
     )?;
     cx.export_function("builderToArchive", neon_builder::NeonBuilder::to_archive)?;
     cx.export_function(

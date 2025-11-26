@@ -70,6 +70,10 @@ export class Builder implements BuilderInterface {
     getNeonBinary().builderSetRemoteUrl.call(this.builder, remoteUrl);
   }
 
+  addAction(actionJson: string): void {
+    return getNeonBinary().builderAddAction.call(this.builder, actionJson);
+  }
+
   addAssertion(
     label: string,
     assertion: unknown,
@@ -89,13 +93,20 @@ export class Builder implements BuilderInterface {
 
   async addIngredient(
     ingredientJson: string,
-    ingredient: SourceAsset,
+    ingredient?: SourceAsset,
   ): Promise<void> {
-    return getNeonBinary().builderAddIngredient.call(
-      this.builder,
-      ingredientJson,
-      ingredient,
-    );
+    if (ingredient) {
+      return getNeonBinary().builderAddIngredientFromAsset.call(
+        this.builder,
+        ingredientJson,
+        ingredient,
+      );
+    } else {
+      return getNeonBinary().builderAddIngredient.call(
+        this.builder,
+        ingredientJson,
+      );
+    }
   }
 
   async toArchive(asset: DestinationAsset): Promise<void> {

@@ -40,10 +40,10 @@ export class Reader implements ReaderInterface {
     return getNeonBinary().readerResourceToAsset.call(this.reader, uri, asset);
   }
 
-  static async fromAsset(asset: SourceAsset): Promise<Reader> {
-    const reader: NeonReaderHandle =
+  static async fromAsset(asset: SourceAsset): Promise<Reader | null> {
+    const reader: NeonReaderHandle | null =
       await getNeonBinary().readerFromAsset(asset);
-    return new Reader(reader);
+    return reader ? new Reader(reader) : null;
   }
 
   static async fromManifestDataAndAsset(

@@ -12,7 +12,7 @@
 // each license.
 
 use crate::asset::parse_asset;
-use crate::error::{as_js_error, Error};
+use crate::error::{as_js_error, Error, Result};
 use crate::runtime::runtime;
 use c2pa::Reader;
 use neon::prelude::*;
@@ -43,7 +43,7 @@ impl NeonReader {
 
         let (deferred, promise) = cx.promise();
         rt.spawn(async move {
-            let result = async {
+            let result: Result<Reader> = async {
                 let format = source
                     .mime_type()
                     .ok_or_else(|| {
@@ -64,7 +64,19 @@ impl NeonReader {
                     });
                     Ok(boxed_reader.upcast::<JsValue>())
                 }
-                Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
+                Err(err) => {
+                    // Check if the error is due to missing C2PA data
+                    // Return null instead of throwing for these specific cases
+                    match &err {
+                        Error::C2pa(c2pa_err) => match c2pa_err {
+                            c2pa::Error::JumbfNotFound => {
+                                Ok(cx.null().upcast::<JsValue>())
+                            }
+                            _ => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
+                        },
+                        _ => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
+                    }
+                }
             });
         });
         Ok(promise)

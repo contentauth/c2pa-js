@@ -11,6 +11,7 @@
 // specific language governing permissions and limitations under
 // each license.
 
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 // import native objects from built native code
 import type { ManifestStore } from "@contentauth/c2pa-types";
 import path from "path";
@@ -121,8 +122,9 @@ describe("Reader", () => {
       buffer,
       mimeType: "jpeg",
     });
+    expect(reader).not.toBeNull();
 
-    const json = reader.json();
+    const json = reader!.json();
     expect(json.manifests).toEqual(manifestStore.manifests);
     expect(json.active_manifest).toEqual(manifestStore.active_manifest);
   });
@@ -131,9 +133,17 @@ describe("Reader", () => {
     const reader = await Reader.fromAsset({
       path: "./tests/fixtures/CA.jpg",
     });
-    const json = reader.json();
+    expect(reader).not.toBeNull();
+    const json = reader!.json();
     expect(json.manifests).toEqual(manifestStore.manifests);
     expect(json.active_manifest).toEqual(manifestStore.active_manifest);
+  });
+
+  it("should return null for a file without C2PA data", async () => {
+    const reader = await Reader.fromAsset({
+      path: "./tests/fixtures/A.jpg",
+    });
+    expect(reader).toBeNull();
   });
 
   it("should read from manifest data and buffer", async () => {
@@ -145,7 +155,7 @@ describe("Reader", () => {
       buffer,
       mimeType: "jpeg",
     });
-    const json = reader.json();
+    const json = reader!.json();
     expect(json.manifests).toEqual(manifestStore.manifests);
     expect(json.active_manifest).toEqual(manifestStore.active_manifest);
   });
@@ -157,7 +167,7 @@ describe("Reader", () => {
     const reader = await Reader.fromManifestDataAndAsset(manifestData, {
       path: "./tests/fixtures/CA.jpg",
     });
-    const json = reader.json();
+    const json = reader!.json();
     expect(json.manifests).toEqual(manifestStore.manifests);
   });
 
@@ -167,11 +177,12 @@ describe("Reader", () => {
     const reader = await Reader.fromAsset({
       path: "./tests/fixtures/CA.jpg",
     });
-    const activeManifest = reader.getActive();
+    expect(reader).not.toBeNull();
+    const activeManifest = reader!.getActive();
     const uri = activeManifest?.thumbnail?.identifier;
 
     if (uri !== undefined) {
-      bytesWritten = await reader.resourceToAsset(uri, {
+      bytesWritten = await reader!.resourceToAsset(uri, {
         path: outputPath,
       });
     }
@@ -183,18 +194,20 @@ describe("Reader", () => {
     const reader = await Reader.fromAsset({
       path: "./tests/fixtures/CA.jpg",
     });
-    expect(reader.remoteUrl()).toEqual("");
-    expect(reader.isEmbedded()).toBeTruthy();
+    expect(reader).not.toBeNull();
+    expect(reader!.remoteUrl()).toEqual("");
+    expect(reader!.isEmbedded()).toBeTruthy();
   });
 
   it("should report manifest is not embedded", async () => {
     const reader = await Reader.fromAsset({
       path: "./tests/fixtures/cloud.jpg",
     });
-    expect(reader.remoteUrl()).toEqual(
+    expect(reader).not.toBeNull();
+    expect(reader!.remoteUrl()).toEqual(
       "https://cai-manifests.adobe.com/manifests/adobe-urn-uuid-5f37e182-3687-462e-a7fb-573462780391",
     );
-    expect(reader.isEmbedded()).toBeFalsy();
+    expect(reader!.isEmbedded()).toBeFalsy();
   });
 
   it("should decode CAWG identity assertion with signature_info", async () => {
@@ -203,8 +216,9 @@ describe("Reader", () => {
     const reader = await Reader.fromAsset({
       path: "./tests/fixtures/C_with_CAWG_data.jpg",
     });
+    expect(reader).not.toBeNull();
 
-    const activeManifest = reader.getActive();
+    const activeManifest = reader!.getActive();
 
     // Find the cawg.identity assertion
     const cawgIdentityAssertion = activeManifest?.assertions?.find(
@@ -238,5 +252,21 @@ describe("Reader", () => {
       url: "self#jumbf=c2pa.assertions/c2pa.hash.data",
       hash: "sASozh9KFSkW+cyMI0Pw5KYoD2qn7MkUEq9jUUhe/sM=",
     });
+  });
+
+  it("should return null when reading an asset without C2PA metadata", async () => {
+    // Create a simple JPEG without C2PA data
+    const simpleJpeg = Buffer.from([
+      0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+      0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xff, 0xd9,
+    ]);
+
+    const asset = {
+      buffer: simpleJpeg,
+      mimeType: "image/jpeg",
+    };
+
+    const reader = await Reader.fromAsset(asset);
+    expect(reader).toBeNull();
   });
 });

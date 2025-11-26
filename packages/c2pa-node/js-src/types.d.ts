@@ -176,17 +176,37 @@ export interface HashedUri {
 }
 
 export interface BuilderInterface {
+  /** An intent lets the API know what kind of manifest to create.
+   * Intents are `Create`, `Edit`, or `Update`.
+   * This allows the API to check that you are doing the right thing.
+   * It can also do things for you, like add parent ingredients from the source asset
+   * and automatically add required c2pa.created or c2pa.opened actions.
+   * Create requires a `DigitalSourceType`. It is used for assets without a parent ingredient.
+   * Edit requires a parent ingredient and is used for most assets that are being edited.
+   * Update is a special case with many restrictions but is more compact than Edit.
+   * @param intent The intent of the manifest
+   */
   setIntent(intent: BuilderIntent): void;
+
   /**
    * Set the no embed flag of the manifest
    * @param noEmbed The no embed flag of the manifest
    */
   setNoEmbed(noEmbed: boolean): void;
+
   /**
    * Set the remote URL of the manifest
    * @param url The remote URL of the manifest
    */
   setRemoteUrl(url: string): void;
+
+  /**
+   * Add a single action to the manifest.
+   * This is a convenience method for adding an action to the `Actions` assertion.
+   * @param actionJson The JSON representation of the action
+   */
+  addAction(actionJson: string): void;
+
   /**
    * Add CBOR assertion to the builder
    * @param label The label of the assertion
@@ -206,11 +226,14 @@ export interface BuilderInterface {
   addResource(uri: string, resource: SourceAsset): Promise<void>;
 
   /**
-   * Add an ingredient from a buffer or file
+   * Add an ingredient to the manifest
    * @param ingredientJson The JSON representation of the ingredient
-   * @param ingredient The source and format of the ingredient
+   * @param ingredient Optional source asset (buffer or file) for the ingredient
    */
-  addIngredient(ingredientJson: string, ingredient: SourceAsset): Promise<void>;
+  addIngredient(
+    ingredientJson: string,
+    ingredient?: SourceAsset,
+  ): Promise<void>;
 
   /**
    * Convert the Builder into a archive formatted buffer or file
@@ -403,8 +426,6 @@ export interface VerifyConfig {
   ocspFetch: boolean;
   /** Whether to fetch remote manifests */
   remoteManifestFetch: boolean;
-  /** Whether to check ingredient trust */
-  checkIngredientTrust: boolean;
   /** Whether to skip ingredient conflict resolution */
   skipIngredientConflictResolution: boolean;
   /** Whether to use strict v1 validation */

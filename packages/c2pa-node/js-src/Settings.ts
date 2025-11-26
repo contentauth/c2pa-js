@@ -169,7 +169,6 @@ export function loadVerifyConfig(verifyConfig: VerifyConfig): void {
     verify_timestamp_trust: verifyConfig.verifyTimestampTrust,
     ocsp_fetch: verifyConfig.ocspFetch,
     remote_manifest_fetch: verifyConfig.remoteManifestFetch,
-    check_ingredient_trust: verifyConfig.checkIngredientTrust,
     skip_ingredient_conflict_resolution:
       verifyConfig.skipIngredientConflictResolution,
     strict_v1_validation: verifyConfig.strictV1Validation,
@@ -203,7 +202,6 @@ export function getVerifyConfig(): VerifyConfig {
     verifyTimestampTrust: parsed.verify_timestamp_trust,
     ocspFetch: parsed.ocsp_fetch,
     remoteManifestFetch: parsed.remote_manifest_fetch,
-    checkIngredientTrust: parsed.check_ingredient_trust,
     skipIngredientConflictResolution:
       parsed.skip_ingredient_conflict_resolution,
     strictV1Validation: parsed.strict_v1_validation,

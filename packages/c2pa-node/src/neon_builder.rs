@@ -16,7 +16,7 @@ use crate::error::{as_js_error, Error};
 use crate::neon_identity_assertion_signer::NeonIdentityAssertionSigner;
 use crate::neon_signer::{CallbackSignerConfig, NeonCallbackSigner, NeonLocalSigner};
 use crate::runtime::runtime;
-use c2pa::{Builder, BuilderIntent};
+use c2pa::{Builder, BuilderIntent, Ingredient};
 use neon::prelude::*;
 use neon_serde4;
 use serde::{Deserialize, Serialize};
@@ -88,6 +88,19 @@ impl NeonBuilder {
         Ok(cx.undefined())
     }
 
+    pub fn add_action(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<Self>>()?;
+        let action_json = cx.argument::<JsString>(0)?.value(&mut cx);
+        let action: c2pa::assertions::Action = serde_json::from_str(&action_json)
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+        builder
+            .add_action(action)
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+        Ok(cx.undefined())
+    }
+
     pub fn add_assertion(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let rt = runtime();
         let this = cx.this::<JsBox<Self>>()?;
@@ -148,8 +161,19 @@ impl NeonBuilder {
 
         Ok(promise)
     }
+    pub fn add_ingredient(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<Self>>()?;
+        let ingredient_json = cx.argument::<JsString>(0)?.value(&mut cx);
+        let ingredient = Ingredient::from_json(&ingredient_json)
+            .or_else(|err| cx.throw_error(err.to_string()))?;
 
-    pub fn add_ingredient(mut cx: FunctionContext) -> JsResult<JsPromise> {
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+        builder.add_ingredient(ingredient);
+        Ok(cx.undefined())
+    }
+
+    pub fn add_ingredient_from_asset(mut cx: FunctionContext) -> JsResult<JsPromise> {
         let rt = runtime();
         let this = cx.this::<JsBox<Self>>()?;
         let ingredient_json = cx.argument::<JsString>(0)?.value(&mut cx);
