@@ -1,5 +1,15 @@
 # @contentauth/c2pa-node
 
+## 0.4.0
+
+### Minor Changes
+
+- 9e2fb33: Integrate postCawgValidate into Reader.
+
+### Patch Changes
+
+- 8a87c6d: Make asset in Builder.addIngredient optional. Add Builder.addAction
+
 ## 0.3.0
 
 ### Minor Changes
