@@ -5,7 +5,7 @@
   "version": "0.4.0",
   "types": "index.d.ts",
   "scripts": {
-    "test": "echo \"No tests to run\" && exit 0",
+    "test": "tsc",
     "build": "pnpm clean && json2ts -i schemas/ -o types/",
     "clean": "rimraf types"
   },

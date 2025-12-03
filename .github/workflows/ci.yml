@@ -27,4 +27,4 @@ jobs:
         working-directory: ./packages/c2pa-web
         run: pnpm exec playwright install --with-deps
 
-      - run: pnpm exec nx run-many -t lint test build --projects=tag:lib
+      - run: pnpm ci:check
