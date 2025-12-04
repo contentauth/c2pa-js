@@ -1,5 +1,11 @@
 # @contentauth/c2pa-types
 
+## 0.4.1
+
+### Patch Changes
+
+- 3fac969: Fix missing types
+
 ## 0.4.0
 
 ### Minor Changes
