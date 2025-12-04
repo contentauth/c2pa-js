@@ -1,0 +1,10 @@
+{
+  "include": ["index.d.ts"],
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noEmit": true
+  }
+}
