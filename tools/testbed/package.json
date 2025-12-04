@@ -8,6 +8,7 @@
     "@contentauth/c2pa-web": "workspace:*"
   },
   "devDependencies": {
+    "vite": "^6.3.5",
     "vite-plugin-mkcert": "^1.17.9"
   }
 }
