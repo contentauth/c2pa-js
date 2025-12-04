@@ -1,3 +1,4 @@
 {
-  "includeVersion": true
+  "includeVersion": true,
+  "entryPoints": ["pkg/c2pa.d.ts"]
 }
