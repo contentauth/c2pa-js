@@ -76,7 +76,15 @@ impl WasmSigner {
         let cert_chain = parse_cert_chain(certs_value)?;
 
         let direct_cose_value = Reflect::get(&js_value, &"directCoseHandling".into())?;
-        let direct_cose_handling = direct_cose_value.as_bool().unwrap_or(false);
+        let direct_cose_handling = match direct_cose_value.as_bool() {
+            Some(value) => value,
+            None if direct_cose_value.is_undefined() || direct_cose_value.is_null() => true,
+            None => {
+                return Err(JsError::new(
+                    "SignerDefinition.directCoseHandling must be a boolean",
+                ))
+            }
+        };
 
         let tsa_url_value = Reflect::get(&js_value, &"tsaUrl".into())?;
         let tsa_url = parse_optional_string(tsa_url_value)?;
