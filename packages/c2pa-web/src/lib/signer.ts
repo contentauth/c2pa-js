@@ -57,9 +57,9 @@ export async function getSerializablePayload(
   const certificates = signer.certs
     ? await signer.certs()
     : undefined;
-  const directCoseHandling = signer.directCoseHandling
+  const directCoseHandling = typeof signer.directCoseHandling === 'boolean'
     ? signer.directCoseHandling
-    : false;
+    : undefined;
   const tsaUrl = signer.timeAuthorityUrl
     ? signer.timeAuthorityUrl
     : undefined;
