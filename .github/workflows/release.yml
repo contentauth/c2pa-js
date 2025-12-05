@@ -11,6 +11,8 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-24.04
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,8 +27,41 @@ jobs:
         uses: changesets/action@v1
         with:
           publish: pnpm ci:release
-          commit: "chore: version packages"
-          title: "chore: version packages"
+          commit: 'chore: version packages'
+          title: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-docs:
+    needs: [release]
+    if: ${{ needs.release.outputs.published }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - uses: ./.github/actions/install-dependencies
+        name: Install dependencies
+
+      - run: pnpm exec nx run-many -t build --projects=tag:lib
+
+      - name: Build docs
+        run: pnpm ci:docs
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'docs/'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
