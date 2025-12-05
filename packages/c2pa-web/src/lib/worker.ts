@@ -121,19 +121,25 @@ rx({
   },
   async builder_sign(builderId, requestId, payload, format, blob) {
     const builder = builderMap.get(builderId);
-    const signedBytes = (await builder.sign(
-      {
-        reserveSize: payload.reserveSize,
-        alg: payload.alg,
-        sign: async (bytes) => {
-          const result = await tx.sign(
-            requestId,
-            transfer(bytes, bytes.buffer),
-            payload.reserveSize
-          );
-          return result;
-        },
+    const signerDefinition = {
+      reserveSize: payload.reserveSize,
+      alg: payload.alg,
+      certs: payload.certs,
+      directCoseHandling: payload.directCoseHandling,
+      tsaUrl: payload.tsaUrl,
+      tsaHeaders: payload.tsaHeaders,
+      tsaBody: payload.tsaBody,
+      sign: async (bytes: Uint8Array<ArrayBuffer>) => {
+        const result = await tx.sign(
+          requestId,
+          transfer(bytes, bytes.buffer),
+          payload.reserveSize
+        );
+        return result;
       },
+    } satisfies Parameters<typeof builder.sign>[0];
+    const signedBytes = (await builder.sign(
+      signerDefinition,
       format,
       blob
     )) as Uint8Array<ArrayBuffer>;
@@ -147,19 +153,25 @@ rx({
     blob
   ) {
     const builder = builderMap.get(builderId);
-    const { manifest, asset } = await builder.signAndGetManifestBytes(
-      {
-        reserveSize: payload.reserveSize,
-        alg: payload.alg,
-        sign: async (bytes) => {
-          const result = await tx.sign(
-            requestId,
-            transfer(bytes, bytes.buffer),
-            payload.reserveSize
-          );
-          return result;
-        },
+    const signerDefinition = {
+      reserveSize: payload.reserveSize,
+      alg: payload.alg,
+      certs: payload.certs,
+      directCoseHandling: payload.directCoseHandling,
+      tsaUrl: payload.tsaUrl,
+      tsaHeaders: payload.tsaHeaders,
+      tsaBody: payload.tsaBody,
+      sign: async (bytes: Uint8Array<ArrayBuffer>) => {
+        const result = await tx.sign(
+          requestId,
+          transfer(bytes, bytes.buffer),
+          payload.reserveSize
+        );
+        return result;
       },
+    } satisfies Parameters<typeof builder.signAndGetManifestBytes>[0];
+    const { manifest, asset } = await builder.signAndGetManifestBytes(
+      signerDefinition,
       format,
       blob
     );

@@ -372,11 +372,13 @@ name = "c2pa-wasm"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "base64 0.22.1",
  "c2pa",
  "console_error_panic_hook",
  "console_log",
  "js-sys",
  "log",
+ "pem",
  "serde",
  "serde-wasm-bindgen",
  "serde_bytes",
