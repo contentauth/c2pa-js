@@ -106,13 +106,16 @@ importers:
         version: 3.2.4(@types/node@18.16.9)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(jiti@2.4.2)(jsdom@22.1.0)(msw@2.12.1(@types/node@18.16.9)(typescript@5.8.3))(terser@5.43.1)(yaml@2.8.1)
 
   packages/c2pa-types:
-    dependencies:
+    devDependencies:
+      '@types/fs-extra':
+        specifier: ^11.0.4
+        version: 11.0.4
       json-schema-to-typescript:
         specifier: ^15.0.4
         version: 15.0.4
-      rimraf:
-        specifier: ^6.0.1
-        version: 6.0.1
+      zx:
+        specifier: ^8.8.0
+        version: 8.8.0
 
   packages/c2pa-wasm: {}
 

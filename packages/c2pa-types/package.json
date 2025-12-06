@@ -2,19 +2,19 @@
   "name": "@contentauth/c2pa-types",
   "description": "Typescript types generated from c2pa-rs",
   "type": "module",
-  "version": "0.4.1",
-  "types": "index.d.ts",
+  "version": "0.4.0",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "tsc",
-    "build": "pnpm clean && json2ts -i schemas/ -o types/",
-    "clean": "rimraf types"
+    "test": "echo \"No tests to run\" && exit 0",
+    "build": "zx build.ts"
   },
   "files": [
-    "index.d.ts",
-    "types/**/*"
+    "dist/**/*",
+    "!**/*.tsbuildinfo"
   ],
-  "dependencies": {
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
     "json-schema-to-typescript": "^15.0.4",
-    "rimraf": "^6.0.1"
+    "zx": "^8.8.0"
   }
 }

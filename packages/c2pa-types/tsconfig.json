@@ -1,10 +1,7 @@
 {
-  "include": ["index.d.ts"],
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "strict": true,
-    "lib": ["ES2023"],
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "noEmit": true
-  }
+    "outDir": "dist"
+  },
+  "include": ["index.ts", "types/**/*.ts"]
 }

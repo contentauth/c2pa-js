@@ -14,10 +14,7 @@
       ],
       "executor": "nx:run-commands",
       "options": {
-        "commands": [
-          "cargo run",
-          "pnpm build"
-        ],
+        "commands": ["pnpm build"],
         "parallel": false,
         "cwd": "{projectRoot}"
       }

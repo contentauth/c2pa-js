@@ -7,6 +7,9 @@
  * it.
  */
 
+// All imports in this file are based on automatically-generated output from schemars + json-schema-to-typescript.
+// Run the build command to generate the necessary underlying types.
+
 import type { Reader } from './types/ManifestStore.js';
 
 // Renames the auto-generated "Reader" type to the more appropriate "ManifestStore"
