@@ -11,9 +11,13 @@ export type * from './lib/c2pa.js';
 
 export type { Reader, ReaderFactory } from './lib/reader.js';
 
-export type { Builder, BuilderFactory } from './lib/builder.js';
+export type {
+  Builder,
+  BuilderFactory,
+  ManifestAndAssetBytes,
+} from './lib/builder.js';
 
-export type { Signer } from './lib/signer.js';
+export type { Signer, SigningAlg } from './lib/signer.js';
 
 export {
   isSupportedReaderFormat,
@@ -24,6 +28,8 @@ export type {
   Settings,
   VerifySettings,
   TrustSettings,
+  BuilderSettings,
+  CawgTrustSettings,
 } from './lib/settings.js';
 
 // Re-export types from c2pa-types for convenience.

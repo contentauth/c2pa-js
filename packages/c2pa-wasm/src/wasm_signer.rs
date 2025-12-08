@@ -22,6 +22,7 @@ interface SignerDefinition {
     sign: (bytes: Uint8Array<ArrayBuffer>) => Promise<Uint8Array<ArrayBuffer>>;
     reserveSize: number;
     alg: string;
+}
 "#;
 
 #[wasm_bindgen]

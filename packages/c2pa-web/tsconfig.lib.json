@@ -11,7 +11,11 @@
     "lib": ["DOM", "ES2023"]
   },
   "include": ["src/**/*.ts"],
-  "references": [],
+  "references": [
+    {
+      "path": "../c2pa-types"
+    }
+  ],
   "exclude": [
     "vite.config.ts",
     "vite.config.mts",
