@@ -4,6 +4,12 @@
 
 ### Patch Changes
 
+- c7ec557: Update c2pa-types build output
+
+## 0.4.1
+
+### Patch Changes
+
 - 3fac969: Fix missing types
 
 ## 0.4.0

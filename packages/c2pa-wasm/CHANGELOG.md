@@ -1,5 +1,11 @@
 # @contentauth/c2pa-wasm
 
+## 0.4.1
+
+### Patch Changes
+
+- c7ec557: Fix broken type
+
 ## 0.4.0
 
 ### Minor Changes
