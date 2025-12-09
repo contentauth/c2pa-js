@@ -8,7 +8,7 @@
  */
 
 import { test, describe, expect } from 'test/methods.js';
-import { ManifestDefinition } from '@contentauth/c2pa-types';
+import { ManifestDefinition, Ingredient } from '@contentauth/c2pa-types';
 
 describe('builder', () => {
   describe('creation', () => {
@@ -119,6 +119,64 @@ describe('builder', () => {
             format: '',
             ingredients: [],
             instance_id: '',
+          });
+        });
+      });
+
+      describe('addIngredient', () => {
+        test('should add the provided ingredient', async ({ c2pa }) => {
+          const builder = await c2pa.builder.new();
+
+          const ingredient: Ingredient = {
+            title: 'source-image.jpg',
+            format: 'image/jpeg',
+            instance_id: 'ingredient-instance-123',
+            document_id: 'ingredient-doc-456',
+          };
+
+          await builder.addIngredient(ingredient);
+
+          const definition = await builder.getDefinition();
+
+          expect(definition.ingredients).toHaveLength(1);
+          expect(definition.ingredients[0]).toMatchObject({
+            title: 'source-image.jpg',
+            format: 'image/jpeg',
+            instance_id: 'ingredient-instance-123',
+            document_id: 'ingredient-doc-456',
+          });
+        });
+
+        test('should add multiple ingredients', async ({ c2pa }) => {
+          const builder = await c2pa.builder.new();
+
+          const ingredient1: Ingredient = {
+            title: 'source-image-1.jpg',
+            format: 'image/jpeg',
+            instance_id: 'ingredient-instance-1',
+          };
+
+          const ingredient2: Ingredient = {
+            title: 'source-image-2.jpg',
+            format: 'image/png',
+            instance_id: 'ingredient-instance-2',
+          };
+
+          await builder.addIngredient(ingredient1);
+          await builder.addIngredient(ingredient2);
+
+          const definition = await builder.getDefinition();
+
+          expect(definition.ingredients).toHaveLength(2);
+          expect(definition.ingredients[0]).toMatchObject({
+            title: 'source-image-1.jpg',
+            format: 'image/jpeg',
+            instance_id: 'ingredient-instance-1',
+          });
+          expect(definition.ingredients[1]).toMatchObject({
+            title: 'source-image-2.jpg',
+            format: 'image/png',
+            instance_id: 'ingredient-instance-2',
           });
         });
       });
