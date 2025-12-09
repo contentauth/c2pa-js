@@ -14,6 +14,7 @@ import {
   initSync,
   loadSettings,
   WasmBuilder,
+  WasmIngredient,
 } from '@contentauth/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
 import { createWorkerTx, rx } from './worker/rpc.js';
@@ -21,6 +22,7 @@ import { transfer } from 'highgain';
 
 const readerMap = createWorkerObjectMap<WasmReader>();
 const builderMap = createWorkerObjectMap<WasmBuilder>();
+const ingredientMap = createWorkerObjectMap<WasmIngredient>();
 
 const tx = createWorkerTx();
 
@@ -82,6 +84,41 @@ rx({
     const builderId = builderMap.add(builder);
     return builderId;
   },
+
+  async ingredient_fromBlob(format, blob) {
+    const buffer = new Uint8Array(await blob.arrayBuffer());
+    const ingredient = WasmIngredient.fromMemory(format, buffer);
+    const ingredientId = ingredientMap.add(ingredient);
+    return ingredientId;
+  },
+  ingredient_fromJsonAndManifestStore(ingredientJson, manifestData) {
+    const ingredient = WasmIngredient.fromJsonAndManifestStore(
+      ingredientJson,
+      manifestData
+    );
+    const ingredientId = ingredientMap.add(ingredient);
+    return ingredientId;
+  },
+  ingredient_toJson(ingredientId) {
+    const ingredient = ingredientMap.get(ingredientId);
+    return ingredient.toJson();
+  },
+  ingredient_manifestStoreBytes(ingredientId) {
+    const ingredient = ingredientMap.get(ingredientId);
+    const bytes =
+      ingredient.manifestStoreBytes() as Uint8Array<ArrayBuffer> | null;
+
+    if (!bytes) {
+      return null;
+    }
+
+    return transfer(bytes, bytes.buffer);
+  },
+  ingredient_free(ingredientId) {
+    const ingredient = ingredientMap.get(ingredientId);
+    ingredient.free();
+    ingredientMap.remove(ingredientId);
+  },
   builder_setIntent(builderId, intent) {
     const builder = builderMap.get(builderId);
     builder.setIntent(intent);
@@ -109,6 +146,19 @@ rx({
   builder_addIngredientFromBlob(builderId, json, format, blob) {
     const builder = builderMap.get(builderId);
     builder.addIngredientFromBlob(json, format, blob);
+  },
+  builder_addIngredientFromJsonAndManifestStore(
+    builderId,
+    ingredientJson,
+    manifestData,
+    relationship
+  ) {
+    const builder = builderMap.get(builderId);
+    builder.addIngredientFromJsonAndManifestStore(
+      ingredientJson,
+      manifestData,
+      relationship
+    );
   },
   builder_addResourceFromBlob(builderId, id, blob) {
     const builder = builderMap.get(builderId);

@@ -9,6 +9,7 @@
 
 import { WorkerManager } from './worker/workerManager.js';
 import { getSerializablePayload, type Signer } from './signer.js';
+import type { IngredientRef } from './ingredient.js';
 import type {
   Action,
   BuilderIntent,
@@ -35,7 +36,10 @@ export interface BuilderFactory {
    * @param context Optional context settings for the builder.
    * @returns A {@link Builder} object.
    */
-  fromDefinition: (definition: ManifestDefinition, context?: SettingsContext) => Promise<Builder>;
+  fromDefinition: (
+    definition: ManifestDefinition,
+    context?: SettingsContext
+  ) => Promise<Builder>;
 
   /**
    * Create a {@link Builder} from a builder archive (created from {@link Builder.toArchive}).
@@ -94,7 +98,20 @@ export interface Builder {
    *
    * @param ingredientDefinition {@link Ingredient} definition.
    */
-  addIngredient: (ingredientDefinition: Ingredient) => Promise<void>;
+  addIngredient(ingredientDefinition: Ingredient): Promise<void>;
+
+  /**
+   * Add an IngredientRef to the builder.
+   *
+   * This uses the ingredient's serialized JSON and optional embedded manifest store bytes.
+   *
+   * @param ingredientRef IngredientRef to add.
+   * @param relationship Optional relationship override for this ingredient.
+   */
+  addIngredientFromRef(
+    ingredientRef: IngredientRef,
+    relationship?: 'parentOf' | 'componentOf' | 'inputTo'
+  ): Promise<void>;
 
   /**
    * Add an ingredient to the builder from a definition, format, and blob.
@@ -179,7 +196,9 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
 
   return {
     async new(context?: SettingsContext) {
-      const contextJson = context ? await contextToWasmJson(context) : undefined;
+      const contextJson = context
+        ? await contextToWasmJson(context)
+        : undefined;
       const builderId = await tx.builder_new(contextJson);
 
       const builder = createBuilder(worker, builderId, () => {
@@ -190,9 +209,14 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
       return builder;
     },
 
-    async fromDefinition(definition: ManifestDefinition, context?: SettingsContext) {
+    async fromDefinition(
+      definition: ManifestDefinition,
+      context?: SettingsContext
+    ) {
       const json = JSON.stringify(definition);
-      const contextJson = context ? await contextToWasmJson(context) : undefined;
+      const contextJson = context
+        ? await contextToWasmJson(context)
+        : undefined;
       const builderId = await tx.builder_fromJson(json, contextJson);
 
       const builder = createBuilder(worker, builderId, () => {
@@ -204,7 +228,9 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
     },
 
     async fromArchive(archive: Blob, context?: SettingsContext) {
-      const contextJson = context ? await contextToWasmJson(context) : undefined;
+      const contextJson = context
+        ? await contextToWasmJson(context)
+        : undefined;
       const builderId = await tx.builder_fromArchive(archive, contextJson);
 
       const builder = createBuilder(worker, builderId, () => {
@@ -248,6 +274,20 @@ function createBuilder(
     async addIngredient(ingredientDefinition: Ingredient) {
       const json = JSON.stringify(ingredientDefinition);
       await tx.builder_addIngredient(id, json);
+    },
+
+    async addIngredientFromRef(
+      ingredientRef: IngredientRef,
+      relationship?: 'parentOf' | 'componentOf' | 'inputTo'
+    ) {
+      const snapshot = await ingredientRef.toSnapshot();
+
+      await tx.builder_addIngredientFromJsonAndManifestStore(
+        id,
+        JSON.stringify(snapshot.ingredient),
+        snapshot.manifestStoreBytes,
+        relationship
+      );
     },
 
     async addIngredientFromBlob(

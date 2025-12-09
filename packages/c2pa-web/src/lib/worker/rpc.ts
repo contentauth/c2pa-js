@@ -42,6 +42,20 @@ const { createTx, rx } = channel<{
   builder_fromJson: (json: string, contextJson?: string) => number;
   builder_fromArchive: (archive: Blob, contextJson?: string) => number;
 
+  // Ingredient construction methods
+  ingredient_fromBlob: (format: string, blob: Blob) => Promise<number>;
+  ingredient_fromJsonAndManifestStore: (
+    ingredientJson: string,
+    manifestData?: Uint8Array
+  ) => number;
+
+  // Ingredient methods
+  ingredient_toJson: (ingredientId: number) => string;
+  ingredient_manifestStoreBytes: (
+    ingredientId: number
+  ) => Uint8Array<ArrayBuffer> | null;
+  ingredient_free: (ingredientId: number) => void;
+
   // Builder methods
   builder_setIntent: (builderId: number, intent: BuilderIntent) => void;
   builder_addAction: (builderId: number, action: Action) => void;
@@ -62,6 +76,12 @@ const { createTx, rx } = channel<{
     format: string,
     blob: Blob
   ) => void;
+  builder_addIngredientFromJsonAndManifestStore(
+    builderId: number,
+    ingredientJson: string,
+    manifestData?: Uint8Array,
+    relationship?: string
+  ): void;
   builder_addResourceFromBlob: (
     builderId: number,
     id: string,
