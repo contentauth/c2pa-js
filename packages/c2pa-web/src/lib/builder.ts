@@ -86,6 +86,13 @@ export interface Builder {
   setThumbnailFromBlob: (format: string, blob: Blob) => Promise<void>;
 
   /**
+   * Add an ingredient to the builder from a definition only.
+   *
+   * @param ingredientDefinition Ingredient definition.
+   */
+  addIngredient: (ingredientDefinition: Ingredient) => Promise<void>;
+
+  /**
    * Add an ingredient to the builder from a definition, format, and blob.
    * Values specified in the ingredient definition will be merged with the ingredient, and these values take precendence.
    *
@@ -229,6 +236,11 @@ function createBuilder(
 
     async setThumbnailFromBlob(format, blob) {
       await tx.builder_setThumbnailFromBlob(id, format, blob);
+    },
+
+    async addIngredient(ingredientDefinition: Ingredient) {
+      const json = JSON.stringify(ingredientDefinition);
+      await tx.builder_addIngredient(id, json);
     },
 
     async addIngredientFromBlob(

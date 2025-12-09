@@ -102,6 +102,10 @@ rx({
     const builder = builderMap.get(builderId);
     builder.setThumbnailFromBlob(format, blob);
   },
+  builder_addIngredient(builderId, json) {
+    const builder = builderMap.get(builderId);
+    builder.addIngredient(json);
+  },
   builder_addIngredientFromBlob(builderId, json, format, blob) {
     const builder = builderMap.get(builderId);
     builder.addIngredientFromBlob(json, format, blob);

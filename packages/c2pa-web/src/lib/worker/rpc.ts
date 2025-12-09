@@ -51,6 +51,10 @@ const { createTx, rx } = channel<{
     format: string,
     blob: Blob
   ) => void;
+  builder_addIngredient: (
+    builderId: number,
+    json: string
+  ) => void;
   builder_addIngredientFromBlob: (
     builderId: number,
     json: string,
