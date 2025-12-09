@@ -27,6 +27,12 @@ impl WasmError {
     }
 }
 
+impl From<serde_json::Error> for WasmError {
+    fn from(value: serde_json::Error) -> Self {
+        WasmError::other(value)
+    }
+}
+
 impl From<WasmError> for JsError {
     fn from(value: WasmError) -> Self {
         JsError::new(&format!("{:?}", value))

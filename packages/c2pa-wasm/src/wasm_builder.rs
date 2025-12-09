@@ -180,6 +180,50 @@ impl WasmBuilder {
         Ok(())
     }
 
+    /// Add an ingredient to the manifest from ingredient JSON and manifest store bytes.
+    ///
+    /// This supports an "ingredient rehydration" workflow where the original ingredient asset bytes are
+    /// not available. This does not verify hard-binding against the original asset.
+    ///
+    /// # Arguments
+    /// * `ingredient_json` - A JSON string representing the ingredient's metadata (serde representation of `c2pa::Ingredient`).
+    /// * `manifest_data` - Optional byte array containing the ingredient's C2PA manifest store (JUMBF bytes, application/c2pa).
+    ///   If omitted or empty, the embedded manifest store is not set.
+    /// * `relationship` - Optional relationship string ("parentOf", "componentOf", or "inputTo") that overrides any relationship in JSON.
+    #[wasm_bindgen(js_name = addIngredientFromJsonAndManifestStore)]
+    pub fn add_ingredient_from_json_and_manifest_store(
+        &mut self,
+        ingredient_json: &str,
+        manifest_data: Option<Uint8Array>,
+        relationship: Option<String>,
+    ) -> Result<(), JsError> {
+        let mut ingredient =
+            c2pa::Ingredient::from_json(ingredient_json).map_err(WasmError::from)?;
+
+        if let Some(manifest_data) = manifest_data {
+            let data_vec = manifest_data.to_vec();
+            if !data_vec.is_empty() {
+                ingredient
+                    .set_manifest_data(data_vec)
+                    .map_err(WasmError::from)?;
+            }
+        }
+
+        if let Some(rel) = relationship {
+            let relationship = match rel.as_str() {
+                "parentOf" => c2pa::Relationship::ParentOf,
+                "componentOf" => c2pa::Relationship::ComponentOf,
+                "inputTo" => c2pa::Relationship::InputTo,
+                _ => return Err(JsError::new("Invalid relationship value")),
+            };
+            ingredient.set_relationship(relationship);
+        }
+
+        self.builder.add_ingredient(ingredient);
+
+        Ok(())
+    }
+
     /// Add a [`Blob`] to the manifest as a resource. The ID must match an identifier in the manifest.
     #[wasm_bindgen(js_name = addResourceFromBlob)]
     pub fn add_resource_from_blob(&mut self, id: &str, blob: &Blob) -> Result<(), JsError> {
