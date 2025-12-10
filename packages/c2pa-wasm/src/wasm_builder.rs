@@ -7,7 +7,7 @@
 
 use std::io::Cursor;
 
-use c2pa::{assertions::Action, Builder, BuilderIntent};
+use c2pa::{assertions::Action, Builder, BuilderIntent, Ingredient};
 use js_sys::{Error as JsError, JsString, Uint8Array};
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::Serializer;
@@ -115,6 +115,18 @@ impl WasmBuilder {
         self.builder
             .set_thumbnail(format, &mut stream)
             .map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
+    /// Add an ingredient to the manifest from a JSON ingredient definition without a blob
+    ///
+    /// # Arguments
+    /// * `ingredient_json` - A JSON string representing the ingredient.
+    #[wasm_bindgen(js_name = addIngredient)]
+    pub fn add_ingredient(&mut self, json: &str) -> Result<(), JsError> {
+        let ingredient = Ingredient::from_json(json).map_err(WasmError::from)?;
+        self.builder.add_ingredient(ingredient);
 
         Ok(())
     }
