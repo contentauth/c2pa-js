@@ -1,5 +1,13 @@
 # @contentauth/c2pa-web
 
+## 0.5.4
+
+### Patch Changes
+
+- 4f76072: Add Builder method to add ingredient json only
+- Updated dependencies [4f76072]
+  - @contentauth/c2pa-wasm@0.4.2
+
 ## 0.5.3
 
 ### Patch Changes
