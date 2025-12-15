@@ -72,4 +72,8 @@ export class Reader implements ReaderInterface {
 
     return manifestStore.manifests[activeManifest];
   }
+
+  getHandle(): NeonReaderHandle {
+    return this.reader;
+  }
 }

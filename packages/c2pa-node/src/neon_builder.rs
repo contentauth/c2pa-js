@@ -14,6 +14,7 @@
 use crate::asset::parse_asset;
 use crate::error::{as_js_error, Error};
 use crate::neon_identity_assertion_signer::NeonIdentityAssertionSigner;
+use crate::neon_reader::NeonReader;
 use crate::neon_signer::{CallbackSignerConfig, NeonCallbackSigner, NeonLocalSigner};
 use crate::runtime::runtime;
 use c2pa::{Builder, BuilderIntent, Ingredient};
@@ -92,8 +93,8 @@ impl NeonBuilder {
         let rt = runtime();
         let this = cx.this::<JsBox<Self>>()?;
         let action_json = cx.argument::<JsString>(0)?.value(&mut cx);
-        let action: c2pa::assertions::Action = serde_json::from_str(&action_json)
-            .or_else(|err| cx.throw_error(err.to_string()))?;
+        let action: c2pa::assertions::Action =
+            serde_json::from_str(&action_json).or_else(|err| cx.throw_error(err.to_string()))?;
         let mut builder = rt.block_on(async { this.builder.lock().await });
         builder
             .add_action(action)
@@ -215,6 +216,21 @@ impl NeonBuilder {
         });
 
         Ok(promise)
+    }
+
+    pub fn add_ingredient_from_reader(mut cx: FunctionContext) -> JsResult<JsString> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<Self>>()?;
+        let reader = cx.argument::<JsBox<NeonReader>>(0)?.reader();
+
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+        let reader = rt.block_on(async { reader.lock().await });
+        let ingredient = builder
+            .add_ingredient_from_reader(&reader)
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+        let json =
+            serde_json::to_string(&ingredient).or_else(|err| cx.throw_error(err.to_string()))?;
+        Ok(cx.string(json))
     }
 
     pub fn to_archive(mut cx: FunctionContext) -> JsResult<JsPromise> {

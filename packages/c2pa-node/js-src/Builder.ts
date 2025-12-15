@@ -11,7 +11,11 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import type { BuilderIntent, Manifest } from "@contentauth/c2pa-types";
+import type {
+  BuilderIntent,
+  Ingredient,
+  Manifest,
+} from "@contentauth/c2pa-types";
 
 import { getNeonBinary } from "./binary.js";
 import type {
@@ -24,6 +28,7 @@ import type {
   JsCallbackSignerConfig,
   LocalSignerInterface,
   ManifestAssertionKind,
+  ReaderInterface,
   SourceAsset,
   NeonBuilderHandle,
 } from "./types.d.ts";
@@ -109,6 +114,15 @@ export class Builder implements BuilderInterface {
     }
   }
 
+  addIngredientFromReader(reader: ReaderInterface): Ingredient {
+    const readerHandle = reader.getHandle();
+    const result = getNeonBinary().builderAddIngredientFromReader.call(
+      this.builder,
+      readerHandle,
+    );
+    return JSON.parse(result);
+  }
+
   async toArchive(asset: DestinationAsset): Promise<void> {
     return getNeonBinary().builderToArchive.call(this.builder, asset);
   }
@@ -124,7 +138,7 @@ export class Builder implements BuilderInterface {
   ): Buffer {
     return getNeonBinary().builderSign.call(
       this.builder,
-      signer.signer(),
+      signer.getHandle(),
       input,
       output,
     );
@@ -138,7 +152,7 @@ export class Builder implements BuilderInterface {
     const input: FileAsset = { path: filePath };
     return getNeonBinary().builderSign.call(
       this.builder,
-      signer.signer(),
+      signer.getHandle(),
       input,
       output,
     );
@@ -182,7 +196,7 @@ export class Builder implements BuilderInterface {
     input: SourceAsset,
     output: DestinationAsset,
   ): Promise<Buffer> {
-    const neonHandle = signer.signer();
+    const neonHandle = signer.getHandle();
     const isIdentity = signer instanceof IdentityAssertionSigner;
     const neonFn = isIdentity
       ? getNeonBinary().builderIdentitySignAsync

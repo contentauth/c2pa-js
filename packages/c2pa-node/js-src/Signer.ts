@@ -59,7 +59,7 @@ export class LocalSigner implements LocalSignerInterface {
     return getNeonBinary().localSignerTimeAuthorityUrl.call(this.localSigner);
   }
 
-  signer(): NeonLocalSignerHandle {
+  getHandle(): NeonLocalSignerHandle {
     return this.localSigner;
   }
 }
@@ -67,7 +67,7 @@ export class LocalSigner implements LocalSignerInterface {
 export class CallbackSigner implements CallbackSignerInterface {
   constructor(private callbackSigner: NeonCallbackSignerHandle) {}
 
-  signer(): NeonCallbackSignerHandle {
+  getHandle(): NeonCallbackSignerHandle {
     return this.callbackSigner;
   }
 

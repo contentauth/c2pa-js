@@ -32,7 +32,7 @@ export class IdentityAssertionBuilder
     credentialHolder: CallbackCredentialHolderInterface,
   ): Promise<IdentityAssertionBuilder> {
     const builder = getNeonBinary().identityBuilderForCredentialHolder(
-      credentialHolder.signer(),
+      credentialHolder.getHandle(),
     );
     return new IdentityAssertionBuilder(builder);
   }
@@ -72,7 +72,7 @@ export class IdentityAssertionSigner
     );
   }
 
-  signer(): NeonIdentityAssertionSignerHandle {
+  getHandle(): NeonIdentityAssertionSignerHandle {
     return this._signer;
   }
 }
@@ -84,7 +84,7 @@ export class CallbackCredentialHolder
     private callbackCredentialHolder: NeonCallbackCredentialHolderHandle,
   ) {}
 
-  signer(): NeonCallbackCredentialHolderHandle {
+  getHandle(): NeonCallbackCredentialHolderHandle {
     return this.callbackCredentialHolder;
   }
 

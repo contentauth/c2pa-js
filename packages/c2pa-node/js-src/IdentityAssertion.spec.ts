@@ -171,7 +171,7 @@ describe("IdentityAssertionBuilder", () => {
     });
 
     // Create and configure the identity assertion
-    const iaSigner = IdentityAssertionSigner.new(c2paSigner.signer());
+    const iaSigner = IdentityAssertionSigner.new(c2paSigner.getHandle());
     const iab =
       await IdentityAssertionBuilder.identityBuilderForCredentialHolder(
         cawgSigner,

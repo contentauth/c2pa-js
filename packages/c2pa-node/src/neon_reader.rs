@@ -34,6 +34,11 @@ impl NeonReader {
         }))
     }
 
+    #[allow(clippy::borrowed_box)]
+    pub(crate) fn reader(&self) -> Arc<Mutex<Reader>> {
+        Arc::clone(&self.reader)
+    }
+
     pub fn from_stream(mut cx: FunctionContext) -> JsResult<JsPromise> {
         let rt = runtime();
         let channel = cx.channel();
@@ -69,9 +74,7 @@ impl NeonReader {
                     // Return null instead of throwing for these specific cases
                     match &err {
                         Error::C2pa(c2pa_err) => match c2pa_err {
-                            c2pa::Error::JumbfNotFound => {
-                                Ok(cx.null().upcast::<JsValue>())
-                            }
+                            c2pa::Error::JumbfNotFound => Ok(cx.null().upcast::<JsValue>()),
                             _ => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
                         },
                         _ => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),

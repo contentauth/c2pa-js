@@ -15,6 +15,7 @@
 import { Buffer } from "buffer";
 import type {
   BuilderIntent,
+  Ingredient,
   Manifest,
   ManifestStore,
 } from "@contentauth/c2pa-types";
@@ -110,7 +111,7 @@ export interface LocalSignerInterface {
   certs(): Array<Buffer>;
   reserveSize(): number;
   timeAuthorityUrl(): string | undefined;
-  signer(): NeonLocalSignerHandle;
+  getHandle(): NeonLocalSignerHandle;
 }
 
 /**
@@ -123,14 +124,14 @@ export interface CallbackSignerInterface {
   reserveSize(): number;
   timeAuthorityUrl(): string | undefined;
   directCoseHandling(): boolean;
-  signer(): NeonCallbackSignerHandle;
+  getHandle(): NeonCallbackSignerHandle;
 }
 
 export interface CallbackCredentialHolderInterface {
   sigType(): string;
   reserveSize(): number;
   sign(payload: SignerPayload): Promise<Buffer>;
-  signer(): NeonCallbackCredentialHolderHandle;
+  getHandle(): NeonCallbackCredentialHolderHandle;
 }
 
 /**
@@ -236,6 +237,12 @@ export interface BuilderInterface {
   ): Promise<void>;
 
   /**
+   * Add an ingredient to the manifest from a Reader
+   * @param reader The Reader object of the ingredient
+   */
+  addIngredientFromReader(reader: ReaderInterface): Ingredient;
+
+  /**
    * Convert the Builder into a archive formatted buffer or file
    * @param asset The file or buffer for the archive
    */
@@ -332,6 +339,11 @@ export interface ReaderInterface {
    * @param filePath The path to the file
    */
   resourceToAsset(uri: string, output: DestinationAsset): Promise<number>;
+
+  /**
+   * Get the internal handle for use with Neon bindings
+   */
+  getHandle(): NeonReaderHandle;
 }
 
 export interface IdentityAssertionSignerInterface {
@@ -345,7 +357,7 @@ export interface IdentityAssertionSignerInterface {
     identityAssertionBuilder: IdentityAssertionBuilderInterface,
   ): void;
 
-  signer(): NeonIdentityAssertionSignerHandle;
+  getHandle(): NeonIdentityAssertionSignerHandle;
 }
 
 export interface IdentityAssertionBuilderInterface {

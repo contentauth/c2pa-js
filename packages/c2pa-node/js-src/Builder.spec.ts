@@ -696,11 +696,15 @@ describe("Builder", () => {
       expect(actionsAssertion).toBeDefined();
       if (isActionsAssertion(actionsAssertion)) {
         const actions = actionsAssertion.data.actions;
-        const editedAction = actions.find((a: any) => a.action === "c2pa.edited");
+        const editedAction = actions.find(
+          (a: any) => a.action === "c2pa.edited",
+        );
         expect(editedAction).toBeDefined();
         expect(editedAction?.action).toBe("c2pa.edited");
       } else {
-        throw new Error("Actions assertion does not have the expected structure");
+        throw new Error(
+          "Actions assertion does not have the expected structure",
+        );
       }
     });
 
@@ -759,6 +763,49 @@ describe("Builder", () => {
       expect(addedIngredient).toBeDefined();
       expect(addedIngredient?.instance_id).toBe("ingredient-12345");
       expect(addedIngredient?.relationship).toBe("componentOf");
+    });
+
+    it("should add ingredient from reader", async () => {
+      const builder1 = Builder.new();
+      builder1.setIntent("edit" as any);
+      const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
+      const dest1: DestinationBufferAsset = {
+        buffer: null,
+      };
+      builder1.sign(signer, source, dest1);
+
+      // Read the signed file back with Reader
+      const reader = await Reader.fromAsset({
+        buffer: dest1.buffer! as Buffer,
+        mimeType: "image/jpeg",
+      });
+      expect(reader).not.toBeNull();
+
+      // Create a new builder and add ingredient from the reader
+      const builder2 = Builder.new();
+      const ingredient = builder2.addIngredientFromReader(reader!);
+      expect(ingredient).toBeDefined();
+
+      // Verify the ingredient was added to the builder
+      const definition = builder2.getManifestDefinition();
+      expect(definition.ingredients).toBeDefined();
+      expect(definition.ingredients!.length).toBeGreaterThan(0);
+
+      // Sign again with the new builder
+      const dest2: DestinationBufferAsset = {
+        buffer: null,
+      };
+      builder2.sign(signer, source, dest2);
+
+      // Verify the ingredient is in the signed manifest
+      const reader2 = await Reader.fromAsset({
+        buffer: dest2.buffer! as Buffer,
+        mimeType: "image/jpeg",
+      });
+      expect(reader2).not.toBeNull();
+      const activeManifest = reader2!.getActive();
+      expect(activeManifest?.ingredients).toBeDefined();
+      expect(activeManifest?.ingredients?.length).toBe(1);
     });
   });
 });

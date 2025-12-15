@@ -55,6 +55,10 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         "builderAddIngredientFromAsset",
         neon_builder::NeonBuilder::add_ingredient_from_asset,
     )?;
+    cx.export_function(
+        "builderAddIngredientFromReader",
+        neon_builder::NeonBuilder::add_ingredient_from_reader,
+    )?;
     cx.export_function("builderToArchive", neon_builder::NeonBuilder::to_archive)?;
     cx.export_function(
         "builderFromArchive",
