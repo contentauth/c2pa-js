@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+## 0.4.1
+
+### Patch Changes
+
+- c6defcc: Add addIngredientFromReader method
+
 ## 0.4.0
 
 ### Minor Changes
