@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+## 0.4.2
+
+### Patch Changes
+
+- 26f0c35: Fix settings on tasks. Fix Builder toArchive
+
 ## 0.4.1
 
 ### Patch Changes
