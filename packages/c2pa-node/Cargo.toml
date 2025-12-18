@@ -34,5 +34,5 @@ toml = "0.8"
 thiserror = "1.0.61"
 tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
 tokio-util = "0.7.13"
-trustmark = "0.2"
+trustmark = "0.2.2"
 rand = "0.8.5"

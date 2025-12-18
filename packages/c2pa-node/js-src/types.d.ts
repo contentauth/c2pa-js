@@ -103,6 +103,13 @@ export type SourceAsset = SourceBufferAsset | FileAsset;
 export type DestinationAsset = DestinationBufferAsset | FileAsset;
 
 /**
+ * The return type of resourceToAsset.
+ * When the asset is a file, returns the number of bytes written.
+ * When the asset is a buffer, returns an object with the buffer and bytes written.
+ */
+export type ResourceAsset = { buffer: Buffer; bytes_written: number };
+
+/**
  * A signer that uses a local certificate and private key to sign data
  */
 export interface LocalSignerInterface {
@@ -315,6 +322,11 @@ export interface BuilderInterface {
    * @returns The manifest definition
    */
   updateManifestProperty(property: string, value: string | ClaimVersion): void;
+
+  /**
+   * Get the internal handle for use with Neon bindings
+   */
+  getHandle(): NeonBuilderHandle;
 }
 
 export interface ReaderInterface {
@@ -336,9 +348,14 @@ export interface ReaderInterface {
   /**
    * Write a resource to a buffer or file
    * @param uri The URI of the resource
-   * @param filePath The path to the file
+   * @param output The destination asset (file or buffer)
+   * @returns When output is a file, returns the number of bytes written.
+   *          When output is a buffer, returns an object with the buffer and bytes written.
    */
-  resourceToAsset(uri: string, output: DestinationAsset): Promise<number>;
+  resourceToAsset(
+    uri: string,
+    output: DestinationAsset,
+  ): Promise<ResourceAsset>;
 
   /**
    * Get the internal handle for use with Neon bindings

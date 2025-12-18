@@ -235,25 +235,47 @@ impl NeonBuilder {
 
     pub fn to_archive(mut cx: FunctionContext) -> JsResult<JsPromise> {
         let this = cx.this::<JsBox<Self>>()?;
-        let dest = cx
-            .argument::<JsObject>(0)
-            .and_then(|obj| parse_asset(&mut cx, obj))?;
+        let dest_obj = cx.argument::<JsObject>(0)?;
+        let dest = parse_asset(&mut cx, dest_obj)?;
+        let is_buffer = dest.name() == "destination_buffer";
         let builder = Arc::clone(&this.builder);
+        let dest_obj_root: Arc<Root<JsObject>> = Arc::new(Root::new(&mut cx, &dest_obj));
 
         let promise = cx
             .task(move || {
                 // Block on acquiring the async mutex lock
+                // Settings are automatically applied when runtime() is called
                 let rt = runtime();
                 let mut builder = rt.block_on(async { builder.lock().await });
 
-                dest.write_stream().and_then(|dest_stream| {
-                    builder.to_archive(dest_stream)?;
-                    Ok(())
+                dest.write_stream().and_then(|mut dest_stream| {
+                    builder.to_archive(&mut dest_stream)?;
+                    if is_buffer {
+                        let mut archive_data = Vec::new();
+                        dest_stream
+                            .rewind()
+                            .map_err(|e| Error::Asset(format!("Failed to rewind stream: {e}")))?;
+                        dest_stream
+                            .read_to_end(&mut archive_data)
+                            .map_err(|e| Error::Asset(format!("Failed to read stream: {e}")))?;
+                        Ok(Some(archive_data))
+                    } else {
+                        Ok(None)
+                    }
                 })
             })
-            .promise(move |mut cx, result: Result<(), Error>| match result {
-                Ok(_) => Ok(cx.undefined()),
-                Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
+            .promise(move |mut cx, result: Result<Option<Vec<u8>>, Error>| {
+                match result {
+                    Ok(Some(archive_data)) => {
+                        // If the output is a buffer, populate it with the archive data
+                        let buffer = JsBuffer::from_slice(&mut cx, &archive_data)?;
+                        let dest_obj = dest_obj_root.to_inner(&mut cx);
+                        dest_obj.set(&mut cx, "buffer", buffer)?;
+                        Ok(cx.undefined())
+                    }
+                    Ok(None) => Ok(cx.undefined()),
+                    Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
+                }
             });
         Ok(promise)
     }

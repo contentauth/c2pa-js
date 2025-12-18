@@ -32,6 +32,14 @@ pub(crate) fn get_global_settings_toml() -> Option<String> {
     global_toml().read().unwrap().clone()
 }
 
+/// Apply settings to the current thread from the global TOML snapshot.
+/// This should be called whenever settings might be needed, as settings may have changed.
+pub(crate) fn apply_settings_to_current_thread() {
+    if let Some(toml) = get_global_settings_toml() {
+        let _ = Settings::from_toml(&toml);
+    }
+}
+
 /// Parse a JSON string (argument 0) into c2pa-rs Settings and apply them globally.
 /// Returns undefined; the JSON snapshot is stored globally for new worker threads.
 pub fn load_settings(mut cx: FunctionContext) -> JsResult<JsUndefined> {
@@ -47,6 +55,8 @@ pub fn load_settings(mut cx: FunctionContext) -> JsResult<JsUndefined> {
                 .or_else(|e| cx.throw_error(format!("Failed to get settings as TOML: {}", e)))?;
             // Save the JSON snapshot for new worker threads
             set_global_settings_toml(Some(toml_string));
+            // Apply settings to current thread
+            apply_settings_to_current_thread();
             reload_runtime();
             Ok(cx.undefined())
         }
@@ -68,6 +78,8 @@ pub fn load_settings_toml(mut cx: FunctionContext) -> JsResult<JsUndefined> {
                 .or_else(|e| cx.throw_error(format!("Failed to get settings as TOML: {}", e)))?;
             // Save the TOML snapshot for new worker threads
             set_global_settings_toml(Some(toml_string));
+            // Apply settings to current thread
+            apply_settings_to_current_thread();
             reload_runtime();
             Ok(cx.undefined())
         }
@@ -152,6 +164,7 @@ pub fn load_trust_config(mut cx: FunctionContext) -> JsResult<JsUndefined> {
             let full_toml = Settings::to_toml()
                 .or_else(|e| cx.throw_error(format!("Failed to get settings as TOML: {}", e)))?;
             set_global_settings_toml(Some(full_toml));
+            apply_settings_to_current_thread();
             reload_runtime();
             Ok(cx.undefined())
         }
@@ -202,6 +215,7 @@ pub fn load_cawg_trust_config(mut cx: FunctionContext) -> JsResult<JsUndefined> 
             let full_toml = Settings::to_toml()
                 .or_else(|e| cx.throw_error(format!("Failed to get settings as TOML: {}", e)))?;
             set_global_settings_toml(Some(full_toml));
+            apply_settings_to_current_thread();
             reload_runtime();
             Ok(cx.undefined())
         }
@@ -424,6 +438,7 @@ pub fn load_verify_config(mut cx: FunctionContext) -> JsResult<JsUndefined> {
                 .or_else(|e| cx.throw_error(format!("Failed to get settings as TOML: {}", e)))?;
             // Save the TOML snapshot for new worker threads
             set_global_settings_toml(Some(toml_string));
+            apply_settings_to_current_thread();
             reload_runtime();
             Ok(cx.undefined())
         }
@@ -496,6 +511,7 @@ pub fn reset_settings(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         Ok(_) => {
             // Store the default TOML for worker threads
             set_global_settings_toml(Some(default_toml));
+            apply_settings_to_current_thread();
             reload_runtime();
             Ok(cx.undefined())
         }

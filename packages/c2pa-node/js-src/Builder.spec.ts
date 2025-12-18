@@ -29,6 +29,7 @@ import { isActionsAssertion } from "./assertions.js";
 import { CallbackSigner, LocalSigner } from "./Signer.js";
 import { Reader } from "./Reader.js";
 import { Builder } from "./Builder.js";
+import { loadC2paSettings, resetSettings } from "./Settings.js";
 
 const tempDir = path.join(__dirname, "tmp");
 
@@ -275,6 +276,81 @@ describe("Builder", () => {
       );
       expect(manifestStore.active_manifest).not.toBeUndefined();
       expect(activeManifest?.title).toBe("Test_Manifest");
+    });
+
+    it("should populate buffer when archiving to buffer", async () => {
+      const archive: DestinationBufferAsset = {
+        buffer: null,
+      };
+      await builder.toArchive(archive);
+      expect(archive.buffer).not.toBeNull();
+      expect(archive.buffer!.length).toBeGreaterThan(0);
+    });
+
+    it("should write archive to file", async () => {
+      const archivePath = path.join(tempDir, "archive_file_test.zip");
+      const archive = { path: archivePath };
+      await builder.toArchive(archive);
+
+      // Verify file was created and has content
+      expect(await fs.pathExists(archivePath)).toBe(true);
+      const stats = await fs.stat(archivePath);
+      expect(stats.size).toBeGreaterThan(0);
+    });
+
+    it("should construct reader directly from builder archive buffer", async () => {
+      // Enable c2pa archive format
+      loadC2paSettings(
+        JSON.stringify({
+          builder: {
+            generate_c2pa_archive: true,
+          },
+          verify: {
+            verify_after_reading: false,
+          },
+        }),
+      );
+
+      try {
+        // Create a builder
+        const simpleManifestDefinition = {
+          claim_generator_info: [
+            {
+              name: "c2pa_test",
+              version: "1.0.0",
+            },
+          ],
+          title: "Test_Manifest",
+          format: "image/jpeg",
+          assertions: [],
+          resources: { resources: {} },
+        };
+
+        const testBuilder = Builder.withJson(simpleManifestDefinition);
+
+        // Add an ingredient
+        await testBuilder.addIngredient(parent_json, source);
+
+        // Create an archive from the builder written to a buffer
+        const archive: DestinationBufferAsset = {
+          buffer: null,
+        };
+        await testBuilder.toArchive(archive);
+
+        // Verify buffer was populated
+        expect(archive.buffer).not.toBeNull();
+        expect(archive.buffer!.length).toBeGreaterThan(0);
+
+        // Construct a reader from the builder archive with mime-type "application/c2pa"
+        const reader = await Reader.fromAsset({
+          buffer: archive.buffer! as Buffer,
+          mimeType: "application/c2pa",
+        });
+        expect(reader).not.toBeNull();
+      } finally {
+        // Reset settings to defaults
+        resetSettings();
+      }
     });
 
     it("should sign data with callback to file", async () => {

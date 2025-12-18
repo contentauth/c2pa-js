@@ -17,6 +17,7 @@ import { getNeonBinary } from "./binary.js";
 import type {
   DestinationAsset,
   ReaderInterface,
+  ResourceAsset,
   SourceAsset,
   NeonReaderHandle,
 } from "./types.d.ts";
@@ -36,7 +37,7 @@ export class Reader implements ReaderInterface {
     return getNeonBinary().readerIsEmbedded.call(this.reader);
   }
 
-  async resourceToAsset(uri: string, asset: DestinationAsset): Promise<number> {
+  async resourceToAsset(uri: string, asset: DestinationAsset): Promise<ResourceAsset> {
     return getNeonBinary().readerResourceToAsset.call(this.reader, uri, asset);
   }
 

@@ -28,6 +28,10 @@ fn build_runtime() -> Arc<Runtime> {
 }
 
 pub fn runtime() -> Arc<Runtime> {
+    // Ensure settings are applied to the current thread
+    // This is important for Neon tasks that don't run on Tokio worker threads
+    crate::settings::apply_settings_to_current_thread();
+
     let cell = RUNTIME.get_or_init(|| RwLock::new(build_runtime()));
     cell.read().unwrap().clone()
 }

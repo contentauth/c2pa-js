@@ -51,6 +51,9 @@ pub enum Error {
     #[error("Settings handling failed: {0}")]
     Settings(String),
 
+    #[error("Reading failed: {0}")]
+    Reading(String),
+
     #[error("Signing failed: {0}")]
     Signing(String),
 

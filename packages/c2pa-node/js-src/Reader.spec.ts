@@ -172,7 +172,6 @@ describe("Reader", () => {
   });
 
   it("should write to a file", async () => {
-    let bytesWritten = 0;
     const outputPath = path.join(tempDir, "thumbnail.jpg");
     const reader = await Reader.fromAsset({
       path: "./tests/fixtures/CA.jpg",
@@ -181,12 +180,12 @@ describe("Reader", () => {
     const activeManifest = reader!.getActive();
     const uri = activeManifest?.thumbnail?.identifier;
 
-    if (uri !== undefined) {
-      bytesWritten = await reader!.resourceToAsset(uri, {
-        path: outputPath,
-      });
-    }
-    expect(bytesWritten).toBe(49690);
+    expect(uri).toBeDefined();
+    const bytesWritten = await reader!.resourceToAsset(uri!, {
+      path: outputPath,
+    });
+
+    expect(bytesWritten.bytes_written).toBe(49690);
     expect(fs.existsSync(outputPath));
   });
 
