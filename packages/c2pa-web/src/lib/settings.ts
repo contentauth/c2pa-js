@@ -64,10 +64,30 @@ export interface VerifySettings {
    * Enable trust validation. The default value is "true."
    */
   verifyTrust?: boolean;
+  /*
+   * Whether to verify the manifest after reading in the Reader. The default value is "true."
+   */
+  verifyAfterReading?: boolean;
 }
 
 export interface BuilderSettings {
-  generateC2paArchive: boolean;
+  /**
+   * Whether to generate a C2PA archive (instead of zip) when writing the manifest builder.
+   * This will eventually become the default behavior.
+   */
+  generateC2paArchive?: boolean;
+  /*
+   * Settings for controlling automatic thumbnail generation.
+   */
+  thumbnail?: BuilderThumbnailSettings;
+}
+
+export interface BuilderThumbnailSettings {
+  /*
+   * Whether or not to automatically generate thumbnails.
+   * The default value is true.
+   */
+  enabled: boolean;
 }
 
 type SettingsObjectType = {
