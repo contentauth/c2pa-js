@@ -10,7 +10,7 @@
 import { test, describe, expect } from 'test/methods.js';
 import { ManifestDefinition, Ingredient } from '@contentauth/c2pa-types';
 import { getBlobForAsset } from 'test/utils.js';
-import fireflyImage from 'test/assets/firefly_thirdparty_gemini.png';
+import C_JPG from 'test/assets/C.jpg';
 
 describe('builder', () => {
   describe('creation', () => {
@@ -103,12 +103,12 @@ describe('builder', () => {
           const builder = await c2pa.builder.fromDefinition(manifestDefinition);
 
           const ingredient: Ingredient = {
-            title: 'firefly_thirdparty_gemini.png',
-            format: 'image/png',
+            title: 'C.jpg',
+            format: 'image/jpeg',
             instance_id: 'ingredient-instance-123',
           };
 
-          const blob = await getBlobForAsset(fireflyImage);
+          const blob = await getBlobForAsset(C_JPG);
           await builder.addIngredientFromBlob(ingredient, 'image/png', blob);
 
           const archive = await builder.toArchive();
@@ -122,8 +122,8 @@ describe('builder', () => {
 
           expect(definitionFromArchivedBuilder.ingredients).toHaveLength(1);
           expect(definitionFromArchivedBuilder.ingredients![0]).toMatchObject({
-            title: 'firefly_thirdparty_gemini.png',
-            format: 'image/png',
+            title: 'C.jpg',
+            format: 'image/jpeg',
             instance_id: 'ingredient-instance-123',
           });
         });
