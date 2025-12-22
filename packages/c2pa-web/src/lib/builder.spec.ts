@@ -9,6 +9,8 @@
 
 import { test, describe, expect } from 'test/methods.js';
 import { ManifestDefinition, Ingredient } from '@contentauth/c2pa-types';
+import { getBlobForAsset } from 'test/utils.js';
+import C_JPG from 'test/assets/C.jpg';
 
 describe('builder', () => {
   describe('creation', () => {
@@ -80,6 +82,50 @@ describe('builder', () => {
             await builderFromArchive.getDefinition();
 
           expect(definitionFromArchivedBuilder).toEqual(manifestDefinition);
+        });
+
+        test('should re-create a builder from an archive with ingredient from blob', async ({
+          c2pa,
+        }) => {
+          const manifestDefinition: ManifestDefinition = {
+            claim_generator_info: [
+              {
+                name: 'c2pa-web-test',
+                version: '1.0.0',
+              },
+            ],
+            assertions: [],
+            format: '',
+            ingredients: [],
+            instance_id: '',
+          };
+
+          const builder = await c2pa.builder.fromDefinition(manifestDefinition);
+
+          const ingredient: Ingredient = {
+            title: 'C.jpg',
+            format: 'image/jpeg',
+            instance_id: 'ingredient-instance-123',
+          };
+
+          const blob = await getBlobForAsset(C_JPG);
+          await builder.addIngredientFromBlob(ingredient, 'image/png', blob);
+
+          const archive = await builder.toArchive();
+
+          const builderFromArchive = await c2pa.builder.fromArchive(
+            new Blob([archive])
+          );
+
+          const definitionFromArchivedBuilder =
+            await builderFromArchive.getDefinition();
+
+          expect(definitionFromArchivedBuilder.ingredients).toHaveLength(1);
+          expect(definitionFromArchivedBuilder.ingredients![0]).toMatchObject({
+            title: 'C.jpg',
+            format: 'image/jpeg',
+            instance_id: 'ingredient-instance-123',
+          });
         });
       });
     });
