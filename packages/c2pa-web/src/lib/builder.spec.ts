@@ -10,7 +10,7 @@
 import { test, describe, expect } from 'test/methods.js';
 import { ManifestDefinition, Ingredient } from '@contentauth/c2pa-types';
 import { getBlobForAsset } from 'test/utils.js';
-import fireflyImage from 'test/fixtures/assets/firefly_thirdparty_gemini.png';
+import fireflyImage from 'test/assets/firefly_thirdparty_gemini.png';
 
 describe('builder', () => {
   describe('creation', () => {
@@ -84,7 +84,9 @@ describe('builder', () => {
           expect(definitionFromArchivedBuilder).toEqual(manifestDefinition);
         });
 
-        test('should re-create a builder from an archive with ingredient from blob', async ({ c2pa }) => {
+        test('should re-create a builder from an archive with ingredient from blob', async ({
+          c2pa,
+        }) => {
           const manifestDefinition: ManifestDefinition = {
             claim_generator_info: [
               {
@@ -119,7 +121,7 @@ describe('builder', () => {
             await builderFromArchive.getDefinition();
 
           expect(definitionFromArchivedBuilder.ingredients).toHaveLength(1);
-          expect(definitionFromArchivedBuilder.ingredients[0]).toMatchObject({
+          expect(definitionFromArchivedBuilder.ingredients![0]).toMatchObject({
             title: 'firefly_thirdparty_gemini.png',
             format: 'image/png',
             instance_id: 'ingredient-instance-123',
