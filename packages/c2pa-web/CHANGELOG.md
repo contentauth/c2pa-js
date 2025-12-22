@@ -1,5 +1,11 @@
 # @contentauth/c2pa-web
 
+## 0.5.5
+
+### Patch Changes
+
+- 827bd7e: add settings required for compliance signing
+
 ## 0.5.4
 
 ### Patch Changes
