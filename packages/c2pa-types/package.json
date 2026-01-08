@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "echo \"No tests to run\" && exit 0",
-    "build": "tsx build.ts"
+    "build": "zx build.ts"
   },
   "files": [
     "dist/**/*",
@@ -15,7 +15,6 @@
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "json-schema-to-typescript": "^15.0.4",
-    "tsx": "^4.0.0",
     "zx": "^8.8.0"
   }
 }
