@@ -22,25 +22,28 @@ import type {
 export interface BuilderFactory {
   /**
    * Create a {@link Builder} with a minimal manifest definition as its initial state.
+   * @param contextJson Optional JSON string representing context settings for the builder.
    * @returns A {@link Builder} object.
    */
-  new: () => Promise<Builder>;
+  new: (contextJson?: string) => Promise<Builder>;
 
   /**
    * Create a {@link Builder} from a {@link ManifestDefinition}.
    *
    * @param definition The {@link ManifestDefinition} to be used as the builder's initial state.
+   * @param contextJson Optional JSON string representing context settings for the builder.
    * @returns A {@link Builder} object.
    */
-  fromDefinition: (definition: ManifestDefinition) => Promise<Builder>;
+  fromDefinition: (definition: ManifestDefinition, contextJson?: string) => Promise<Builder>;
 
   /**
    * Create a {@link Builder} from a builder archive (created from {@link Builder.toArchive}).
    *
    * @param archive Builder archive as a blob.
+   * @param contextJson Optional JSON string representing context settings for the builder.
    * @returns A {@link Builder} object.
    */
-  fromArchive: (archive: Blob) => Promise<Builder>;
+  fromArchive: (archive: Blob, contextJson?: string) => Promise<Builder>;
 }
 
 /**
@@ -174,8 +177,8 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
   });
 
   return {
-    async new() {
-      const builderId = await tx.builder_new();
+    async new(contextJson?: string) {
+      const builderId = await tx.builder_new(contextJson);
 
       const builder = createBuilder(worker, builderId, () => {
         registry.unregister(builder);
@@ -185,9 +188,9 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
       return builder;
     },
 
-    async fromDefinition(definition: ManifestDefinition) {
+    async fromDefinition(definition: ManifestDefinition, contextJson?: string) {
       const json = JSON.stringify(definition);
-      const builderId = await tx.builder_fromJson(json);
+      const builderId = await tx.builder_fromJson(json, contextJson);
 
       const builder = createBuilder(worker, builderId, () => {
         registry.unregister(builder);
@@ -197,8 +200,8 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
       return builder;
     },
 
-    async fromArchive(archive: Blob) {
-      const builderId = await tx.builder_fromArchive(archive);
+    async fromArchive(archive: Blob, contextJson?: string) {
+      const builderId = await tx.builder_fromArchive(archive, contextJson);
 
       const builder = createBuilder(worker, builderId, () => {
         registry.unregister(builder);

@@ -31,13 +31,13 @@ rx({
       loadSettings(settings);
     }
   },
-  async reader_fromBlob(format, blob) {
-    const reader = await WasmReader.fromBlob(format, blob);
+  async reader_fromBlob(format, blob, contextJson) {
+    const reader = await WasmReader.fromBlob(format, blob, contextJson);
     const readerId = readerMap.add(reader);
     return readerId;
   },
-  async reader_fromBlobFragment(format, init, fragment) {
-    const reader = await WasmReader.fromBlobFragment(format, init, fragment);
+  async reader_fromBlobFragment(format, init, fragment, contextJson) {
+    const reader = await WasmReader.fromBlobFragment(format, init, fragment, contextJson);
     const readerId = readerMap.add(reader);
     return readerId;
   },
@@ -67,18 +67,18 @@ rx({
     reader.free();
     readerMap.remove(readerId);
   },
-  builder_new() {
-    const builder = WasmBuilder.new();
+  builder_new(contextJson) {
+    const builder = WasmBuilder.new(contextJson);
     const builderId = builderMap.add(builder);
     return builderId;
   },
-  builder_fromJson(json: string) {
-    const builder = WasmBuilder.fromJson(json);
+  builder_fromJson(json: string, contextJson) {
+    const builder = WasmBuilder.fromJson(json, contextJson);
     const builderId = builderMap.add(builder);
     return builderId;
   },
-  builder_fromArchive(archive) {
-    const builder = WasmBuilder.fromArchive(archive);
+  builder_fromArchive(archive, contextJson) {
+    const builder = WasmBuilder.fromArchive(archive, contextJson);
     const builderId = builderMap.add(builder);
     return builderId;
   },
