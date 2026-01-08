@@ -28,7 +28,6 @@ export default {
         identifier:
           'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.thumbnail.claim',
       },
-      ingredients: [],
       assertions: [
         {
           label: 'c2pa.actions.v2',
@@ -187,5 +186,5 @@ export default {
       ],
     },
   },
-  validation_state: 'Invalid',
+  validation_state: 'Valid',
 } satisfies ManifestStore;

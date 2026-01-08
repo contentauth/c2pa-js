@@ -75,7 +75,6 @@ export default {
           version: '0.58.0',
         },
       ],
-      ingredients: [],
       instance_id: 'xmp:iid:855872d9-5358-497e-b7b4-afca591277e1',
       label: 'urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d',
       signature_info: {
