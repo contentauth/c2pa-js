@@ -7,7 +7,7 @@
 
 use std::io::Cursor;
 
-use c2pa::{assertions::Action, Builder, BuilderIntent, Ingredient};
+use c2pa::{assertions::Action, Builder, BuilderIntent, Context, Ingredient};
 use js_sys::{Error as JsError, JsString, Uint8Array};
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::Serializer;
@@ -40,9 +40,17 @@ struct AssetAndManifestBytes {
 #[wasm_bindgen]
 impl WasmBuilder {
     /// Creates a new `WasmBuilder` with a minimal manifest definition.
+    /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = new)]
-    pub fn new() -> Result<WasmBuilder, JsError> {
-        let builder = Builder::new();
+    pub fn new(context_json: Option<String>) -> Result<WasmBuilder, JsError> {
+        let builder = if let Some(json) = context_json {
+            let context = Context::new()
+                .with_settings(json.as_str())
+                .map_err(WasmError::from)?;
+            Builder::from_context(context)
+        } else {
+            Builder::new()
+        };
 
         Ok(WasmBuilder::from_builder(builder))
     }
@@ -58,16 +66,36 @@ impl WasmBuilder {
     }
 
     /// Attempts to create a new `WasmBuilder` from a JSON ManifestDefinition string.
+    /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = fromJson)]
-    pub fn from_json(json: &str) -> Result<WasmBuilder, JsError> {
-        let builder = Builder::from_json(json).map_err(WasmError::from)?;
+    pub fn from_json(json: &str, context_json: Option<String>) -> Result<WasmBuilder, JsError> {
+        let builder = if let Some(ctx_json) = context_json {
+            let context = Context::new()
+                .with_settings(ctx_json.as_str())
+                .map_err(WasmError::from)?;
+            let mut builder = Builder::from_context(context);
+            // Parse the manifest definition and set it directly
+            let definition = Builder::from_json(json)
+                .map_err(WasmError::from)?
+                .definition;
+            builder.definition = definition;
+            builder
+        } else {
+            Builder::from_json(json).map_err(WasmError::from)?
+        };
 
         Ok(WasmBuilder::from_builder(builder))
     }
 
     /// Attempts to create a new `WasmBuilder` from a builder archive.
+    /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = fromArchive)]
-    pub fn from_archive(archive: &Blob) -> Result<WasmBuilder, JsError> {
+    pub fn from_archive(
+        archive: &Blob,
+        _context_json: Option<String>,
+    ) -> Result<WasmBuilder, JsError> {
+        // TODO: CAI-10614 Context support for archives is not currently available
+        // due to private APIs in c2pa-rs. For now, we use the default context.
         let stream = BlobStream::new(archive);
         let builder = Builder::from_archive(stream).map_err(WasmError::from)?;
 

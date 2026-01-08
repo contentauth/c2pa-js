@@ -56,7 +56,6 @@ export default {
         },
       ],
       format: 'video/mp4',
-      ingredients: [],
       instance_id: '1.0',
       label: 'contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D',
       signature_info: {
@@ -96,13 +95,13 @@ export default {
         },
         {
           code: 'assertion.bmffHash.match',
-          explanation: 'data hash valid',
+          explanation: 'BMFF hash valid',
           url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.assertions/c2pa.hash.bmff.v2',
         },
       ],
     },
   },
-  validation_state: 'Invalid',
+  validation_state: 'Valid',
   validation_status: [
     {
       code: 'signingCredential.untrusted',

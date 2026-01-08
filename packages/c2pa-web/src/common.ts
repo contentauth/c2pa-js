@@ -25,10 +25,12 @@ export {
 } from './lib/supportedFormats.js';
 
 export type {
+  SettingsContext,
   Settings,
   VerifySettings,
   TrustSettings,
   BuilderSettings,
+  BuilderThumbnailSettings,
   CawgTrustSettings,
 } from './lib/settings.js';
 
