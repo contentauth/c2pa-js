@@ -13,7 +13,7 @@ import { merge } from 'ts-deepmerge';
  * Context configuration for C2PA operations.
  *
  * Context encapsulates settings and configuration options for Reader and Builder operations.
- * It provides a flexible way to configure SDK behavior including verification settings,
+ * It provides a flexible way to configure SDK behavior including the verification configuration,
  * trust configuration, and builder options.
  *
  * @example

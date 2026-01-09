@@ -24,8 +24,6 @@ export {
   READER_SUPPORTED_FORMATS,
 } from './lib/supportedFormats.js';
 
-export { contextToWasmJson, settingsToWasmJson } from './lib/settings.js';
-
 export type {
   SettingsContext,
   Settings,

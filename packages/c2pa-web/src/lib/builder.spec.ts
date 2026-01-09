@@ -10,6 +10,7 @@
 import { test, describe, expect } from 'test/methods.js';
 import { ManifestDefinition, Ingredient } from '@contentauth/c2pa-types';
 import { getBlobForAsset } from 'test/utils.js';
+import { SettingsContext } from './settings.js';
 import C_JPG from 'test/assets/C.jpg';
 
 describe('builder', () => {
@@ -131,16 +132,12 @@ describe('builder', () => {
         test('should read builder archive with context settings', async ({
           c2pa,
         }) => {
-          // Import the context serialization function
-          const { contextToWasmJson } = await import('./settings.js');
-
           // Configure builder to generate C2PA archive
-          const builderContext = {
+          const builderContext: SettingsContext = {
             builder: {
               generateC2paArchive: true,
             },
           };
-          const builderContextJson = await contextToWasmJson(builderContext);
 
           const manifestDefinition: ManifestDefinition = {
             claim_generator_info: [
@@ -159,7 +156,7 @@ describe('builder', () => {
           // Create builder with generateC2paArchive enabled
           const builder = await c2pa.builder.fromDefinition(
             manifestDefinition,
-            builderContextJson
+            builderContext
           );
 
           const ingredient: Ingredient = {
@@ -177,19 +174,18 @@ describe('builder', () => {
           expect(archive.byteLength).toBeGreaterThan(0);
 
           // Configure reader to skip verification for unsigned archive
-          const readerContext = {
+          const readerContext: SettingsContext = {
             verify: {
               verifyAfterReading: false,
             },
           };
-          const readerContextJson = await contextToWasmJson(readerContext);
 
           // Read the C2PA archive with Reader using application/c2pa format
           const archiveBlob = new Blob([archive]);
           const reader = await c2pa.reader.fromBlob(
             'application/c2pa',
             archiveBlob,
-            readerContextJson
+            readerContext
           );
 
           expect(reader).not.toBeNull();
