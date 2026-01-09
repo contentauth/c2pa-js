@@ -49,13 +49,22 @@ This command will download precompiled binaries for the following systems:
 
 ### Reader
 
-The `Reader` class is used to read and validate C2PA manifests from media files. It can parse embedded manifests or fetch remote manifests.
+The `Reader` class is used to read and validate C2PA manifests from media files. It can parse embedded manifests or fetch remote manifests. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
 
 ```javascript
 import { Reader } from '@contentauth/c2pa-node';
 
 // Read from an asset file
 const reader = await Reader.fromAsset(inputAsset);
+
+// Read with custom settings
+const settings = {
+  verify: {
+    verify_after_reading: false,
+    verify_trust: true
+  }
+};
+const reader = await Reader.fromAsset(inputAsset, settings);
 
 // Read from manifest data and asset
 const reader = await Reader.fromManifestDataAndAsset(manifestData, asset);
@@ -75,7 +84,7 @@ const remoteUrl = reader.remoteUrl();
 
 ### Builder
 
-The `Builder` class is the main component for creating and signing C2PA manifests. It provides methods to add assertions, resources, and ingredients to manifests, and handles the signing process. Use the `Signer` class to sign the manifests.
+The `Builder` class is the main component for creating and signing C2PA manifests. It provides methods to add assertions, resources, and ingredients to manifests, and handles the signing process. Use the `Signer` class to sign the manifests. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
 
 ```javascript
 import { Builder } from '@contentauth/c2pa-node';
@@ -83,8 +92,19 @@ import { Builder } from '@contentauth/c2pa-node';
 // Create a new builder
 const builder = Builder.new();
 
+// Create with custom settings
+const settings = {
+  builder: {
+    generate_c2pa_archive: true
+  }
+};
+const builder = Builder.new(settings);
+
 // Or create from an existing manifest definition
 const builder = Builder.withJson(manifestDefinition);
+
+// Or create with both manifest and settings
+const builder = Builder.withJson(manifestDefinition, settings);
 
 // Add assertions to the manifest
 builder.addAssertion('c2pa.actions', actionsAssertion);
@@ -214,40 +234,116 @@ const decodedData = await trustmark.decode(imageBuffer);
 
 ### Settings and Configuration
 
-The library provides comprehensive settings management for trust configuration, verification settings, and global C2PA settings:
+The library provides comprehensive settings management that can be configured per Reader/Builder instance or using helper functions. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
+
+#### Per-Instance Settings
+
+Settings can be passed directly to `Reader` and `Builder` constructors:
+
+```javascript
+import { Reader, Builder } from '@contentauth/c2pa-node';
+
+// Create settings object
+const settings = {
+  verify: {
+    verify_after_reading: false,
+    verify_after_sign: false,
+    verify_trust: true,
+    ocsp_fetch: true
+  },
+  trust: {
+    verify_trust_list: true,
+    trust_anchors: "path/to/anchors.pem"
+  }
+};
+
+// Pass settings to Reader
+const reader = await Reader.fromAsset(inputAsset, settings);
+
+// Pass settings to Builder
+const builder = Builder.new(settings);
+
+// Settings can also be JSON strings
+const settingsJson = JSON.stringify(settings);
+const builder2 = Builder.new(settingsJson);
+```
+
+#### Settings Helper Functions
+
+The library provides helper functions to create and manage settings objects:
 
 ```javascript
 import {
-  loadC2paSettings,
-  loadTrustConfig,
-  loadVerifyConfig,
+  createTrustSettings,
+  createCawgTrustSettings,
+  createVerifySettings,
+  mergeSettings,
+  settingsToJson,
   loadSettingsFromFile,
   loadSettingsFromUrl
 } from '@contentauth/c2pa-node';
 
-// Load settings from JSON string
-loadC2paSettings('{"trust": {"verify_trust_list": true}}');
+// Create trust settings
+const trustSettings = createTrustSettings({
+  verifyTrustList: true,
+  userAnchors: "path/to/user-anchors.pem",
+  trustAnchors: "path/to/trust-anchors.pem",
+  allowedList: "path/to/allowed-list.pem"
+});
 
-// Load settings from file
-await loadSettingsFromFile('./c2pa-settings.json');
+// Create CAWG trust settings
+const cawgTrustSettings = createCawgTrustSettings({
+  verifyTrustList: true,
+  trustAnchors: "path/to/cawg-anchors.pem"
+});
+
+// Create verify settings
+const verifySettings = createVerifySettings({
+  verifyAfterReading: false,
+  verifyAfterSign: false,
+  verifyTrust: true,
+  verifyTimestampTrust: true,
+  ocspFetch: true,
+  remoteManifestFetch: true,
+  skipIngredientConflictResolution: false,
+  strictV1Validation: false
+});
+
+// Merge multiple settings
+const combinedSettings = mergeSettings(trustSettings, verifySettings);
+
+// Convert settings to JSON string
+const jsonString = settingsToJson(combinedSettings);
+
+// Load settings from file (JSON or TOML)
+const fileSettings = await loadSettingsFromFile('./c2pa-settings.toml');
+const reader = await Reader.fromAsset(inputAsset, fileSettings);
 
 // Load settings from URL
-await loadSettingsFromUrl('https://example.com/c2pa-settings.json');
-
-// Configure trust settings
-loadTrustConfig({
-  verifyTrustList: true,
-  userAnchors: ['anchor1', 'anchor2'],
-  trustAnchors: ['trust-anchor1'],
-  allowedList: ['allowed-cert1']
-});
-
-// Configure verification settings
-loadVerifyConfig({
-  verifyAfterReading: true,
-  verifyAfterSign: true,
-  verifyTrust: true,
-  ocspFetch: true,
-  remoteManifestFetch: true
-});
+const urlSettings = await loadSettingsFromUrl('https://example.com/c2pa-settings.json');
+const builder = Builder.new(urlSettings);
 ```
+
+#### Available Settings
+
+**Trust Settings:**
+- `verifyTrustList` - Whether to verify against the trust list
+- `userAnchors` - User-provided trust anchors (PEM format or path)
+- `trustAnchors` - Trust anchors for validation (PEM format or path)
+- `trustConfig` - Path to trust configuration file
+- `allowedList` - Allowed list of certificates (PEM format or path)
+
+**Verify Settings:**
+- `verifyAfterReading` - Whether to verify after reading a manifest
+- `verifyAfterSign` - Whether to verify after signing a manifest
+- `verifyTrust` - Whether to verify trust during validation
+- `verifyTimestampTrust` - Whether to verify timestamp trust
+- `ocspFetch` - Whether to fetch OCSP responses
+- `remoteManifestFetch` - Whether to fetch remote manifests
+- `skipIngredientConflictResolution` - Whether to skip ingredient conflict resolution
+- `strictV1Validation` - Whether to use strict v1 validation
+
+**Builder Settings:**
+- `generate_c2pa_archive` - Whether to generate C2PA archive format
+
+**Note:** Settings are passed as per-instance configuration. There are no global settings that affect all Readers and Builders.

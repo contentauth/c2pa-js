@@ -17,29 +17,15 @@ use crate::neon_identity_assertion_signer::NeonIdentityAssertionSigner;
 use crate::neon_reader::NeonReader;
 use crate::neon_signer::{CallbackSignerConfig, NeonCallbackSigner, NeonLocalSigner};
 use crate::runtime::runtime;
+use crate::utils::parse_settings;
 use c2pa::{Builder, BuilderIntent, Ingredient};
+use neon::context::Context as NeonContext;
 use neon::prelude::*;
 use neon_serde4;
-use serde::{Deserialize, Serialize};
 use serde_json;
 use std::ops::Deref;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-
-#[derive(Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct IngredientThumbnail {
-    pub format: String,
-    #[serde(with = "serde_bytes")]
-    pub data: Vec<u8>,
-}
-
-#[derive(Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct IngredientOptions {
-    pub is_parent: bool,
-    pub thumbnail: Option<IngredientThumbnail>,
-}
 
 pub struct NeonBuilder {
     builder: Arc<Mutex<Builder>>,
@@ -47,14 +33,36 @@ pub struct NeonBuilder {
 
 impl NeonBuilder {
     pub fn new(mut cx: FunctionContext) -> JsResult<JsBox<Self>> {
+        // Parse optional settings parameter (argument 0)
+        let context_opt =
+            parse_settings(&mut cx, 0, "Builder").or_else(|err| cx.throw_error(err.to_string()))?;
+
+        let builder = if let Some(context) = context_opt {
+            Builder::from_context(context)
+        } else {
+            Builder::default()
+        };
+
         Ok(cx.boxed(Self {
-            builder: Arc::new(Mutex::new(Builder::default())),
+            builder: Arc::new(Mutex::new(builder)),
         }))
     }
 
     pub fn with_json(mut cx: FunctionContext) -> JsResult<JsBox<Self>> {
         let json = cx.argument::<JsString>(0)?.value(&mut cx);
-        let builder = Builder::from_json(&json).or_else(|err| cx.throw_error(err.to_string()))?;
+
+        // Parse optional settings parameter (argument 1)
+        let context_opt =
+            parse_settings(&mut cx, 1, "Builder").or_else(|err| cx.throw_error(err.to_string()))?;
+
+        let builder = if let Some(context) = context_opt {
+            Builder::from_context(context)
+                .with_definition(json.as_str())
+                .or_else(|err| cx.throw_error(err.to_string()))?
+        } else {
+            Builder::from_json(&json).or_else(|err| cx.throw_error(err.to_string()))?
+        };
+
         Ok(cx.boxed(Self {
             builder: Arc::new(Mutex::new(builder)),
         }))
@@ -285,18 +293,24 @@ impl NeonBuilder {
             .argument::<JsObject>(0)
             .and_then(|obj| parse_asset(&mut cx, obj))?;
 
+        // TODO: CAI-10614 This won't work until from_archive_with_context() is ready
+        let _context_opt =
+            parse_settings(&mut cx, 1, "Builder").or_else(|err| cx.throw_error(err.to_string()))?;
+
         let promise = cx
             .task(move || {
                 let source_stream = source.into_read_stream()?;
                 let builder = Builder::from_archive(source_stream)?;
                 Ok(builder)
             })
-            .promise(move |mut cx, result: Result<Builder, Error>| match result {
-                Ok(builder) => Ok(cx.boxed(Self {
-                    builder: Arc::new(Mutex::new(builder)),
-                })),
-                Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
-            });
+            .promise(
+                move |mut cx, result: crate::error::Result<Builder>| match result {
+                    Ok(builder) => Ok(cx.boxed(Self {
+                        builder: Arc::new(Mutex::new(builder)),
+                    })),
+                    Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
+                },
+            );
         Ok(promise)
     }
 

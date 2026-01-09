@@ -20,6 +20,7 @@ import * as crypto from "crypto";
 
 import type {
   BuilderInterface,
+  C2paSettings,
   JsCallbackSignerConfig,
   DestinationBufferAsset,
   SourceBufferAsset,
@@ -29,7 +30,6 @@ import { isActionsAssertion } from "./assertions.js";
 import { CallbackSigner, LocalSigner } from "./Signer.js";
 import { Reader } from "./Reader.js";
 import { Builder } from "./Builder.js";
-import { loadC2paSettings, resetSettings } from "./Settings.js";
 
 const tempDir = path.join(__dirname, "tmp");
 
@@ -299,58 +299,52 @@ describe("Builder", () => {
     });
 
     it("should construct reader directly from builder archive buffer", async () => {
-      // Enable c2pa archive format
-      loadC2paSettings(
-        JSON.stringify({
-          builder: {
-            generate_c2pa_archive: true,
+      const settings: C2paSettings = JSON.stringify({
+        builder: {
+          generate_c2pa_archive: true,
+        },
+        verify: {
+          verify_after_reading: false,
+        },
+      });
+      // Create a builder
+      const simpleManifestDefinition = {
+        claim_generator_info: [
+          {
+            name: "c2pa_test",
+            version: "1.0.0",
           },
-          verify: {
-            verify_after_reading: false,
-          },
-        }),
-      );
+        ],
+        title: "Test_Manifest",
+        format: "image/jpeg",
+        assertions: [],
+        resources: { resources: {} },
+      };
 
-      try {
-        // Create a builder
-        const simpleManifestDefinition = {
-          claim_generator_info: [
-            {
-              name: "c2pa_test",
-              version: "1.0.0",
-            },
-          ],
-          title: "Test_Manifest",
-          format: "image/jpeg",
-          assertions: [],
-          resources: { resources: {} },
-        };
+      const testBuilder = Builder.withJson(simpleManifestDefinition, settings);
 
-        const testBuilder = Builder.withJson(simpleManifestDefinition);
+      // Add an ingredient
+      await testBuilder.addIngredient(parent_json, source);
 
-        // Add an ingredient
-        await testBuilder.addIngredient(parent_json, source);
+      // Create an archive from the builder written to a buffer
+      const archive: DestinationBufferAsset = {
+        buffer: null,
+      };
+      await testBuilder.toArchive(archive);
 
-        // Create an archive from the builder written to a buffer
-        const archive: DestinationBufferAsset = {
-          buffer: null,
-        };
-        await testBuilder.toArchive(archive);
+      // Verify buffer was populated
+      expect(archive.buffer).not.toBeNull();
+      expect(archive.buffer!.length).toBeGreaterThan(0);
 
-        // Verify buffer was populated
-        expect(archive.buffer).not.toBeNull();
-        expect(archive.buffer!.length).toBeGreaterThan(0);
-
-        // Construct a reader from the builder archive with mime-type "application/c2pa"
-        const reader = await Reader.fromAsset({
+      // Construct a reader from the builder archive with mime-type "application/c2pa"
+      const reader = await Reader.fromAsset(
+        {
           buffer: archive.buffer! as Buffer,
           mimeType: "application/c2pa",
-        });
-        expect(reader).not.toBeNull();
-      } finally {
-        // Reset settings to defaults
-        resetSettings();
-      }
+        },
+        settings,
+      );
+      expect(reader).not.toBeNull();
     });
 
     it("should sign data with callback to file", async () => {

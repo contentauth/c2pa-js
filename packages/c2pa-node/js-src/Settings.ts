@@ -12,206 +12,126 @@
 // each license.
 
 import * as fs from "fs-extra";
-import path from "path";
 import fetch from "node-fetch";
 
-import { getNeonBinary } from "./binary.js";
-import type { TrustConfig, VerifyConfig } from "./types.d.ts";
+import type { TrustConfig, VerifyConfig, SettingsContext } from "./types.d.ts";
 
 /**
- * Load settings from a JSON string and apply them globally.
- * @param json The JSON string containing the settings configuration
+ * Create a Settings object with trust configuration.
+ * @param trustConfig The trust configuration
+ * @returns Settings object that can be passed to Reader/Builder
  */
-export function loadC2paSettings(json: string): void {
-  getNeonBinary().loadSettings(json);
+export function createTrustSettings(trustConfig: TrustConfig): SettingsContext {
+  return {
+    trust: {
+      verify_trust_list: trustConfig.verifyTrustList,
+      user_anchors: trustConfig.userAnchors,
+      trust_anchors: trustConfig.trustAnchors,
+      trust_config: trustConfig.trustConfig,
+      allowed_list: trustConfig.allowedList,
+    },
+  };
 }
 
 /**
- * Load settings from a TOML string and apply them globally.
- * @param toml The TOML string containing the settings configuration
+ * Create a settings object with CAWG trust configuration.
+ * @param trustConfig The CAWG trust configuration
+ * @returns Settings object that can be passed to Reader/Builder
  */
-export function loadC2paSettingsToml(toml: string): void {
-  getNeonBinary().loadSettingsToml(toml);
+export function createCawgTrustSettings(
+  trustConfig: TrustConfig,
+): SettingsContext {
+  return {
+    cawg_trust: {
+      verify_trust_list: trustConfig.verifyTrustList,
+      user_anchors: trustConfig.userAnchors,
+      trust_anchors: trustConfig.trustAnchors,
+      trust_config: trustConfig.trustConfig,
+      allowed_list: trustConfig.allowedList,
+    },
+  };
 }
 
 /**
- * Load settings from a TOML or JSON file path and apply them globally.
- * The file format is determined by the file extension (.toml for TOML, otherwise JSON).
- * @param filePath The path to the settings file
+ * Create a settings object with verify configuration.
+ * @param verifyConfig The verify configuration
+ * @returns Settings object that can be passed to Reader/Builder
  */
-export async function loadSettingsFromFile(filePath: string): Promise<void> {
-  const ext = path.extname(filePath).toLowerCase();
-  const content = await fs.readFile(filePath, "utf8");
-  if (ext === ".toml") {
-    loadC2paSettingsToml(content);
-    return;
+export function createVerifySettings(
+  verifyConfig: VerifyConfig,
+): SettingsContext {
+  return {
+    verify: {
+      verify_after_reading: verifyConfig.verifyAfterReading,
+      verify_after_sign: verifyConfig.verifyAfterSign,
+      verify_trust: verifyConfig.verifyTrust,
+      verify_timestamp_trust: verifyConfig.verifyTimestampTrust,
+      ocsp_fetch: verifyConfig.ocspFetch,
+      remote_manifest_fetch: verifyConfig.remoteManifestFetch,
+      skip_ingredient_conflict_resolution:
+        verifyConfig.skipIngredientConflictResolution,
+      strict_v1_validation: verifyConfig.strictV1Validation,
+    },
+  };
+}
+
+/**
+ * Merge multiple settings objects into one.
+ * Later settings override earlier ones.
+ * @param settings Settings objects to merge
+ * @returns Merged settings object
+ */
+export function mergeSettings(...settings: SettingsContext[]): SettingsContext {
+  const merged: SettingsContext = {};
+
+  for (const setting of settings) {
+    if (setting.trust) {
+      merged.trust = { ...merged.trust, ...setting.trust };
+    }
+    if (setting.cawg_trust) {
+      merged.cawg_trust = { ...merged.cawg_trust, ...setting.cawg_trust };
+    }
+    if (setting.verify) {
+      merged.verify = { ...merged.verify, ...setting.verify };
+    }
+    if (setting.builder) {
+      merged.builder = { ...merged.builder, ...setting.builder };
+    }
   }
-  // Assume JSON (or JSON5 that is valid JSON) otherwise
-  // If needed, callers can ensure the content is valid JSON.
-  loadC2paSettings(content);
+
+  return merged;
 }
 
 /**
- * Load settings from a URL and apply them globally.
- * The format is determined by the content-type header or file extension (.toml for TOML, otherwise JSON).
- * @param url The URL to fetch the settings from
+ * Convert a settings object to a JSON string.
+ * @param settings The settings object
+ * @returns JSON string representation
  */
-export async function loadSettingsFromUrl(url: string): Promise<void> {
+export function settingsToJson(settings: SettingsContext): string {
+  return JSON.stringify(settings);
+}
+
+/**
+ * Load settings from a TOML or JSON file.
+ * @param filePath The path to the settings file
+ * @returns Settings as a string (TOML or JSON depending on file extension)
+ */
+export async function loadSettingsFromFile(filePath: string): Promise<string> {
+  const content = await fs.readFile(filePath, "utf8");
+  return content;
+}
+
+/**
+ * Load settings from a URL.
+ * @param url The URL to fetch the settings from
+ * @returns Settings as a string
+ */
+export async function loadSettingsFromUrl(url: string): Promise<string> {
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(
       `Failed to fetch settings from URL: ${res.status} ${res.statusText}`,
     );
   }
-  const contentType = res.headers.get("content-type") || "";
-  const text = await res.text();
-
-  const isToml =
-    contentType.includes("toml") || url.toLowerCase().endsWith(".toml");
-  if (isToml) {
-    loadC2paSettingsToml(text);
-    return;
-  }
-  // Treat as JSON by default
-  loadC2paSettings(text);
-}
-
-/**
- * Get the current settings as a JSON string.
- * @returns The JSON representation of the current settings
- */
-export function getSettingsJson(): string {
-  return getNeonBinary().getSettingsJson();
-}
-
-/**
- * Load trust configuration into the main trust settings.
- * @param trustConfig The trust configuration object
- */
-export function loadTrustConfig(trustConfig: TrustConfig): void {
-  // Convert settings to snake_case for the neon Rust code.
-  // Explicitly set undefined fields to null to ensure they are cleared
-  const config = {
-    verify_trust_list: trustConfig.verifyTrustList,
-    user_anchors: trustConfig.userAnchors ?? null,
-    trust_anchors: trustConfig.trustAnchors ?? null,
-    trust_config: trustConfig.trustConfig ?? null,
-    allowed_list: trustConfig.allowedList ?? null,
-  };
-  getNeonBinary().loadTrustConfig(JSON.stringify(config));
-}
-
-/**
- * Load trust configuration into the CAWG trust settings.
- * @param trustConfig The trust configuration object
- */
-export function loadCawgTrustConfig(trustConfig: TrustConfig): void {
-  // Convert settings to snake_case for the neon Rust code
-  // Explicitly set undefined fields to null to ensure they are cleared
-  const config = {
-    verify_trust_list: trustConfig.verifyTrustList,
-    user_anchors: trustConfig.userAnchors ?? null,
-    trust_anchors: trustConfig.trustAnchors ?? null,
-    trust_config: trustConfig.trustConfig ?? null,
-    allowed_list: trustConfig.allowedList ?? null,
-  };
-  getNeonBinary().loadCawgTrustConfig(JSON.stringify(config));
-}
-
-/**
- * Get the current trust configuration.
- * @returns The current trust configuration object
- */
-export function getTrustConfig(): TrustConfig {
-  const json = getNeonBinary().getTrustConfig();
-  const parsed = JSON.parse(json);
-
-  // Convert snake_case to camelCase to match TrustConfig interface
-  // Handle undefined values by converting them to null
-  return {
-    verifyTrustList: parsed.verify_trust_list,
-    userAnchors: parsed.user_anchors ?? null,
-    trustAnchors: parsed.trust_anchors ?? null,
-    trustConfig: parsed.trust_config ?? null,
-    allowedList: parsed.allowed_list ?? null,
-  };
-}
-
-/**
- * Get the current CAWG trust configuration.
- * @returns The current CAWG trust configuration object
- */
-export function getCawgTrustConfig(): TrustConfig {
-  const json = getNeonBinary().getCawgTrustConfig();
-  const parsed = JSON.parse(json);
-
-  // Convert snake_case to camelCase to match TrustConfig interface
-  // Handle undefined values by converting them to null
-  return {
-    verifyTrustList: parsed.verify_trust_list,
-    userAnchors: parsed.user_anchors ?? null,
-    trustAnchors: parsed.trust_anchors ?? null,
-    trustConfig: parsed.trust_config ?? null,
-    allowedList: parsed.allowed_list ?? null,
-  };
-}
-
-/**
- * Load verify configuration into the verify settings.
- * @param verifyConfig The verify configuration object
- */
-export function loadVerifyConfig(verifyConfig: VerifyConfig): void {
-  // Convert camelCase to snake_case for the neon Rust code
-  const config = {
-    verify_after_reading: verifyConfig.verifyAfterReading,
-    verify_after_sign: verifyConfig.verifyAfterSign,
-    verify_trust: verifyConfig.verifyTrust,
-    verify_timestamp_trust: verifyConfig.verifyTimestampTrust,
-    ocsp_fetch: verifyConfig.ocspFetch,
-    remote_manifest_fetch: verifyConfig.remoteManifestFetch,
-    skip_ingredient_conflict_resolution:
-      verifyConfig.skipIngredientConflictResolution,
-    strict_v1_validation: verifyConfig.strictV1Validation,
-  };
-  getNeonBinary().loadVerifyConfig(JSON.stringify(config));
-}
-
-/**
- * Patch the verify configuration with any subset of fields.
- * @param patch Partial verify config fields to update
- */
-export function patchVerifyConfig(patch: Partial<VerifyConfig>): void {
-  const current = getVerifyConfig();
-  const updated = { ...current, ...patch };
-  loadVerifyConfig(updated);
-}
-
-/**
- * Get the current verify configuration.
- * @returns The current verify configuration object
- */
-export function getVerifyConfig(): VerifyConfig {
-  const json = getNeonBinary().getVerifyConfig();
-  const parsed = JSON.parse(json);
-
-  // Convert snake_case to camelCase to match VerifyConfig interface
-  return {
-    verifyAfterReading: parsed.verify_after_reading,
-    verifyAfterSign: parsed.verify_after_sign,
-    verifyTrust: parsed.verify_trust,
-    verifyTimestampTrust: parsed.verify_timestamp_trust,
-    ocspFetch: parsed.ocsp_fetch,
-    remoteManifestFetch: parsed.remote_manifest_fetch,
-    skipIngredientConflictResolution:
-      parsed.skip_ingredient_conflict_resolution,
-    strictV1Validation: parsed.strict_v1_validation,
-  };
-}
-
-/**
- * Reset settings to their default values.
- * This clears any custom settings and restores the default configuration.
- */
-export function resetSettings(): void {
-  getNeonBinary().resetSettings();
+  return await res.text();
 }

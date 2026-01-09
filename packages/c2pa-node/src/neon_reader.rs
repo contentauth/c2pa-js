@@ -14,7 +14,9 @@
 use crate::asset::parse_asset;
 use crate::error::{as_js_error, Error, Result};
 use crate::runtime::runtime;
+use crate::utils::parse_settings;
 use c2pa::Reader;
+use neon::context::Context as NeonContext;
 use neon::prelude::*;
 use neon::types::buffer::TypedArray;
 use std::sync::Arc;
@@ -46,6 +48,10 @@ impl NeonReader {
             .argument::<JsObject>(0)
             .and_then(|obj| parse_asset(&mut cx, obj))?;
 
+        // Parse optional settings parameter (argument 1)
+        let context_opt =
+            parse_settings(&mut cx, 1, "Reader").or_else(|err| cx.throw_error(err.to_string()))?;
+
         let (deferred, promise) = cx.promise();
         rt.spawn(async move {
             let result: Result<Reader> = async {
@@ -57,7 +63,16 @@ impl NeonReader {
                     .to_owned();
 
                 let stream = source.into_read_stream()?;
-                let reader = Reader::from_stream_async(&format, stream).await?;
+
+                // Create reader with or without context
+                let reader = if let Some(context) = context_opt {
+                    Reader::from_context(context)
+                        .with_stream_async(&format, stream)
+                        .await?
+                } else {
+                    Reader::from_stream_async(&format, stream).await?
+                };
+
                 Ok(reader)
             }
             .await;
@@ -93,6 +108,11 @@ impl NeonReader {
             .argument::<JsObject>(1)
             .and_then(|obj| parse_asset(&mut cx, obj))?;
 
+        // Parse optional settings parameter (argument 2) - note: settings are not currently used
+        // for from_manifest_data_and_asset as the c2pa-rs API doesn't support context for this method yet
+        let _context_opt =
+            parse_settings(&mut cx, 2, "Reader").or_else(|err| cx.throw_error(err.to_string()))?;
+
         let c2pa_data = manifest_data.as_slice(&cx).to_vec();
         let (deferred, promise) = cx.promise();
         rt.spawn(async move {
@@ -104,9 +124,13 @@ impl NeonReader {
                     })?
                     .to_owned();
                 let stream = asset.into_read_stream()?;
+
+                // TODO: CAI-10614 c2pa-rs currently does not support passing Context to
+                // from_manifest_data_and_stream_async
                 let reader =
                     Reader::from_manifest_data_and_stream_async(&c2pa_data, &format, stream)
                         .await?;
+
                 Ok(reader)
             }
             .await;

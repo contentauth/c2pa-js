@@ -183,6 +183,12 @@ export interface HashedUri {
   alg?: string;
 }
 
+/**
+ * Optional settings that can be provided when creating a Reader or Builder.
+ * Can be a JSON string, TOML string, or a settings object.
+ */
+export type C2paSettings = string | object;
+
 export interface BuilderInterface {
   /** An intent lets the API know what kind of manifest to create.
    * Intents are `Create`, `Edit`, or `Update`.
@@ -459,4 +465,45 @@ export interface VerifyConfig {
   skipIngredientConflictResolution: boolean;
   /** Whether to use strict v1 validation */
   strictV1Validation: boolean;
+}
+
+/**
+ * Settings configuration object that can be passed to Reader and Builder constructors.
+ * Only trust, verify, and builder settings are configurable from the Node SDK.
+ * Uses snake_case internally to match the c2pa-rs settings format.
+ */
+export interface SettingsContext {
+  /** C2PA trust configuration */
+  trust?: {
+    verify_trust_list?: boolean;
+    user_anchors?: string;
+    trust_anchors?: string;
+    trust_config?: string;
+    allowed_list?: string;
+  };
+  /** CAWG trust configuration */
+  cawg_trust?: {
+    verify_trust_list?: boolean;
+    user_anchors?: string;
+    trust_anchors?: string;
+    trust_config?: string;
+    allowed_list?: string;
+  };
+  /** Verification configuration */
+  verify?: {
+    verify_after_reading?: boolean;
+    verify_after_sign?: boolean;
+    verify_trust?: boolean;
+    verify_timestamp_trust?: boolean;
+    ocsp_fetch?: boolean;
+    remote_manifest_fetch?: boolean;
+    skip_ingredient_conflict_resolution?: boolean;
+    strict_v1_validation?: boolean;
+  };
+  /** Builder configuration */
+  builder?: {
+    thumbnail?: {
+      enabled?: boolean;
+    };
+  };
 }
