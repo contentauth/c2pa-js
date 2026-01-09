@@ -7,7 +7,7 @@
 
 use std::io::{Cursor, Read, Seek};
 
-use c2pa::Reader;
+use c2pa::{Context, Reader};
 use js_sys::{Error as JsError, Uint8Array};
 use serde::Serialize;
 use serde_wasm_bindgen::Serializer;
@@ -26,41 +26,62 @@ pub struct WasmReader {
 #[wasm_bindgen]
 impl WasmReader {
     /// Attempts to create a new `WasmReader` from an asset format and `Blob` of the asset's bytes.
+    /// Optionally accepts a context JSON string to configure the reader.
     #[wasm_bindgen(js_name = fromBlob)]
-    pub async fn from_blob(format: &str, blob: &Blob) -> Result<WasmReader, JsError> {
+    pub async fn from_blob(
+        format: &str,
+        blob: &Blob,
+        context_json: Option<String>,
+    ) -> Result<WasmReader, JsError> {
         let stream = BlobStream::new(blob);
-        WasmReader::from_stream(format, stream).await
+        WasmReader::from_stream(format, stream, context_json).await
     }
 
     async fn from_stream(
         format: &str,
         stream: impl Read + Seek + Send,
+        context_json: Option<String>,
     ) -> Result<WasmReader, JsError> {
-        let reader = Reader::from_stream_async(format, stream)
-            .await
-            .map_err(WasmError::from)?;
+        let reader = if let Some(json) = context_json {
+            let context = Context::new()
+                .with_settings(json.as_str())
+                .map_err(WasmError::from)?;
+            Reader::from_context(context)
+                .with_stream_async(format, stream)
+                .await
+                .map_err(WasmError::from)?
+        } else {
+            Reader::from_stream_async(format, stream)
+                .await
+                .map_err(WasmError::from)?
+        };
 
         Ok(WasmReader::from_reader(reader).await)
     }
 
     /// Attempts to create a new `WasmReader` from an asset format, a `Blob` of the bytes of the initial segment, and a fragment `Blob`.
+    /// Optionally accepts a context JSON string to configure the reader.
     #[wasm_bindgen(js_name = fromBlobFragment)]
     pub async fn from_blob_fragment(
         format: &str,
         init: &Blob,
         fragment: &Blob,
+        context_json: Option<String>,
     ) -> Result<WasmReader, JsError> {
         let init_stream = BlobStream::new(init);
         let fragment_stream = BlobStream::new(fragment);
 
-        WasmReader::from_stream_fragment(format, init_stream, fragment_stream).await
+        WasmReader::from_stream_fragment(format, init_stream, fragment_stream, context_json).await
     }
 
     async fn from_stream_fragment(
         format: &str,
         init: impl Read + Seek + Send,
         fragment: impl Read + Seek + Send,
+        _context_json: Option<String>,
     ) -> Result<WasmReader, JsError> {
+        // TODO: CAI-10614 Context support for fragments is not currently available
+        // due to private APIs in c2pa-rs. For now, we use the default context.
         let reader = Reader::from_fragment_async(format, init, fragment)
             .await
             .map_err(WasmError::from)?;

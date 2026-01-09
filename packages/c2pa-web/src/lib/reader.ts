@@ -11,6 +11,7 @@ import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
 import { AssetTooLargeError, UnsupportedFormatError } from './error.js';
 import { isSupportedReaderFormat } from './supportedFormats.js';
 import type { WorkerManager } from './worker/workerManager.js';
+import { SettingsContext, contextToWasmJson } from './settings.js';
 
 // 1 GB
 export const MAX_SIZE_IN_BYTES = 10 ** 9;
@@ -24,21 +25,24 @@ export interface ReaderFactory {
    *
    * @param format Asset format.
    * @param blob Blob of asset bytes.
+   * @param context Optional context settings for the reader.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
    */
-  fromBlob: (format: string, blob: Blob) => Promise<Reader | null>;
+  fromBlob: (format: string, blob: Blob, context?: SettingsContext) => Promise<Reader | null>;
 
   /**
    *
    * @param format Asset format.
    * @param init Blob of initial fragment bytes.
    * @param fragment Blob of fragment bytes.
+   * @param context Optional context settings for the reader.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
    */
   fromBlobFragment: (
     format: string,
     init: Blob,
-    fragment: Blob
+    fragment: Blob,
+    context?: SettingsContext
   ) => Promise<Reader | null>;
 }
 
@@ -110,7 +114,7 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
   });
 
   return {
-    async fromBlob(format: string, blob: Blob): Promise<Reader | null> {
+    async fromBlob(format: string, blob: Blob, context?: SettingsContext): Promise<Reader | null> {
       if (!isSupportedReaderFormat(format)) {
         throw new UnsupportedFormatError(format);
       }
@@ -120,7 +124,8 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
       }
 
       try {
-        const readerId = await tx.reader_fromBlob(format, blob);
+        const contextJson = context ? await contextToWasmJson(context) : undefined;
+        const readerId = await tx.reader_fromBlob(format, blob, contextJson);
 
         const reader = createReader(worker, readerId, () => {
           registry.unregister(reader);
@@ -133,7 +138,7 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
       }
     },
 
-    async fromBlobFragment(format: string, init: Blob, fragment: Blob) {
+    async fromBlobFragment(format: string, init: Blob, fragment: Blob, context?: SettingsContext) {
       if (!isSupportedReaderFormat(format)) {
         throw new UnsupportedFormatError(format);
       }
@@ -143,10 +148,12 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
       }
 
       try {
+        const contextJson = context ? await contextToWasmJson(context) : undefined;
         const readerId = await tx.reader_fromBlobFragment(
           format,
           init,
-          fragment
+          fragment,
+          contextJson
         );
 
         const reader = createReader(worker, readerId, () => {

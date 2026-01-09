@@ -10,6 +10,7 @@
 import { test, describe, expect } from 'test/methods.js';
 import { ManifestDefinition, Ingredient } from '@contentauth/c2pa-types';
 import { getBlobForAsset } from 'test/utils.js';
+import { SettingsContext } from './settings.js';
 import C_JPG from 'test/assets/C.jpg';
 
 describe('builder', () => {
@@ -126,6 +127,92 @@ describe('builder', () => {
             format: 'image/jpeg',
             instance_id: 'ingredient-instance-123',
           });
+        });
+
+        test('should read builder archive with context settings', async ({
+          c2pa,
+        }) => {
+          // Configure builder to generate C2PA archive
+          const builderContext: SettingsContext = {
+            builder: {
+              generateC2paArchive: true,
+            },
+          };
+
+          const manifestDefinition: ManifestDefinition = {
+            claim_generator_info: [
+              {
+                name: 'c2pa-web-test',
+                version: '1.0.0',
+              },
+            ],
+            title: 'Test_Manifest',
+            format: 'image/jpeg',
+            assertions: [],
+            ingredients: [],
+            instance_id: '',
+          };
+
+          // Create builder with generateC2paArchive enabled
+          const builder = await c2pa.builder.fromDefinition(
+            manifestDefinition,
+            builderContext
+          );
+
+          const ingredient: Ingredient = {
+            title: 'C.jpg',
+            format: 'image/jpeg',
+            instance_id: 'ingredient-instance-123',
+          };
+
+          const blob = await getBlobForAsset(C_JPG);
+          await builder.addIngredientFromBlob(ingredient, 'image/jpeg', blob);
+
+          // Create C2PA archive from the builder
+          const archive = await builder.toArchive();
+          expect(archive).toBeDefined();
+          expect(archive.byteLength).toBeGreaterThan(0);
+
+          // Configure reader to skip verification for unsigned archive
+          const readerContext: SettingsContext = {
+            verify: {
+              verifyAfterReading: false,
+            },
+          };
+
+          // Read the C2PA archive with Reader using application/c2pa format
+          const archiveBlob = new Blob([archive]);
+          const reader = await c2pa.reader.fromBlob(
+            'application/c2pa',
+            archiveBlob,
+            readerContext
+          );
+
+          expect(reader).not.toBeNull();
+          expect(reader).toBeDefined();
+
+          // Verify we can read the manifest from the archive
+          const manifestStore = await reader!.manifestStore();
+          expect(manifestStore).toBeDefined();
+          expect(manifestStore.manifests).toBeDefined();
+
+          // Verify the manifest contains our data
+          const activeManifestLabel = manifestStore.active_manifest;
+          expect(activeManifestLabel).toBeDefined();
+
+          if (activeManifestLabel) {
+            const activeManifest = manifestStore.manifests[activeManifestLabel];
+            expect(activeManifest?.title).toBe('Test_Manifest');
+            // Verify our claim generator info is present (c2pa-rs may add its own)
+            expect(activeManifest?.claim_generator_info).toEqual(
+              expect.arrayContaining([
+                expect.objectContaining({
+                  name: 'c2pa-web-test',
+                  version: '1.0.0',
+                }),
+              ])
+            );
+          }
         });
       });
     });

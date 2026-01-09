@@ -10,7 +10,50 @@
 import { merge } from 'ts-deepmerge';
 
 /**
+ * Context configuration for C2PA operations.
+ *
+ * Context encapsulates settings and configuration options for Reader and Builder operations.
+ * It provides a flexible way to configure SDK behavior including the verification configuration,
+ * trust configuration, and builder options.
+ *
+ * @example
+ * ```typescript
+ * const context: Context = {
+ *   verify: {
+ *     verifyTrust: true,
+ *     verifyAfterReading: true
+ *   },
+ *   trust: {
+ *     trustAnchors: 'https://example.com/anchors.pem'
+ *   }
+ * };
+ *
+ * const reader = await c2pa.reader.fromBlob(blob.type, blob, JSON.stringify(context));
+ * ```
+ */
+export interface SettingsContext {
+  /**
+   * Trust configuration for C2PA claim validation.
+   */
+  trust?: TrustSettings;
+  /**
+   * Trust configuration for CAWG identity validation.
+   */
+  cawgTrust?: CawgTrustSettings;
+  /**
+   * Verification settings.
+   */
+  verify?: VerifySettings;
+  /**
+   * Builder settings.
+   */
+  builder?: BuilderSettings;
+}
+
+/**
  * Settings used to configure the SDK's behavior.
+ *
+ * @deprecated Use {@link SettingsContext} instead. Settings will be removed in a future version.
  */
 export interface Settings {
   /**
@@ -94,7 +137,7 @@ type SettingsObjectType = {
   [k: string]: string | boolean | SettingsObjectType;
 };
 
-const DEFAULT_SETTINGS: Settings = {
+const DEFAULT_SETTINGS: SettingsContext = {
   builder: {
     generateC2paArchive: true,
   },
@@ -103,7 +146,31 @@ const DEFAULT_SETTINGS: Settings = {
 /**
  * Resolves any trust list URLs and serializes the resulting object into a JSON string of the structure expected by c2pa-rs.
  *
+ * @param context - Context configuration object
+ */
+export async function contextToWasmJson(context: SettingsContext) {
+  const mergedContext: SettingsContext = merge(DEFAULT_SETTINGS, context);
+
+  const resolvePromises: Promise<any>[] = [];
+
+  if (mergedContext.trust) {
+    resolvePromises.push(resolveTrustSettings(mergedContext.trust));
+  }
+
+  if (mergedContext.cawgTrust) {
+    resolvePromises.push(resolveTrustSettings(mergedContext.cawgTrust));
+  }
+
+  await Promise.all(resolvePromises);
+
+  return JSON.stringify(snakeCaseify(mergedContext as SettingsObjectType));
+}
+
+/**
+ * Resolves any trust list URLs and serializes the resulting object into a JSON string of the structure expected by c2pa-rs.
+ *
  * @param settings
+ * @deprecated Use {@link contextToWasmJson} instead.
  */
 export async function settingsToWasmJson(settings: Settings) {
   const mergedSettings: Settings = merge(DEFAULT_SETTINGS, settings);
