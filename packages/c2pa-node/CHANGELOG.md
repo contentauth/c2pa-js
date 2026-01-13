@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+## 0.5.0
+
+### Minor Changes
+
+- 70a7ee3: Add settings to Builder and Reader constructors, remove global settings
+
 ## 0.4.2
 
 ### Patch Changes
