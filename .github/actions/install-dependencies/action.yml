@@ -13,7 +13,7 @@ runs:
     - run: curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
       shell: bash
 
-    - run: cargo binstall wasm-bindgen-cli@0.2.105 --no-confirm --force
+    - run: cargo binstall wasm-bindgen-cli@0.2.106 --no-confirm --force
       shell: bash
     - run: cargo binstall wasm-pack@0.13.1 --no-confirm --force
       shell: bash
