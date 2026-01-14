@@ -1,5 +1,11 @@
 # @contentauth/c2pa-wasm
 
+## 0.4.3
+
+### Patch Changes
+
+- b7312c3: Allow settings to be passed to Reader and Builder constructors
+
 ## 0.4.2
 
 ### Patch Changes
