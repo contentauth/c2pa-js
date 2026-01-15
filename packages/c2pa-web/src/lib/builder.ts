@@ -9,6 +9,7 @@
 
 import { WorkerManager } from './worker/workerManager.js';
 import { getSerializablePayload, type Signer } from './signer.js';
+import type { IngredientRef } from './ingredient.js';
 import type {
   Action,
   BuilderIntent,
@@ -108,6 +109,19 @@ export interface Builder {
     ingredientDefinition: Ingredient,
     format: string,
     blob: Blob
+  ) => Promise<void>;
+
+  /**
+   * Add an IngredientRef to the builder.
+   *
+   * This uses the ingredient's serialized JSON and optional embedded manifest store bytes.
+   *
+   * @param ingredientRef IngredientRef to add.
+   * @param relationship Optional relationship override for this ingredient.
+   */
+  addIngredient: (
+    ingredientRef: IngredientRef,
+    relationship?: 'parentOf' | 'componentOf' | 'inputTo'
   ) => Promise<void>;
 
   /**
@@ -257,6 +271,20 @@ function createBuilder(
     ) {
       const json = JSON.stringify(ingredientDefinition);
       await tx.builder_addIngredientFromBlob(id, json, format, blob);
+    },
+
+    async addIngredient(
+      ingredientRef: IngredientRef,
+      relationship?: 'parentOf' | 'componentOf' | 'inputTo'
+    ) {
+      const snapshot = await ingredientRef.toSnapshot();
+
+      await tx.builder_addIngredientFromJsonAndManifestStore(
+        id,
+        JSON.stringify(snapshot.ingredient),
+        snapshot.manifestStoreBytes,
+        relationship
+      );
     },
 
     async addResourceFromBlob(resourceId: string, blob: Blob) {

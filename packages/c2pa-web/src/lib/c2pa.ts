@@ -11,6 +11,7 @@ import { createReaderFactory, ReaderFactory } from './reader.js';
 import { WASM_SRI } from '@contentauth/c2pa-wasm';
 import { Settings, settingsToWasmJson } from './settings.js';
 import { BuilderFactory, createBuilderFactory } from './builder.js';
+import { createIngredientFactory, IngredientFactory } from './ingredient.js';
 
 export interface Config {
   /**
@@ -36,6 +37,11 @@ export interface C2paSdk {
   builder: BuilderFactory;
 
   /**
+   * Contains methods for creating Ingredient objects.
+   */
+  ingredient: IngredientFactory;
+
+  /**
    * Terminates the SDK's underlying web worker.
    */
   dispose: () => void;
@@ -55,6 +61,7 @@ export async function createC2pa(config: Config): Promise<C2paSdk> {
   return {
     reader: createReaderFactory(worker),
     builder: createBuilderFactory(worker),
+    ingredient: createIngredientFactory(worker),
     dispose: worker.terminate,
   };
 }

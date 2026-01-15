@@ -22,6 +22,9 @@ pub mod wasm_reader;
 /// Exposes a builder API to JS via wasm-bindgen.
 pub mod wasm_builder;
 
+/// Exposes an ingredient API to JS via wasm-bindgen.
+pub mod wasm_ingredient;
+
 /// Exposes a JS Callback signer API to JS via wasm-bindgen.
 pub mod wasm_signer;
 
