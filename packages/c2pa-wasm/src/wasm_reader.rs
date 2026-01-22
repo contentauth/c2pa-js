@@ -78,13 +78,21 @@ impl WasmReader {
         format: &str,
         init: impl Read + Seek + Send,
         fragment: impl Read + Seek + Send,
-        _context_json: Option<String>,
+        context_json: Option<String>,
     ) -> Result<WasmReader, JsError> {
-        // TODO: CAI-10614 Context support for fragments is not currently available
-        // due to private APIs in c2pa-rs. For now, we use the default context.
-        let reader = Reader::from_fragment_async(format, init, fragment)
-            .await
-            .map_err(WasmError::from)?;
+        let reader = if let Some(json) = context_json {
+            let context = Context::new()
+                .with_settings(json.as_str())
+                .map_err(WasmError::from)?;
+            Reader::from_context(context)
+                .with_fragment_async(format, init, fragment)
+                .await
+                .map_err(WasmError::from)?
+        } else {
+            Reader::from_fragment_async(format, init, fragment)
+                .await
+                .map_err(WasmError::from)?
+        };
 
         Ok(WasmReader::from_reader(reader).await)
     }
