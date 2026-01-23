@@ -21,6 +21,7 @@ export default {
           'org.contentauth.c2pa_rs': '0.58.0',
         },
       ],
+      claim_version: 2,
       title: 'C_with_CAWG_data.jpg',
       instance_id: 'xmp:iid:855872d9-5358-497e-b7b4-afca591277e1',
       thumbnail: {

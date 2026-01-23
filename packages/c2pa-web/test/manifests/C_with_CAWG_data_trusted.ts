@@ -75,6 +75,7 @@ export default {
           version: '0.58.0',
         },
       ],
+      claim_version: 2,
       instance_id: 'xmp:iid:855872d9-5358-497e-b7b4-afca591277e1',
       label: 'urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d',
       signature_info: {
@@ -94,7 +95,13 @@ export default {
   },
   validation_results: {
     activeManifest: {
-      failure: [],
+      failure: [
+        {
+          code: 'signingCredential.untrusted',
+          explanation: 'signing certificate untrusted',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity',
+        },
+      ],
       informational: [
         {
           code: 'timeStamp.untrusted',
@@ -162,12 +169,6 @@ export default {
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.hash.data',
         },
         {
-          code: 'signingCredential.trusted',
-          explanation:
-            'signing certificate trusted, found in System trust anchors',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity',
-        },
-        {
           code: 'cawg.identity.well-formed',
           explanation: 'CAWG X.509 identity signature valid',
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity',
@@ -175,5 +176,12 @@ export default {
       ],
     },
   },
-  validation_state: 'Trusted',
+  validation_state: 'Valid',
+  validation_status: [
+    {
+      code: 'signingCredential.untrusted',
+      explanation: 'signing certificate untrusted',
+      url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity',
+    },
+  ],
 } satisfies ManifestStore;

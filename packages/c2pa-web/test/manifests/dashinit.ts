@@ -55,6 +55,7 @@ export default {
           name: 'Test provenance manaifest builder',
         },
       ],
+      claim_version: 1,
       format: 'video/mp4',
       instance_id: '1.0',
       label: 'contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D',

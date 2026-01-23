@@ -21,6 +21,7 @@ export default {
           'org.contentauth.c2pa_rs': '0.58.0',
         },
       ],
+      claim_version: 2,
       title: 'C_with_CAWG_data.jpg',
       instance_id: 'xmp:iid:855872d9-5358-497e-b7b4-afca591277e1',
       thumbnail: {
@@ -160,8 +161,21 @@ export default {
             'timestamp cert untrusted: DigiCert SHA256 RSA4096 Timestamp Responder 2025 1',
         },
       ],
-      failure: [],
+      failure: [
+        {
+          code: 'signingCredential.untrusted',
+          explanation: 'signing certificate untrusted',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity',
+        },
+      ],
     },
   },
   validation_state: 'Valid',
+  validation_status: [
+    {
+      code: 'signingCredential.untrusted',
+      explanation: 'signing certificate untrusted',
+      url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity',
+    },
+  ],
 } satisfies ManifestStore;
