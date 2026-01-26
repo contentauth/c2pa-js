@@ -79,34 +79,9 @@ await reader.free();
 
 The `Builder` API allows you to create C2PA manifests and add ingredients (source assets) to document the provenance chain.
 
-##### Adding Ingredients from Definitions
-
-You can add ingredients using just their metadata when the ingredient assets are referenced externally or stored separately:
-
-```typescript
-// Create a new builder
-const builder = await c2pa.builder.new();
-
-// Add an ingredient with metadata only
-await builder.addIngredient({
-  title: 'source-image.jpg',
-  format: 'image/jpeg',
-  instance_id: 'xmp:iid:12345678',
-  document_id: 'xmp:did:87654321',
-  relationship: 'parentOf',
-});
-
-// Get the manifest definition
-const definition = await builder.getDefinition();
-console.log(definition.ingredients); // Contains the ingredient
-
-// Clean up
-await builder.free();
-```
-
 ##### Adding Ingredients from Blobs
 
-When you have access to the ingredient asset itself, use `addIngredientFromBlob` to include both the metadata and the asset data:
+When you have access to the ingredient asset, use `addIngredientFromBlob` to include both the metadata and the asset data:
 
 ```typescript
 // Fetch or load the ingredient asset
@@ -141,21 +116,33 @@ You can add multiple ingredients to document complex provenance chains:
 ```typescript
 const builder = await c2pa.builder.new();
 
+// Fetch ingredient assets
+const background = await fetch('background.jpg').then((r) => r.blob());
+const overlay = await fetch('overlay.png').then((r) => r.blob());
+
 // Add first ingredient
-await builder.addIngredient({
-  title: 'background.jpg',
-  format: 'image/jpeg',
-  instance_id: 'background-001',
-  relationship: 'componentOf',
-});
+await builder.addIngredientFromBlob(
+  {
+    title: 'background.jpg',
+    format: 'image/jpeg',
+    instance_id: 'background-001',
+    relationship: 'componentOf',
+  },
+  'image/jpeg',
+  background
+);
 
 // Add second ingredient
-await builder.addIngredient({
-  title: 'overlay.png',
-  format: 'image/png',
-  instance_id: 'overlay-002',
-  relationship: 'componentOf',
-});
+await builder.addIngredientFromBlob(
+  {
+    title: 'overlay.png',
+    format: 'image/png',
+    instance_id: 'overlay-002',
+    relationship: 'componentOf',
+  },
+  'image/png',
+  overlay
+);
 
 const definition = await builder.getDefinition();
 console.log(definition.ingredients.length); // 2
