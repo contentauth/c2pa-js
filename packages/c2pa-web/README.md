@@ -55,6 +55,8 @@ const c2pa = await createC2pa();
 
 ### Use
 
+#### Reading C2PA Manifests
+
 Fetch an image and provide it to the `Reader`:
 
 ```typescript
@@ -72,6 +74,141 @@ console.log(manifestStore);
 // Free SDK objects when they are no longer needed to avoid memory leaks.
 await reader.free();
 ```
+
+#### Building C2PA Manifests with Ingredients
+
+The `Builder` API allows you to create C2PA manifests and add ingredients (source assets) to document the provenance chain.
+
+##### Adding Ingredients from Definitions
+
+You can add ingredients using just their metadata when the ingredient assets are referenced externally or stored separately:
+
+```typescript
+// Create a new builder
+const builder = await c2pa.builder.new();
+
+// Add an ingredient with metadata only
+await builder.addIngredient({
+  title: 'source-image.jpg',
+  format: 'image/jpeg',
+  instance_id: 'xmp:iid:12345678',
+  document_id: 'xmp:did:87654321',
+  relationship: 'parentOf',
+});
+
+// Get the manifest definition
+const definition = await builder.getDefinition();
+console.log(definition.ingredients); // Contains the ingredient
+
+// Clean up
+await builder.free();
+```
+
+##### Adding Ingredients from Blobs
+
+When you have access to the ingredient asset itself, use `addIngredientFromBlob` to include both the metadata and the asset data:
+
+```typescript
+// Fetch or load the ingredient asset
+const ingredientResponse = await fetch('path/to/source-image.jpg');
+const ingredientBlob = await ingredientResponse.blob();
+
+// Create a builder
+const builder = await c2pa.builder.new();
+
+// Add the ingredient with its blob
+await builder.addIngredientFromBlob(
+  {
+    title: 'source-image.jpg',
+    format: 'image/jpeg',
+    instance_id: 'ingredient-123',
+    relationship: 'parentOf',
+  },
+  'image/jpeg', // Format
+  ingredientBlob // The actual asset bytes
+);
+
+const definition = await builder.getDefinition();
+console.log(definition.ingredients); // Contains the ingredient with embedded data
+
+await builder.free();
+```
+
+##### Adding Multiple Ingredients
+
+You can add multiple ingredients to document complex provenance chains:
+
+```typescript
+const builder = await c2pa.builder.new();
+
+// Add first ingredient
+await builder.addIngredient({
+  title: 'background.jpg',
+  format: 'image/jpeg',
+  instance_id: 'background-001',
+  relationship: 'componentOf',
+});
+
+// Add second ingredient
+await builder.addIngredient({
+  title: 'overlay.png',
+  format: 'image/png',
+  instance_id: 'overlay-002',
+  relationship: 'componentOf',
+});
+
+const definition = await builder.getDefinition();
+console.log(definition.ingredients.length); // 2
+
+await builder.free();
+```
+
+##### Creating and Reusing Builder Archives
+
+Builder archives allow you to save a builder's state (including ingredients) and reuse it later:
+
+```typescript
+// Create a builder with ingredients
+const builder = await c2pa.builder.new();
+
+const ingredientBlob = await fetch('source.jpg').then((r) => r.blob());
+await builder.addIngredientFromBlob(
+  {
+    title: 'source.jpg',
+    format: 'image/jpeg',
+    instance_id: 'source-123',
+  },
+  'image/jpeg',
+  ingredientBlob
+);
+
+// Save as an archive
+const archive = await builder.toArchive();
+await builder.free();
+
+// Later, recreate the builder from the archive
+const restoredBuilder = await c2pa.builder.fromArchive(new Blob([archive]));
+
+// The ingredients are preserved
+const definition = await restoredBuilder.getDefinition();
+console.log(definition.ingredients); // Contains the ingredient
+
+await restoredBuilder.free();
+```
+
+##### Ingredient Properties
+
+The `Ingredient` type supports the following properties:
+
+- `title`: Human-readable title for the ingredient
+- `format`: MIME type of the ingredient asset (e.g., `'image/jpeg'`)
+- `instance_id`: Unique identifier for this specific instance
+- `document_id` (optional): Identifier for the source document
+- `relationship` (optional): Relationship to the parent asset (`'parentOf'`, `'componentOf'`, etc.)
+- `thumbnail` (optional): Thumbnail reference for the ingredient
+- `validation_status` (optional): Validation results if the ingredient has C2PA data
+
+For complete type definitions, see the [API reference](https://contentauth.github.io/c2pa-js/modules/_contentauth_c2pa-web.html).
 
 ## Api reference
 

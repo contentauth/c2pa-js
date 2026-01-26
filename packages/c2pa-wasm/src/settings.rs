@@ -5,13 +5,13 @@
 // accordance with the terms of the Adobe license agreement accompanying
 // it.
 
+use crate::error::WasmError;
 use wasm_bindgen::prelude::*;
 
 /// Accepts a JSON-serialized string to be loaded as c2pa-rs settings.
 #[wasm_bindgen(js_name = loadSettings)]
 pub fn load_settings(settings: &str) -> Result<(), js_sys::Error> {
-    c2pa::settings::Settings::from_string(settings, "json")
-        .map_err(|e| js_sys::Error::new(&format!("Failed to load settings: {}", e)))?;
+    c2pa::settings::Settings::from_string(settings, "json").map_err(WasmError::other)?;
 
     Ok(())
 }
