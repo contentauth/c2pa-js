@@ -92,12 +92,19 @@ impl WasmBuilder {
     #[wasm_bindgen(js_name = fromArchive)]
     pub fn from_archive(
         archive: &Blob,
-        _context_json: Option<String>,
+        context_json: Option<String>,
     ) -> Result<WasmBuilder, JsError> {
-        // TODO: CAI-10614 Context support for archives is not currently available
-        // due to private APIs in c2pa-rs. For now, we use the default context.
         let stream = BlobStream::new(archive);
-        let builder = Builder::from_archive(stream).map_err(WasmError::from)?;
+        let builder = if let Some(ctx_json) = context_json {
+            let context = Context::new()
+                .with_settings(ctx_json.as_str())
+                .map_err(WasmError::from)?;
+            Builder::from_context(context)
+                .with_archive(stream)
+                .map_err(WasmError::from)?
+        } else {
+            Builder::from_archive(stream).map_err(WasmError::from)?
+        };
 
         Ok(WasmBuilder::from_builder(builder))
     }
