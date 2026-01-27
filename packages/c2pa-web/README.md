@@ -79,6 +79,36 @@ await reader.free();
 
 The `Builder` API allows you to create C2PA manifests and add ingredients (source assets) to document the provenance chain.
 
+##### Setting Builder Intent
+
+The builder intent describes the type of operation being performed on the asset. This influences how the manifest is structured and what assertions are automatically added.
+
+```typescript
+const builder = await c2pa.builder.new();
+
+// For creating a new asset from scratch (e.g., AI generation, digital art)
+await builder.setIntent({
+  create: 'http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia',
+});
+
+// Or for editing an existing asset
+await builder.setIntent('edit');
+
+// Or for updating metadata without changing the asset
+await builder.setIntent('update');
+```
+
+The `create` intent accepts a `DigitalSourceType` that describes the origin of the asset. Common values include:
+
+- `'http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia'` - AI-generated content
+- `'http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture'` - Digital camera capture
+- `'http://cv.iptc.org/newscodes/digitalsourcetype/digitalArt'` - Digital artwork
+- `'http://cv.iptc.org/newscodes/digitalsourcetype/composite'` - Composite of multiple sources
+
+For a complete list of digital source types, see the [C2PA specification](https://c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html#_digital_source_type) and [IPTC digital source type vocabulary](https://cv.iptc.org/newscodes/digitalsourcetype).
+
+For more details on builder intents, see the [c2pa-rs Builder documentation](https://docs.rs/c2pa/latest/c2pa/struct.Builder.html).
+
 ##### Adding Ingredients from Blobs
 
 When you have access to the ingredient asset, use `addIngredientFromBlob` to include both the metadata and the asset data:
