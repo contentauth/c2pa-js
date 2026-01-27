@@ -83,18 +83,21 @@ The `Builder` API allows you to create C2PA manifests and add ingredients (sourc
 
 The builder intent describes the type of operation being performed on the asset. This influences how the manifest is structured and what assertions are automatically added.
 
+`create`: This is a new digital creation, a DigitalSourceType is required. The Manifest must not have have a parent ingredient. A `c2pa.created` action will be added if not provided.
+
+`edit`: This is an edit of a pre-existing parent asset. The Manifest must have a parent ingredient. A parent ingredient will be generated from the source stream if not otherwise provided. A `c2pa.opened action will be tied to the parent ingredient.
+
+`update`: A restricted version of Edit for non-editorial changes. There must be only one ingredient, as a parent. No changes can be made to the hashed content of the parent. There are additional restrictions on the types of changes that can be made.
+
 ```typescript
 const builder = await c2pa.builder.new();
 
-// For creating a new asset from scratch (e.g., AI generation, digital art)
 await builder.setIntent({
   create: 'http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia',
 });
 
-// Or for editing an existing asset
 await builder.setIntent('edit');
 
-// Or for updating metadata without changing the asset
 await builder.setIntent('update');
 ```
 
@@ -102,7 +105,6 @@ The `create` intent accepts a `DigitalSourceType` that describes the origin of t
 
 - `'http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia'` - AI-generated content
 - `'http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture'` - Digital camera capture
-- `'http://cv.iptc.org/newscodes/digitalsourcetype/digitalArt'` - Digital artwork
 - `'http://cv.iptc.org/newscodes/digitalsourcetype/composite'` - Composite of multiple sources
 
 For a complete list of digital source types, see the [C2PA specification](https://c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html#_digital_source_type) and [IPTC digital source type vocabulary](https://cv.iptc.org/newscodes/digitalsourcetype).
