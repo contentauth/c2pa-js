@@ -293,14 +293,17 @@ impl NeonBuilder {
             .argument::<JsObject>(0)
             .and_then(|obj| parse_asset(&mut cx, obj))?;
 
-        // TODO: CAI-10614 This won't work until from_archive_with_context() is ready
-        let _context_opt =
+        let context_opt =
             parse_settings(&mut cx, 1, "Builder").or_else(|err| cx.throw_error(err.to_string()))?;
 
         let promise = cx
             .task(move || {
                 let source_stream = source.into_read_stream()?;
-                let builder = Builder::from_archive(source_stream)?;
+                let builder = if let Some(context) = context_opt {
+                    Builder::from_context(context).with_archive(source_stream)?
+                } else {
+                    Builder::from_archive(source_stream)?
+                };
                 Ok(builder)
             })
             .promise(

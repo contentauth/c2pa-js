@@ -110,7 +110,7 @@ impl NeonReader {
 
         // Parse optional settings parameter (argument 2) - note: settings are not currently used
         // for from_manifest_data_and_asset as the c2pa-rs API doesn't support context for this method yet
-        let _context_opt =
+        let context_opt =
             parse_settings(&mut cx, 2, "Reader").or_else(|err| cx.throw_error(err.to_string()))?;
 
         let c2pa_data = manifest_data.as_slice(&cx).to_vec();
@@ -125,11 +125,13 @@ impl NeonReader {
                     .to_owned();
                 let stream = asset.into_read_stream()?;
 
-                // TODO: CAI-10614 c2pa-rs currently does not support passing Context to
-                // from_manifest_data_and_stream_async
-                let reader =
-                    Reader::from_manifest_data_and_stream_async(&c2pa_data, &format, stream)
-                        .await?;
+                let reader = if let Some(context) = context_opt {
+                    Reader::from_context(context)
+                        .with_manifest_data_and_stream_async(&c2pa_data, &format, stream)
+                        .await?
+                } else {
+                    Reader::from_manifest_data_and_stream_async(&c2pa_data, &format, stream).await?
+                };
 
                 Ok(reader)
             }
