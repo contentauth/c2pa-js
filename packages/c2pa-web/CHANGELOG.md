@@ -1,5 +1,13 @@
 # @contentauth/c2pa-web
 
+## 0.5.7
+
+### Patch Changes
+
+- 8024c5f: Add context to additional methods. Update c2pa crate.
+- Updated dependencies [8024c5f]
+  - @contentauth/c2pa-wasm@0.4.4
+
 ## 0.5.6
 
 ### Patch Changes
