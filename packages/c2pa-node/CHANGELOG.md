@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+## 0.5.1
+
+### Patch Changes
+
+- df6a49c: Add context to additional methods. Update c2pa crate.
+
 ## 0.5.0
 
 ### Minor Changes
