@@ -116,6 +116,165 @@ await builder.addResource('resource://example', resourceAsset);
 const manifest = builder.sign(signer, inputAsset, outputAsset);
 ```
 
+#### Setting Builder Intent
+
+The builder intent describes the type of operation being performed on the asset. This influences how the manifest is structured and what assertions are automatically added.
+
+`create`: This is a new digital creation, a DigitalSourceType is required. The Manifest must not have a parent ingredient. A `c2pa.created` action will be added if not provided.
+
+`edit`: This is an edit of a pre-existing parent asset. The Manifest must have a parent ingredient. A parent ingredient will be generated from the source stream if not otherwise provided. A `c2pa.opened` action will be tied to the parent ingredient.
+
+`update`: A restricted version of Edit for non-editorial changes. There must be only one ingredient, as a parent. No changes can be made to the hashed content of the parent. There are additional restrictions on the types of changes that can be made.
+
+```javascript
+const builder = Builder.new();
+
+builder.setIntent({
+  create: 'http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia',
+});
+
+builder.setIntent('edit');
+
+builder.setIntent('update');
+```
+
+The `create` intent accepts a `DigitalSourceType` that describes the origin of the asset. Common values include:
+
+- `'http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia'` - AI-generated content
+- `'http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture'` - Digital camera capture
+- `'http://cv.iptc.org/newscodes/digitalsourcetype/composite'` - Composite of multiple sources
+
+For a complete list of digital source types, see the [C2PA specification](https://c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html#_digital_source_type) and [IPTC digital source type vocabulary](https://cv.iptc.org/newscodes/digitalsourcetype).
+
+For more details on builder intents, see the [c2pa-rs Builder documentation](https://docs.rs/c2pa/latest/c2pa/struct.Builder.html).
+
+#### Adding Ingredients from Assets
+
+When you have access to the ingredient asset, use `addIngredient` with an asset to include both the metadata and the asset data:
+
+```javascript
+import * as fs from "node:fs/promises";
+
+// Load the ingredient asset
+const ingredientBuffer = await fs.readFile('path/to/source-image.jpg');
+
+// Create a builder
+const builder = Builder.new();
+
+// Add the ingredient with its asset
+await builder.addIngredient(
+  JSON.stringify({
+    title: 'source-image.jpg',
+    format: 'image/jpeg',
+    instance_id: 'ingredient-123',
+    relationship: 'parentOf',
+  }),
+  {
+    buffer: ingredientBuffer,
+    mimeType: 'image/jpeg',
+  }
+);
+
+const definition = builder.getManifestDefinition();
+console.log(definition.ingredients); // Contains the ingredient with embedded data
+```
+
+#### Adding Multiple Ingredients
+
+You can add multiple ingredients to document complex provenance chains:
+
+```javascript
+const builder = Builder.new();
+
+// Load ingredient assets
+const background = await fs.promises.readFile('background.jpg');
+const overlay = await fs.promises.readFile('overlay.png');
+
+// Add first ingredient
+await builder.addIngredient(
+  JSON.stringify({
+    title: 'background.jpg',
+    format: 'image/jpeg',
+    instance_id: 'background-001',
+    relationship: 'componentOf',
+  }),
+  {
+    buffer: background,
+    mimeType: 'image/jpeg',
+  }
+);
+
+// Add second ingredient
+await builder.addIngredient(
+  JSON.stringify({
+    title: 'overlay.png',
+    format: 'image/png',
+    instance_id: 'overlay-002',
+    relationship: 'componentOf',
+  }),
+  {
+    buffer: overlay,
+    mimeType: 'image/png',
+  }
+);
+
+const definition = builder.getManifestDefinition();
+console.log(definition.ingredients.length); // 2
+```
+
+#### Adding Ingredients from Readers
+
+You can also add ingredients directly from a `Reader` object, which automatically includes the C2PA data:
+
+```javascript
+// Read an existing C2PA asset
+const sourceReader = await Reader.fromAsset({
+  path: 'source-image.jpg',
+});
+
+// Create a builder
+const builder = Builder.new();
+
+// Add ingredient from reader
+const ingredient = builder.addIngredientFromReader(sourceReader);
+
+console.log(ingredient.title); // Contains ingredient metadata
+```
+
+#### Creating and Reusing Builder Archives
+
+Builder archives allow you to save a builder's state (including ingredients) and reuse it later:
+
+```javascript
+// Create a builder with ingredients
+const builder = Builder.new();
+
+const ingredientBuffer = await fs.promises.readFile('source.jpg');
+await builder.addIngredient(
+  JSON.stringify({
+    title: 'source.jpg',
+    format: 'image/jpeg',
+    instance_id: 'source-123',
+  }),
+  {
+    buffer: ingredientBuffer,
+    mimeType: 'image/jpeg',
+  }
+);
+
+// Save as an archive
+await builder.toArchive({ path: 'builder-archive.zip' });
+
+// Later, recreate the builder from the archive
+const restoredBuilder = await Builder.fromArchive({ path: 'builder-archive.zip' });
+
+// The ingredients are preserved
+const definition = restoredBuilder.getManifestDefinition();
+console.log(definition.ingredients); // Contains the ingredient
+```
+
+For complete type definitions, see the [@contentauth/c2pa-types](https://www.npmjs.com/package/@contentauth/c2pa-types) package.
+
 ### Signers
 
 The library provides several types of signers for different use cases:
