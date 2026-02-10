@@ -10,15 +10,16 @@ As a guiding philosophy, `c2pa-web` attempts to adhere closely to the API paradi
 npm install @contentauth/c2pa-web
 ```
 
-## Quickstart
+## Importing the library
 
-### Importing
+There are two ways to import the library, due to [specific requirements](https://developer.mozilla.org/en-US/docs/WebAssembly/Guides/Loading_and_running) for handling Wasm modules: 
+- Using a separate Wasm binary, which provides better performance.
+- Using an inline Wasm binary, which is more convenient. 
 
-Due to [specific requirements](https://developer.mozilla.org/en-US/docs/WebAssembly/Guides/Loading_and_running) around handling WASM modules, there are two methods of importing the library. One optimizes for performance, the other for convenience.
+### Using a separate Wasm binary
 
-#### With a separate WASM binary (performance)
-
-The recommended method of using the library requires that the WASM binary be hosted separately, to be fetched over the network at runtime.
+The recommended way to import the library is to fetch the Wasm binary over the network at runtime. 
+This requires that the Wasm binary be hosted separately.
 
 With Vite:
 
@@ -30,7 +31,7 @@ import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 const c2pa = createC2pa({ wasmSrc });
 ```
 
-Use a solution appropriate to your tooling. Alternatively, the binary can be requested from a CDN:
+Use a solution appropriate to your tooling. Alternatively, you can request the binary from a CDN:
 
 ```typescript
 import { createC2pa } from '@contentauth/c2pa-web';
@@ -42,9 +43,11 @@ const c2pa = await createC2pa({
 });
 ```
 
-#### With an inlined WASM binary (convenience)
+### Using an inline Wasm binary
 
-In environments where it is not possible or not convenient to request a separate resource over the network, the "inline" SDK can be used. The WASM binary is encoded as a base64 string and included in the JavaScript file, so no (additional) network request is necessary. However, this adds _significant_ size to the JavaScript bundle, and cannot take advantage of the higher-performance
+Where it is not possible or convenient to request a separate resource over the network, use the `@contentauth/c2pa-web/inline` package, which has the Wasm binary encoded as a base64 string in the JavaScript file. 
+
+Using this package does not require an additional network request. However, it adds _significant_ size to the JavaScript bundle, and cannot take advantage of the higher-performance
 [`WebAssembly.compileStreaming()`](https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/JavaScript_interface/compileStreaming_static) API.
 
 ```typescript
@@ -53,9 +56,11 @@ import { createC2pa } from '@contentauth/c2pa-web/inline';
 const c2pa = await createC2pa();
 ```
 
-### Use
+## Using the library
 
-#### Reading C2PA Manifests
+See also the [API reference documentation](https://contentauth.github.io/c2pa-js/modules/_contentauth_c2pa-web.html).
+
+### Reading C2PA manifests
 
 Fetch an image and provide it to the `Reader`:
 
@@ -75,19 +80,16 @@ console.log(manifestStore);
 await reader.free();
 ```
 
-#### Building C2PA Manifests with Ingredients
+### Building C2PA manifests with ingredients
 
-The `Builder` API allows you to create C2PA manifests and add ingredients (source assets) to document the provenance chain.
+Use the `Builder` API to create C2PA manifests and add ingredients (source assets) to document the provenance chain.
 
-##### Setting Builder Intent
+#### Setting builder intent
 
-The builder intent describes the type of operation being performed on the asset. This influences how the manifest is structured and what assertions are automatically added.
-
-`create`: This is a new digital creation, a DigitalSourceType is required. The Manifest must not have have a parent ingredient. A `c2pa.created` action will be added if not provided.
-
-`edit`: This is an edit of a pre-existing parent asset. The Manifest must have a parent ingredient. A parent ingredient will be generated from the source stream if not otherwise provided. A `c2pa.opened action will be tied to the parent ingredient.
-
-`update`: A restricted version of Edit for non-editorial changes. There must be only one ingredient, as a parent. No changes can be made to the hashed content of the parent. There are additional restrictions on the types of changes that can be made.
+The builder intent describes the type of operation being performed on the asset. This influences how the manifest is structured and what assertions are automatically added.  Use one of these intents:
+- `create`: Indicates the asset is a new digital creation, a DigitalSourceType is required. The Manifest must not have have a parent ingredient. A `c2pa.created` action will be added if not provided.
+- `edit`: Indicates the asset is an edit of a pre-existing parent asset. The Manifest must have a parent ingredient. A parent ingredient will be generated from the source stream if not otherwise provided. A `c2pa.opened action will be tied to the parent ingredient.
+- `update`: A restricted version of `edit` for non-editorial changes. There must be only one ingredient, as a parent. No changes can be made to the hashed content of the parent. There are additional restrictions on the types of changes that can be made.
 
 ```typescript
 const builder = await c2pa.builder.new();
@@ -111,7 +113,7 @@ For a complete list of digital source types, see the [C2PA specification](https:
 
 For more details on builder intents, see the [c2pa-rs Builder documentation](https://docs.rs/c2pa/latest/c2pa/struct.Builder.html).
 
-##### Adding Ingredients from Blobs
+#### Adding ingredients from blobs
 
 When you have access to the ingredient asset, use `addIngredientFromBlob` to include both the metadata and the asset data:
 
@@ -141,7 +143,7 @@ console.log(definition.ingredients); // Contains the ingredient with embedded da
 await builder.free();
 ```
 
-##### Adding Multiple Ingredients
+#### Adding multiple ingredients
 
 You can add multiple ingredients to document complex provenance chains:
 
@@ -182,9 +184,9 @@ console.log(definition.ingredients.length); // 2
 await builder.free();
 ```
 
-##### Creating and Reusing Builder Archives
+#### Creating and reusing builder archives
 
-Builder archives allow you to save a builder's state (including ingredients) and reuse it later:
+Use a builder archive to save a builder's state (including ingredients) and reuse it later:
 
 ```typescript
 // Create a builder with ingredients
@@ -215,25 +217,21 @@ console.log(definition.ingredients); // Contains the ingredient
 await restoredBuilder.free();
 ```
 
-##### Ingredient Properties
+#### Ingredient properties
 
-The `Ingredient` type supports the following properties:
+The `Ingredient` type supports a number of properties, including:
 
-- `title`: Human-readable title for the ingredient
-- `format`: MIME type of the ingredient asset (e.g., `'image/jpeg'`)
-- `instance_id`: Unique identifier for this specific instance
-- `document_id` (optional): Identifier for the source document
+- `title`: Human-readable title for the ingredient.
+- `format`: MIME type of the ingredient asset (e.g., `'image/jpeg'`).
+- `instance_id`: Unique identifier for this specific instance.
+- `document_id` (optional): Identifier for the source document.
 - `relationship` (optional): Relationship to the parent asset (`'parentOf'`, `'componentOf'`, etc.)
-- `thumbnail` (optional): Thumbnail reference for the ingredient
-- `validation_status` (optional): Validation results if the ingredient has C2PA data
+- `thumbnail` (optional): Thumbnail reference for the ingredient.
+- `validation_status` (optional): Validation results if the ingredient has C2PA data.
 
-For complete type definitions, see the [API reference](https://contentauth.github.io/c2pa-js/modules/_contentauth_c2pa-web.html).
+For the full list, see the [API reference](https://contentauth.github.io/c2pa-js/interfaces/_contentauth_c2pa-web.index.Ingredient.html).
 
-## Api reference
-
-API docs are available [here](https://contentauth.github.io/c2pa-js/modules/_contentauth_c2pa-web.html).
-
-## Development
+## Library development
 
 ### Prerequsities
 
