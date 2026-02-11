@@ -19,6 +19,12 @@ export type {
 
 export type { Signer, SigningAlg } from './lib/signer.js';
 
+export type {
+  IngredientFactory,
+  IngredientRef,
+  IngredientSnapshot,
+} from './lib/ingredient.js';
+
 export {
   isSupportedReaderFormat,
   READER_SUPPORTED_FORMATS,
