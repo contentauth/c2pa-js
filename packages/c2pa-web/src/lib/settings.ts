@@ -151,7 +151,7 @@ const DEFAULT_SETTINGS: SettingsContext = {
 export async function contextToWasmJson(context: SettingsContext) {
   const mergedContext: SettingsContext = merge(DEFAULT_SETTINGS, context);
 
-  const resolvePromises: Promise<any>[] = [];
+  const resolvePromises: Promise<void>[] = [];
 
   if (mergedContext.trust) {
     resolvePromises.push(resolveTrustSettings(mergedContext.trust));
@@ -175,7 +175,7 @@ export async function contextToWasmJson(context: SettingsContext) {
 export async function settingsToWasmJson(settings: Settings) {
   const mergedSettings: Settings = merge(DEFAULT_SETTINGS, settings);
 
-  const resolvePromises: Promise<any>[] = [];
+  const resolvePromises: Promise<void>[] = [];
 
   if (mergedSettings.trust) {
     resolvePromises.push(resolveTrustSettings(mergedSettings.trust));
