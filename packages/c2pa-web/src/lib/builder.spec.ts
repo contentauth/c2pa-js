@@ -317,6 +317,34 @@ describe('builder', () => {
             instance_id: 'ingredient-instance-2',
           });
         });
+
+        test('should add ingredient with custom metadata', async ({ c2pa }) => {
+          const builder = await c2pa.builder.new();
+
+          const ingredient: Ingredient = {
+            title: 'source-image.jpg',
+            format: 'image/jpeg',
+            instance_id: 'ingredient-instance-123',
+            document_id: 'ingredient-doc-456',
+            metadata: {
+              customString: "my custom value",
+              customNumber: 42,
+              customBool: true,
+              customObject: {
+                  nested: "value",
+                  count: 123
+              },
+              customArray: ["item1", "item2", "item3"]
+            }
+          };
+
+          await builder.addIngredient(ingredient);
+
+          const definition = await builder.getDefinition();
+
+          expect(definition.ingredients).toHaveLength(1);
+          expect(definition.ingredients[0]).toMatchObject(ingredient);
+        });
       });
     });
   });
