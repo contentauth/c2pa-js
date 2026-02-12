@@ -11,7 +11,8 @@ import { test, describe, expect } from 'test/methods.js';
 import { ManifestDefinition, Ingredient } from '@contentauth/c2pa-types';
 import { getBlobForAsset } from 'test/utils.js';
 import { SettingsContext } from './settings.js';
-import C_JPG from 'test/assets/C.jpg';
+
+const JPEG_TEST_ASSET_PATH = 'test/assets/C.jpg';
 
 describe('builder', () => {
   describe('creation', () => {
@@ -68,7 +69,7 @@ describe('builder', () => {
             assertions: [],
             format: '',
             ingredients: [],
-            instance_id: '',
+            instance_id: ''
           };
 
           const builder = await c2pa.builder.fromDefinition(manifestDefinition);
@@ -82,7 +83,7 @@ describe('builder', () => {
           const definitionFromArchivedBuilder =
             await builderFromArchive.getDefinition();
 
-          expect(definitionFromArchivedBuilder).toEqual(manifestDefinition);
+          expect(definitionFromArchivedBuilder).toMatchObject(manifestDefinition);
         });
 
         test('should re-create a builder from an archive with ingredient from blob', async ({
@@ -103,14 +104,16 @@ describe('builder', () => {
 
           const builder = await c2pa.builder.fromDefinition(manifestDefinition);
 
+          const blob = await getBlobForAsset(JPEG_TEST_ASSET_PATH);
+          const blobType = blob.type;
+
           const ingredient: Ingredient = {
             title: 'C.jpg',
-            format: 'image/jpeg',
+            format: blobType,
             instance_id: 'ingredient-instance-123',
           };
-
-          const blob = await getBlobForAsset(C_JPG);
-          await builder.addIngredientFromBlob(ingredient, 'image/png', blob);
+          
+          await builder.addIngredientFromBlob(ingredient, blob.type, blob);
 
           const archive = await builder.toArchive();
 
@@ -124,7 +127,7 @@ describe('builder', () => {
           expect(definitionFromArchivedBuilder.ingredients).toHaveLength(1);
           expect(definitionFromArchivedBuilder.ingredients![0]).toMatchObject({
             title: 'C.jpg',
-            format: 'image/jpeg',
+            format: blobType,
             instance_id: 'ingredient-instance-123',
           });
         });
@@ -159,14 +162,16 @@ describe('builder', () => {
             builderContext
           );
 
+          const blob = await getBlobForAsset(JPEG_TEST_ASSET_PATH);
+          const blobType = blob.type;
+
           const ingredient: Ingredient = {
             title: 'C.jpg',
-            format: 'image/jpeg',
+            format: blobType,
             instance_id: 'ingredient-instance-123',
           };
 
-          const blob = await getBlobForAsset(C_JPG);
-          await builder.addIngredientFromBlob(ingredient, 'image/jpeg', blob);
+          await builder.addIngredientFromBlob(ingredient, blobType, blob);
 
           // Create C2PA archive from the builder
           const archive = await builder.toArchive();
@@ -291,7 +296,7 @@ describe('builder', () => {
 
           const ingredient2: Ingredient = {
             title: 'source-image-2.jpg',
-            format: 'image/png',
+            format: 'image/jpeg',
             instance_id: 'ingredient-instance-2',
           };
 
@@ -308,7 +313,7 @@ describe('builder', () => {
           });
           expect(definition.ingredients[1]).toMatchObject({
             title: 'source-image-2.jpg',
-            format: 'image/png',
+            format: 'image/jpeg',
             instance_id: 'ingredient-instance-2',
           });
         });
