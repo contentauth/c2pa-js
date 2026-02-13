@@ -53,6 +53,19 @@ nx test c2pa-web # This will build and run the tests defined in the c2pa-web pac
 nx run lint # This will run the linter (eslint) on the entire repo.
 ```
 
+### Committing Changes for Release
+
+If your changes should be part of a release, you will need to create and commit a changeset.
+
+To create a new changeset, from the root repo directory, run:
+```sh
+pnpm changeset
+```
+
+Follow the prompts to bump the version numbers of affected packages as appropriate. This will generate a new changeset markdown file in the `.changeset` directory, which should then be committed as part of your PR.
+
+Once the PR is merge into `main`, the changeset bot will create a release PR, which will then be reviewed, merged, and result in a new release being published.
+
 ## Packages
 
 Please see the individual package directories for more detailed information.
