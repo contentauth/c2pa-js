@@ -62,7 +62,7 @@ describe('builder', () => {
             claim_generator_info: [
               {
                 name: 'c2pa-web-test',
-                version: '1.0.0',
+                version: '1.0.0'
               },
             ],
             assertions: [],
@@ -109,9 +109,9 @@ describe('builder', () => {
           const ingredient: Ingredient = {
             title: 'C.jpg',
             format: blobType,
-            instance_id: 'ingredient-instance-123',
+            instance_id: 'ingredient-instance-123'
           };
-          
+
           await builder.addIngredientFromBlob(ingredient, blobType, blob);
 
           const archive = await builder.toArchive();
@@ -127,7 +127,7 @@ describe('builder', () => {
           expect(definitionFromArchivedBuilder.ingredients![0]).toMatchObject({
             title: 'C.jpg',
             format: blobType,
-            instance_id: 'ingredient-instance-123',
+            instance_id: 'ingredient-instance-123'
           });
         });
 
