@@ -113,7 +113,7 @@ describe('builder', () => {
             instance_id: 'ingredient-instance-123',
           };
           
-          await builder.addIngredientFromBlob(ingredient, blob.type, blob);
+          await builder.addIngredientFromBlob(ingredient, blobType, blob);
 
           const archive = await builder.toArchive();
 
