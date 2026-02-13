@@ -11,8 +11,7 @@ import { test, describe, expect } from 'test/methods.js';
 import { ManifestDefinition, Ingredient } from '@contentauth/c2pa-types';
 import { getBlobForAsset } from 'test/utils.js';
 import { SettingsContext } from './settings.js';
-
-const JPEG_TEST_ASSET_PATH = 'test/assets/C.jpg';
+import C_JPG from 'test/assets/C.jpg';
 
 describe('builder', () => {
   describe('creation', () => {
@@ -104,7 +103,7 @@ describe('builder', () => {
 
           const builder = await c2pa.builder.fromDefinition(manifestDefinition);
 
-          const blob = await getBlobForAsset(JPEG_TEST_ASSET_PATH);
+          const blob = await getBlobForAsset(C_JPG);
           const blobType = blob.type;
 
           const ingredient: Ingredient = {
@@ -162,7 +161,7 @@ describe('builder', () => {
             builderContext
           );
 
-          const blob = await getBlobForAsset(JPEG_TEST_ASSET_PATH);
+          const blob = await getBlobForAsset(C_JPG);
           const blobType = blob.type;
 
           const ingredient: Ingredient = {
