@@ -20,7 +20,7 @@ Then, all of the following prerequisites must be installed before `c2pa-wasm` ca
 
 [Installation instructions](https://www.rust-lang.org/tools/install)
 
-Minimum supported Rust version: **1.86.0**.
+Minimum supported Rust version: **1.88.0**.
 
 To install Rust via [rustup](https://rustup.rs/):
 

@@ -6,6 +6,9 @@ members = [
 	'packages/c2pa-types',
 ]
 
+[workspace.package]
+rust-version = "1.88.0"
+
 [workspace.dependencies]
 c2pa = { version = "=0.75.19", features = ["pdf", "rust_native_crypto", "fetch_remote_manifests", "json_schema", "http_reqwest"], default-features = false }
 

@@ -2,7 +2,8 @@
 name = "c2pa-wasm"
 version = "0.1.0"
 authors = ["Eli Mensch <mensch@adobe.com>"]
-edition = "2021"
+edition = "2024"
+rust-version.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
