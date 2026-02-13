@@ -2,7 +2,8 @@
 name = "c2pa-wasm"
 version = "0.1.0"
 authors = ["Eli Mensch <mensch@adobe.com>"]
-edition = "2021"
+edition = "2024"
+rust-version.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -37,7 +38,7 @@ features = [
 
 [dependencies.wasm-bindgen]
 # Keep this version in sync with the version installed in .github/actions/install-dependencies
-version = "0.2.106"
+version = "0.2.108"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.50"

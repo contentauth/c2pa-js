@@ -10,9 +10,9 @@ npm install @contentauth/c2pa-wasm
 
 ## Development
 
-### Prerequsities
+### Prerequisites
 
-Ensure the repo-wide prerequisites [NX](https://nx.dev/getting-started/intro) and [pnpm](https://pnpm.io/) are installed.
+Ensure the repo-wide prerequisites ([Node.js](https://nodejs.org/) v22+, [NX](https://nx.dev/getting-started/intro), and [pnpm](https://pnpm.io/)) are installed. See the [top-level README](https://github.com/contentauth/c2pa-js#prerequisites) for details.
 
 Then, all of the following prerequisites must be installed before `c2pa-wasm` can be built:
 
@@ -20,7 +20,13 @@ Then, all of the following prerequisites must be installed before `c2pa-wasm` ca
 
 [Installation instructions](https://www.rust-lang.org/tools/install)
 
-Minimum supported Rust version: **1.86.0**.
+Minimum supported Rust version: **1.88.0**.
+
+To install Rust via [rustup](https://rustup.rs/):
+
+```sh
+curl https://sh.rustup.rs -sSf | sh
+```
 
 Additionally, the `wasm32-unknown-unknown` target must be installed:
 
@@ -33,8 +39,10 @@ rustup target add wasm32-unknown-unknown
 [Documentation](https://wasm-bindgen.github.io/wasm-bindgen/reference/cli)
 
 ```sh
-cargo install wasm-bindgen-cli@0.2.106
+cargo install wasm-bindgen-cli@0.2.108
 ```
+
+> **Important:** The version of `wasm-bindgen-cli` **must** match the version of the `wasm-bindgen` dependency in [`Cargo.toml`](./Cargo.toml). A version mismatch will cause build failures with errors like _"rust Wasm file schema version: X.X.X, this binary schema version: Y.Y.Y"_. If you encounter this, check `Cargo.toml` for the correct version and reinstall the CLI accordingly.
 
 #### wasm-pack
 

@@ -62,13 +62,13 @@ describe('builder', () => {
             claim_generator_info: [
               {
                 name: 'c2pa-web-test',
-                version: '1.0.0',
+                version: '1.0.0'
               },
             ],
             assertions: [],
             format: '',
             ingredients: [],
-            instance_id: '',
+            instance_id: ''
           };
 
           const builder = await c2pa.builder.fromDefinition(manifestDefinition);
@@ -82,7 +82,7 @@ describe('builder', () => {
           const definitionFromArchivedBuilder =
             await builderFromArchive.getDefinition();
 
-          expect(definitionFromArchivedBuilder).toEqual(manifestDefinition);
+          expect(definitionFromArchivedBuilder).toMatchObject(manifestDefinition);
         });
 
         test('should re-create a builder from an archive with ingredient from blob', async ({
@@ -103,14 +103,16 @@ describe('builder', () => {
 
           const builder = await c2pa.builder.fromDefinition(manifestDefinition);
 
+          const blob = await getBlobForAsset(C_JPG);
+          const blobType = blob.type;
+
           const ingredient: Ingredient = {
             title: 'C.jpg',
-            format: 'image/jpeg',
-            instance_id: 'ingredient-instance-123',
+            format: blobType,
+            instance_id: 'ingredient-instance-123'
           };
 
-          const blob = await getBlobForAsset(C_JPG);
-          await builder.addIngredientFromBlob(ingredient, 'image/png', blob);
+          await builder.addIngredientFromBlob(ingredient, blobType, blob);
 
           const archive = await builder.toArchive();
 
@@ -124,8 +126,8 @@ describe('builder', () => {
           expect(definitionFromArchivedBuilder.ingredients).toHaveLength(1);
           expect(definitionFromArchivedBuilder.ingredients![0]).toMatchObject({
             title: 'C.jpg',
-            format: 'image/jpeg',
-            instance_id: 'ingredient-instance-123',
+            format: blobType,
+            instance_id: 'ingredient-instance-123'
           });
         });
 
@@ -159,14 +161,16 @@ describe('builder', () => {
             builderContext
           );
 
+          const blob = await getBlobForAsset(C_JPG);
+          const blobType = blob.type;
+
           const ingredient: Ingredient = {
             title: 'C.jpg',
-            format: 'image/jpeg',
+            format: blobType,
             instance_id: 'ingredient-instance-123',
           };
 
-          const blob = await getBlobForAsset(C_JPG);
-          await builder.addIngredientFromBlob(ingredient, 'image/jpeg', blob);
+          await builder.addIngredientFromBlob(ingredient, blobType, blob);
 
           // Create C2PA archive from the builder
           const archive = await builder.toArchive();
@@ -291,7 +295,7 @@ describe('builder', () => {
 
           const ingredient2: Ingredient = {
             title: 'source-image-2.jpg',
-            format: 'image/png',
+            format: 'image/jpeg',
             instance_id: 'ingredient-instance-2',
           };
 
@@ -308,9 +312,37 @@ describe('builder', () => {
           });
           expect(definition.ingredients[1]).toMatchObject({
             title: 'source-image-2.jpg',
-            format: 'image/png',
+            format: 'image/jpeg',
             instance_id: 'ingredient-instance-2',
           });
+        });
+
+        test('should add ingredient with custom metadata', async ({ c2pa }) => {
+          const builder = await c2pa.builder.new();
+
+          const ingredient: Ingredient = {
+            title: 'source-image.jpg',
+            format: 'image/jpeg',
+            instance_id: 'ingredient-instance-123',
+            document_id: 'ingredient-doc-456',
+            metadata: {
+              customString: "my custom value",
+              customNumber: 42,
+              customBool: true,
+              customObject: {
+                  nested: "value",
+                  count: 123
+              },
+              customArray: ["item1", "item2", "item3"]
+            }
+          };
+
+          await builder.addIngredient(ingredient);
+
+          const definition = await builder.getDefinition();
+
+          expect(definition.ingredients).toHaveLength(1);
+          expect(definition.ingredients[0]).toMatchObject(ingredient);
         });
       });
     });

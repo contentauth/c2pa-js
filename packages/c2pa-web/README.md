@@ -233,11 +233,11 @@ For the full list, see the [API reference](https://contentauth.github.io/c2pa-js
 
 ## Library development
 
-### Prerequsities
+### Prerequisites
 
-Ensure the repo-wide prerequisites [NX](https://nx.dev/getting-started/intro) and [pnpm](https://pnpm.io/) are installed.
+Ensure the repo-wide prerequisites ([Node.js](https://nodejs.org/) v22+, [NX](https://nx.dev/getting-started/intro), and [pnpm](https://pnpm.io/)) are installed. See the [top-level README](https://github.com/contentauth/c2pa-js#prerequisites) for details.
 
-[`c2pa-wasm`'s prerequisites](https://github.com/contentauth/c2pa-js-v2/tree/main/packages/c2pa-wasm) must also be installed.
+[`c2pa-wasm`'s prerequisites](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm#prerequisites) must also be installed.
 
 ### Building
 
@@ -249,10 +249,10 @@ nx build c2pa-web
 
 ### Testing
 
-This library relies on [Vitest](https://vitest.dev/) to run its tests in a headless browser. Before the tests can be run, the test browser binaries must be installed:
+This library relies on [Vitest](https://vitest.dev/) to run its tests in a headless browser. Before the tests can be run, the test browser binaries must be installed. Run the following from the `packages/c2pa-web` directory (rather than from the root directory, to ensure that the correct binaries are installed):
 
 ```sh
-pnpx playwright install
+pnpm exec playwright install
 ```
 
 To run the tests:

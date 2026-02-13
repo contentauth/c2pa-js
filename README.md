@@ -7,18 +7,64 @@ A collection of libraries and tools that enable interaction with [C2PA metadata]
 
 ## Using This Monorepo
 
-This monorepo is managed by [NX](https://nx.dev/getting-started/intro) and [pnpm](https://pnpm.io/). As a prerequisite for any interaction, both must be installed:
+This monorepo is managed by [NX](https://nx.dev/getting-started/intro) and [pnpm](https://pnpm.io/).
+
+### Prerequisites
+
+The following must be installed before working with this monorepo:
+
+#### Node.js
+
+Node.js **v22 or later** is required (earlier versions may fail with build errors related to unknown file extensions).
+
+If you use [nvm](https://github.com/nvm-sh/nvm), you can install the required version with:
+
+```sh
+nvm install <version>
+nvm install 22.22.0
+```
+
+#### pnpm and NX
+
+Install pnpm and NX.
 
 ```sh
 npm install -g pnpm
-pnpm install
+npm install -g nx
 ```
+
+#### Rust Toolchain (for building `c2pa-wasm`)
+
+If you plan to build from source (rather than only consuming published packages), the Rust toolchain and additional prerequisites are required. See [`c2pa-wasm`'s prerequisites](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm#prerequisites) for full details.
+
+### Recommended Setup Order
+
+1. Install Node.js, pnpm, and NX (see above).
+2. Install the Rust toolchain and `c2pa-wasm` prerequisites (see [`packages/c2pa-wasm/README.md`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm#prerequisites)).
+3. Run `pnpm install` from the repo root to install the project's dependencies.
+
+### Running Commands with Nx
 
 Commands are run in the following format: `nx [target] [project]`, e.g.:
 
 ```sh
 nx build c2pa-web # This will build c2pa-web and all of its dependencies
+nx test c2pa-web # This will build and run the tests defined in the c2pa-web package
+nx run lint # This will run the linter (eslint) on the entire repo.
 ```
+
+### Committing Changes for Release
+
+If your changes should be part of a release, you will need to create and commit a changeset.
+
+To create a new changeset, from the root repo directory, run:
+```sh
+pnpm changeset
+```
+
+Follow the prompts to bump the version numbers of affected packages as appropriate. This will generate a new changeset markdown file in the `.changeset` directory, which should then be committed as part of your PR.
+
+Once the PR is merge into `main`, the changeset bot will create a release PR, which will then be reviewed, merged, and result in a new release being published.
 
 ## Packages
 
