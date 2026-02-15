@@ -10,7 +10,7 @@
 import { test, describe, expect } from 'test/methods.js';
 import { ManifestDefinition, Ingredient } from '@contentauth/c2pa-types';
 import { getBlobForAsset } from 'test/utils.js';
-import { SettingsContext } from './settings.js';
+import { Settings } from './settings.js';
 import C_JPG from 'test/assets/C.jpg';
 
 describe('builder', () => {
@@ -62,13 +62,13 @@ describe('builder', () => {
             claim_generator_info: [
               {
                 name: 'c2pa-web-test',
-                version: '1.0.0'
+                version: '1.0.0',
               },
             ],
             assertions: [],
             format: '',
             ingredients: [],
-            instance_id: ''
+            instance_id: '',
           };
 
           const builder = await c2pa.builder.fromDefinition(manifestDefinition);
@@ -82,7 +82,9 @@ describe('builder', () => {
           const definitionFromArchivedBuilder =
             await builderFromArchive.getDefinition();
 
-          expect(definitionFromArchivedBuilder).toMatchObject(manifestDefinition);
+          expect(definitionFromArchivedBuilder).toMatchObject(
+            manifestDefinition
+          );
         });
 
         test('should re-create a builder from an archive with ingredient from blob', async ({
@@ -109,7 +111,7 @@ describe('builder', () => {
           const ingredient: Ingredient = {
             title: 'C.jpg',
             format: blobType,
-            instance_id: 'ingredient-instance-123'
+            instance_id: 'ingredient-instance-123',
           };
 
           await builder.addIngredientFromBlob(ingredient, blobType, blob);
@@ -127,20 +129,11 @@ describe('builder', () => {
           expect(definitionFromArchivedBuilder.ingredients![0]).toMatchObject({
             title: 'C.jpg',
             format: blobType,
-            instance_id: 'ingredient-instance-123'
+            instance_id: 'ingredient-instance-123',
           });
         });
 
-        test('should read builder archive with context settings', async ({
-          c2pa,
-        }) => {
-          // Configure builder to generate C2PA archive
-          const builderContext: SettingsContext = {
-            builder: {
-              generateC2paArchive: true,
-            },
-          };
-
+        test('should create a readable archive', async ({ c2pa }) => {
           const manifestDefinition: ManifestDefinition = {
             claim_generator_info: [
               {
@@ -156,10 +149,7 @@ describe('builder', () => {
           };
 
           // Create builder with generateC2paArchive enabled
-          const builder = await c2pa.builder.fromDefinition(
-            manifestDefinition,
-            builderContext
-          );
+          const builder = await c2pa.builder.fromDefinition(manifestDefinition);
 
           const blob = await getBlobForAsset(C_JPG);
           const blobType = blob.type;
@@ -178,7 +168,7 @@ describe('builder', () => {
           expect(archive.byteLength).toBeGreaterThan(0);
 
           // Configure reader to skip verification for unsigned archive
-          const readerContext: SettingsContext = {
+          const readerContext: Settings = {
             verify: {
               verifyAfterReading: false,
             },
@@ -200,23 +190,16 @@ describe('builder', () => {
           expect(manifestStore).toBeDefined();
           expect(manifestStore.manifests).toBeDefined();
 
+          const activeManifest = await reader!.activeManifest();
+
           // Verify the manifest contains our data
+          expect(activeManifest.title).toEqual(manifestDefinition.title);
+          expect(activeManifest.claim_generator_info).toMatchObject(
+            manifestDefinition.claim_generator_info!
+          );
+
           const activeManifestLabel = manifestStore.active_manifest;
           expect(activeManifestLabel).toBeDefined();
-
-          if (activeManifestLabel) {
-            const activeManifest = manifestStore.manifests[activeManifestLabel];
-            expect(activeManifest?.title).toBe('Test_Manifest');
-            // Verify our claim generator info is present (c2pa-rs may add its own)
-            expect(activeManifest?.claim_generator_info).toEqual(
-              expect.arrayContaining([
-                expect.objectContaining({
-                  name: 'c2pa-web-test',
-                  version: '1.0.0',
-                }),
-              ])
-            );
-          }
         });
       });
     });
@@ -276,7 +259,7 @@ describe('builder', () => {
           const definition = await builder.getDefinition();
 
           expect(definition.ingredients).toHaveLength(1);
-          expect(definition.ingredients[0]).toMatchObject({
+          expect(definition.ingredients?.[0]).toMatchObject({
             title: 'source-image.jpg',
             format: 'image/jpeg',
             instance_id: 'ingredient-instance-123',
@@ -305,12 +288,12 @@ describe('builder', () => {
           const definition = await builder.getDefinition();
 
           expect(definition.ingredients).toHaveLength(2);
-          expect(definition.ingredients[0]).toMatchObject({
+          expect(definition.ingredients?.[0]).toMatchObject({
             title: 'source-image-1.jpg',
             format: 'image/jpeg',
             instance_id: 'ingredient-instance-1',
           });
-          expect(definition.ingredients[1]).toMatchObject({
+          expect(definition.ingredients?.[1]).toMatchObject({
             title: 'source-image-2.jpg',
             format: 'image/jpeg',
             instance_id: 'ingredient-instance-2',
@@ -326,15 +309,15 @@ describe('builder', () => {
             instance_id: 'ingredient-instance-123',
             document_id: 'ingredient-doc-456',
             metadata: {
-              customString: "my custom value",
+              customString: 'my custom value',
               customNumber: 42,
               customBool: true,
               customObject: {
-                  nested: "value",
-                  count: 123
+                nested: 'value',
+                count: 123,
               },
-              customArray: ["item1", "item2", "item3"]
-            }
+              customArray: ['item1', 'item2', 'item3'],
+            },
           };
 
           await builder.addIngredient(ingredient);
@@ -342,7 +325,7 @@ describe('builder', () => {
           const definition = await builder.getDefinition();
 
           expect(definition.ingredients).toHaveLength(1);
-          expect(definition.ingredients[0]).toMatchObject(ingredient);
+          expect(definition.ingredients?.[0]).toMatchObject(ingredient);
         });
       });
     });

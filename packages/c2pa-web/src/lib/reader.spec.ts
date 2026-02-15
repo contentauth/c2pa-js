@@ -235,6 +235,43 @@ describe('reader', () => {
     c2pa.dispose();
   });
 
+  test('should use local "context" settings when provided', async () => {
+    const settings: Settings = {
+      verify: {
+        verifyTrust: false,
+      },
+      cawgTrust: {
+        verifyTrustList: false,
+      },
+    };
+
+    const contextSettings: Settings = {
+      trust: {
+        trustAnchors: anchor_correct,
+      },
+      cawgTrust: {
+        trustAnchors: anchor_cawg,
+      },
+      verify: {
+        verifyTrust: true,
+      },
+    };
+
+    const c2pa = await createC2pa({ wasmSrc, settings });
+
+    const blob = await getBlobForAsset(C_with_CAWG_data);
+
+    const reader = await c2pa.reader.fromBlob(blob.type, blob, contextSettings);
+
+    expect(reader).not.toBeNull();
+
+    const manifestStore = await reader!.manifestStore();
+
+    expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
+
+    c2pa.dispose();
+  });
+
   // TODO: can this test be written to track the status of the underlying object instead of checking for an error?
   test('should be freeable', async ({ c2pa }) => {
     const blob = await getBlobForAsset(C_with_CAWG_data);

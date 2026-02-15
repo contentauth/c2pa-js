@@ -15,7 +15,7 @@ import type {
   Ingredient,
   ManifestDefinition,
 } from '@contentauth/c2pa-types';
-import { SettingsContext, contextToWasmJson } from './settings.js';
+import { Settings, settingsToWasmJson } from './settings.js';
 
 /**
  * Functions that permit the creation of Builder objects.
@@ -23,28 +23,31 @@ import { SettingsContext, contextToWasmJson } from './settings.js';
 export interface BuilderFactory {
   /**
    * Create a {@link Builder} with a minimal manifest definition as its initial state.
-   * @param context Optional context settings for the builder.
+   * @param settings Optional context settings for the builder. Will override any values inherited by the top-level settings passed to createC2pa.
    * @returns A {@link Builder} object.
    */
-  new: (context?: SettingsContext) => Promise<Builder>;
+  new: (settings?: Settings) => Promise<Builder>;
 
   /**
    * Create a {@link Builder} from a {@link ManifestDefinition}.
    *
    * @param definition The {@link ManifestDefinition} to be used as the builder's initial state.
-   * @param context Optional context settings for the builder.
+   * @param settings Optional context settings for the builder. Will override any values inherited by the top-level settings passed to createC2pa.
    * @returns A {@link Builder} object.
    */
-  fromDefinition: (definition: ManifestDefinition, context?: SettingsContext) => Promise<Builder>;
+  fromDefinition: (
+    definition: ManifestDefinition,
+    settings?: Settings
+  ) => Promise<Builder>;
 
   /**
    * Create a {@link Builder} from a builder archive (created from {@link Builder.toArchive}).
    *
    * @param archive Builder archive as a blob.
-   * @param context Optional context settings for the builder.
+   * @param settings Optional context settings for the builder. Will override any values inherited by the top-level settings passed to createC2pa.
    * @returns A {@link Builder} object.
    */
-  fromArchive: (archive: Blob, context?: SettingsContext) => Promise<Builder>;
+  fromArchive: (archive: Blob, settings?: Settings) => Promise<Builder>;
 }
 
 /**
@@ -178,9 +181,9 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
   });
 
   return {
-    async new(context?: SettingsContext) {
-      const contextJson = context ? await contextToWasmJson(context) : undefined;
-      const builderId = await tx.builder_new(contextJson);
+    async new(settings?: Settings) {
+      const settingsJson = settings && (await settingsToWasmJson(settings));
+      const builderId = await tx.builder_new(settingsJson);
 
       const builder = createBuilder(worker, builderId, () => {
         registry.unregister(builder);
@@ -190,10 +193,10 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
       return builder;
     },
 
-    async fromDefinition(definition: ManifestDefinition, context?: SettingsContext) {
+    async fromDefinition(definition: ManifestDefinition, settings?: Settings) {
       const json = JSON.stringify(definition);
-      const contextJson = context ? await contextToWasmJson(context) : undefined;
-      const builderId = await tx.builder_fromJson(json, contextJson);
+      const settingsJson = settings && (await settingsToWasmJson(settings));
+      const builderId = await tx.builder_fromJson(json, settingsJson);
 
       const builder = createBuilder(worker, builderId, () => {
         registry.unregister(builder);
@@ -203,9 +206,9 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
       return builder;
     },
 
-    async fromArchive(archive: Blob, context?: SettingsContext) {
-      const contextJson = context ? await contextToWasmJson(context) : undefined;
-      const builderId = await tx.builder_fromArchive(archive, contextJson);
+    async fromArchive(archive: Blob, settings?: Settings) {
+      const settingsJson = settings && (await settingsToWasmJson(settings));
+      const builderId = await tx.builder_fromArchive(archive, settingsJson);
 
       const builder = createBuilder(worker, builderId, () => {
         registry.unregister(builder);

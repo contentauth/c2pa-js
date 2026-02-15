@@ -8,8 +8,18 @@
  */
 
 import { test, describe, expect } from 'test/methods.js';
-import { settingsToWasmJson } from './settings.js';
 import { http, HttpResponse } from 'msw';
+import { settingsToWasmJson } from './settings.js';
+
+/**
+ * NOTE: settingsToWasmJson relies on a module-level HTTP cache that I could not
+ * seem to reset in between test runs. Test-level imports with vi.resetModules()
+ * had no effect. It is, of course, totally possible I did something wrong :)
+ *
+ * As such, there is some shared state between these tests - keep in mind that once
+ * a URL is cached, the cached result will be used in all subsequent tests that
+ * request that same URL.
+ */
 
 describe('settings', () => {
   describe('settingsToWasmJson', () => {
@@ -119,16 +129,19 @@ describe('settings', () => {
         requestMock,
       }) => {
         requestMock.use(
-          http.get('http://userAnchors', () =>
+          http.get('http://userAnchorsConcat', () =>
             HttpResponse.text(
-              '-----BEGIN CERTIFICATE-----foo-----END CERTIFICATE-----'
+              '-----BEGIN CERTIFICATE-----qux-----END CERTIFICATE-----'
             )
           )
         );
 
         const settingsString = await settingsToWasmJson({
           trust: {
-            userAnchors: ['http://userAnchors', 'http://userAnchors'],
+            userAnchors: [
+              'http://userAnchorsConcat',
+              'http://userAnchorsConcat',
+            ],
           },
         });
 
@@ -137,7 +150,7 @@ describe('settings', () => {
             builder: { generate_c2pa_archive: true },
             trust: {
               user_anchors:
-                '-----BEGIN CERTIFICATE-----foo-----END CERTIFICATE----------BEGIN CERTIFICATE-----foo-----END CERTIFICATE-----',
+                '-----BEGIN CERTIFICATE-----qux-----END CERTIFICATE----------BEGIN CERTIFICATE-----qux-----END CERTIFICATE-----',
             },
           })
         );
@@ -147,18 +160,47 @@ describe('settings', () => {
         requestMock,
       }) => {
         requestMock.use(
-          http.get('http://userAnchors', () => HttpResponse.text('invalid'))
+          http.get('http://userAnchorsShouldFail', () =>
+            HttpResponse.text('invalid')
+          )
         );
 
         const settingsStringPromise = settingsToWasmJson({
           trust: {
-            userAnchors: 'http://userAnchors',
+            userAnchors: 'http://userAnchorsShouldFail',
           },
         });
 
         await expect(settingsStringPromise).rejects.toThrow(
           'Failed to resolve trust settings.'
         );
+      });
+
+      test('should cache fetched values', async ({ requestMock }) => {
+        let requestCount = 0;
+
+        requestMock.use(
+          http.get('http://userAnchorsCacheTest', () => {
+            requestCount++;
+            return HttpResponse.text(
+              '-----BEGIN CERTIFICATE-----foo-----END CERTIFICATE-----'
+            );
+          })
+        );
+
+        await settingsToWasmJson({
+          trust: {
+            userAnchors: 'http://userAnchorsCacheTest',
+          },
+        });
+
+        await settingsToWasmJson({
+          trust: {
+            userAnchors: 'http://userAnchorsCacheTest',
+          },
+        });
+
+        expect(requestCount).toEqual(1);
       });
     });
   });

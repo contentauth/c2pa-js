@@ -10,9 +10,9 @@
 import { merge } from 'ts-deepmerge';
 
 /**
- * Context configuration for C2PA operations.
+ * Settings configuration for C2PA operations.
  *
- * Context encapsulates settings and configuration options for Reader and Builder operations.
+ * Encapsulates settings and configuration options for Reader and Builder operations.
  * It provides a flexible way to configure SDK behavior including the verification configuration,
  * trust configuration, and builder options.
  *
@@ -31,7 +31,7 @@ import { merge } from 'ts-deepmerge';
  * const reader = await c2pa.reader.fromBlob(blob.type, blob, JSON.stringify(context));
  * ```
  */
-export interface SettingsContext {
+export interface Settings {
   /**
    * Trust configuration for C2PA claim validation.
    */
@@ -47,24 +47,6 @@ export interface SettingsContext {
   /**
    * Builder settings.
    */
-  builder?: BuilderSettings;
-}
-
-/**
- * Settings used to configure the SDK's behavior.
- *
- * @deprecated Use {@link SettingsContext} instead. Settings will be removed in a future version.
- */
-export interface Settings {
-  /**
-   * Trust configuration for C2PA claim validation.
-   */
-  trust?: TrustSettings;
-  /**
-   * Trust configuration for CAWG identity valdation.
-   */
-  cawgTrust?: CawgTrustSettings;
-  verify?: VerifySettings;
   builder?: BuilderSettings;
 }
 
@@ -137,7 +119,7 @@ type SettingsObjectType = {
   [k: string]: string | boolean | SettingsObjectType;
 };
 
-const DEFAULT_SETTINGS: SettingsContext = {
+const DEFAULT_SETTINGS: Settings = {
   builder: {
     generateC2paArchive: true,
   },
@@ -146,31 +128,7 @@ const DEFAULT_SETTINGS: SettingsContext = {
 /**
  * Resolves any trust list URLs and serializes the resulting object into a JSON string of the structure expected by c2pa-rs.
  *
- * @param context - Context configuration object
- */
-export async function contextToWasmJson(context: SettingsContext) {
-  const mergedContext: SettingsContext = merge(DEFAULT_SETTINGS, context);
-
-  const resolvePromises: Promise<void>[] = [];
-
-  if (mergedContext.trust) {
-    resolvePromises.push(resolveTrustSettings(mergedContext.trust));
-  }
-
-  if (mergedContext.cawgTrust) {
-    resolvePromises.push(resolveTrustSettings(mergedContext.cawgTrust));
-  }
-
-  await Promise.all(resolvePromises);
-
-  return JSON.stringify(snakeCaseify(mergedContext as SettingsObjectType));
-}
-
-/**
- * Resolves any trust list URLs and serializes the resulting object into a JSON string of the structure expected by c2pa-rs.
- *
- * @param settings
- * @deprecated Use {@link contextToWasmJson} instead.
+ * @param settings Settings configuration object
  */
 export async function settingsToWasmJson(settings: Settings) {
   const mergedSettings: Settings = merge(DEFAULT_SETTINGS, settings);
@@ -209,6 +167,7 @@ function snakeCase(str: string): string {
 
 /**
  * Walks a TrustSettings object and fetches trust resources if necessary, replacing URLs with their fetched values.
+ * Maintains a cache of previously fetched values.
  *
  * @param settings TrustSettings object
  */
@@ -217,8 +176,7 @@ async function resolveTrustSettings(settings: TrustSettings): Promise<void> {
     const promises = Object.entries(settings).map(async ([key, val]) => {
       if (Array.isArray(val)) {
         const promises = val.map(async (val) => {
-          const res = await fetch(val);
-          const text = await res.text();
+          const text = await retrieveFromCacheOrFetch(val);
 
           if (shouldValidateKey(key) && !containsCerts(text)) {
             throw new Error(`Error parsing PEM file at: ${val}`);
@@ -231,8 +189,7 @@ async function resolveTrustSettings(settings: TrustSettings): Promise<void> {
         const combined = result.join('');
         settings[key as keyof TrustSettings] = combined;
       } else if (val && isUrl(val)) {
-        const res = await fetch(val);
-        const text = await res.text();
+        const text = await retrieveFromCacheOrFetch(val);
 
         if (shouldValidateKey(key) && !containsCerts(text)) {
           throw new Error(`Error parsing PEM file at: ${val}`);
@@ -257,3 +214,20 @@ const containsCerts = (content: string): boolean =>
   content.includes('-----BEGIN CERTIFICATE-----');
 
 const isUrl = (str: string): boolean => str.startsWith('http');
+
+const cache = new Map<string, string>();
+
+async function retrieveFromCacheOrFetch(url: string): Promise<string> {
+  const maybeCached = cache.get(url);
+
+  if (maybeCached) {
+    return maybeCached;
+  }
+
+  const res = await fetch(url);
+  const text = await res.text();
+
+  cache.set(url, text);
+
+  return text;
+}
