@@ -33,7 +33,7 @@ describe('builder', () => {
         });
       });
 
-      test.only('should use local "context" settings when provided', async () => {
+      test('should use local "context" settings when provided', async () => {
         const settings: Settings = {
           verify: {
             verifyTrust: false,
