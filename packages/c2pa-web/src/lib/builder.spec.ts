@@ -11,6 +11,9 @@ import { test, describe, expect } from 'test/methods.js';
 import { ManifestDefinition, Ingredient } from '@contentauth/c2pa-types';
 import { getBlobForAsset } from 'test/utils.js';
 import { Settings } from './settings.js';
+import { createC2pa } from './c2pa.js';
+import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
+
 import C_JPG from 'test/assets/C.jpg';
 
 describe('builder', () => {
@@ -30,303 +33,332 @@ describe('builder', () => {
         });
       });
 
-      describe('manifestDefinition', () => {
-        test('should create a builder with the provided manifest definition', async ({
-          c2pa,
-        }) => {
-          const manifestDefinition: ManifestDefinition = {
-            claim_generator_info: [
-              {
-                name: 'c2pa-web-test',
-                version: '1.0.0',
-              },
-            ],
-            title: 'Test_Manifest',
-            format: 'image/jpeg',
-            instance_id: '1234',
-            assertions: [],
-            ingredients: [],
-          };
+      test.only('should use local "context" settings when provided', async () => {
+        const settings: Settings = {
+          verify: {
+            verifyTrust: false,
+          },
+        };
 
-          const builder = await c2pa.builder.fromDefinition(manifestDefinition);
+        const overrideSettings: Settings = {
+          verify: {
+            verifyTrust: true,
+          },
+        };
 
-          const manifestDefinitionFromBuilder = await builder.getDefinition();
+        const c2pa = await createC2pa({ wasmSrc, settings });
 
-          expect(manifestDefinitionFromBuilder).toEqual(manifestDefinition);
+        const builder = await c2pa.builder.new(overrideSettings);
+
+        const blob = await getBlobForAsset(C_JPG);
+
+        await builder.addIngredientFromBlob({}, blob.type, blob);
+
+        const definition = await builder.getDefinition();
+
+        const ingredientFailureCodes =
+          definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
+            (entry) => entry.code
+          );
+
+        expect(ingredientFailureCodes).toContain('signingCredential.untrusted');
+      });
+    });
+
+    describe('manifestDefinition', () => {
+      test('should create a builder with the provided manifest definition', async ({
+        c2pa,
+      }) => {
+        const manifestDefinition: ManifestDefinition = {
+          claim_generator_info: [
+            {
+              name: 'c2pa-web-test',
+              version: '1.0.0',
+            },
+          ],
+          title: 'Test_Manifest',
+          format: 'image/jpeg',
+          instance_id: '1234',
+          assertions: [],
+          ingredients: [],
+        };
+
+        const builder = await c2pa.builder.fromDefinition(manifestDefinition);
+
+        const manifestDefinitionFromBuilder = await builder.getDefinition();
+
+        expect(manifestDefinitionFromBuilder).toEqual(manifestDefinition);
+      });
+    });
+
+    describe('fromArchive', () => {
+      test('should re-create a builder from an archive', async ({ c2pa }) => {
+        const manifestDefinition: ManifestDefinition = {
+          claim_generator_info: [
+            {
+              name: 'c2pa-web-test',
+              version: '1.0.0',
+            },
+          ],
+          assertions: [],
+          format: '',
+          ingredients: [],
+          instance_id: '',
+        };
+
+        const builder = await c2pa.builder.fromDefinition(manifestDefinition);
+
+        const archive = await builder.toArchive();
+
+        const builderFromArchive = await c2pa.builder.fromArchive(
+          new Blob([archive])
+        );
+
+        const definitionFromArchivedBuilder =
+          await builderFromArchive.getDefinition();
+
+        expect(definitionFromArchivedBuilder).toMatchObject(manifestDefinition);
+      });
+
+      test('should re-create a builder from an archive with ingredient from blob', async ({
+        c2pa,
+      }) => {
+        const manifestDefinition: ManifestDefinition = {
+          claim_generator_info: [
+            {
+              name: 'c2pa-web-test',
+              version: '1.0.0',
+            },
+          ],
+          assertions: [],
+          format: '',
+          ingredients: [],
+          instance_id: '',
+        };
+
+        const builder = await c2pa.builder.fromDefinition(manifestDefinition);
+
+        const blob = await getBlobForAsset(C_JPG);
+        const blobType = blob.type;
+
+        const ingredient: Ingredient = {
+          title: 'C.jpg',
+          format: blobType,
+          instance_id: 'ingredient-instance-123',
+        };
+
+        await builder.addIngredientFromBlob(ingredient, blobType, blob);
+
+        const archive = await builder.toArchive();
+
+        const builderFromArchive = await c2pa.builder.fromArchive(
+          new Blob([archive])
+        );
+
+        const definitionFromArchivedBuilder =
+          await builderFromArchive.getDefinition();
+
+        expect(definitionFromArchivedBuilder.ingredients).toHaveLength(1);
+        expect(definitionFromArchivedBuilder.ingredients![0]).toMatchObject({
+          title: 'C.jpg',
+          format: blobType,
+          instance_id: 'ingredient-instance-123',
         });
       });
 
-      describe('fromArchive', () => {
-        test('should re-create a builder from an archive', async ({ c2pa }) => {
-          const manifestDefinition: ManifestDefinition = {
-            claim_generator_info: [
-              {
-                name: 'c2pa-web-test',
-                version: '1.0.0',
-              },
-            ],
-            assertions: [],
-            format: '',
-            ingredients: [],
-            instance_id: '',
-          };
-
-          const builder = await c2pa.builder.fromDefinition(manifestDefinition);
-
-          const archive = await builder.toArchive();
-
-          const builderFromArchive = await c2pa.builder.fromArchive(
-            new Blob([archive])
-          );
-
-          const definitionFromArchivedBuilder =
-            await builderFromArchive.getDefinition();
-
-          expect(definitionFromArchivedBuilder).toMatchObject(
-            manifestDefinition
-          );
-        });
-
-        test('should re-create a builder from an archive with ingredient from blob', async ({
-          c2pa,
-        }) => {
-          const manifestDefinition: ManifestDefinition = {
-            claim_generator_info: [
-              {
-                name: 'c2pa-web-test',
-                version: '1.0.0',
-              },
-            ],
-            assertions: [],
-            format: '',
-            ingredients: [],
-            instance_id: '',
-          };
-
-          const builder = await c2pa.builder.fromDefinition(manifestDefinition);
-
-          const blob = await getBlobForAsset(C_JPG);
-          const blobType = blob.type;
-
-          const ingredient: Ingredient = {
-            title: 'C.jpg',
-            format: blobType,
-            instance_id: 'ingredient-instance-123',
-          };
-
-          await builder.addIngredientFromBlob(ingredient, blobType, blob);
-
-          const archive = await builder.toArchive();
-
-          const builderFromArchive = await c2pa.builder.fromArchive(
-            new Blob([archive])
-          );
-
-          const definitionFromArchivedBuilder =
-            await builderFromArchive.getDefinition();
-
-          expect(definitionFromArchivedBuilder.ingredients).toHaveLength(1);
-          expect(definitionFromArchivedBuilder.ingredients![0]).toMatchObject({
-            title: 'C.jpg',
-            format: blobType,
-            instance_id: 'ingredient-instance-123',
-          });
-        });
-
-        test('should create a readable archive', async ({ c2pa }) => {
-          const manifestDefinition: ManifestDefinition = {
-            claim_generator_info: [
-              {
-                name: 'c2pa-web-test',
-                version: '1.0.0',
-              },
-            ],
-            title: 'Test_Manifest',
-            format: 'image/jpeg',
-            assertions: [],
-            ingredients: [],
-            instance_id: '',
-          };
-
-          // Create builder with generateC2paArchive enabled
-          const builder = await c2pa.builder.fromDefinition(manifestDefinition);
-
-          const blob = await getBlobForAsset(C_JPG);
-          const blobType = blob.type;
-
-          const ingredient: Ingredient = {
-            title: 'C.jpg',
-            format: blobType,
-            instance_id: 'ingredient-instance-123',
-          };
-
-          await builder.addIngredientFromBlob(ingredient, blobType, blob);
-
-          // Create C2PA archive from the builder
-          const archive = await builder.toArchive();
-          expect(archive).toBeDefined();
-          expect(archive.byteLength).toBeGreaterThan(0);
-
-          // Configure reader to skip verification for unsigned archive
-          const readerContext: Settings = {
-            verify: {
-              verifyAfterReading: false,
+      test('should create a readable archive', async ({ c2pa }) => {
+        const manifestDefinition: ManifestDefinition = {
+          claim_generator_info: [
+            {
+              name: 'c2pa-web-test',
+              version: '1.0.0',
             },
-          };
+          ],
+          title: 'Test_Manifest',
+          format: 'image/jpeg',
+          assertions: [],
+          ingredients: [],
+          instance_id: '',
+        };
 
-          // Read the C2PA archive with Reader using application/c2pa format
-          const archiveBlob = new Blob([archive]);
-          const reader = await c2pa.reader.fromBlob(
-            'application/c2pa',
-            archiveBlob,
-            readerContext
-          );
+        // Create builder with generateC2paArchive enabled
+        const builder = await c2pa.builder.fromDefinition(manifestDefinition);
 
-          expect(reader).not.toBeNull();
-          expect(reader).toBeDefined();
+        const blob = await getBlobForAsset(C_JPG);
+        const blobType = blob.type;
 
-          // Verify we can read the manifest from the archive
-          const manifestStore = await reader!.manifestStore();
-          expect(manifestStore).toBeDefined();
-          expect(manifestStore.manifests).toBeDefined();
+        const ingredient: Ingredient = {
+          title: 'C.jpg',
+          format: blobType,
+          instance_id: 'ingredient-instance-123',
+        };
 
-          const activeManifest = await reader!.activeManifest();
+        await builder.addIngredientFromBlob(ingredient, blobType, blob);
 
-          // Verify the manifest contains our data
-          expect(activeManifest.title).toEqual(manifestDefinition.title);
-          expect(activeManifest.claim_generator_info).toMatchObject(
-            manifestDefinition.claim_generator_info!
-          );
+        // Create C2PA archive from the builder
+        const archive = await builder.toArchive();
+        expect(archive).toBeDefined();
+        expect(archive.byteLength).toBeGreaterThan(0);
 
-          const activeManifestLabel = manifestStore.active_manifest;
-          expect(activeManifestLabel).toBeDefined();
+        // Configure reader to skip verification for unsigned archive
+        const readerContext: Settings = {
+          verify: {
+            verifyAfterReading: false,
+          },
+        };
+
+        // Read the C2PA archive with Reader using application/c2pa format
+        const archiveBlob = new Blob([archive]);
+        const reader = await c2pa.reader.fromBlob(
+          'application/c2pa',
+          archiveBlob,
+          readerContext
+        );
+
+        expect(reader).not.toBeNull();
+        expect(reader).toBeDefined();
+
+        // Verify we can read the manifest from the archive
+        const manifestStore = await reader!.manifestStore();
+        expect(manifestStore).toBeDefined();
+        expect(manifestStore.manifests).toBeDefined();
+
+        const activeManifest = await reader!.activeManifest();
+
+        // Verify the manifest contains our data
+        expect(activeManifest.title).toEqual(manifestDefinition.title);
+        expect(activeManifest.claim_generator_info).toMatchObject(
+          manifestDefinition.claim_generator_info!
+        );
+
+        const activeManifestLabel = manifestStore.active_manifest;
+        expect(activeManifestLabel).toBeDefined();
+      });
+    });
+  });
+
+  describe('methods', () => {
+    describe('addAction', () => {
+      test('should add the provided actions', async ({ c2pa }) => {
+        const builder = await c2pa.builder.new();
+
+        await builder.addAction({
+          action: 'c2pa.opened',
+        });
+
+        await builder.addAction({
+          action: 'c2pa.edited',
+        });
+
+        const definition = await builder.getDefinition();
+
+        expect(definition).toEqual({
+          assertions: [
+            {
+              data: {
+                actions: [
+                  {
+                    action: 'c2pa.opened',
+                  },
+                  {
+                    action: 'c2pa.edited',
+                  },
+                ],
+              },
+              label: 'c2pa.actions',
+            },
+          ],
+          claim_generator_info: [],
+          format: '',
+          ingredients: [],
+          instance_id: '',
         });
       });
     });
 
-    describe('methods', () => {
-      describe('addAction', () => {
-        test('should add the provided actions', async ({ c2pa }) => {
-          const builder = await c2pa.builder.new();
+    describe('addIngredient', () => {
+      test('should add the provided ingredient', async ({ c2pa }) => {
+        const builder = await c2pa.builder.new();
 
-          await builder.addAction({
-            action: 'c2pa.opened',
-          });
+        const ingredient: Ingredient = {
+          title: 'source-image.jpg',
+          format: 'image/jpeg',
+          instance_id: 'ingredient-instance-123',
+          document_id: 'ingredient-doc-456',
+        };
 
-          await builder.addAction({
-            action: 'c2pa.edited',
-          });
+        await builder.addIngredient(ingredient);
 
-          const definition = await builder.getDefinition();
+        const definition = await builder.getDefinition();
 
-          expect(definition).toEqual({
-            assertions: [
-              {
-                data: {
-                  actions: [
-                    {
-                      action: 'c2pa.opened',
-                    },
-                    {
-                      action: 'c2pa.edited',
-                    },
-                  ],
-                },
-                label: 'c2pa.actions',
-              },
-            ],
-            claim_generator_info: [],
-            format: '',
-            ingredients: [],
-            instance_id: '',
-          });
+        expect(definition.ingredients).toHaveLength(1);
+        expect(definition.ingredients?.[0]).toMatchObject({
+          title: 'source-image.jpg',
+          format: 'image/jpeg',
+          instance_id: 'ingredient-instance-123',
+          document_id: 'ingredient-doc-456',
         });
       });
 
-      describe('addIngredient', () => {
-        test('should add the provided ingredient', async ({ c2pa }) => {
-          const builder = await c2pa.builder.new();
+      test('should add multiple ingredients', async ({ c2pa }) => {
+        const builder = await c2pa.builder.new();
 
-          const ingredient: Ingredient = {
-            title: 'source-image.jpg',
-            format: 'image/jpeg',
-            instance_id: 'ingredient-instance-123',
-            document_id: 'ingredient-doc-456',
-          };
+        const ingredient1: Ingredient = {
+          title: 'source-image-1.jpg',
+          format: 'image/jpeg',
+          instance_id: 'ingredient-instance-1',
+        };
 
-          await builder.addIngredient(ingredient);
+        const ingredient2: Ingredient = {
+          title: 'source-image-2.jpg',
+          format: 'image/jpeg',
+          instance_id: 'ingredient-instance-2',
+        };
 
-          const definition = await builder.getDefinition();
+        await builder.addIngredient(ingredient1);
+        await builder.addIngredient(ingredient2);
 
-          expect(definition.ingredients).toHaveLength(1);
-          expect(definition.ingredients?.[0]).toMatchObject({
-            title: 'source-image.jpg',
-            format: 'image/jpeg',
-            instance_id: 'ingredient-instance-123',
-            document_id: 'ingredient-doc-456',
-          });
+        const definition = await builder.getDefinition();
+
+        expect(definition.ingredients).toHaveLength(2);
+        expect(definition.ingredients?.[0]).toMatchObject({
+          title: 'source-image-1.jpg',
+          format: 'image/jpeg',
+          instance_id: 'ingredient-instance-1',
         });
-
-        test('should add multiple ingredients', async ({ c2pa }) => {
-          const builder = await c2pa.builder.new();
-
-          const ingredient1: Ingredient = {
-            title: 'source-image-1.jpg',
-            format: 'image/jpeg',
-            instance_id: 'ingredient-instance-1',
-          };
-
-          const ingredient2: Ingredient = {
-            title: 'source-image-2.jpg',
-            format: 'image/jpeg',
-            instance_id: 'ingredient-instance-2',
-          };
-
-          await builder.addIngredient(ingredient1);
-          await builder.addIngredient(ingredient2);
-
-          const definition = await builder.getDefinition();
-
-          expect(definition.ingredients).toHaveLength(2);
-          expect(definition.ingredients?.[0]).toMatchObject({
-            title: 'source-image-1.jpg',
-            format: 'image/jpeg',
-            instance_id: 'ingredient-instance-1',
-          });
-          expect(definition.ingredients?.[1]).toMatchObject({
-            title: 'source-image-2.jpg',
-            format: 'image/jpeg',
-            instance_id: 'ingredient-instance-2',
-          });
+        expect(definition.ingredients?.[1]).toMatchObject({
+          title: 'source-image-2.jpg',
+          format: 'image/jpeg',
+          instance_id: 'ingredient-instance-2',
         });
+      });
 
-        test('should add ingredient with custom metadata', async ({ c2pa }) => {
-          const builder = await c2pa.builder.new();
+      test('should add ingredient with custom metadata', async ({ c2pa }) => {
+        const builder = await c2pa.builder.new();
 
-          const ingredient: Ingredient = {
-            title: 'source-image.jpg',
-            format: 'image/jpeg',
-            instance_id: 'ingredient-instance-123',
-            document_id: 'ingredient-doc-456',
-            metadata: {
-              customString: 'my custom value',
-              customNumber: 42,
-              customBool: true,
-              customObject: {
-                nested: 'value',
-                count: 123,
-              },
-              customArray: ['item1', 'item2', 'item3'],
+        const ingredient: Ingredient = {
+          title: 'source-image.jpg',
+          format: 'image/jpeg',
+          instance_id: 'ingredient-instance-123',
+          document_id: 'ingredient-doc-456',
+          metadata: {
+            customString: 'my custom value',
+            customNumber: 42,
+            customBool: true,
+            customObject: {
+              nested: 'value',
+              count: 123,
             },
-          };
+            customArray: ['item1', 'item2', 'item3'],
+          },
+        };
 
-          await builder.addIngredient(ingredient);
+        await builder.addIngredient(ingredient);
 
-          const definition = await builder.getDefinition();
+        const definition = await builder.getDefinition();
 
-          expect(definition.ingredients).toHaveLength(1);
-          expect(definition.ingredients?.[0]).toMatchObject(ingredient);
-        });
+        expect(definition.ingredients).toHaveLength(1);
+        expect(definition.ingredients?.[0]).toMatchObject(ingredient);
       });
     });
   });

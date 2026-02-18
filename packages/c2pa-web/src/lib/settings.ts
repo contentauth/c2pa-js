@@ -98,21 +98,8 @@ export interface VerifySettings {
 export interface BuilderSettings {
   /**
    * Whether to generate a C2PA archive (instead of zip) when writing the manifest builder.
-   * This will eventually become the default behavior.
    */
   generateC2paArchive?: boolean;
-  /*
-   * Settings for controlling automatic thumbnail generation.
-   */
-  thumbnail?: BuilderThumbnailSettings;
-}
-
-export interface BuilderThumbnailSettings {
-  /*
-   * Whether or not to automatically generate thumbnails.
-   * The default value is true.
-   */
-  enabled: boolean;
 }
 
 type SettingsObjectType = {
@@ -127,10 +114,12 @@ const DEFAULT_SETTINGS: Settings = {
 
 /**
  * Resolves any trust list URLs and serializes the resulting object into a JSON string of the structure expected by c2pa-rs.
+ * Will merge any provided values on top of the default settings.
  *
  * @param settings Settings configuration object
+ * @returns A JSON-serialized string containing all resolved settings values, ready to be consumed by c2pa-rs.
  */
-export async function settingsToWasmJson(settings: Settings) {
+export async function settingsToWasmJson(settings: Settings): Promise<string> {
   const mergedSettings: Settings = merge(DEFAULT_SETTINGS, settings);
 
   const resolvePromises: Promise<void>[] = [];
@@ -167,7 +156,6 @@ function snakeCase(str: string): string {
 
 /**
  * Walks a TrustSettings object and fetches trust resources if necessary, replacing URLs with their fetched values.
- * Maintains a cache of previously fetched values.
  *
  * @param settings TrustSettings object
  */
@@ -176,7 +164,7 @@ async function resolveTrustSettings(settings: TrustSettings): Promise<void> {
     const promises = Object.entries(settings).map(async ([key, val]) => {
       if (Array.isArray(val)) {
         const promises = val.map(async (val) => {
-          const text = await retrieveFromCacheOrFetch(val);
+          const text = await fetchResource(val);
 
           if (shouldValidateKey(key) && !containsCerts(text)) {
             throw new Error(`Error parsing PEM file at: ${val}`);
@@ -189,7 +177,7 @@ async function resolveTrustSettings(settings: TrustSettings): Promise<void> {
         const combined = result.join('');
         settings[key as keyof TrustSettings] = combined;
       } else if (val && isUrl(val)) {
-        const text = await retrieveFromCacheOrFetch(val);
+        const text = await fetchResource(val);
 
         if (shouldValidateKey(key) && !containsCerts(text)) {
           throw new Error(`Error parsing PEM file at: ${val}`);
@@ -215,19 +203,9 @@ const containsCerts = (content: string): boolean =>
 
 const isUrl = (str: string): boolean => str.startsWith('http');
 
-const cache = new Map<string, string>();
-
-async function retrieveFromCacheOrFetch(url: string): Promise<string> {
-  const maybeCached = cache.get(url);
-
-  if (maybeCached) {
-    return maybeCached;
-  }
-
+async function fetchResource(url: string): Promise<string> {
   const res = await fetch(url);
   const text = await res.text();
-
-  cache.set(url, text);
 
   return text;
 }

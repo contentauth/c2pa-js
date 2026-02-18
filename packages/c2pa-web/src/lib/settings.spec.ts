@@ -11,16 +11,6 @@ import { test, describe, expect } from 'test/methods.js';
 import { http, HttpResponse } from 'msw';
 import { settingsToWasmJson } from './settings.js';
 
-/**
- * NOTE: settingsToWasmJson relies on a module-level HTTP cache that I could not
- * seem to reset in between test runs. Test-level imports with vi.resetModules()
- * had no effect. It is, of course, totally possible I did something wrong :)
- *
- * As such, there is some shared state between these tests - keep in mind that once
- * a URL is cached, the cached result will be used in all subsequent tests that
- * request that same URL.
- */
-
 describe('settings', () => {
   describe('settingsToWasmJson', () => {
     describe('general behavior', () => {
@@ -174,33 +164,6 @@ describe('settings', () => {
         await expect(settingsStringPromise).rejects.toThrow(
           'Failed to resolve trust settings.'
         );
-      });
-
-      test('should cache fetched values', async ({ requestMock }) => {
-        let requestCount = 0;
-
-        requestMock.use(
-          http.get('http://userAnchorsCacheTest', () => {
-            requestCount++;
-            return HttpResponse.text(
-              '-----BEGIN CERTIFICATE-----foo-----END CERTIFICATE-----'
-            );
-          })
-        );
-
-        await settingsToWasmJson({
-          trust: {
-            userAnchors: 'http://userAnchorsCacheTest',
-          },
-        });
-
-        await settingsToWasmJson({
-          trust: {
-            userAnchors: 'http://userAnchorsCacheTest',
-          },
-        });
-
-        expect(requestCount).toEqual(1);
       });
     });
   });
