@@ -51,6 +51,7 @@ Commands are run in the following format: `nx [target] [project]`, e.g.:
 nx build c2pa-web # This will build c2pa-web and all of its dependencies
 nx test c2pa-web # This will build and run the tests defined in the c2pa-web package
 nx lint c2pa-web # This will run ESLint on the c2pa-web package
+nx lint c2pa-web --fix # This will run ESLint on the c2pa-web package and fix any errors
 ```
 
 ### Committing Changes for Release
