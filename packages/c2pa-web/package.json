@@ -1,6 +1,6 @@
 {
   "name": "@contentauth/c2pa-web",
-  "version": "0.5.7",
+  "version": "0.6.0",
   "license": "MIT",
   "type": "module",
   "module": "./dist/index.js",

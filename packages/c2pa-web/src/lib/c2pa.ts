@@ -19,7 +19,7 @@ export interface Config {
   wasmSrc: string | WebAssembly.Module;
 
   /**
-   * Settings for the SDK.
+   * Settings for the SDK. Will be inherited by created builders and readers.
    */
   settings?: Settings;
 }

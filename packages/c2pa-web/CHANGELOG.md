@@ -1,5 +1,18 @@
 # @contentauth/c2pa-web
 
+## 0.6.0
+
+### Minor Changes
+
+- 08994f8: Unify Settings and SettingsContext interfaces (they were identical duplicates)
+
+### Patch Changes
+
+- 7faebe7: Add support for arbitrary key/value pairs in assertion metadata. Update c2pa crate version to 0.75.19.
+- Updated dependencies [7faebe7]
+  - @contentauth/c2pa-types@0.4.2
+  - @contentauth/c2pa-wasm@0.4.5
+
 ## 0.5.7
 
 ### Patch Changes
