@@ -2,6 +2,10 @@
   "name": "@contentauth/c2pa-wasm",
   "version": "0.4.4",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/contentauth/c2pa-js"
+  },
   "type": "module",
   "module": "./pkg/c2pa.js",
   "types": "./pkg/c2pa.d.ts",
