@@ -8,8 +8,8 @@
  */
 
 import { test, describe, expect } from 'test/methods.js';
-import { settingsToWasmJson } from './settings.js';
 import { http, HttpResponse } from 'msw';
+import { settingsToWasmJson } from './settings.js';
 
 describe('settings', () => {
   describe('settingsToWasmJson', () => {
@@ -119,16 +119,19 @@ describe('settings', () => {
         requestMock,
       }) => {
         requestMock.use(
-          http.get('http://userAnchors', () =>
+          http.get('http://userAnchorsConcat', () =>
             HttpResponse.text(
-              '-----BEGIN CERTIFICATE-----foo-----END CERTIFICATE-----'
+              '-----BEGIN CERTIFICATE-----qux-----END CERTIFICATE-----'
             )
           )
         );
 
         const settingsString = await settingsToWasmJson({
           trust: {
-            userAnchors: ['http://userAnchors', 'http://userAnchors'],
+            userAnchors: [
+              'http://userAnchorsConcat',
+              'http://userAnchorsConcat',
+            ],
           },
         });
 
@@ -137,7 +140,7 @@ describe('settings', () => {
             builder: { generate_c2pa_archive: true },
             trust: {
               user_anchors:
-                '-----BEGIN CERTIFICATE-----foo-----END CERTIFICATE----------BEGIN CERTIFICATE-----foo-----END CERTIFICATE-----',
+                '-----BEGIN CERTIFICATE-----qux-----END CERTIFICATE----------BEGIN CERTIFICATE-----qux-----END CERTIFICATE-----',
             },
           })
         );
@@ -147,12 +150,14 @@ describe('settings', () => {
         requestMock,
       }) => {
         requestMock.use(
-          http.get('http://userAnchors', () => HttpResponse.text('invalid'))
+          http.get('http://userAnchorsShouldFail', () =>
+            HttpResponse.text('invalid')
+          )
         );
 
         const settingsStringPromise = settingsToWasmJson({
           trust: {
-            userAnchors: 'http://userAnchors',
+            userAnchors: 'http://userAnchorsShouldFail',
           },
         });
 

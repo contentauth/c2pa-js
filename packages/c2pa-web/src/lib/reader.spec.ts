@@ -56,6 +56,47 @@ describe('reader', () => {
 
         expect(reader).toBeNull();
       });
+
+      test('should use local "context" settings when provided', async () => {
+        const settings: Settings = {
+          verify: {
+            verifyTrust: false,
+          },
+          cawgTrust: {
+            verifyTrustList: false,
+          },
+        };
+
+        const overrideSettings: Settings = {
+          trust: {
+            trustAnchors: anchor_correct,
+          },
+          cawgTrust: {
+            trustAnchors: anchor_cawg,
+          },
+          verify: {
+            verifyTrust: true,
+          },
+        };
+
+        const c2pa = await createC2pa({ wasmSrc, settings });
+
+        const blob = await getBlobForAsset(C_with_CAWG_data);
+
+        const reader = await c2pa.reader.fromBlob(
+          blob.type,
+          blob,
+          overrideSettings
+        );
+
+        expect(reader).not.toBeNull();
+
+        const manifestStore = await reader!.manifestStore();
+
+        expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
+
+        c2pa.dispose();
+      });
     });
 
     describe('fromBlobFragment', () => {
@@ -107,7 +148,7 @@ describe('reader', () => {
         const manifestStore = await reader!.manifestStore();
 
         const activeManifest =
-          manifestStore.manifests[manifestStore.active_manifest!];
+          manifestStore.manifests![manifestStore.active_manifest!];
         const thumbnailId = activeManifest.thumbnail!.identifier;
 
         const thumbnailBuffer = await reader!.resourceToBytes(thumbnailId);
@@ -136,7 +177,7 @@ describe('reader', () => {
         const expectedManifestStore =
           C_with_CAWG_data_untrusted_ManifestStore as ManifestStore;
         const expectedActiveManifest =
-          expectedManifestStore.manifests[
+          expectedManifestStore.manifests?.[
             expectedManifestStore.active_manifest!
           ];
 

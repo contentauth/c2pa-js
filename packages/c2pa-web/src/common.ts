@@ -25,7 +25,6 @@ export {
 } from './lib/supportedFormats.js';
 
 export type {
-  SettingsContext,
   Settings,
   VerifySettings,
   TrustSettings,
