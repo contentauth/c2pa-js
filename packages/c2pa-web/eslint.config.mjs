@@ -11,7 +11,7 @@ import baseConfig from '../../eslint.config.mjs';
 export default [
   ...baseConfig,
   {
-    files: ['test/**', '**/*.spec.ts'],
+    files: ['src/**/*.ts', 'test/**', '**/*.spec.ts'],
     rules: {
       'no-empty-pattern': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
