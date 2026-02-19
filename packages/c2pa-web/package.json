@@ -2,6 +2,10 @@
   "name": "@contentauth/c2pa-web",
   "version": "0.5.7",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/contentauth/c2pa-js"
+  },
   "type": "module",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

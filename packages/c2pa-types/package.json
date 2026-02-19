@@ -1,6 +1,10 @@
 {
   "name": "@contentauth/c2pa-types",
   "description": "Typescript types generated from c2pa-rs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/contentauth/c2pa-js"
+  },
   "type": "module",
   "version": "0.4.1",
   "types": "dist/index.d.ts",
