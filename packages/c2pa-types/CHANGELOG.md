@@ -1,11 +1,5 @@
 # @contentauth/c2pa-types
 
-## 0.4.2
-
-### Patch Changes
-
-- 7faebe7: Add support for arbitrary key/value pairs in assertion metadata. Update c2pa crate version to 0.75.19.
-
 ## 0.4.1
 
 ### Patch Changes
