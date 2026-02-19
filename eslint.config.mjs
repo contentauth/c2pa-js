@@ -16,8 +16,8 @@ export default [
     // Override or add rules here
     rules: {},
     languageOptions: {
-      parser: await import('jsonc-eslint-parser'),
-    },
+      parser: await import('jsonc-eslint-parser')
+    }
   },
   ...nx.configs['flat/base'],
   ...nx.configs['flat/typescript'],
@@ -27,8 +27,8 @@ export default [
       '**/docs',
       '**/dist',
       '**/vite.config.*.timestamp*',
-      '**/vitest.config.*.timestamp*',
-    ],
+      '**/vitest.config.*.timestamp*'
+    ]
   },
   {
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
@@ -41,12 +41,12 @@ export default [
           depConstraints: [
             {
               sourceTag: '*',
-              onlyDependOnLibsWithTags: ['*'],
-            },
-          ],
-        },
-      ],
-    },
+              onlyDependOnLibsWithTags: ['*']
+            }
+          ]
+        }
+      ]
+    }
   },
   {
     files: [
@@ -57,7 +57,7 @@ export default [
       '**/*.js',
       '**/*.jsx',
       '**/*.cjs',
-      '**/*.mjs',
+      '**/*.mjs'
     ],
     // Override or add rules here
     rules: {
@@ -71,19 +71,19 @@ export default [
             '',
             'NOTICE: Adobe permits you to use, modify, and distribute this file in',
             'accordance with the terms of the Adobe license agreement accompanying',
-            'it.',
+            'it.'
           ].join('\n'),
           patterns: {
             year: {
               pattern: '\\d{4}',
-              defaultValue: new Date().getFullYear().toString(),
-            },
-          },
-        },
-      ],
+              defaultValue: new Date().getFullYear().toString()
+            }
+          }
+        }
+      ]
     },
     plugins: {
-      headers,
-    },
-  },
+      headers
+    }
+  }
 ];

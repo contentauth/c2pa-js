@@ -36,6 +36,6 @@ export function createWorkerObjectMap<T>(): WorkerObjectMap<T> {
 
     remove(id: number): boolean {
       return objectMap.delete(id);
-    },
+    }
   };
 }

@@ -35,7 +35,7 @@ const test = baseTest.extend<TestWithC2paFixture>({
     worker.resetHandlers();
 
     worker.stop();
-  },
+  }
 });
 
 export { test };

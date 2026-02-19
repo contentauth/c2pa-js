@@ -55,7 +55,7 @@ export async function createC2pa(config: Config): Promise<C2paSdk> {
   return {
     reader: createReaderFactory(worker),
     builder: createBuilderFactory(worker),
-    dispose: worker.terminate,
+    dispose: worker.terminate
   };
 }
 

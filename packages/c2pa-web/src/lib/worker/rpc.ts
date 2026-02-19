@@ -18,7 +18,11 @@ const { createTx, rx } = channel<{
   initWorker: (module: WebAssembly.Module, settings?: string) => void;
 
   // Reader construction methods
-  reader_fromBlob: (format: string, blob: Blob, contextJson?: string) => Promise<number>;
+  reader_fromBlob: (
+    format: string,
+    blob: Blob,
+    contextJson?: string
+  ) => Promise<number>;
   reader_fromBlobFragment: (
     format: string,
     init: Blob,
@@ -52,10 +56,7 @@ const { createTx, rx } = channel<{
     format: string,
     blob: Blob
   ) => void;
-  builder_addIngredient: (
-    builderId: number,
-    json: string
-  ) => void;
+  builder_addIngredient: (builderId: number, json: string) => void;
   builder_addIngredientFromBlob: (
     builderId: number,
     json: string,

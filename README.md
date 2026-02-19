@@ -50,7 +50,7 @@ Commands are run in the following format: `nx [target] [project]`, e.g.:
 ```sh
 nx build c2pa-web # This will build c2pa-web and all of its dependencies
 nx test c2pa-web # This will build and run the tests defined in the c2pa-web package
-nx run lint # This will run the linter (eslint) on the entire repo.
+nx lint c2pa-web # This will run ESLint on the c2pa-web package
 ```
 
 ### Committing Changes for Release
@@ -58,6 +58,7 @@ nx run lint # This will run the linter (eslint) on the entire repo.
 If your changes should be part of a release, you will need to create and commit a changeset.
 
 To create a new changeset, from the root repo directory, run:
+
 ```sh
 pnpm changeset
 ```

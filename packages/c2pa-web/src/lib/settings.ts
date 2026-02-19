@@ -139,8 +139,8 @@ type SettingsObjectType = {
 
 const DEFAULT_SETTINGS: SettingsContext = {
   builder: {
-    generateC2paArchive: true,
-  },
+    generateC2paArchive: true
+  }
 };
 
 /**

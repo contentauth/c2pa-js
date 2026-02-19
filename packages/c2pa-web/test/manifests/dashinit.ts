@@ -20,20 +20,20 @@ export default {
             alg: 'sha256',
             exclusions: [
               {
-                xpath: '/ftyp',
+                xpath: '/ftyp'
               },
               {
                 data: [
                   {
                     offset: 8,
-                    value: expect.any(Array),
-                  },
+                    value: expect.any(Array)
+                  }
                 ],
-                xpath: '/uuid',
+                xpath: '/uuid'
               },
               {
-                xpath: '/mfra',
-              },
+                xpath: '/mfra'
+              }
             ],
             merkle: [
               {
@@ -42,18 +42,18 @@ export default {
                 hashes: expect.any(Array),
                 initHash: expect.any(Array),
                 localId: 1,
-                uniqueId: 1,
-              },
-            ],
+                uniqueId: 1
+              }
+            ]
           },
-          label: 'c2pa.hash.bmff.v2',
-        },
+          label: 'c2pa.hash.bmff.v2'
+        }
       ],
       claim_generator: 'drmprovenancemanifestbuilder/1.0',
       claim_generator_info: [
         {
-          name: 'Test provenance manaifest builder',
-        },
+          name: 'Test provenance manaifest builder'
+        }
       ],
       claim_version: 1,
       format: 'video/mp4',
@@ -63,9 +63,9 @@ export default {
         alg: 'Es256',
         cert_serial_number: '231582073800106855458784768030131201943489567163',
         common_name: 'Alice',
-        issuer: 'Media Publisher Company',
-      },
-    },
+        issuer: 'Media Publisher Company'
+      }
+    }
   },
   validation_results: {
     activeManifest: {
@@ -73,41 +73,41 @@ export default {
         {
           code: 'signingCredential.untrusted',
           explanation: 'signing certificate untrusted',
-          url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.signature',
-        },
+          url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.signature'
+        }
       ],
       informational: [],
       success: [
         {
           code: 'claimSignature.insideValidity',
           explanation: 'claim signature valid',
-          url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.signature',
+          url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.signature'
         },
         {
           code: 'claimSignature.validated',
           explanation: 'claim signature valid',
-          url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.signature',
+          url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.signature'
         },
         {
           code: 'assertion.hashedURI.match',
           explanation:
             'hashed uri matched: self#jumbf=c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.assertions/c2pa.hash.bmff.v2',
-          url: 'self#jumbf=c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.assertions/c2pa.hash.bmff.v2',
+          url: 'self#jumbf=c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.assertions/c2pa.hash.bmff.v2'
         },
         {
           code: 'assertion.bmffHash.match',
           explanation: 'BMFF hash valid',
-          url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.assertions/c2pa.hash.bmff.v2',
-        },
-      ],
-    },
+          url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.assertions/c2pa.hash.bmff.v2'
+        }
+      ]
+    }
   },
   validation_state: 'Valid',
   validation_status: [
     {
       code: 'signingCredential.untrusted',
       explanation: 'signing certificate untrusted',
-      url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.signature',
-    },
-  ],
+      url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.signature'
+    }
+  ]
 } satisfies ManifestStore;

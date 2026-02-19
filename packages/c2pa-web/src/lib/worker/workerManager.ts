@@ -53,7 +53,7 @@ export async function createWorkerManager(
         }
         const result = await signFn(bytes, reserveSize);
         return transfer(result, result.buffer);
-      },
+      }
     },
     worker
   );
@@ -69,6 +69,6 @@ export async function createWorkerManager(
   return {
     tx,
     registerSignReceiver,
-    terminate: () => worker.terminate(),
+    terminate: () => worker.terminate()
   };
 }

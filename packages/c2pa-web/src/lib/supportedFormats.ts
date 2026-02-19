@@ -64,7 +64,7 @@ export const READER_SUPPORTED_FORMATS = [
   'avif',
   'image/webp',
   'nef',
-  'heif',
+  'heif'
 ];
 
 export function isSupportedReaderFormat(format: string): boolean {

@@ -14,7 +14,8 @@ export default [
     files: ['test/**', '**/*.spec.ts'],
     rules: {
       'no-empty-pattern': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'off'
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      'comma-dangle': ['error', 'never']
     }
   },
   {
@@ -26,13 +27,13 @@ export default [
           ignoredFiles: [
             '{projectRoot}/test/**/*',
             '{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}',
-            '{projectRoot}/vite.config.{js,ts,mjs,mts}',
-          ],
-        },
-      ],
+            '{projectRoot}/vite.config.{js,ts,mjs,mts}'
+          ]
+        }
+      ]
     },
     languageOptions: {
-      parser: await import('jsonc-eslint-parser'),
-    },
-  },
+      parser: await import('jsonc-eslint-parser')
+    }
+  }
 ];

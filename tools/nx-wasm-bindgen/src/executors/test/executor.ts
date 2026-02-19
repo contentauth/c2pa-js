@@ -22,7 +22,7 @@ const runExecutor: PromiseExecutor<TestExecutorSchema> = async (
     await $$`wasm-pack test --headless --chrome`;
 
     return {
-      success: true,
+      success: true
     };
   } catch (e: unknown) {
     if (e instanceof ProcessOutput) {
@@ -32,7 +32,7 @@ const runExecutor: PromiseExecutor<TestExecutorSchema> = async (
     }
 
     return {
-      success: false,
+      success: false
     };
   }
 };

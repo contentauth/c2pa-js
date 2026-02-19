@@ -28,7 +28,11 @@ export interface ReaderFactory {
    * @param context Optional context settings for the reader.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
    */
-  fromBlob: (format: string, blob: Blob, context?: SettingsContext) => Promise<Reader | null>;
+  fromBlob: (
+    format: string,
+    blob: Blob,
+    context?: SettingsContext
+  ) => Promise<Reader | null>;
 
   /**
    *
@@ -114,7 +118,11 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
   });
 
   return {
-    async fromBlob(format: string, blob: Blob, context?: SettingsContext): Promise<Reader | null> {
+    async fromBlob(
+      format: string,
+      blob: Blob,
+      context?: SettingsContext
+    ): Promise<Reader | null> {
       if (!isSupportedReaderFormat(format)) {
         throw new UnsupportedFormatError(format);
       }
@@ -124,7 +132,9 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
       }
 
       try {
-        const contextJson = context ? await contextToWasmJson(context) : undefined;
+        const contextJson = context
+          ? await contextToWasmJson(context)
+          : undefined;
         const readerId = await tx.reader_fromBlob(format, blob, contextJson);
 
         const reader = createReader(worker, readerId, () => {
@@ -138,7 +148,12 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
       }
     },
 
-    async fromBlobFragment(format: string, init: Blob, fragment: Blob, context?: SettingsContext) {
+    async fromBlobFragment(
+      format: string,
+      init: Blob,
+      fragment: Blob,
+      context?: SettingsContext
+    ) {
       if (!isSupportedReaderFormat(format)) {
         throw new UnsupportedFormatError(format);
       }
@@ -148,7 +163,9 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
       }
 
       try {
-        const contextJson = context ? await contextToWasmJson(context) : undefined;
+        const contextJson = context
+          ? await contextToWasmJson(context)
+          : undefined;
         const readerId = await tx.reader_fromBlobFragment(
           format,
           init,
@@ -165,7 +182,7 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
       } catch (e: unknown) {
         return handleReaderCreationError(e);
       }
-    },
+    }
   };
 }
 
@@ -215,6 +232,6 @@ function createReader(
     async free(): Promise<void> {
       onFree();
       await tx.reader_free(id);
-    },
+    }
   };
 }

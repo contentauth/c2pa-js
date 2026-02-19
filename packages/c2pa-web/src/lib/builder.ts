@@ -13,7 +13,7 @@ import type {
   Action,
   BuilderIntent,
   Ingredient,
-  ManifestDefinition,
+  ManifestDefinition
 } from '@contentauth/c2pa-types';
 import { SettingsContext, contextToWasmJson } from './settings.js';
 
@@ -35,7 +35,10 @@ export interface BuilderFactory {
    * @param context Optional context settings for the builder.
    * @returns A {@link Builder} object.
    */
-  fromDefinition: (definition: ManifestDefinition, context?: SettingsContext) => Promise<Builder>;
+  fromDefinition: (
+    definition: ManifestDefinition,
+    context?: SettingsContext
+  ) => Promise<Builder>;
 
   /**
    * Create a {@link Builder} from a builder archive (created from {@link Builder.toArchive}).
@@ -179,7 +182,9 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
 
   return {
     async new(context?: SettingsContext) {
-      const contextJson = context ? await contextToWasmJson(context) : undefined;
+      const contextJson = context
+        ? await contextToWasmJson(context)
+        : undefined;
       const builderId = await tx.builder_new(contextJson);
 
       const builder = createBuilder(worker, builderId, () => {
@@ -190,9 +195,14 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
       return builder;
     },
 
-    async fromDefinition(definition: ManifestDefinition, context?: SettingsContext) {
+    async fromDefinition(
+      definition: ManifestDefinition,
+      context?: SettingsContext
+    ) {
       const json = JSON.stringify(definition);
-      const contextJson = context ? await contextToWasmJson(context) : undefined;
+      const contextJson = context
+        ? await contextToWasmJson(context)
+        : undefined;
       const builderId = await tx.builder_fromJson(json, contextJson);
 
       const builder = createBuilder(worker, builderId, () => {
@@ -204,7 +214,9 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
     },
 
     async fromArchive(archive: Blob, context?: SettingsContext) {
-      const contextJson = context ? await contextToWasmJson(context) : undefined;
+      const contextJson = context
+        ? await contextToWasmJson(context)
+        : undefined;
       const builderId = await tx.builder_fromArchive(archive, contextJson);
 
       const builder = createBuilder(worker, builderId, () => {
@@ -213,7 +225,7 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
       registry.register(builder, builderId, builder);
 
       return builder;
-    },
+    }
   };
 }
 
@@ -312,6 +324,6 @@ function createBuilder(
     async free() {
       onFree();
       await tx.builder_free(id);
-    },
+    }
   };
 }

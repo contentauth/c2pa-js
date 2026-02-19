@@ -38,6 +38,6 @@ export async function getSerializablePayload(
 
   return {
     reserveSize,
-    alg,
+    alg
   };
 }

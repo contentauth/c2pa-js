@@ -76,13 +76,13 @@ const runExecutor: PromiseExecutor<BuildExecutorSchema> = async (
     await fs.appendFile(dtsOutput, 'export declare const WASM_SRI: string;');
 
     return {
-      success: true,
+      success: true
     };
   } catch (error) {
     console.error('Error building release:', error);
 
     return {
-      success: false,
+      success: false
     };
   }
 };
@@ -116,7 +116,7 @@ async function getWasmOptPath(rootDir: string) {
 
   await extract({
     f: downloadFilePath,
-    cwd: downloadDir,
+    cwd: downloadDir
   });
 
   const outFileJsName = path.join(outDir, 'wasm-opt.js');

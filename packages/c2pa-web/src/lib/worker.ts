@@ -13,7 +13,7 @@ import {
   WasmReader,
   initSync,
   loadSettings,
-  WasmBuilder,
+  WasmBuilder
 } from '@contentauth/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
 import { createWorkerTx, rx } from './worker/rpc.js';
@@ -37,7 +37,12 @@ rx({
     return readerId;
   },
   async reader_fromBlobFragment(format, init, fragment, contextJson) {
-    const reader = await WasmReader.fromBlobFragment(format, init, fragment, contextJson);
+    const reader = await WasmReader.fromBlobFragment(
+      format,
+      init,
+      fragment,
+      contextJson
+    );
     const readerId = readerMap.add(reader);
     return readerId;
   },
@@ -136,7 +141,7 @@ rx({
             payload.reserveSize
           );
           return result;
-        },
+        }
       },
       format,
       blob
@@ -162,7 +167,7 @@ rx({
             payload.reserveSize
           );
           return result;
-        },
+        }
       },
       format,
       blob
@@ -171,7 +176,7 @@ rx({
     return transfer(
       {
         manifest,
-        asset,
+        asset
       },
       [manifest.buffer, asset.buffer]
     );
@@ -180,5 +185,5 @@ rx({
     const builder = builderMap.get(builderId);
     builder.free();
     builderMap.remove(builderId);
-  },
+  }
 });
