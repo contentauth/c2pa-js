@@ -60,23 +60,23 @@ describe('reader', () => {
       test('should use local "context" settings when provided', async () => {
         const settings: Settings = {
           verify: {
-            verifyTrust: false,
+            verifyTrust: false
           },
           cawgTrust: {
-            verifyTrustList: false,
-          },
+            verifyTrustList: false
+          }
         };
 
         const overrideSettings: Settings = {
           trust: {
-            trustAnchors: anchor_correct,
+            trustAnchors: anchor_correct
           },
           cawgTrust: {
-            trustAnchors: anchor_cawg,
+            trustAnchors: anchor_cawg
           },
           verify: {
-            verifyTrust: true,
-          },
+            verifyTrust: true
+          }
         };
 
         const c2pa = await createC2pa({ wasmSrc, settings });

@@ -130,9 +130,9 @@ describe('settings', () => {
           trust: {
             userAnchors: [
               'http://userAnchorsConcat',
-              'http://userAnchorsConcat',
-            ],
-          },
+              'http://userAnchorsConcat'
+            ]
+          }
         });
 
         expect(settingsString).toEqual(
@@ -140,8 +140,8 @@ describe('settings', () => {
             builder: { generate_c2pa_archive: true },
             trust: {
               user_anchors:
-                '-----BEGIN CERTIFICATE-----qux-----END CERTIFICATE----------BEGIN CERTIFICATE-----qux-----END CERTIFICATE-----',
-            },
+                '-----BEGIN CERTIFICATE-----qux-----END CERTIFICATE----------BEGIN CERTIFICATE-----qux-----END CERTIFICATE-----'
+            }
           })
         );
       });
@@ -157,8 +157,8 @@ describe('settings', () => {
 
         const settingsStringPromise = settingsToWasmJson({
           trust: {
-            userAnchors: 'http://userAnchorsShouldFail',
-          },
+            userAnchors: 'http://userAnchorsShouldFail'
+          }
         });
 
         await expect(settingsStringPromise).rejects.toThrow(
