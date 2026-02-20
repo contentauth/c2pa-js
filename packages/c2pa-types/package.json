@@ -6,7 +6,7 @@
     "url": "git+https://github.com/contentauth/c2pa-js"
   },
   "type": "module",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "echo \"No tests to run\" && exit 0",
