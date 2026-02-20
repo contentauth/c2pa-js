@@ -15,11 +15,11 @@ export default defineConfig(() => ({
   cacheDir: '../../node_modules/.vite/tools/testbed',
   server: {
     port: 4200,
-    host: 'localhost',
+    host: 'localhost'
   },
   preview: {
     port: 4300,
-    host: 'localhost',
+    host: 'localhost'
   },
   plugins: [mkcert()],
   build: {
@@ -28,7 +28,7 @@ export default defineConfig(() => ({
     reportCompressedSize: true,
     target: 'esnext',
     commonjsOptions: {
-      transformMixedEsModules: true,
-    },
-  },
+      transformMixedEsModules: true
+    }
+  }
 }));

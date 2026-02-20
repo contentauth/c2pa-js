@@ -79,19 +79,18 @@ impl AsyncSigner for WasmSigner {
         let sign_promise: JsPromise = self
             .sign_fn
             .call1(&JsValue::undefined(), &to_be_signed)
-            .map_err(|err| c2pa::Error::BadParam(format!("Error calling signer: {:?}", err)))?
+            .map_err(|err| c2pa::Error::BadParam(format!("Error calling signer: {err:?}")))?
             .dyn_into()
             .map_err(|err| {
                 c2pa::Error::BadParam(format!(
-                    "Failed to convert sign result to promise: {:?}",
-                    err
+                    "Failed to convert sign result to promise: {err:?}"
                 ))
             })?;
 
         let sign_result: Uint8Array = JsFuture::from(sign_promise)
             .await
             .map_err(|err| {
-                c2pa::Error::BadParam(format!("Error awaiting sign promise: {:?}", err))
+                c2pa::Error::BadParam(format!("Error awaiting sign promise: {err:?}"))
             })?
             .into();
 

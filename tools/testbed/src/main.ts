@@ -14,8 +14,8 @@ const c2pa = await createC2pa({
   wasmSrc,
   settings: {
     verify: { verifyTrust: false },
-    cawgTrust: { verifyTrustList: false },
-  },
+    cawgTrust: { verifyTrustList: false }
+  }
 });
 
 const dropzone = document.getElementById('drop-zone');

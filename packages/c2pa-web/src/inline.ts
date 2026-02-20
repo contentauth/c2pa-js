@@ -32,7 +32,7 @@ export async function createC2pa(config?: InlineConfig) {
 
   return createC2paBase({
     ...config,
-    wasmSrc: wasm,
+    wasmSrc: wasm
   });
 }
 

@@ -14,14 +14,14 @@ export type { Reader, ReaderFactory } from './lib/reader.js';
 export type {
   Builder,
   BuilderFactory,
-  ManifestAndAssetBytes,
+  ManifestAndAssetBytes
 } from './lib/builder.js';
 
 export type { Signer, SigningAlg } from './lib/signer.js';
 
 export {
   isSupportedReaderFormat,
-  READER_SUPPORTED_FORMATS,
+  READER_SUPPORTED_FORMATS
 } from './lib/supportedFormats.js';
 
 export type {
@@ -30,7 +30,7 @@ export type {
   TrustSettings,
   BuilderSettings,
   BuilderThumbnailSettings,
-  CawgTrustSettings,
+  CawgTrustSettings
 } from './lib/settings.js';
 
 // Re-export types from c2pa-types for convenience.

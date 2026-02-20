@@ -13,7 +13,7 @@ import type {
   Action,
   BuilderIntent,
   Ingredient,
-  ManifestDefinition,
+  ManifestDefinition
 } from '@contentauth/c2pa-types';
 import { Settings, settingsToWasmJson } from './settings.js';
 
@@ -216,7 +216,7 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
       registry.register(builder, builderId, builder);
 
       return builder;
-    },
+    }
   };
 }
 
@@ -315,6 +315,6 @@ function createBuilder(
     async free() {
       onFree();
       await tx.builder_free(id);
-    },
+    }
   };
 }

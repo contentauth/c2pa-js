@@ -30,14 +30,14 @@ describe('settings', () => {
             userAnchors: 'foo',
             trustAnchors: 'bar',
             allowedList: 'baz',
-            trustConfig: 'qux',
+            trustConfig: 'qux'
           },
           cawgTrust: {
             userAnchors: 'cawg foo',
             trustAnchors: 'cawg bar',
             allowedList: 'cawg baz',
-            trustConfig: 'cawg qux',
-          },
+            trustConfig: 'cawg qux'
+          }
         });
 
         expect(settingsString).toEqual(
@@ -47,14 +47,14 @@ describe('settings', () => {
               user_anchors: 'foo',
               trust_anchors: 'bar',
               allowed_list: 'baz',
-              trust_config: 'qux',
+              trust_config: 'qux'
             },
             cawg_trust: {
               user_anchors: 'cawg foo',
               trust_anchors: 'cawg bar',
               allowed_list: 'cawg baz',
-              trust_config: 'cawg qux',
-            },
+              trust_config: 'cawg qux'
+            }
           })
         );
       });
@@ -73,7 +73,7 @@ describe('settings', () => {
               )
             ),
             http.get('http://allowedList', () => HttpResponse.text('allowed')),
-            http.get('http://trustConfig', () => HttpResponse.text('config')),
+            http.get('http://trustConfig', () => HttpResponse.text('config'))
           ]
         );
 
@@ -82,14 +82,14 @@ describe('settings', () => {
             userAnchors: 'http://userAnchors',
             trustAnchors: 'http://trustAnchors',
             allowedList: 'http://allowedList',
-            trustConfig: 'http://trustConfig',
+            trustConfig: 'http://trustConfig'
           },
           cawgTrust: {
             userAnchors: 'http://userAnchors',
             trustAnchors: 'http://trustAnchors',
             allowedList: 'http://allowedList',
-            trustConfig: 'http://trustConfig',
-          },
+            trustConfig: 'http://trustConfig'
+          }
         });
 
         expect(settingsString).toEqual(
@@ -101,7 +101,7 @@ describe('settings', () => {
               trust_anchors:
                 '-----BEGIN CERTIFICATE-----bar-----END CERTIFICATE-----',
               allowed_list: 'allowed',
-              trust_config: 'config',
+              trust_config: 'config'
             },
             cawg_trust: {
               user_anchors:
@@ -109,14 +109,14 @@ describe('settings', () => {
               trust_anchors:
                 '-----BEGIN CERTIFICATE-----bar-----END CERTIFICATE-----',
               allowed_list: 'allowed',
-              trust_config: 'config',
-            },
+              trust_config: 'config'
+            }
           })
         );
       });
 
       test('should concatenate the fetched results of URLs when given as an array', async ({
-        requestMock,
+        requestMock
       }) => {
         requestMock.use(
           http.get('http://userAnchorsConcat', () =>
@@ -130,9 +130,9 @@ describe('settings', () => {
           trust: {
             userAnchors: [
               'http://userAnchorsConcat',
-              'http://userAnchorsConcat',
-            ],
-          },
+              'http://userAnchorsConcat'
+            ]
+          }
         });
 
         expect(settingsString).toEqual(
@@ -140,14 +140,14 @@ describe('settings', () => {
             builder: { generate_c2pa_archive: true },
             trust: {
               user_anchors:
-                '-----BEGIN CERTIFICATE-----qux-----END CERTIFICATE----------BEGIN CERTIFICATE-----qux-----END CERTIFICATE-----',
-            },
+                '-----BEGIN CERTIFICATE-----qux-----END CERTIFICATE----------BEGIN CERTIFICATE-----qux-----END CERTIFICATE-----'
+            }
           })
         );
       });
 
       test('should report an error when fetching a URL without a certificate', async ({
-        requestMock,
+        requestMock
       }) => {
         requestMock.use(
           http.get('http://userAnchorsShouldFail', () =>
@@ -157,8 +157,8 @@ describe('settings', () => {
 
         const settingsStringPromise = settingsToWasmJson({
           trust: {
-            userAnchors: 'http://userAnchorsShouldFail',
-          },
+            userAnchors: 'http://userAnchorsShouldFail'
+          }
         });
 
         await expect(settingsStringPromise).rejects.toThrow(

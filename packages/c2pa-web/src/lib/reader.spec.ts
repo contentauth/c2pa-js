@@ -34,7 +34,7 @@ describe('reader', () => {
   describe('creation', () => {
     describe('fromBlob', () => {
       test('should return c2pa data when created from a blob', async ({
-        c2pa,
+        c2pa
       }) => {
         const blob = await getBlobForAsset(C_with_CAWG_data);
 
@@ -48,7 +48,7 @@ describe('reader', () => {
       });
 
       test('should return null when reading an asset with no C2PA data', async ({
-        c2pa,
+        c2pa
       }) => {
         const blob = await getBlobForAsset(C_with_CAWG_data_thumbnail);
 
@@ -60,23 +60,23 @@ describe('reader', () => {
       test('should use local "context" settings when provided', async () => {
         const settings: Settings = {
           verify: {
-            verifyTrust: false,
+            verifyTrust: false
           },
           cawgTrust: {
-            verifyTrustList: false,
-          },
+            verifyTrustList: false
+          }
         };
 
         const overrideSettings: Settings = {
           trust: {
-            trustAnchors: anchor_correct,
+            trustAnchors: anchor_correct
           },
           cawgTrust: {
-            trustAnchors: anchor_cawg,
+            trustAnchors: anchor_cawg
           },
           verify: {
-            verifyTrust: true,
-          },
+            verifyTrust: true
+          }
         };
 
         const c2pa = await createC2pa({ wasmSrc, settings });
@@ -101,7 +101,7 @@ describe('reader', () => {
 
     describe('fromBlobFragment', () => {
       test('should return c2pa data from an initial segment and fragment', async ({
-        c2pa,
+        c2pa
       }) => {
         const initBlob = await getBlobForAsset(dashinit);
         const fragmentBlob = await getBlobForAsset(dash1);
@@ -120,7 +120,7 @@ describe('reader', () => {
       });
 
       test('should return null when reading an initial fragment with no C2PA data', async ({
-        c2pa,
+        c2pa
       }) => {
         const initBlob = await getBlobForAsset(C_with_CAWG_data_thumbnail);
         const fragmentBlob = await getBlobForAsset(dash1);
@@ -201,14 +201,14 @@ describe('reader', () => {
   test('should report a trusted asset when when configured to verify trust', async () => {
     const settings: Settings = {
       trust: {
-        trustAnchors: anchor_correct,
+        trustAnchors: anchor_correct
       },
       cawgTrust: {
-        trustAnchors: anchor_cawg,
+        trustAnchors: anchor_cawg
       },
       verify: {
-        verifyTrust: true,
-      },
+        verifyTrust: true
+      }
     };
 
     const c2pa = await createC2pa({ wasmSrc, settings });
@@ -229,11 +229,11 @@ describe('reader', () => {
   test('should report an untrusted asset when configured to verify trust', async () => {
     const settings: Settings = {
       trust: {
-        trustAnchors: anchor_incorrect,
+        trustAnchors: anchor_incorrect
       },
       verify: {
-        verifyTrust: true,
-      },
+        verifyTrust: true
+      }
     };
 
     const c2pa = await createC2pa({ wasmSrc, settings });
@@ -254,11 +254,11 @@ describe('reader', () => {
   test('should report a "valid" (not "trusted") asset when trust settings are disabled', async () => {
     const settings: Settings = {
       verify: {
-        verifyTrust: false,
+        verifyTrust: false
       },
       cawgTrust: {
-        verifyTrustList: false,
-      },
+        verifyTrustList: false
+      }
     };
 
     const c2pa = await createC2pa({ wasmSrc, settings });

@@ -49,18 +49,18 @@ export type {
   UriOrResource,
   ValidationResults,
   ValidationState,
-  ValidationStatus,
+  ValidationStatus
 } from './types/ManifestStore.js';
 
 export type {
   AssertionDefinition,
-  ManifestDefinition,
+  ManifestDefinition
 } from './types/ManifestDefinition.js';
 
 export type {
   Builder,
   BuilderIntent,
-  DigitalSourceType,
+  DigitalSourceType
 } from './types/Builder.js';
 
 export type { Action } from './types/Action.js';

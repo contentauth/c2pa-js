@@ -269,7 +269,7 @@ impl WasmBuilder {
         source: &Blob,
         dest: &mut Vec<u8>,
     ) -> Result<Vec<u8>, JsError> {
-        let signer = WasmSigner::from_definition(&signer_definition)?;
+        let signer = WasmSigner::from_definition(signer_definition)?;
         let mut stream = BlobStream::new(source);
 
         let mut cursor = Cursor::new(dest);

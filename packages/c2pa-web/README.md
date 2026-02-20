@@ -12,13 +12,14 @@ npm install @contentauth/c2pa-web
 
 ## Importing the library
 
-There are two ways to import the library, due to [specific requirements](https://developer.mozilla.org/en-US/docs/WebAssembly/Guides/Loading_and_running) for handling Wasm modules: 
+There are two ways to import the library, due to [specific requirements](https://developer.mozilla.org/en-US/docs/WebAssembly/Guides/Loading_and_running) for handling Wasm modules:
+
 - Using a separate Wasm binary, which provides better performance.
-- Using an inline Wasm binary, which is more convenient. 
+- Using an inline Wasm binary, which is more convenient.
 
 ### Using a separate Wasm binary
 
-The recommended way to import the library is to fetch the Wasm binary over the network at runtime. 
+The recommended way to import the library is to fetch the Wasm binary over the network at runtime.
 This requires that the Wasm binary be hosted separately.
 
 With Vite:
@@ -39,13 +40,13 @@ import { createC2pa } from '@contentauth/c2pa-web';
 // Ensure that [PACKAGE VERSION] matches the currently-installed version of @contentauth/c2pa-web.
 const c2pa = await createC2pa({
   wasmSrc:
-    'https://cdn.jsdelivr.net/npm/@contentauth/c2pa-web@[PACKAGE VERSION]/dist/resources/c2pa_bg.wasm',
+    'https://cdn.jsdelivr.net/npm/@contentauth/c2pa-web@[PACKAGE VERSION]/dist/resources/c2pa_bg.wasm'
 });
 ```
 
 ### Using an inline Wasm binary
 
-Where it is not possible or convenient to request a separate resource over the network, use the `@contentauth/c2pa-web/inline` package, which has the Wasm binary encoded as a base64 string in the JavaScript file. 
+Where it is not possible or convenient to request a separate resource over the network, use the `@contentauth/c2pa-web/inline` package, which has the Wasm binary encoded as a base64 string in the JavaScript file.
 
 Using this package does not require an additional network request. However, it adds _significant_ size to the JavaScript bundle, and cannot take advantage of the higher-performance
 [`WebAssembly.compileStreaming()`](https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/JavaScript_interface/compileStreaming_static) API.
@@ -86,7 +87,8 @@ Use the `Builder` API to create C2PA manifests and add ingredients (source asset
 
 #### Setting builder intent
 
-The builder intent describes the type of operation being performed on the asset. This influences how the manifest is structured and what assertions are automatically added.  Use one of these intents:
+The builder intent describes the type of operation being performed on the asset. This influences how the manifest is structured and what assertions are automatically added. Use one of these intents:
+
 - `create`: Indicates the asset is a new digital creation, a DigitalSourceType is required. The Manifest must not have have a parent ingredient. A `c2pa.created` action will be added if not provided.
 - `edit`: Indicates the asset is an edit of a pre-existing parent asset. The Manifest must have a parent ingredient. A parent ingredient will be generated from the source stream if not otherwise provided. A `c2pa.opened action will be tied to the parent ingredient.
 - `update`: A restricted version of `edit` for non-editorial changes. There must be only one ingredient, as a parent. No changes can be made to the hashed content of the parent. There are additional restrictions on the types of changes that can be made.
@@ -95,7 +97,8 @@ The builder intent describes the type of operation being performed on the asset.
 const builder = await c2pa.builder.new();
 
 await builder.setIntent({
-  create: 'http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia',
+  create:
+    'http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia'
 });
 
 await builder.setIntent('edit');
@@ -131,7 +134,7 @@ await builder.addIngredientFromBlob(
     title: 'source-image.jpg',
     format: 'image/jpeg',
     instance_id: 'ingredient-123',
-    relationship: 'parentOf',
+    relationship: 'parentOf'
   },
   'image/jpeg', // Format
   ingredientBlob // The actual asset bytes
@@ -160,7 +163,7 @@ await builder.addIngredientFromBlob(
     title: 'background.jpg',
     format: 'image/jpeg',
     instance_id: 'background-001',
-    relationship: 'componentOf',
+    relationship: 'componentOf'
   },
   'image/jpeg',
   background
@@ -172,7 +175,7 @@ await builder.addIngredientFromBlob(
     title: 'overlay.png',
     format: 'image/png',
     instance_id: 'overlay-002',
-    relationship: 'componentOf',
+    relationship: 'componentOf'
   },
   'image/png',
   overlay
@@ -197,7 +200,7 @@ await builder.addIngredientFromBlob(
   {
     title: 'source.jpg',
     format: 'image/jpeg',
-    instance_id: 'source-123',
+    instance_id: 'source-123'
   },
   'image/jpeg',
   ingredientBlob

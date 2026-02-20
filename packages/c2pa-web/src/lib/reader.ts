@@ -180,7 +180,7 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
       } catch (e: unknown) {
         return handleReaderCreationError(e);
       }
-    },
+    }
   };
 }
 
@@ -230,6 +230,6 @@ function createReader(
     async free(): Promise<void> {
       onFree();
       await tx.reader_free(id);
-    },
+    }
   };
 }

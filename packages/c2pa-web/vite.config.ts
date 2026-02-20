@@ -20,10 +20,10 @@ export default defineConfig(() => ({
   plugins: [
     dts({
       entryRoot: 'src',
-      tsconfigPath: join(__dirname, 'tsconfig.lib.json'),
+      tsconfigPath: join(__dirname, 'tsconfig.lib.json')
     }),
     tsconfigPaths(),
-    createBuildPlugin(),
+    createBuildPlugin()
   ],
   // Configuration for building your library.
   // See: https://vitejs.dev/guide/build.html#library-mode
@@ -32,27 +32,27 @@ export default defineConfig(() => ({
     emptyOutDir: false, // Done in our custom plugin so we can correctly create the "resources" folder
     reportCompressedSize: true,
     commonjsOptions: {
-      transformMixedEsModules: true,
+      transformMixedEsModules: true
     },
     lib: {
       entry: {
         index: 'src/index.ts',
-        inline: 'src/inline.ts',
+        inline: 'src/inline.ts'
       },
       name: '@contentauth/c2pa-web',
       // Change this to the formats you want to support.
       // Don't forget to update your package.json as well.
-      formats: ['es' as const],
+      formats: ['es' as const]
     },
     rollupOptions: {
       // External packages that should not be bundled into your library.
-      external: ['@contentauth/c2pa-types', 'highgain', 'ts-deepmerge'],
-    },
+      external: ['@contentauth/c2pa-types', 'highgain', 'ts-deepmerge']
+    }
   },
   server: {
     fs: {
-      deny: [],
-    },
+      deny: []
+    }
   },
   test: {
     watch: false,
@@ -63,9 +63,9 @@ export default defineConfig(() => ({
       provider: 'playwright',
       // https://vitest.dev/guide/browser/playwright
       instances: [{ browser: 'chromium' }],
-      screenshotFailures: false,
-    },
-  },
+      screenshotFailures: false
+    }
+  }
 }));
 
 /**
@@ -91,6 +91,6 @@ function createBuildPlugin(): Plugin {
 
       mkdirSync(pkgResourceDir, { recursive: true });
       linkSync(wasmResourcePath, pkgResourcePath);
-    },
+    }
   };
 }

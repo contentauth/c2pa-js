@@ -7,7 +7,7 @@
 
 use std::{
     cmp::min,
-    io::{Error as IoError, ErrorKind as IoErrorKind, Read, Result as IoResult, Seek, SeekFrom},
+    io::{Error as IoError, Read, Result as IoResult, Seek, SeekFrom},
 };
 
 use js_sys::Uint8Array;
@@ -41,15 +41,13 @@ fn get_vec_u8_from_blob(blob: &Blob, offset: usize, len: usize) -> IoResult<Vec<
         .slice_with_f64_and_f64(offset as f64, end as f64)
         .map_err(|err| {
             IoError::other(format!(
-                "Failed to create slice from blob. Details: {:?}",
-                err
+                "Failed to create slice from blob. Details: {err:?}"
             ))
         })?;
 
     let reader_sync = FileReaderSync::new().map_err(|err| {
         IoError::other(format!(
-            "Failed to create FileReaderSync on blob slice. Details: {:?}",
-            err
+            "Failed to create FileReaderSync on blob slice. Details: {err:?}"
         ))
     })?;
 
@@ -57,9 +55,8 @@ fn get_vec_u8_from_blob(blob: &Blob, offset: usize, len: usize) -> IoResult<Vec<
         .read_as_array_buffer(&slice)
         .map(|array_buffer| Uint8Array::new(&array_buffer))
         .map_err(|err| {
-            IoError::new(
-                IoErrorKind::Other,
-                format!("Failed to read blob slice. Details: {:?}", err),
+            IoError::other(
+                format!("Failed to read blob slice. Details: {err:?}"),
             )
         })?;
 
