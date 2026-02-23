@@ -25,11 +25,6 @@ export default defineConfig(() => ({
       afterDiagnostic(diagnostics) {
         const errors = diagnostics.filter(d => d.category === ts.DiagnosticCategory.Error);
         if (errors.length > 0) {
-          console.error(ts.formatDiagnosticsWithColorAndContext(errors, {
-            getCurrentDirectory: () => process.cwd(),
-            getCanonicalFileName: f => f,
-            getNewLine: () => '\n',
-          }));
           throw new Error(`vite-plugin-dts: Found ${errors.length} type error(s).`);
         }
       }
