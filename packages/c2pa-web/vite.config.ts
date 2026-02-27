@@ -13,6 +13,7 @@ import { workspaceRoot } from '@nx/devkit';
 import { rimrafSync } from 'rimraf';
 import { join } from 'path';
 import { mkdirSync, linkSync } from 'fs';
+import ts from 'typescript';
 
 export default defineConfig(() => ({
   root: __dirname,
@@ -20,7 +21,13 @@ export default defineConfig(() => ({
   plugins: [
     dts({
       entryRoot: 'src',
-      tsconfigPath: join(__dirname, 'tsconfig.lib.json')
+      tsconfigPath: join(__dirname, 'tsconfig.lib.json'),
+      afterDiagnostic(diagnostics) {
+        const errors = diagnostics.filter(d => d.category === ts.DiagnosticCategory.Error);
+        if (errors.length > 0) {
+          throw new Error(`vite-plugin-dts: Found ${errors.length} type error(s).`);
+        }
+      }
     }),
     tsconfigPaths(),
     createBuildPlugin()
