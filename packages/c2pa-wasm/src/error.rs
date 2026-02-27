@@ -7,7 +7,7 @@
 
 use std::error::Error;
 
-use js_sys::Error as JsError;
+use js_sys::{Error as JsError, JsString};
 
 #[derive(thiserror::Error, Debug)]
 pub enum WasmError {
@@ -30,5 +30,11 @@ impl WasmError {
 impl From<WasmError> for JsError {
     fn from(value: WasmError) -> Self {
         JsError::new(&format!("{value:?}"))
+    }
+}
+
+impl From<WasmError> for JsString {
+    fn from(value: WasmError) -> Self {
+        format!("{value:?}").into()
     }
 }

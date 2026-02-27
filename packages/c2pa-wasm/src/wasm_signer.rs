@@ -8,12 +8,9 @@
 use async_trait::async_trait;
 use c2pa::SigningAlg;
 use c2pa::{AsyncSigner, Result as C2paResult};
-use js_sys::{
-    Error as JsError, Function as JsFunction, JsString, Number, Promise as JsPromise, Reflect,
-    Uint8Array,
-};
-use wasm_bindgen::prelude::*;
+use js_sys::{Function as JsFunction, JsString, Number, Promise as JsPromise, Reflect, Uint8Array};
 use wasm_bindgen::JsValue;
+use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 
 #[wasm_bindgen(typescript_custom_section)]
@@ -40,11 +37,18 @@ pub(crate) struct WasmSigner {
     signing_alg: SigningAlg,
 }
 
+/**
+ * NOTE: we can only return Err(JsString) or Err(JsValue) as error types here, because for some as-of-yet unknown
+ * reason, wasm-bindgen appears to mishandle JsErrors when created in a Firefox web worker.
+ *
+ * See: https://github.com/wasm-bindgen/wasm-bindgen/issues/4961
+ */
+
 #[wasm_bindgen]
 impl WasmSigner {
     /// Attempt to create a new [`WasmSigner`] from a SignerDefinition.
     #[wasm_bindgen(js_name = fromDefinition)]
-    pub fn from_definition(def: &SignerDefinition) -> Result<Self, JsError> {
+    pub fn from_definition(def: &SignerDefinition) -> Result<Self, JsString> {
         let js_value: JsValue = def.into();
 
         let reserve_size_result: Number = Reflect::get(&js_value, &"reserveSize".into())?.into();
@@ -82,16 +86,12 @@ impl AsyncSigner for WasmSigner {
             .map_err(|err| c2pa::Error::BadParam(format!("Error calling signer: {err:?}")))?
             .dyn_into()
             .map_err(|err| {
-                c2pa::Error::BadParam(format!(
-                    "Failed to convert sign result to promise: {err:?}"
-                ))
+                c2pa::Error::BadParam(format!("Failed to convert sign result to promise: {err:?}"))
             })?;
 
         let sign_result: Uint8Array = JsFuture::from(sign_promise)
             .await
-            .map_err(|err| {
-                c2pa::Error::BadParam(format!("Error awaiting sign promise: {err:?}"))
-            })?
+            .map_err(|err| c2pa::Error::BadParam(format!("Error awaiting sign promise: {err:?}")))?
             .into();
 
         let mut signed_bytes = vec![0_u8; sign_result.length() as usize];
