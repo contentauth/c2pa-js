@@ -25,7 +25,7 @@ const builderMap = createWorkerObjectMap<WasmBuilder>();
 const tx = createWorkerTx();
 
 rx(
-  wrapFunctions({
+  wrapFunctionsForErrorHandling({
     async initWorker(module, settings) {
       initSync({ module });
       if (settings) {
@@ -193,14 +193,12 @@ rx(
 /**
  * Wraps all functions with additional error-handling code that converts any thrown strings into Error objects.
  * This is only necessary because a bug (likely in wasm-bindgen, see https://github.com/wasm-bindgen/wasm-bindgen/issues/4961)
- * prevents the proper handling of Error objects. As a workaround, we throw strings from our wasm-bindgen
+ * prevents the proper handling of Error objects. As a workaround, we "throw" strings from our wasm-bindgen
  * functions and convert them into errors here.
- *
- * I hope that one day this can be removed :)
  */
-function wrapFunctions<T extends Record<string, (...args: any[]) => any>>(
-  functions: T
-): T {
+function wrapFunctionsForErrorHandling<
+  T extends Record<string, (...args: any[]) => any>
+>(functions: T): T {
   const wrappedFunctions = {} as Record<string, (...args: any[]) => any>;
 
   for (const [fnName, fn] of Object.entries(functions)) {
