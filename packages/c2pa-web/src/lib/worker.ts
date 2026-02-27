@@ -203,7 +203,7 @@ function wrapFunctions<T extends Record<string, (...args: any[]) => any>>(
 ): T {
   const wrappedFunctions = {} as Record<string, (...args: any[]) => any>;
 
-  for (let [fnName, fn] of Object.entries(functions)) {
+  for (const [fnName, fn] of Object.entries(functions)) {
     wrappedFunctions[fnName] = async (...args: any[]) => {
       try {
         return await fn(...args);
