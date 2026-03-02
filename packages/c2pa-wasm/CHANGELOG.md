@@ -1,5 +1,12 @@
 # @contentauth/c2pa-wasm
 
+## 0.4.6
+
+### Patch Changes
+
+- 62ba0d7: Fix broken error handling in Firefox that could cause indefinite hangs
+- 8b7f597: Update dependency on c2pa to v0.76.1 and wasm-bindgen to v0.2.114.
+
 ## 0.4.5
 
 ### Patch Changes
