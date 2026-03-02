@@ -39,7 +39,7 @@ rustup target add wasm32-unknown-unknown
 [Documentation](https://wasm-bindgen.github.io/wasm-bindgen/reference/cli)
 
 ```sh
-cargo install wasm-bindgen-cli@0.2.108
+cargo install wasm-bindgen-cli@0.2.114
 ```
 
 > **Important:** The version of `wasm-bindgen-cli` **must** match the version of the `wasm-bindgen` dependency in [`Cargo.toml`](./Cargo.toml). A version mismatch will cause build failures with errors like _"rust Wasm file schema version: X.X.X, this binary schema version: Y.Y.Y"_. If you encounter this, check `Cargo.toml` for the correct version and reinstall the CLI accordingly.
