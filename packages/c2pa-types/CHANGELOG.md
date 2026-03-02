@@ -1,5 +1,11 @@
 # @contentauth/c2pa-types
 
+## 0.4.3
+
+### Patch Changes
+
+- 8b7f597: Update dependency on c2pa to v0.76.1 and wasm-bindgen to v0.2.114.
+
 ## 0.4.2
 
 ### Patch Changes

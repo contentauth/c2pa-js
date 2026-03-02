@@ -1,5 +1,17 @@
 # @contentauth/c2pa-web
 
+## 0.6.1
+
+### Patch Changes
+
+- 62ba0d7: Fix broken error handling in Firefox that could cause indefinite hangs
+- a8827b9: Removed an export of a non-existent type.
+- 8b7f597: Update dependency on c2pa to v0.76.1 and wasm-bindgen to v0.2.114.
+- Updated dependencies [62ba0d7]
+- Updated dependencies [8b7f597]
+  - @contentauth/c2pa-wasm@0.4.6
+  - @contentauth/c2pa-types@0.4.3
+
 ## 0.6.0
 
 ### Minor Changes
