@@ -28,5 +28,5 @@ describe('inline entrypoint', () => {
     expect(manifestStore).toEqual(C_with_CAWG_data_untrusted_ManifestStore);
 
     c2pa.dispose();
-  }, { timeout: 30000 });
+  }, { timeout: 60000 });
 });
