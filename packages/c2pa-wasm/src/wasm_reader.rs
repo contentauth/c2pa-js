@@ -8,7 +8,7 @@
 use std::io::{Cursor, Read, Seek};
 
 use c2pa::{Context, Reader};
-use js_sys::{Error as JsError, Uint8Array};
+use js_sys::{JsString, Uint8Array};
 use serde::Serialize;
 use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
@@ -23,6 +23,13 @@ pub struct WasmReader {
     serializer: Serializer,
 }
 
+/**
+ * NOTE: we can only return Err(JsString) or Err(JsValue) as error types here, because for some as-of-yet unknown
+ * reason, wasm-bindgen appears to mishandle JsErrors when created in a Firefox web worker.
+ *
+ * See: https://github.com/wasm-bindgen/wasm-bindgen/issues/4961
+ */
+
 #[wasm_bindgen]
 impl WasmReader {
     /// Attempts to create a new `WasmReader` from an asset format and `Blob` of the asset's bytes.
@@ -32,7 +39,7 @@ impl WasmReader {
         format: &str,
         blob: &Blob,
         context_json: Option<String>,
-    ) -> Result<WasmReader, JsError> {
+    ) -> Result<WasmReader, JsString> {
         let stream = BlobStream::new(blob);
         WasmReader::from_stream(format, stream, context_json).await
     }
@@ -41,7 +48,7 @@ impl WasmReader {
         format: &str,
         stream: impl Read + Seek + Send,
         context_json: Option<String>,
-    ) -> Result<WasmReader, JsError> {
+    ) -> Result<WasmReader, JsString> {
         let reader = if let Some(json) = context_json {
             let context = Context::new()
                 .with_settings(json.as_str())
@@ -67,7 +74,7 @@ impl WasmReader {
         init: &Blob,
         fragment: &Blob,
         context_json: Option<String>,
-    ) -> Result<WasmReader, JsError> {
+    ) -> Result<WasmReader, JsString> {
         let init_stream = BlobStream::new(init);
         let fragment_stream = BlobStream::new(fragment);
 
@@ -79,7 +86,7 @@ impl WasmReader {
         init: impl Read + Seek + Send,
         fragment: impl Read + Seek + Send,
         context_json: Option<String>,
-    ) -> Result<WasmReader, JsError> {
+    ) -> Result<WasmReader, JsString> {
         let reader = if let Some(json) = context_json {
             let context = Context::new()
                 .with_settings(json.as_str())
@@ -111,7 +118,7 @@ impl WasmReader {
 
     /// Returns the asset's manifest store.
     #[wasm_bindgen(js_name = manifestStore)]
-    pub fn manifest_store(&self) -> Result<JsValue, JsError> {
+    pub fn manifest_store(&self) -> Result<JsValue, JsString> {
         let manifest_store = self
             .reader
             .serialize(&self.serializer)
@@ -122,7 +129,7 @@ impl WasmReader {
 
     /// Returns the asset's active manifest.
     #[wasm_bindgen(js_name = activeManifest)]
-    pub fn active_manifest(&self) -> Result<JsValue, JsError> {
+    pub fn active_manifest(&self) -> Result<JsValue, JsString> {
         let active_manifest = self
             .reader
             .active_manifest()
@@ -140,7 +147,7 @@ impl WasmReader {
 
     /// Accepts a URI reference to a binary object in the resource store and returns a `js_sys::Uint8Array` containing the resource's bytes.
     #[wasm_bindgen(js_name = resourceToBytes)]
-    pub fn resource_to_bytes(&self, uri: &str) -> Result<Uint8Array, JsError> {
+    pub fn resource_to_bytes(&self, uri: &str) -> Result<Uint8Array, JsString> {
         let data = Vec::new();
         let mut stream = Cursor::new(data);
 
@@ -148,6 +155,6 @@ impl WasmReader {
             .resource_to_stream(uri, &mut stream)
             .map_err(WasmError::from)?;
 
-        cursor_to_u8array(stream)
+        Ok(cursor_to_u8array(stream)?)
     }
 }

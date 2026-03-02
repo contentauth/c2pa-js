@@ -7,8 +7,8 @@
 
 use std::io::Cursor;
 
-use c2pa::{assertions::Action, Builder, BuilderIntent, Context, Ingredient};
-use js_sys::{Error as JsError, JsString, Uint8Array};
+use c2pa::{Builder, BuilderIntent, Context, Ingredient, assertions::Action};
+use js_sys::{JsString, Uint8Array};
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
@@ -37,12 +37,19 @@ struct AssetAndManifestBytes {
     pub manifest: Vec<u8>,
 }
 
+/**
+ * NOTE: we can only return Err(JsString) or Err(JsValue) as error types here, because for some as-of-yet unknown
+ * reason, wasm-bindgen appears to mishandle JsErrors when created in a Firefox web worker.
+ *
+ * See: https://github.com/wasm-bindgen/wasm-bindgen/issues/4961
+ */
+
 #[wasm_bindgen]
 impl WasmBuilder {
     /// Creates a new `WasmBuilder` with a minimal manifest definition.
     /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = new)]
-    pub fn new(context_json: Option<String>) -> Result<WasmBuilder, JsError> {
+    pub fn new(context_json: Option<String>) -> Result<WasmBuilder, JsString> {
         let builder = if let Some(json) = context_json {
             let context = Context::new()
                 .with_settings(json.as_str())
@@ -57,7 +64,7 @@ impl WasmBuilder {
 
     /// Sets the builder "intent."
     #[wasm_bindgen(js_name = setIntent)]
-    pub fn set_intent(&mut self, json_intent: JsValue) -> Result<(), JsError> {
+    pub fn set_intent(&mut self, json_intent: JsValue) -> Result<(), JsString> {
         let intent: BuilderIntent =
             serde_wasm_bindgen::from_value(json_intent).map_err(WasmError::from)?;
         self.builder.set_intent(intent);
@@ -68,7 +75,7 @@ impl WasmBuilder {
     /// Attempts to create a new `WasmBuilder` from a JSON ManifestDefinition string.
     /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = fromJson)]
-    pub fn from_json(json: &str, context_json: Option<String>) -> Result<WasmBuilder, JsError> {
+    pub fn from_json(json: &str, context_json: Option<String>) -> Result<WasmBuilder, JsString> {
         let builder = if let Some(ctx_json) = context_json {
             let context = Context::new()
                 .with_settings(ctx_json.as_str())
@@ -93,7 +100,7 @@ impl WasmBuilder {
     pub fn from_archive(
         archive: &Blob,
         context_json: Option<String>,
-    ) -> Result<WasmBuilder, JsError> {
+    ) -> Result<WasmBuilder, JsString> {
         let stream = BlobStream::new(archive);
         let builder = if let Some(ctx_json) = context_json {
             let context = Context::new()
@@ -120,7 +127,7 @@ impl WasmBuilder {
 
     /// Add an action to the manifest's `Actions` assertion.
     #[wasm_bindgen(js_name = addAction)]
-    pub fn add_action(&mut self, action: JsValue) -> Result<(), JsError> {
+    pub fn add_action(&mut self, action: JsValue) -> Result<(), JsString> {
         let action: Action = serde_wasm_bindgen::from_value(action).map_err(WasmError::from)?;
 
         self.builder.add_action(action).map_err(WasmError::from)?;
@@ -145,7 +152,7 @@ impl WasmBuilder {
 
     /// Sets a thumbnail from a [`Blob`] to be included in the manifest. The thumbnail should represent the asset being signed.
     #[wasm_bindgen(js_name = setThumbnailFromBlob)]
-    pub fn set_thumbnail_from_blob(&mut self, format: &str, blob: &Blob) -> Result<(), JsError> {
+    pub fn set_thumbnail_from_blob(&mut self, format: &str, blob: &Blob) -> Result<(), JsString> {
         let mut stream = BlobStream::new(blob);
         self.builder
             .set_thumbnail(format, &mut stream)
@@ -159,7 +166,7 @@ impl WasmBuilder {
     /// # Arguments
     /// * `ingredient_json` - A JSON string representing the ingredient.
     #[wasm_bindgen(js_name = addIngredient)]
-    pub fn add_ingredient(&mut self, json: &str) -> Result<(), JsError> {
+    pub fn add_ingredient(&mut self, json: &str) -> Result<(), JsString> {
         let ingredient = Ingredient::from_json(json).map_err(WasmError::from)?;
         self.builder.add_ingredient(ingredient);
 
@@ -178,7 +185,7 @@ impl WasmBuilder {
         json: &str,
         format: &str,
         blob: &Blob,
-    ) -> Result<(), JsError> {
+    ) -> Result<(), JsString> {
         let mut stream = BlobStream::new(blob);
         self.builder
             .add_ingredient_from_stream(json, format, &mut stream)
@@ -189,7 +196,7 @@ impl WasmBuilder {
 
     /// Add a [`Blob`] to the manifest as a resource. The ID must match an identifier in the manifest.
     #[wasm_bindgen(js_name = addResourceFromBlob)]
-    pub fn add_resource_from_blob(&mut self, id: &str, blob: &Blob) -> Result<(), JsError> {
+    pub fn add_resource_from_blob(&mut self, id: &str, blob: &Blob) -> Result<(), JsString> {
         let mut stream = BlobStream::new(blob);
         self.builder
             .add_resource(id, &mut stream)
@@ -200,7 +207,7 @@ impl WasmBuilder {
 
     /// Get the current manifest definition.
     #[wasm_bindgen(js_name = getDefinition)]
-    pub fn get_definition(&self) -> Result<JsString, JsError> {
+    pub fn get_definition(&self) -> Result<JsString, JsString> {
         let manifest_definition: JsString = self
             .builder
             .definition
@@ -213,7 +220,7 @@ impl WasmBuilder {
 
     /// "Save" a builder to an archive.
     #[wasm_bindgen(js_name = toArchive)]
-    pub fn to_archive(&mut self) -> Result<Uint8Array, JsError> {
+    pub fn to_archive(&mut self) -> Result<Uint8Array, JsString> {
         let data = Vec::new();
         let mut stream = Cursor::new(data);
 
@@ -221,7 +228,7 @@ impl WasmBuilder {
             .to_archive(&mut stream)
             .map_err(WasmError::from)?;
 
-        cursor_to_u8array(stream)
+        Ok(cursor_to_u8array(stream)?)
     }
 
     /// Sign an asset using the provided SignerDefinition, format, and source Blob.
@@ -231,7 +238,7 @@ impl WasmBuilder {
         signer_definition: &SignerDefinition,
         format: &str,
         source: &Blob,
-    ) -> Result<Vec<u8>, JsError> {
+    ) -> Result<Vec<u8>, JsString> {
         let mut asset: Vec<u8> = Vec::new();
 
         self.sign_internal(signer_definition, format, source, &mut asset)
@@ -248,7 +255,7 @@ impl WasmBuilder {
         signer_definition: &SignerDefinition,
         format: &str,
         source: &Blob,
-    ) -> Result<JsValue, JsError> {
+    ) -> Result<JsValue, JsString> {
         let mut asset: Vec<u8> = Vec::new();
 
         let manifest = self
@@ -268,7 +275,7 @@ impl WasmBuilder {
         format: &str,
         source: &Blob,
         dest: &mut Vec<u8>,
-    ) -> Result<Vec<u8>, JsError> {
+    ) -> Result<Vec<u8>, JsString> {
         let signer = WasmSigner::from_definition(signer_definition)?;
         let mut stream = BlobStream::new(source);
 

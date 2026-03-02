@@ -54,11 +54,7 @@ fn get_vec_u8_from_blob(blob: &Blob, offset: usize, len: usize) -> IoResult<Vec<
     let slice_u8array = reader_sync
         .read_as_array_buffer(&slice)
         .map(|array_buffer| Uint8Array::new(&array_buffer))
-        .map_err(|err| {
-            IoError::other(
-                format!("Failed to read blob slice. Details: {err:?}"),
-            )
-        })?;
+        .map_err(|err| IoError::other(format!("Failed to read blob slice. Details: {err:?}")))?;
 
     let mut buf = vec![0; slice_u8array.byte_length() as usize];
     slice_u8array.copy_to(&mut buf);
