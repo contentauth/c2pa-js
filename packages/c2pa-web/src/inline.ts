@@ -28,7 +28,7 @@ export type InlineConfig = Omit<Config, 'wasmSrc'>;
  * ```
  */
 export async function createC2pa(config?: InlineConfig) {
-  const wasm = await WebAssembly.compile(await dataUrlToArrayBuffer(wasmB64));
+  const wasm = await WebAssembly.compileStreaming(fetch(wasmB64));
 
   return createC2paBase({
     ...config,
@@ -38,7 +38,7 @@ export async function createC2pa(config?: InlineConfig) {
 
 export * from './common.js';
 
-async function dataUrlToArrayBuffer(dataUrl: string): Promise<ArrayBuffer> {
+// async function dataUrlToArrayBuffer(dataUrl: string): Promise<ArrayBuffer> {
   // const base64StartIndex = dataUrl.indexOf('base64,');
   // if (base64StartIndex >= 0) {
   //   const base64 = dataUrl.slice(base64StartIndex + 'base64,'.length);
@@ -53,5 +53,5 @@ async function dataUrlToArrayBuffer(dataUrl: string): Promise<ArrayBuffer> {
   // const enc = new TextEncoder();
   // const bytes = enc.encode(str);
   // return bytes.buffer;
-  return fetch(dataUrl).then(response => response.arrayBuffer());
-}
+//   return fetch(dataUrl).then(response => response.arrayBuffer());
+// }
