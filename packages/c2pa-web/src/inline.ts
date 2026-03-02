@@ -28,7 +28,7 @@ export type InlineConfig = Omit<Config, 'wasmSrc'>;
  * ```
  */
 export async function createC2pa(config?: InlineConfig) {
-  const wasm = await WebAssembly.compile(dataUrlToArrayBuffer(wasmB64));
+  const wasm = await WebAssembly.compile(await dataUrlToArrayBuffer(wasmB64));
 
   return createC2paBase({
     ...config,
@@ -38,19 +38,20 @@ export async function createC2pa(config?: InlineConfig) {
 
 export * from './common.js';
 
-function dataUrlToArrayBuffer(dataUrl: string) {
-  const base64StartIndex = dataUrl.indexOf('base64,');
-  if (base64StartIndex >= 0) {
-    const base64 = dataUrl.slice(base64StartIndex + 'base64,'.length);
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-  }
-  const str = decodeURIComponent(dataUrl.slice(dataUrl.indexOf(',') + 1));
-  const enc = new TextEncoder();
-  const bytes = enc.encode(str);
-  return bytes.buffer;
+async function dataUrlToArrayBuffer(dataUrl: string): Promise<ArrayBuffer> {
+  // const base64StartIndex = dataUrl.indexOf('base64,');
+  // if (base64StartIndex >= 0) {
+  //   const base64 = dataUrl.slice(base64StartIndex + 'base64,'.length);
+  //   const binaryString = atob(base64);
+  //   const bytes = new Uint8Array(binaryString.length);
+  //   for (let i = 0; i < binaryString.length; i++) {
+  //     bytes[i] = binaryString.charCodeAt(i);
+  //   }
+  //   return bytes.buffer;
+  // }
+  // const str = decodeURIComponent(dataUrl.slice(dataUrl.indexOf(',') + 1));
+  // const enc = new TextEncoder();
+  // const bytes = enc.encode(str);
+  // return bytes.buffer;
+  return fetch(dataUrl).then(response => response.arrayBuffer());
 }
