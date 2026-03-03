@@ -13,12 +13,16 @@ use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 
+use crate::error::WasmError;
+
 #[wasm_bindgen(typescript_custom_section)]
 const SIGNER_DEFINITION: &'static str = r#"
 interface SignerDefinition {
     sign: (bytes: Uint8Array<ArrayBuffer>) => Promise<Uint8Array<ArrayBuffer>>;
     reserveSize: number;
     alg: string;
+    certs: Uint8Array[];
+    directCoseHandling: boolean;
 }
 "#;
 
@@ -35,6 +39,8 @@ pub(crate) struct WasmSigner {
     sign_fn: JsFunction,
     reserve_size: f64,
     signing_alg: SigningAlg,
+    certs: Vec<Vec<u8>>,
+    direct_cose_handling: bool,
 }
 
 /**
@@ -65,10 +71,21 @@ impl WasmSigner {
 
         let sign_fn: JsFunction = Reflect::get(&js_value, &"sign".into())?.into();
 
+        let direct_cose_handling_js_value = Reflect::get(&js_value, &"directCoseHandling".into())?;
+        let direct_cose_handling: bool =
+            serde_wasm_bindgen::from_value(direct_cose_handling_js_value)
+                .map_err(WasmError::from)?;
+
+        let certs_js_value = Reflect::get(&js_value, &"certs".into())?;
+        let certs: Vec<Vec<u8>> =
+            serde_wasm_bindgen::from_value(certs_js_value).map_err(WasmError::from)?;
+
         Ok(WasmSigner {
             reserve_size: reserve_size_result.into(),
             signing_alg,
             sign_fn,
+            direct_cose_handling,
+            certs,
         })
     }
 }
@@ -106,7 +123,7 @@ impl AsyncSigner for WasmSigner {
 
     fn certs(&self) -> C2paResult<Vec<Vec<u8>>> {
         // @TODO: make configurable
-        Ok(Vec::new())
+        Ok(self.certs.clone())
     }
 
     fn reserve_size(&self) -> usize {
@@ -114,7 +131,6 @@ impl AsyncSigner for WasmSigner {
     }
 
     fn direct_cose_handling(&self) -> bool {
-        // @TODO: make configurable
-        true
+        self.direct_cose_handling
     }
 }
