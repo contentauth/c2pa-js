@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+## 0.5.2
+
+### Patch Changes
+
+- ec86837: Update c2pa crate to 0.77.0
+
 ## 0.5.1
 
 ### Patch Changes
