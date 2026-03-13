@@ -558,6 +558,31 @@ describe("Builder", () => {
       expect(JSON.stringify(manifestStore)).toContain("thumbnail.ingredient");
     });
 
+    it("should add ingredient with custom metadata", async () => {
+      const builder = Builder.new();
+      const ingredient = {
+        title: "Test Ingredient",
+        format: "image/jpeg",
+        instance_id: "ingredient-12345",
+        relationship: "componentOf",
+        metadata: {
+          customString: "my custom value",
+          customNumber: 42,
+          customBool: true,
+          customObject: {
+              nested: "value",
+              count: 123
+          },
+          customArray: ["item1", "item2", "item3"]
+        }
+      };
+      await builder.addIngredient(JSON.stringify(ingredient));
+
+      const definition = builder.getManifestDefinition();
+      expect(definition.ingredients).toHaveLength(1);
+      expect(definition.ingredients![0]).toMatchObject(ingredient);
+    });
+
     it("should perform redaction workflow like test_redaction_async", async () => {
       // This test mirrors the Rust test_redaction_async test
 
