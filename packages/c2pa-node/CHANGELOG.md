@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+## 0.5.3
+
+### Patch Changes
+
+- c94044e: export Ingredient from c2pa-types
+
 ## 0.5.2
 
 ### Patch Changes
