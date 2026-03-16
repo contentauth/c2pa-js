@@ -19,6 +19,9 @@ import type {
   Manifest,
   ManifestStore,
 } from "@contentauth/c2pa-types";
+
+export type { Ingredient } from "@contentauth/c2pa-types";
+
 /**
  * Describes the digital signature algorithms allowed by the C2PA spec
  *
@@ -59,7 +62,7 @@ export type TrustmarkVariant =
   // Quality Trustmark model
   | "Q";
 
-type ManifestAssertionKind = "Cbor" | "Json" | "Binary" | "Uri";
+export type ManifestAssertionKind = "Cbor" | "Json" | "Binary" | "Uri";
 
 /**
  * A buffer for the source asset
