@@ -34,9 +34,9 @@ describe("Settings", () => {
 
     const settings = createTrustSettings(trustConfig);
     expect(settings.trust).toBeDefined();
-    expect(settings.trust?.verify_trust_list).toBe(true);
-    expect(settings.trust?.user_anchors).toBe("test");
-    expect(settings.trust?.allowed_list).toBe("allowed");
+    expect(settings.trust?.verifyTrustList).toBe(true);
+    expect(settings.trust?.userAnchors).toBe("test");
+    expect(settings.trust?.allowedList).toBe("allowed");
   });
 
   it("creates CAWG trust settings", () => {
@@ -46,9 +46,9 @@ describe("Settings", () => {
     };
 
     const settings = createCawgTrustSettings(trustConfig);
-    expect(settings.cawg_trust).toBeDefined();
-    expect(settings.cawg_trust?.verify_trust_list).toBe(false);
-    expect(settings.cawg_trust?.trust_anchors).toBe("anchors");
+    expect(settings.cawgTrust).toBeDefined();
+    expect(settings.cawgTrust?.verifyTrustList).toBe(false);
+    expect(settings.cawgTrust?.trustAnchors).toBe("anchors");
   });
 
   it("creates verify settings", () => {
@@ -65,10 +65,21 @@ describe("Settings", () => {
 
     const settings = createVerifySettings(verifyConfig);
     expect(settings.verify).toBeDefined();
-    expect(settings.verify?.verify_after_reading).toBe(true);
-    expect(settings.verify?.verify_after_sign).toBe(false);
-    expect(settings.verify?.verify_trust).toBe(true);
-    expect(settings.verify?.ocsp_fetch).toBe(true);
+    expect(settings.verify?.verifyAfterReading).toBe(true);
+    expect(settings.verify?.verifyAfterSign).toBe(false);
+    expect(settings.verify?.verifyTrust).toBe(true);
+    expect(settings.verify?.ocspFetch).toBe(true);
+  });
+
+  it("creates verify settings with partial config", () => {
+    const settings = createVerifySettings({
+      verifyAfterReading: false,
+    });
+
+    expect(settings.verify).toBeDefined();
+    expect(settings.verify?.verifyAfterReading).toBe(false);
+    expect(settings.verify?.verifyAfterSign).toBeUndefined();
+    expect(settings.verify?.verifyTrust).toBeUndefined();
   });
 
   it("merges multiple settings", () => {
@@ -91,11 +102,11 @@ describe("Settings", () => {
     const merged = mergeSettings(trustSettings, verifySettings);
     expect(merged.trust).toBeDefined();
     expect(merged.verify).toBeDefined();
-    expect(merged.trust?.verify_trust_list).toBe(true);
-    expect(merged.verify?.verify_after_reading).toBe(false);
+    expect(merged.trust?.verifyTrustList).toBe(true);
+    expect(merged.verify?.verifyAfterReading).toBe(false);
   });
 
-  it("converts settings to JSON", () => {
+  it("converts settings to JSON with snake_case keys", () => {
     const settings = createVerifySettings({
       verifyAfterReading: true,
       verifyAfterSign: true,
@@ -111,7 +122,7 @@ describe("Settings", () => {
     expect(json).toContain("verify");
     expect(json).toContain("verify_after_reading");
 
-    // Should be parseable
+    // Should be parseable with snake_case keys
     const parsed = JSON.parse(json);
     expect(parsed.verify.verify_after_reading).toBe(true);
   });
@@ -119,17 +130,12 @@ describe("Settings", () => {
   it("does not include undefined values in trust settings JSON", () => {
     const trustConfig: TrustConfig = {
       verifyTrustList: true,
-      // userAnchors is undefined
-      // trustAnchors is undefined
-      // trustConfig is undefined
-      // allowedList is undefined
     };
 
     const settings = createTrustSettings(trustConfig);
     const json = settingsToJson(settings);
     const parsed = JSON.parse(json);
 
-    // JSON.stringify automatically excludes undefined values
     expect(parsed.trust.verify_trust_list).toBe(true);
     expect("user_anchors" in parsed.trust).toBe(false);
     expect("trust_anchors" in parsed.trust).toBe(false);
@@ -140,14 +146,12 @@ describe("Settings", () => {
   it("does not include undefined values in CAWG trust settings JSON", () => {
     const trustConfig: TrustConfig = {
       verifyTrustList: false,
-      // Only verifyTrustList is defined
     };
 
     const settings = createCawgTrustSettings(trustConfig);
     const json = settingsToJson(settings);
     const parsed = JSON.parse(json);
 
-    // JSON.stringify automatically excludes undefined values
     expect(parsed.cawg_trust.verify_trust_list).toBe(false);
     expect("user_anchors" in parsed.cawg_trust).toBe(false);
     expect("trust_anchors" in parsed.cawg_trust).toBe(false);
@@ -157,20 +161,12 @@ describe("Settings", () => {
     const verifyConfig: VerifyConfig = {
       verifyAfterReading: true,
       verifyAfterSign: false,
-      // Only first two are defined, rest are undefined
-      verifyTrust: undefined as any,
-      verifyTimestampTrust: undefined as any,
-      ocspFetch: undefined as any,
-      remoteManifestFetch: undefined as any,
-      skipIngredientConflictResolution: undefined as any,
-      strictV1Validation: undefined as any,
     };
 
     const settings = createVerifySettings(verifyConfig);
     const json = settingsToJson(settings);
     const parsed = JSON.parse(json);
 
-    // JSON.stringify automatically excludes undefined values
     expect(parsed.verify.verify_after_reading).toBe(true);
     expect(parsed.verify.verify_after_sign).toBe(false);
     expect("verify_trust" in parsed.verify).toBe(false);
@@ -182,17 +178,18 @@ describe("Settings", () => {
   it("does not include undefined values when merging settings", () => {
     const settings1: SettingsContext = {
       trust: {
-        verify_trust_list: true,
-        user_anchors: "test",
+        verifyTrustList: true,
+        userAnchors: "test",
       },
     };
 
     const settings2: SettingsContext = {
       trust: {
-        allowed_list: undefined, // Explicitly undefined
+        verifyTrustList: true,
+        allowedList: undefined,
       },
       verify: {
-        verify_after_reading: false,
+        verifyAfterReading: false,
       },
     };
 
@@ -200,7 +197,6 @@ describe("Settings", () => {
     const json = settingsToJson(merged);
     const parsed = JSON.parse(json);
 
-    // JSON.stringify automatically excludes undefined values
     expect(parsed.trust.verify_trust_list).toBe(true);
     expect(parsed.trust.user_anchors).toBe("test");
     expect("allowed_list" in parsed.trust).toBe(false);
@@ -221,15 +217,15 @@ describe("Settings", () => {
 
     const settings2: SettingsContext = {
       verify: {
-        verify_trust: true, // Override this value
-        ocsp_fetch: true, // Override this value
+        verifyTrust: true,
+        ocspFetch: true,
       },
     };
 
     const merged = mergeSettings(settings1, settings2);
-    expect(merged.verify?.verify_after_reading).toBe(true); // from settings1
-    expect(merged.verify?.verify_trust).toBe(true); // overridden by settings2
-    expect(merged.verify?.ocsp_fetch).toBe(true); // overridden by settings2
+    expect(merged.verify?.verifyAfterReading).toBe(true); // from settings1
+    expect(merged.verify?.verifyTrust).toBe(true); // overridden by settings2
+    expect(merged.verify?.ocspFetch).toBe(true); // overridden by settings2
   });
 
   describe("loadSettingsFromFile", () => {

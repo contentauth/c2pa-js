@@ -453,21 +453,21 @@ export interface TrustConfig {
  */
 export interface VerifyConfig {
   /** Whether to verify after reading a manifest */
-  verifyAfterReading: boolean;
+  verifyAfterReading?: boolean;
   /** Whether to verify after signing a manifest */
-  verifyAfterSign: boolean;
+  verifyAfterSign?: boolean;
   /** Whether to verify trust during validation */
-  verifyTrust: boolean;
+  verifyTrust?: boolean;
   /** Whether to verify timestamp trust */
-  verifyTimestampTrust: boolean;
+  verifyTimestampTrust?: boolean;
   /** Whether to fetch OCSP responses */
-  ocspFetch: boolean;
+  ocspFetch?: boolean;
   /** Whether to fetch remote manifests */
-  remoteManifestFetch: boolean;
+  remoteManifestFetch?: boolean;
   /** Whether to skip ingredient conflict resolution */
-  skipIngredientConflictResolution: boolean;
+  skipIngredientConflictResolution?: boolean;
   /** Whether to use strict v1 validation */
-  strictV1Validation: boolean;
+  strictV1Validation?: boolean;
 }
 
 /**
@@ -477,32 +477,11 @@ export interface VerifyConfig {
  */
 export interface SettingsContext {
   /** C2PA trust configuration */
-  trust?: {
-    verify_trust_list?: boolean;
-    user_anchors?: string;
-    trust_anchors?: string;
-    trust_config?: string;
-    allowed_list?: string;
-  };
+  trust?: TrustConfig;
   /** CAWG trust configuration */
-  cawg_trust?: {
-    verify_trust_list?: boolean;
-    user_anchors?: string;
-    trust_anchors?: string;
-    trust_config?: string;
-    allowed_list?: string;
-  };
+  cawgTrust?: TrustConfig;
   /** Verification configuration */
-  verify?: {
-    verify_after_reading?: boolean;
-    verify_after_sign?: boolean;
-    verify_trust?: boolean;
-    verify_timestamp_trust?: boolean;
-    ocsp_fetch?: boolean;
-    remote_manifest_fetch?: boolean;
-    skip_ingredient_conflict_resolution?: boolean;
-    strict_v1_validation?: boolean;
-  };
+  verify?: VerifyConfig;
   /** Builder configuration */
   builder?: {
     thumbnail?: {
