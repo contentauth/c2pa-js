@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+## 0.5.4
+
+### Patch Changes
+
+- c5e18ed: Allow partial verify settings
+
 ## 0.5.3
 
 ### Patch Changes
