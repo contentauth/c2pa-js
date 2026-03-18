@@ -220,6 +220,56 @@ console.log(definition.ingredients); // Contains the ingredient
 await restoredBuilder.free();
 ```
 
+#### Adding an archive as an ingredient
+
+A `.c2pa` archive (created via `toArchive`) can be added as an ingredient to another builder using `addIngredientFromBlob` with the format `application/c2pa`. This is useful when you want to include the provenance history from a previous builder as an ingredient in a new manifest.
+
+```typescript
+// Step 1: Create a builder and archive it
+const originalBuilder = await c2pa.builder.new();
+const archive = await originalBuilder.toArchive();
+await originalBuilder.free();
+
+// Step 2: Create a new builder and add the archive as an ingredient
+const newBuilder = await c2pa.builder.new();
+await newBuilder.setIntent('edit');
+
+await newBuilder.addIngredientFromBlob(
+  {
+    title: 'previous-work.c2pa',
+    relationship: 'parentOf'
+  },
+  'application/c2pa', // Format for .c2pa archives
+  new Blob([archive])
+);
+
+// The archive's provenance is now an ingredient in the new builder
+const definition = await newBuilder.getDefinition();
+console.log(definition.ingredients); // Contains the archived ingredient
+
+await newBuilder.free();
+```
+
+You can also add a `.c2pa` file loaded from a URL or file input:
+
+```typescript
+// Load a .c2pa archive from a URL
+const response = await fetch('path/to/ingredient.c2pa');
+const archiveBlob = await response.blob();
+
+const builder = await c2pa.builder.new();
+await builder.setIntent('edit');
+
+await builder.addIngredientFromBlob(
+  {
+    title: 'ingredient.c2pa',
+    relationship: 'parentOf'
+  },
+  'application/c2pa',
+  archiveBlob
+);
+```
+
 #### Ingredient properties
 
 The `Ingredient` type supports a number of properties, including:
