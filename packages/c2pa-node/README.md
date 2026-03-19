@@ -241,6 +241,125 @@ const ingredient = builder.addIngredientFromReader(sourceReader);
 console.log(ingredient.title); // Contains ingredient metadata
 ```
 
+#### Adding Ingredients from Archives (.c2pa files)
+
+You can add ingredients from `.c2pa` archive files. Archives are binary files that contain a manifest store with ingredients and their associated resources (thumbnails, manifest data, etc.). To work with them, read the archive with `Reader` using the `application/c2pa` MIME type, then extract the ingredients and transfer their binary resources to a new `Builder`.
+
+There are two types of archives sharing the same binary format:
+
+- **Builder archives** (working store archives): Serialized snapshots of a `Builder`, created by `builder.toArchive()`. They can contain multiple ingredients.
+- **Ingredient archives**: Contain exactly one ingredient from a source asset. They carry the provenance history for reuse in other manifests.
+
+##### Reading an archive and adding its ingredients
+
+```javascript
+import { Reader, Builder } from '@contentauth/c2pa-node';
+import * as fs from 'node:fs/promises';
+
+// Read the archive using the application/c2pa MIME type
+const archiveBuffer = await fs.readFile('ingredients.c2pa');
+const reader = await Reader.fromAsset(
+  { buffer: archiveBuffer, mimeType: 'application/c2pa' },
+  { verify: { verify_after_reading: false } }
+);
+
+// Get the ingredients from the active manifest
+const activeManifest = reader.getActive();
+const ingredients = activeManifest.ingredients;
+
+// Create a new builder with the ingredients from the archive
+const builder = Builder.withJson({
+  claim_generator_info: [{ name: 'my-app', version: '1.0.0' }],
+  ingredients: ingredients,
+});
+
+// Transfer binary resources (thumbnails, manifest_data) for each ingredient
+for (const ingredient of ingredients) {
+  if (ingredient.thumbnail) {
+    const resource = await reader.resourceToAsset(ingredient.thumbnail.identifier, { buffer: null });
+    await builder.addResource(ingredient.thumbnail.identifier, {
+      buffer: resource.buffer,
+      mimeType: ingredient.thumbnail.format,
+    });
+  }
+  if (ingredient.manifest_data) {
+    const resource = await reader.resourceToAsset(ingredient.manifest_data.identifier, { buffer: null });
+    await builder.addResource(ingredient.manifest_data.identifier, {
+      buffer: resource.buffer,
+      mimeType: 'application/c2pa',
+    });
+  }
+}
+
+// Sign the manifest
+const signer = LocalSigner.newSigner(cert, key, 'es256');
+builder.sign(signer, inputAsset, outputAsset);
+```
+
+##### Selecting specific ingredients from an archive
+
+When an archive contains multiple ingredients, you can filter to include only the ones you need:
+
+```javascript
+const reader = await Reader.fromAsset(
+  { buffer: archiveBuffer, mimeType: 'application/c2pa' },
+  { verify: { verify_after_reading: false } }
+);
+
+const activeManifest = reader.getActive();
+const allIngredients = activeManifest.ingredients;
+
+// Select only the ingredients you want (e.g., by title or instance_id)
+const selected = allIngredients.filter(
+  (ing) => ing.title === 'photo_1.jpg' || ing.instance_id === 'catalog:logo'
+);
+
+// Build with only the selected ingredients
+const builder = Builder.withJson({
+  claim_generator_info: [{ name: 'my-app', version: '1.0.0' }],
+  ingredients: selected,
+});
+
+// Transfer resources only for selected ingredients
+for (const ingredient of selected) {
+  if (ingredient.thumbnail) {
+    const resource = await reader.resourceToAsset(ingredient.thumbnail.identifier, { buffer: null });
+    await builder.addResource(ingredient.thumbnail.identifier, {
+      buffer: resource.buffer,
+      mimeType: ingredient.thumbnail.format,
+    });
+  }
+  if (ingredient.manifest_data) {
+    const resource = await reader.resourceToAsset(ingredient.manifest_data.identifier, { buffer: null });
+    await builder.addResource(ingredient.manifest_data.identifier, {
+      buffer: resource.buffer,
+      mimeType: 'application/c2pa',
+    });
+  }
+}
+```
+
+##### Building an ingredient archive
+
+To create an ingredient archive, add ingredients to a `Builder` and save it as an archive:
+
+```javascript
+const builder = Builder.new();
+
+// Add ingredients with stable instance_id for later catalog lookups
+await builder.addIngredient(
+  JSON.stringify({
+    title: 'photo-A.jpg',
+    relationship: 'componentOf',
+    instance_id: 'catalog:photo-A',
+  }),
+  { path: 'photo-A.jpg' }
+);
+
+// Save as a .c2pa archive
+await builder.toArchive({ path: 'ingredient-catalog.c2pa' });
+```
+
 #### Creating and Reusing Builder Archives
 
 Builder archives allow you to save a builder's state (including ingredients) and reuse it later:
