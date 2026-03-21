@@ -112,9 +112,9 @@ rx(
       const builder = builderMap.get(builderId);
       builder.addIngredient(json);
     },
-    builder_addIngredientFromBlob(builderId, json, format, blob) {
+    async builder_addIngredientFromBlob(builderId, json, format, blob) {
       const builder = builderMap.get(builderId);
-      builder.addIngredientFromBlob(json, format, blob);
+      await builder.addIngredientFromBlob(json, format, blob);
     },
     builder_addResourceFromBlob(builderId, id, blob) {
       const builder = builderMap.get(builderId);

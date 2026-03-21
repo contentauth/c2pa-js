@@ -15,6 +15,7 @@ import { createC2pa } from './c2pa.js';
 import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 
 import C_JPG from 'test/assets/C.jpg';
+import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';
 
 describe('builder', () => {
   describe('creation', () => {
@@ -331,6 +332,31 @@ describe('builder', () => {
           format: 'image/jpeg',
           instance_id: 'ingredient-instance-2'
         });
+      });
+
+      test('should add ingredient from blob and archive for cloud-only file', async ({
+        c2pa
+      }) => {
+        const blob = await getBlobForAsset(PirateShip_cloud);
+
+        const builder = await c2pa.builder.new();
+
+        const ingredient: Ingredient = {
+          relationship: 'parentOf',
+          title: 'PirateShip_cloud',
+          format: blob.type
+        };
+
+        // addIngredientFromBlob can fetch remote manifests,
+        await builder.addIngredientFromBlob(ingredient, blob.type, blob);
+
+        // Verify the remote manifest was fetched: the ingredient should have
+        // both activeManifest and validationResults present.
+        const definition = await builder.getDefinition();
+        expect(definition.ingredients).toHaveLength(1);
+        const addedIngredient = definition.ingredients![0];
+        expect(addedIngredient.active_manifest).toBeDefined();
+        expect(addedIngredient.validation_results).toBeDefined();
       });
 
       test('should add ingredient with custom metadata', async ({ c2pa }) => {
