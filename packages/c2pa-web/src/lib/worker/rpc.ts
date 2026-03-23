@@ -62,7 +62,7 @@ const { createTx, rx } = channel<{
     json: string,
     format: string,
     blob: Blob
-  ) => void;
+  ) => Promise<void>;
   builder_addResourceFromBlob: (
     builderId: number,
     id: string,

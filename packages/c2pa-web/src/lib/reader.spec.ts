@@ -21,6 +21,7 @@ import C_with_CAWG_data_ManifestStore from 'test/manifests/C_with_CAWG_data.js';
 import C_with_CAWG_data_trusted_ManifestStore from 'test/manifests/C_with_CAWG_data_trusted.js';
 import C_with_CAWG_data_untrusted_ManifestStore from 'test/manifests/C_with_CAWG_data_untrusted.js';
 import no_alg from 'test/assets/no_alg.jpg';
+import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';
 import dashinit from 'test/assets/dashinit.mp4';
 import dash1 from 'test/assets/dash1.m4s?url';
 import dashinit_ManifestStore from 'test/manifests/dashinit.js';
@@ -274,6 +275,28 @@ describe('reader', () => {
     expect(manifestStore).toEqual(C_with_CAWG_data_ManifestStore);
 
     c2pa.dispose();
+  });
+
+  test('should fetch the remote manifest', async ({ c2pa }) => {
+    const blob = await getBlobForAsset(PirateShip_cloud);
+
+    const reader = await c2pa.reader.fromBlob(blob.type, blob);
+
+    expect(reader).not.toBeNull();
+
+    const manifestStore = await reader!.manifestStore();
+    expect(manifestStore).toBeDefined();
+    expect(manifestStore.manifests).toBeDefined();
+
+    const activeManifestLabel = manifestStore.active_manifest!;
+    const activeManifest = manifestStore.manifests![activeManifestLabel];
+    expect(activeManifest).toBeDefined();
+
+    const actionsAssertions = activeManifest.assertions?.filter(
+      (a: { label: string }) =>
+        a.label === 'c2pa.actions' || a.label === 'c2pa.actions.v2'
+    );
+    expect(actionsAssertions!.length).toBe(1);
   });
 
   // TODO: can this test be written to track the status of the underlying object instead of checking for an error?

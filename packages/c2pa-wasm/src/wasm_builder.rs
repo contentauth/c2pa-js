@@ -180,7 +180,7 @@ impl WasmBuilder {
     /// * `format` - The format of the ingredient.
     /// * `blob` - A [`Blob`] representing an asset which should be included as an ingredient.
     #[wasm_bindgen(js_name = addIngredientFromBlob)]
-    pub fn add_ingredient_from_blob(
+    pub async fn add_ingredient_from_blob(
         &mut self,
         json: &str,
         format: &str,
@@ -188,7 +188,8 @@ impl WasmBuilder {
     ) -> Result<(), JsString> {
         let mut stream = BlobStream::new(blob);
         self.builder
-            .add_ingredient_from_stream(json, format, &mut stream)
+            .add_ingredient_from_stream_async(json, format, &mut stream)
+            .await
             .map_err(WasmError::from)?;
 
         Ok(())
