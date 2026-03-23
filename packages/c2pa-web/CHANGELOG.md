@@ -1,5 +1,16 @@
 # @contentauth/c2pa-web
 
+## 0.7.0
+
+### Minor Changes
+
+- 7f8a898: addIngredientFromBlob needs to be async in order to fetch remote manifests
+
+### Patch Changes
+
+- Updated dependencies [7f8a898]
+  - @contentauth/c2pa-wasm@0.5.0
+
 ## 0.6.1
 
 ### Patch Changes

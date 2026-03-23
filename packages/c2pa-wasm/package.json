@@ -1,6 +1,6 @@
 {
   "name": "@contentauth/c2pa-wasm",
-  "version": "0.4.6",
+  "version": "0.5.0",
   "license": "MIT",
   "repository": {
     "type": "git",
