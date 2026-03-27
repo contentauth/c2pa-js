@@ -184,21 +184,27 @@ fn check_strength(strength: f32) -> Result<()> {
     Ok(())
 }
 
+/// Minimum expected size for a valid ONNX model file (10 MB).
+const MIN_MODEL_SIZE: usize = 10 * 1024 * 1024;
+
+/// Maximum number of download attempts per model file.
+const MAX_RETRIES: u32 = 3;
+
 // Taken from Trustmark xtask.
 // Will not overwrite models if they already exist.
 pub fn fetch_model(variant: Variant, dir_path: &std::path::Path) -> Result<PathBuf> {
     let rt = runtime();
     let client = Client::builder()
-        .timeout(Duration::from_secs(10))
-        .connect_timeout(Duration::from_secs(5))
-        .read_timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(120))
+        .connect_timeout(Duration::from_secs(10))
+        .read_timeout(Duration::from_secs(60))
         .build()
         .map_err(|e| Error::ModelDownload(format!("Failed to build HTTP client: {e}")))?;
 
     // Ensure directory exists
     std::fs::create_dir_all(dir_path)?;
 
-    let root = "https://cc-assets.netlify.app/watermarking/trustmark-models";
+    let root = "https://cai-watermark.adobe.net/watermarking/trustmark-models";
 
     // Construct filenames manually since encoder_filename/decoder_filename are private
     let encoder_filename = format!("encoder_{variant}.onnx");
@@ -210,32 +216,76 @@ pub fn fetch_model(variant: Variant, dir_path: &std::path::Path) -> Result<PathB
             continue;
         }
         let model_url = format!("{root}/{filename}");
-        let model_bytes = rt.block_on(async {
-            let response = client
-                .get(&model_url)
-                .send()
-                .await
-                .map_err(|e| Error::ModelDownload(format!("Failed to GET model: {e}")))?;
-            response
-                .bytes()
-                .await
-                .map_err(|e| Error::ModelDownload(format!("Failed to read model bytes: {e}")))
-                .map(|b| b.to_vec())
-        })?;
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&model_path)
-            .map_err(|e| {
-                Error::ModelDownload(format!(
-                    "Created {dir_path:?} but failed to open model directory{model_path:?}: {e}"
-                ))
-            })?;
-        file.write_all(&model_bytes).map_err(|e| {
-            Error::ModelDownload(format!(
-                "Failed to write model to model directory {model_path:?}: {e}"
-            ))
-        })?;
+
+        let mut last_err = None;
+        for attempt in 1..=MAX_RETRIES {
+            match download_model(&rt, &client, &model_url) {
+                Ok(model_bytes) => {
+                    if model_bytes.len() < MIN_MODEL_SIZE {
+                        last_err = Some(Error::ModelDownload(format!(
+                            "Downloaded model {filename} is too small ({} bytes), expected at least {MIN_MODEL_SIZE} bytes",
+                            model_bytes.len()
+                        )));
+                        continue;
+                    }
+
+                    // Write to a temporary file first, then rename for atomicity.
+                    let tmp_path = dir_path.join(format!("{filename}.tmp"));
+                    let mut file = OpenOptions::new()
+                        .write(true)
+                        .create(true)
+                        .truncate(true)
+                        .open(&tmp_path)
+                        .map_err(|e| {
+                            Error::ModelDownload(format!(
+                                "Failed to create temp file {tmp_path:?}: {e}"
+                            ))
+                        })?;
+                    file.write_all(&model_bytes).map_err(|e| {
+                        Error::ModelDownload(format!(
+                            "Failed to write model to {tmp_path:?}: {e}"
+                        ))
+                    })?;
+                    std::fs::rename(&tmp_path, &model_path).map_err(|e| {
+                        Error::ModelDownload(format!(
+                            "Failed to rename {tmp_path:?} to {model_path:?}: {e}"
+                        ))
+                    })?;
+
+                    last_err = None;
+                    break;
+                }
+                Err(e) => {
+                    last_err = Some(e);
+                    if attempt < MAX_RETRIES {
+                        std::thread::sleep(Duration::from_secs(u64::from(attempt)));
+                    }
+                }
+            }
+        }
+
+        if let Some(err) = last_err {
+            return Err(err);
+        }
     }
     Ok(dir_path.to_path_buf())
+}
+
+fn download_model(
+    rt: &tokio::runtime::Runtime,
+    client: &Client,
+    url: &str,
+) -> Result<Vec<u8>> {
+    rt.block_on(async {
+        let response = client
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| Error::ModelDownload(format!("Failed to GET model: {e}")))?;
+        response
+            .bytes()
+            .await
+            .map_err(|e| Error::ModelDownload(format!("Failed to read model bytes: {e}")))
+            .map(|b| b.to_vec())
+    })
 }
