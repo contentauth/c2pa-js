@@ -45,6 +45,18 @@ This command will download precompiled binaries for the following systems:
 - Windows x86
 - Windows ARM
 
+## Documentation
+
+Complete API documentation is generated from TypeScript source using [TypeDoc](https://typedoc.org/) and published to GitHub Pages at [https://contentauth.github.io/c2pa-node-v2/](https://contentauth.github.io/c2pa-node-v2/).
+
+To generate documentation locally:
+
+```bash
+pnpm build:docs
+```
+
+This generates HTML documentation in the `docs/` directory. The `docs/` directory is not checked into version control. It's automatically generated and published to GitHub Pages whenever a new release is published.
+
 ## Components
 
 ### Reader

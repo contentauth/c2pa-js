@@ -1,8 +1,0 @@
-{%- assign nav_items = "Classes, Interfaces, Type Aliases, Functions" | split: ", " -%}
-<div class="nav-items">
-  {% for item in nav_items %}
-    {%- assign path = '/' | append: (item | slugify) | append: '/' -%}
-    <a class="nav-item" href="{{ path | relative_url }}">{{ item }}</a>
-  {% endfor %}
-</div>
-

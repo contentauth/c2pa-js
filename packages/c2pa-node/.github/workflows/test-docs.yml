@@ -1,9 +1,6 @@
-name: Build and publish docs
+name: Test docs publishing
 
 on:
-  release:
-    types: [published]  
-
   workflow_dispatch:
 
 permissions:
@@ -12,17 +9,20 @@ permissions:
   id-token: write
 
 concurrency:
-  group: 'github-pages'
+  group: 'github-pages-test'
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  publish-docs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         name: Install pnpm
@@ -40,24 +40,16 @@ jobs:
           SKIP_RUST_BUILD: 1
         run: pnpm install --frozen-lockfile
 
-      - name: Generate TypeDoc markdown (without modifying repo)
-        run: |
-          pnpm run build:docs
-          rm -rf docs-typedoc
+      - name: Build docs
+        run: pnpm run build:docs
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./docs
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload the built site for deployment
-          path: '_site'
+          path: 'docs'
 
       - name: Deploy to GitHub Pages
         id: deployment

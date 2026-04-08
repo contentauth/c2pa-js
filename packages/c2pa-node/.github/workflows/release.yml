@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -186,3 +187,51 @@ jobs:
             -H "Content-Type: application/zip" \
             "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ steps.get-release-id.outputs.id }}/assets?name=${{ steps.package-artifact.outputs.archive }}" \
             --data-binary "@generated/${{ steps.package-artifact.outputs.archive }}"
+
+  publish-docs:
+    needs: [release]
+    if: ${{ needs.release.outputs.published == 'true' }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        env:
+          SKIP_RUST_BUILD: 1
+        run: pnpm install --frozen-lockfile
+
+      - name: Build docs
+        run: pnpm run build:docs
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'docs'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
