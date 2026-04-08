@@ -1,8 +1,0 @@
-# Ignore everything
-*.md
-
-# Don't ignore .gitignore itself
-!.gitignore
-
-# Don't ignore the README file
-!index.md
