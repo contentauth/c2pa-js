@@ -64,7 +64,19 @@ export async function createWorkerManager(
     return id;
   }
 
-  await tx.initWorker(wasm, settingsString);
+  await new Promise<void>((resolve, reject) => {
+    worker.onerror = (e) => {
+      worker.onerror = null;
+      reject(e);
+    };
+    tx.initWorker(wasm, settingsString).then(
+      () => {
+        worker.onerror = null;
+        resolve();
+      },
+      reject
+    );
+  });
 
   return {
     tx,
