@@ -5,17 +5,14 @@
 // accordance with the terms of the Adobe license agreement accompanying
 // it.
 
-use std::{
-    cmp::min,
-    io::{Error as IoError, Read, Result as IoResult, Seek, SeekFrom},
-};
+use std::io::{Error as IoError, Read, Result as IoResult, Seek, SeekFrom};
 
 use js_sys::Uint8Array;
 use web_sys::{Blob, FileReaderSync};
 
 /// Wraps a JS-space Blob and a byte offset to support the implementation of Read + Seek.
 pub struct BlobStream<'a> {
-    offset: usize,
+    offset: u64,
     blob: &'a Blob,
 }
 
@@ -30,13 +27,13 @@ impl Read for BlobStream<'_> {
     fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
         let mut slice: &[u8] = &get_vec_u8_from_blob(self.blob, self.offset, buf.len())?;
         let bytes_read = slice.read(buf)?;
-        self.offset += bytes_read;
+        self.offset += bytes_read as u64;
         Ok(bytes_read)
     }
 }
 
-fn get_vec_u8_from_blob(blob: &Blob, offset: usize, len: usize) -> IoResult<Vec<u8>> {
-    let end = min(blob.size() as usize, offset + len);
+fn get_vec_u8_from_blob(blob: &Blob, offset: u64, len: usize) -> IoResult<Vec<u8>> {
+    let end = (blob.size() as u64).min(offset + len as u64);
     let slice = blob
         .slice_with_f64_and_f64(offset as f64, end as f64)
         .map_err(|err| {
@@ -64,19 +61,35 @@ fn get_vec_u8_from_blob(blob: &Blob, offset: usize, len: usize) -> IoResult<Vec<
 
 impl Seek for BlobStream<'_> {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        match pos {
-            SeekFrom::Start(offset) => {
-                self.offset = offset as usize;
-            }
+        let new_offset: u64 = match pos {
+            SeekFrom::Start(offset) => offset,
             SeekFrom::End(offset) => {
-                self.offset = (self.blob.size() as i64 + offset) as usize;
+                let pos = (self.blob.size() as i64)
+                    .checked_add(offset)
+                    .ok_or_else(|| IoError::other("seek overflow"))?;
+                if pos < 0 {
+                    return Err(IoError::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "seek before start of stream",
+                    ));
+                }
+                pos as u64
             }
             SeekFrom::Current(offset) => {
-                self.offset = (self.offset as i64 + offset) as usize;
+                let pos = (self.offset as i64)
+                    .checked_add(offset)
+                    .ok_or_else(|| IoError::other("seek overflow"))?;
+                if pos < 0 {
+                    return Err(IoError::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "seek before start of stream",
+                    ));
+                }
+                pos as u64
             }
-        }
-
-        Ok(self.offset as u64)
+        };
+        self.offset = new_offset;
+        Ok(self.offset)
     }
 }
 
@@ -161,6 +174,26 @@ mod tests {
 
         assert_eq!(buf, vec![0, 0]);
         assert_eq!(bytes_read, 0)
+    }
+
+    #[wasm_bindgen_test]
+    fn test_crafted_png_seek_does_not_wrap() {
+        // A crafted PNG triggers seek(Current(0xFFFFFFE7)) from offset 41.
+        // On wasm32 with usize (32-bit), this wrapped to offset 16, causing an infinite loop.
+        // With u64 offsets the seek resolves to a large value past EOF and reads 0 bytes.
+        let blob = blob_from_vec(vec![0u8; 41]);
+        let mut stream = BlobStream::new(&blob);
+        stream.seek(SeekFrom::Start(41)).unwrap();
+
+        // 0xFFFFFFE7 as i64 = 4294967271; 41 + 4294967271 = 4294967312 >> blob size
+        let result = stream.seek(SeekFrom::Current(0xFFFF_FFE7_u32 as i64));
+        assert!(result.is_ok(), "seek past EOF must succeed");
+        assert!(result.unwrap() > 41, "offset must not have wrapped");
+
+        // Read must return 0 (past EOF), not loop forever
+        let mut buf = vec![0u8; 4];
+        let n = stream.read(&mut buf).unwrap();
+        assert_eq!(n, 0, "read past EOF must return 0 bytes");
     }
 
     fn blob_from_vec(vec: Vec<u8>) -> Blob {
