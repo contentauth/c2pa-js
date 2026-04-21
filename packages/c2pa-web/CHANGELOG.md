@@ -1,5 +1,13 @@
 # @contentauth/c2pa-web
 
+## 0.7.1
+
+### Patch Changes
+
+- 43febbe: fix possible BlobStream offset overflow
+- Updated dependencies [43febbe]
+  - @contentauth/c2pa-wasm@0.5.1
+
 ## 0.7.0
 
 ### Minor Changes
