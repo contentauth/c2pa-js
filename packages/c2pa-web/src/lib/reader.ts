@@ -98,7 +98,7 @@ export interface Reader {
    * const thumbnailBuffer = await reader.resourceToBytes(activeManifest.thumbnail!.identifier);
    * ```
    */
-  resourceToBytes: (uri: string) => Promise<Uint8Array>;
+  resourceToBytes: (uri: string) => Promise<Uint8Array<ArrayBuffer>>;
 
   /**
    * Dispose of this Reader, freeing the memory it occupied and preventing further use. Call this whenever the Reader is no longer needed.
