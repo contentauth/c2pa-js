@@ -1,5 +1,11 @@
 # @contentauth/c2pa-web
 
+## 0.7.2
+
+### Patch Changes
+
+- 96fbe5e: Narrowed resourceToBytes type to Uint8Array<ArrayBuffer>
+
 ## 0.7.1
 
 ### Patch Changes
