@@ -23,21 +23,27 @@ export interface Signer {
   ) => Promise<Uint8Array<ArrayBuffer>>;
   reserveSize: () => Promise<number>;
   alg: SigningAlg;
+  certs?: Uint8Array<ArrayBuffer>[];
+  directCoseHandling?: boolean;
 }
 
 export interface SerializableSigningPayload {
   reserveSize: number;
   alg: SigningAlg;
+  certs: Uint8Array<ArrayBuffer>[];
+  directCoseHandling: boolean;
 }
 
 export async function getSerializablePayload(
   signer: Signer
 ): Promise<SerializableSigningPayload> {
-  const { alg } = signer;
+  const { alg, certs, directCoseHandling } = signer;
   const reserveSize = await signer.reserveSize();
 
   return {
     reserveSize,
-    alg
+    alg,
+    certs: certs ?? [],
+    directCoseHandling: directCoseHandling ?? true
   };
 }

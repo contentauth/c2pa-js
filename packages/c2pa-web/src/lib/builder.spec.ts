@@ -13,7 +13,9 @@ import { getBlobForAsset } from 'test/utils.js';
 import { Settings } from './settings.js';
 import { createC2pa } from './c2pa.js';
 import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
+import { createTestSigner } from 'test/testSigner.js';
 
+import C_with_CAWG_data_thumbnail from 'test/assets/C_with_CAWG_data_thumbnail.jpg';
 import C_JPG from 'test/assets/C.jpg';
 import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';
 
@@ -182,7 +184,6 @@ describe('builder', () => {
           instance_id: ''
         };
 
-        // Create builder with generateC2paArchive enabled
         const builder = await c2pa.builder.fromDefinition(manifestDefinition);
 
         const blob = await getBlobForAsset(C_JPG);
@@ -385,6 +386,57 @@ describe('builder', () => {
 
         expect(definition.ingredients).toHaveLength(1);
         expect(definition.ingredients?.[0]).toMatchObject(ingredient);
+      });
+
+      describe('sign', () => {
+        test.only('should sign and return bytes representing the signed asset', async ({
+          c2pa
+        }) => {
+          const manifestDefinition: ManifestDefinition = {
+            claim_generator_info: [
+              {
+                name: 'c2pa-web-test',
+                version: '1.0.0'
+              }
+            ],
+            title: 'Test_Manifest',
+            format: 'image/jpeg',
+            assertions: [],
+            ingredients: [],
+            instance_id: ''
+          };
+
+          const builder = await c2pa.builder.fromDefinition(manifestDefinition);
+
+          const blob = await getBlobForAsset(C_with_CAWG_data_thumbnail);
+
+          const testSigner = await createTestSigner();
+
+          const signedBytes = await builder.sign(
+            testSigner,
+            'image/jpeg',
+            blob
+          );
+
+          const reader = await c2pa.reader.fromBlob(
+            'image/jpeg',
+            new Blob([signedBytes])
+          );
+
+          const activeManifest = await reader!.activeManifest();
+
+          expect(activeManifest.claim_generator_info).toMatchObject(
+            manifestDefinition.claim_generator_info!
+          );
+
+          expect(activeManifest.signature_info).toMatchObject({
+            alg: 'Ed25519',
+            cert_serial_number:
+              '638838410810235485828984295321338730070538954823',
+            common_name: 'C2PA Signer',
+            issuer: 'C2PA Test Signing Cert'
+          });
+        });
       });
     });
   });
