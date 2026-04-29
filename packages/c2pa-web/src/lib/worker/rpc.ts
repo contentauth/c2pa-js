@@ -35,6 +35,7 @@ const { createTx, rx } = channel<{
   reader_manifestStore: (readerId: number) => any;
   reader_activeManifest: (readerId: number) => any;
   reader_json: (readerId: number) => string;
+  reader_crJson: (readerId: number) => string;
   reader_resourceToBytes: (
     readerId: number,
     uri: string

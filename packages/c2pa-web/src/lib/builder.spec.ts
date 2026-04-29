@@ -266,7 +266,7 @@ describe('builder', () => {
                   }
                 ]
               },
-              label: 'c2pa.actions'
+              label: 'c2pa.actions.v2'
             }
           ],
           claim_generator_info: [],

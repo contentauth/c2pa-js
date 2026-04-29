@@ -145,6 +145,12 @@ impl WasmReader {
         self.reader.json()
     }
 
+    /// Returns the asset's manifest store as crJSON.
+    #[wasm_bindgen(js_name = crJson)]
+    pub fn crjson(&self) -> String {
+        self.reader.crjson()
+    }
+
     /// Accepts a URI reference to a binary object in the resource store and returns a `js_sys::Uint8Array` containing the resource's bytes.
     #[wasm_bindgen(js_name = resourceToBytes)]
     pub fn resource_to_bytes(&self, uri: &str) -> Result<Uint8Array, JsString> {

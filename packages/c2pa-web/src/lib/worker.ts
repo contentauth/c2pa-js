@@ -63,6 +63,10 @@ rx(
       const reader = readerMap.get(readerId);
       return reader.json();
     },
+    reader_crJson(readerId) {
+      const reader = readerMap.get(readerId);
+      return reader.crJson();
+    },
     reader_resourceToBytes(readerId, uri) {
       const reader = readerMap.get(readerId);
       const buffer = reader.resourceToBytes(uri) as Uint8Array<ArrayBuffer>;

@@ -84,6 +84,11 @@ export interface Reader {
   json: () => Promise<any>;
 
   /**
+   * @returns The asset's manifest store as crJSON.
+   */
+  crJson: () => Promise<any>;
+
+  /**
    * Resolves a URI reference to a binary object (e.g. a thumbnail) in the resource store.
    *
    * @param uri URI of the binary object to resolve.
@@ -222,6 +227,10 @@ function createReader(
       const manifestStore = JSON.parse(json);
 
       return manifestStore;
+    },
+    async crJson(): Promise<any> {
+      const crJson = await tx.reader_crJson(id);
+      return JSON.parse(crJson);
     },
     async resourceToBytes(uri: string): Promise<Uint8Array<ArrayBuffer>> {
       const buffer = await tx.reader_resourceToBytes(id, uri);
