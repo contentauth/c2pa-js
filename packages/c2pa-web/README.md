@@ -61,6 +61,23 @@ const c2pa = await createC2pa();
 
 See also the [API reference documentation](https://contentauth.github.io/c2pa-js/modules/_contentauth_c2pa-web.html).
 
+### Configuring verification settings
+
+You can configure verification behavior globally when creating the SDK:
+
+```typescript
+const c2pa = await createC2pa({
+  wasmSrc,
+  settings: {
+    verify: {
+      verifyTrust: true,
+      verifyAfterReading: true,
+      verifyAfterSign: false
+    }
+  }
+});
+```
+
 ### Reading C2PA manifests
 
 Fetch an image and provide it to the `Reader`:

@@ -21,6 +21,27 @@ describe('settings', () => {
           JSON.stringify({ builder: { generate_c2pa_archive: true } })
         );
       });
+
+      test('should pass through verify settings', async () => {
+        const settingsString = await settingsToWasmJson({
+          verify: {
+            verifyTrust: false,
+            verifyAfterReading: false,
+            verifyAfterSign: false
+          }
+        });
+
+        expect(settingsString).toEqual(
+          JSON.stringify({
+            builder: { generate_c2pa_archive: true },
+            verify: {
+              verify_trust: false,
+              verify_after_reading: false,
+              verify_after_sign: false
+            }
+          })
+        );
+      });
     });
 
     describe('trust', () => {

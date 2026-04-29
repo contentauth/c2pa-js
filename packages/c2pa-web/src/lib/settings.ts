@@ -93,6 +93,10 @@ export interface VerifySettings {
    * Whether to verify the manifest after reading in the Reader. The default value is "true."
    */
   verifyAfterReading?: boolean;
+  /**
+   * Whether to verify the manifest after signing in the Builder.
+   */
+  verifyAfterSign?: boolean;
 }
 
 export interface BuilderSettings {
