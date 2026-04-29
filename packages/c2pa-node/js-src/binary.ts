@@ -23,7 +23,8 @@ let neon: any = null;
 // Get the binary module (loads synchronously on first access)
 export function getNeonBinary() {
   if (neon === null) {
-    neon = require("./index.node");
+    const C2PA_LIBRARY_PATH = process.env.C2PA_LIBRARY_PATH;
+    neon = require(C2PA_LIBRARY_PATH ?? "./index.node");
   }
   return neon;
 }

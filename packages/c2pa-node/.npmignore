@@ -1,0 +1,3 @@
+# Excluded so the Linux binary built during `ci:release` (on ubuntu-latest) doesn't
+# ship to users on other platforms. postinstall downloads the correct binary instead.
+dist/index.node

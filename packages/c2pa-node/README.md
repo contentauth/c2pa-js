@@ -637,3 +637,14 @@ const builder = Builder.new(urlSettings);
 - `generate_c2pa_archive` - Whether to generate C2PA archive format
 
 **Note:** Settings are passed as per-instance configuration. There are no global settings that affect all Readers and Builders.
+
+
+### Build and use custom binary
+**Build rust binary:**
+```
+npm run build:rust
+```
+**Use custom rust binary:**
+```bash
+export C2PA_LIBRARY_PATH=<path-to-binary-folder>/index.node
+```

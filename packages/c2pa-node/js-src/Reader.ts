@@ -24,7 +24,7 @@ import type {
 } from "./types.d.ts";
 
 export class Reader implements ReaderInterface {
-  constructor(private reader: NeonReaderHandle) {}
+  constructor(private reader: NeonReaderHandle) { }
 
   json(): ManifestStore {
     return JSON.parse(getNeonBinary().readerJson.call(this.reader));
@@ -75,7 +75,7 @@ export class Reader implements ReaderInterface {
       return undefined;
     }
 
-    return manifestStore.manifests[activeManifest];
+    return manifestStore.manifests?.[activeManifest];
   }
 
   getHandle(): NeonReaderHandle {

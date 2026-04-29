@@ -470,7 +470,7 @@ describe("Builder", () => {
       const manifest = reader!.json();
 
       // Check that our specific JSON assertion doesn't have escaped characters
-      const activeManifest = manifest.manifests[manifest.active_manifest!];
+      const activeManifest = manifest.manifests![manifest.active_manifest!];
       const fingerprintAssertionData = activeManifest?.assertions?.find(
         (a: any) => a.label === "org.contentauth.fingerprint",
       );
@@ -570,8 +570,8 @@ describe("Builder", () => {
           customNumber: 42,
           customBool: true,
           customObject: {
-              nested: "value",
-              count: 123
+            nested: "value",
+            count: 123
           },
           customArray: ["item1", "item2", "item3"]
         }

@@ -62,11 +62,7 @@ describe("Trustmark", () => {
     testImageWidth = imageInfo.width!;
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     testImageHeight = imageInfo.height!;
-  });
 
-  beforeEach(async () => {
-    // Note: In a real test environment, you would need a valid model file
-    // For now, we'll mock the trustmark creation or handle the case where model doesn't exist
     trustmark = await Trustmark.newTrustmark(trustmarkConfig);
   });
 
