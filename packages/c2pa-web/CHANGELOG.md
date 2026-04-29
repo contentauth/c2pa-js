@@ -1,5 +1,17 @@
 # @contentauth/c2pa-web
 
+## 0.8.0
+
+### Minor Changes
+
+- df2b773: Add `crJson()` to `Reader`, exposing the asset's manifest store as crJSON (backed by `c2pa-rs`'s `Reader::crjson`). Bumps the `c2pa` workspace dependency to `=0.78.6` to pick up the new method; this also updates the default `Builder` actions assertion label from `c2pa.actions` to `c2pa.actions.v2`, and the corresponding test has been updated.
+
+### Patch Changes
+
+- 96fbe5e: Narrowed resourceToBytes type to Uint8Array<ArrayBuffer>
+- Updated dependencies [df2b773]
+  - @contentauth/c2pa-wasm@0.6.0
+
 ## 0.7.1
 
 ### Patch Changes
