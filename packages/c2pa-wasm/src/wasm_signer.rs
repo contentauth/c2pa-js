@@ -87,7 +87,7 @@ impl WasmSigner {
             Some(value) => value,
             None if direct_cose_value.is_undefined() || direct_cose_value.is_null() => true,
             None => {
-                return Err(JsError::new(
+                return Err(JsString::from(
                     "SignerDefinition.directCoseHandling must be a boolean",
                 ))
             }
@@ -203,7 +203,7 @@ fn parse_cert_chain(value: JsValue) -> Result<Vec<Vec<u8>>, JsString> {
 fn parse_cert_entry(value: JsValue, index: usize) -> Result<Vec<Vec<u8>>, JsString> {
     if let Some(pem) = value.as_string() {
         return decode_pem_or_base64(&pem).map_err(|message| {
-            JsString::from(&format!("Failed to decode certificate at index {index}: {message}"))
+            JsString::from(format!("Failed to decode certificate at index {index}: {message}"))
         });
     }
 
@@ -223,7 +223,7 @@ fn parse_cert_entry(value: JsValue, index: usize) -> Result<Vec<Vec<u8>>, JsStri
         return decode_cert_from_bytes(view.to_vec(), index);
     }
 
-    Err(JsString::from(&format!(
+    Err(JsString::from(format!(
         "Unsupported certificate value at index {index}; expected a PEM string or ArrayBuffer",
     )))
 }
@@ -255,14 +255,14 @@ fn parse_tsa_headers(value: JsValue) -> Result<Vec<(String, String)>, JsString> 
 
     for (index, entry) in headers_array.iter().enumerate() {
         if !Array::is_array(&entry) {
-            return Err(JsString::from(&format!(
+            return Err(JsString::from(format!(
                 "SignerDefinition.tsaHeaders[{index}] must be an array with [key, value]",
             )));
         }
 
         let tuple = Array::from(&entry);
         if tuple.length() < 2 {
-            return Err(JsString::from(&format!(
+            return Err(JsString::from(format!(
                 "SignerDefinition.tsaHeaders[{index}] must contain at least two elements",
             )));
         }
@@ -270,14 +270,14 @@ fn parse_tsa_headers(value: JsValue) -> Result<Vec<(String, String)>, JsString> 
         let key = tuple
             .get(0)
             .as_string()
-            .ok_or_else(|| JsString::from(&format!(
+            .ok_or_else(|| JsString::from(format!(
                 "SignerDefinition.tsaHeaders[{index}][0] must be a string",
             )))?;
 
         let value = tuple
             .get(1)
             .as_string()
-            .ok_or_else(|| JsString::from(&format!(
+            .ok_or_else(|| JsString::from(format!(
                 "SignerDefinition.tsaHeaders[{index}][1] must be a string",
             )))?;
 
@@ -320,7 +320,7 @@ fn parse_optional_body(value: JsValue) -> Result<Option<Vec<u8>>, JsString> {
 fn decode_cert_from_bytes(bytes: Vec<u8>, index: usize) -> Result<Vec<Vec<u8>>, JsString> {
     match std::str::from_utf8(&bytes) {
         Ok(text) => decode_pem_or_base64(text).map_err(|message| {
-            JsString::from(&format!(
+            JsString::from(format!(
                 "Failed to decode certificate at index {index}: {message}",
             ))
         }),
