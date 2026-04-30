@@ -64,7 +64,9 @@ export interface TrustSettings {
    */
   trustAnchors?: string | string[];
   /**
-   * Trust store
+   * Additional Extended Key Usage (EKU) OIDs that signing certificates are allowed to have, in addition to the C2PA-required EKUs.
+   *
+   * Provided as a newline-delimited list of OID strings (the contents of a c2pa-rs trust `store.cfg` file).
    *
    * Possible values are: the text content of a .cfg file, a URL to fetch a .cfg file from, or an array of URLs that will be fetched and concatenated.
    */
