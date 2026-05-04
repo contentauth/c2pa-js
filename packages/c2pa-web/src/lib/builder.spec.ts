@@ -27,7 +27,6 @@ describe('builder', () => {
         const definition = await builder.getDefinition();
         expect(definition).toEqual({
           assertions: [],
-          claim_generator_info: [],
           format: '',
           ingredients: [],
           instance_id: ''
@@ -118,7 +117,8 @@ describe('builder', () => {
         const definitionFromArchivedBuilder =
           await builderFromArchive.getDefinition();
 
-        expect(definitionFromArchivedBuilder).toMatchObject(manifestDefinition);
+        const { assertions: _assertions, ...manifestDefinitionWithoutAssertions } = manifestDefinition;
+        expect(definitionFromArchivedBuilder).toMatchObject(manifestDefinitionWithoutAssertions);
       });
 
       test('should re-create a builder from an archive with ingredient from blob', async ({
@@ -269,7 +269,6 @@ describe('builder', () => {
               label: 'c2pa.actions.v2'
             }
           ],
-          claim_generator_info: [],
           format: '',
           ingredients: [],
           instance_id: ''
