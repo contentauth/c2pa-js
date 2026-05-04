@@ -100,6 +100,10 @@ rx(
       const builder = builderMap.get(builderId);
       builder.addAction(action);
     },
+    builder_addRedaction(builderId, uri, reason) {
+      const builder = builderMap.get(builderId);
+      builder.addRedaction(uri, reason);
+    },
     builder_setRemoteUrl(builderId, url) {
       const builder = builderMap.get(builderId);
       builder.setRemoteUrl(url);

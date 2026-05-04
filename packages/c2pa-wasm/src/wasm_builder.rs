@@ -7,7 +7,10 @@
 
 use std::io::Cursor;
 
-use c2pa::{Builder, BuilderIntent, Context, Ingredient, assertions::Action};
+use c2pa::{
+    Builder, BuilderIntent, Context, Ingredient,
+    assertions::{Action, C2paReason},
+};
 use js_sys::{JsString, Uint8Array};
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::Serializer;
@@ -129,6 +132,30 @@ impl WasmBuilder {
     #[wasm_bindgen(js_name = addAction)]
     pub fn add_action(&mut self, action: JsValue) -> Result<(), JsString> {
         let action: Action = serde_wasm_bindgen::from_value(action).map_err(WasmError::from)?;
+
+        self.builder.add_action(action).map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
+    /// Add a redaction for a JUMBF URI with the given reason.
+    ///
+    /// Adds the URI to the builder's redaction list and appends a `c2pa.redacted` action
+    /// with the reason and URI parameter, as required by the C2PA spec.
+    #[wasm_bindgen(js_name = addRedaction)]
+    pub fn add_redaction(&mut self, uri: String, reason: JsValue) -> Result<(), JsString> {
+        let reason: C2paReason = serde_wasm_bindgen::from_value(reason).map_err(WasmError::from)?;
+
+        self.builder
+            .definition
+            .redactions
+            .get_or_insert_with(Vec::new)
+            .push(uri.clone());
+
+        let action = Action::new("c2pa.redacted")
+            .set_reason(reason)
+            .set_parameter("redacted".to_owned(), uri)
+            .map_err(WasmError::from)?;
 
         self.builder.add_action(action).map_err(WasmError::from)?;
 

@@ -12,6 +12,7 @@ import { getSerializablePayload, type Signer } from './signer.js';
 import type {
   Action,
   BuilderIntent,
+  C2paReason,
   Ingredient,
   ManifestDefinition
 } from '@contentauth/c2pa-types';
@@ -91,6 +92,17 @@ export interface Builder {
    * @param blob Blob of the thumbnail bytes
    */
   setThumbnailFromBlob: (format: string, blob: Blob) => Promise<void>;
+
+  /**
+   * Redact an assertion from an ingredient manifest.
+   *
+   * Adds the URI to the builder's redaction list and appends a `c2pa.redacted` action
+   * with the given reason, as required by the C2PA spec.
+   *
+   * @param uri JUMBF URI of the assertion to redact.
+   * @param reason The {@link C2paReason} for the redaction.
+   */
+  addRedaction: (uri: string, reason: C2paReason) => Promise<void>;
 
   /**
    * Add an ingredient to the builder from a definition only.
@@ -234,6 +246,10 @@ function createBuilder(
 
     async addAction(action) {
       await tx.builder_addAction(id, action);
+    },
+
+    async addRedaction(uri, reason) {
+      await tx.builder_addRedaction(id, uri, reason);
     },
 
     async setRemoteUrl(url) {
