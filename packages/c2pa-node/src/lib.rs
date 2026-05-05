@@ -81,6 +81,10 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         "builderUpdateManifestProperty",
         neon_builder::NeonBuilder::update_manifest_property,
     )?;
+    cx.export_function(
+        "builderAddRedaction",
+        neon_builder::NeonBuilder::add_redaction,
+    )?;
 
     // Reader
     cx.export_function("readerNew", neon_reader::NeonReader::new)?;

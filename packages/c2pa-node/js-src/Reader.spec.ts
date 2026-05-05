@@ -53,7 +53,7 @@ describe("Reader", () => {
           "instance_id": "xmp.iid:813ee422-9736-4cdc-9be6-4e35ed8e41cb",
           "thumbnail": {
             "format": "image/jpeg",
-            "identifier": "self#jumbf=c2pa.assertions/c2pa.thumbnail.ingredient.jpeg"
+            "identifier": "self#jumbf=/c2pa/contentauth:urn:uuid:c2677d4b-0a93-4444-876f-ed2f2d40b8cf/c2pa.assertions/c2pa.thumbnail.ingredient.jpeg"
           },
           "relationship": "parentOf",
           "label": "c2pa.ingredient"

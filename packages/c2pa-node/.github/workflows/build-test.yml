@@ -44,6 +44,21 @@ jobs:
           SKIP_RUST_BUILD: 1
         run: pnpm install --frozen-lockfile
 
+      - name: Cache Trustmark models
+        id: cache-trustmark-models
+        uses: actions/cache@v4
+        with:
+          path: tmp/trustmark_models
+          key: trustmark-models-B-v1
+
+      - name: Download Trustmark models
+        if: steps.cache-trustmark-models.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p tmp/trustmark_models
+          BASE="https://cai-watermark.adobe.net/watermarking/trustmark-models"
+          curl -fSL "$BASE/encoder_B.onnx" -o tmp/trustmark_models/encoder_B.onnx
+          curl -fSL "$BASE/decoder_B.onnx" -o tmp/trustmark_models/decoder_B.onnx
+
       - run: pnpm run ci
 
       - run: pnpm run lint

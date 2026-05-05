@@ -213,7 +213,7 @@ version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddb939d66e4ae03cee6091612804ba446b12878410cfa17f785f4dd67d4014e8"
 dependencies = [
- "brotli",
+ "brotli 8.0.1",
  "flate2",
  "futures-core",
  "memchr",
@@ -257,9 +257,9 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
 name = "atree"
-version = "0.5.2"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "132573478eb9ff973c6f75d0ed425ac12da77d266506483345f46743ecc83a98"
+checksum = "239d25181cb40f1955529367ee495e35d03aab4e578028f41e7abc8b21c367a8"
 
 [[package]]
 name = "autocfg"
@@ -399,13 +399,34 @@ dependencies = [
 
 [[package]]
 name = "brotli"
+version = "7.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc97b8f16f944bba54f0433f07e30be199b6dc2bd25937444bbad560bcea29bd"
+dependencies = [
+ "alloc-no-stdlib",
+ "alloc-stdlib",
+ "brotli-decompressor 4.0.3",
+]
+
+[[package]]
+name = "brotli"
 version = "8.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9991eea70ea4f293524138648e41ee89b0b2b12ddef3b255effa43c8056e0e0d"
 dependencies = [
  "alloc-no-stdlib",
  "alloc-stdlib",
- "brotli-decompressor",
+ "brotli-decompressor 5.0.0",
+]
+
+[[package]]
+name = "brotli-decompressor"
+version = "4.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a334ef7c9e23abf0ce748e8cd309037da93e606ad52eb372e4ce327a0dcfbdfd"
+dependencies = [
+ "alloc-no-stdlib",
+ "alloc-stdlib",
 ]
 
 [[package]]
@@ -495,9 +516,9 @@ checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
 
 [[package]]
 name = "c2pa"
-version = "0.78.4"
+version = "0.82.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cae87cdb2ae6070bf628f889d745797071b194ecb31c711b452617308075c5e"
+checksum = "8e96917bbbabdb4dd15030b67e4694b6751d618768fe88ad57f98aad7fd8e751"
 dependencies = [
  "asn1-rs",
  "async-generic",
@@ -505,6 +526,7 @@ dependencies = [
  "atree",
  "base64",
  "bcder",
+ "brotli 7.0.0",
  "byteorder",
  "byteordered",
  "bytes",
@@ -522,6 +544,7 @@ dependencies = [
  "extfmt",
  "getrandom 0.2.16",
  "getrandom 0.3.4",
+ "glob",
  "hex",
  "hex-literal",
  "http",
@@ -1425,6 +1448,12 @@ name = "gimli"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
+
+[[package]]
+name = "glob"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
 name = "group"

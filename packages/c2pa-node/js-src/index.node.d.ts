@@ -14,6 +14,7 @@
 import { Buffer } from "buffer";
 
 import type {
+  C2paReason,
   CallbackSignerConfig,
   ClaimVersion,
   DestinationAsset,
@@ -85,6 +86,7 @@ declare module "index.node" {
     property: string,
     value: string | ClaimVersion,
   ): void;
+  export function builderAddRedaction(uri: string, reason: C2paReason): void;
 
   // Reader methods
   export function readerFromAsset(

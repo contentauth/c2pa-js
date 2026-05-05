@@ -13,6 +13,7 @@
 
 import type {
   BuilderIntent,
+  C2paReason,
   Ingredient,
   Manifest,
 } from "@contentauth/c2pa-types";
@@ -257,6 +258,10 @@ export class Builder implements BuilderInterface {
       property,
       value,
     );
+  }
+
+  addRedaction(uri: string, reason: C2paReason): void {
+    getNeonBinary().builderAddRedaction.call(this.builder, uri, reason);
   }
 
   getHandle(): NeonBuilderHandle {

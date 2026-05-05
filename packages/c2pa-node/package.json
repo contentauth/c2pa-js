@@ -46,7 +46,7 @@
   "license": "MIT",
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
-    "@contentauth/c2pa-types": "^0.4.3",
+    "@contentauth/c2pa-types": "^0.4.4",
     "@eslint/js": "^9.39.4",
     "@neon-rs/cli": "0.1.82",
     "@types/cli-progress": "^3.11.6",

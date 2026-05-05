@@ -18,7 +18,7 @@ use crate::neon_reader::NeonReader;
 use crate::neon_signer::{CallbackSignerConfig, NeonCallbackSigner, NeonLocalSigner};
 use crate::runtime::runtime;
 use crate::utils::parse_settings;
-use c2pa::{Builder, BuilderIntent, Ingredient};
+use c2pa::{assertions::Action, Builder, BuilderIntent, Ingredient};
 use neon::context::Context as NeonContext;
 use neon::prelude::*;
 use neon_serde4;
@@ -60,7 +60,9 @@ impl NeonBuilder {
                 .with_definition(json.as_str())
                 .or_else(|err| cx.throw_error(err.to_string()))?
         } else {
-            Builder::from_json(&json).or_else(|err| cx.throw_error(err.to_string()))?
+            Builder::default()
+                .with_definition(&json)
+                .or_else(|err| cx.throw_error(err.to_string()))?
         };
 
         Ok(cx.boxed(Self {
@@ -73,7 +75,7 @@ impl NeonBuilder {
         let this = cx.this::<JsBox<Self>>()?;
         let intent_str = cx.argument::<JsString>(0)?.value(&mut cx);
         let intent: BuilderIntent = serde_json::from_str(&intent_str)
-            .or_else(|_| cx.throw_error(format!("Invalid intent: {}", intent_str)))?;
+            .or_else(|_| cx.throw_error(format!("Invalid intent: {intent_str}")))?;
         let mut builder = rt.block_on(async { this.builder.lock().await });
         builder.set_intent(intent);
         Ok(cx.undefined())
@@ -127,7 +129,7 @@ impl NeonBuilder {
             // For Json, expect the assertion as a string (JSON) and parse it
             let assertion_str = cx.argument::<JsString>(1)?.value(&mut cx);
             let assertion: serde_json::Value = serde_json::from_str(&assertion_str)
-                .or_else(|err| cx.throw_error(format!("Invalid JSON: {}", err)))?;
+                .or_else(|err| cx.throw_error(format!("Invalid JSON: {err}")))?;
             builder
                 .add_assertion(&label, &assertion)
                 .or_else(|err| cx.throw_error(err.to_string()))?;
@@ -170,6 +172,28 @@ impl NeonBuilder {
 
         Ok(promise)
     }
+
+    pub fn add_redaction(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<Self>>()?;
+        let uri = cx.argument::<JsString>(0)?.value(&mut cx);
+        let reason = cx.argument::<JsString>(1)?.value(&mut cx);
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+        builder
+            .definition
+            .redactions
+            .get_or_insert_with(Vec::new)
+            .push(uri.clone());
+        let action = Action::new("c2pa.redacted")
+            .set_reason(reason)
+            .set_parameter("redacted".to_owned(), uri)
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+        builder
+            .add_action(action)
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+        Ok(cx.undefined())
+    }
+
     pub fn add_ingredient(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let rt = runtime();
         let this = cx.this::<JsBox<Self>>()?;
@@ -254,7 +278,7 @@ impl NeonBuilder {
                 // Block on acquiring the async mutex lock
                 // Settings are automatically applied when runtime() is called
                 let rt = runtime();
-                let mut builder = rt.block_on(async { builder.lock().await });
+                let builder = rt.block_on(async { builder.lock().await });
 
                 dest.write_stream().and_then(|mut dest_stream| {
                     builder.to_archive(&mut dest_stream)?;
@@ -302,7 +326,7 @@ impl NeonBuilder {
                 let builder = if let Some(context) = context_opt {
                     Builder::from_context(context).with_archive(source_stream)?
                 } else {
-                    Builder::from_archive(source_stream)?
+                    Builder::default().with_archive(source_stream)?
                 };
                 Ok(builder)
             })

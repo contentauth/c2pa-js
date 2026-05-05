@@ -46,25 +46,27 @@ pub fn parse_settings(
         Some(js_value) => {
             if js_value.is_a::<JsString, _>(cx) {
                 let settings_string = js_value
-                    .downcast::<JsString, _>(cx).map_err(|_| Error::Signing(format!("{}: Expected settings string", error_prefix)))?
+                    .downcast::<JsString, _>(cx)
+                    .map_err(|_| {
+                        Error::Signing(format!("{error_prefix}: Expected settings string"))
+                    })? 
                     .value(cx);
 
                 // Create context with settings
                 let context = Context::new()
                     .with_settings(settings_string.as_str())
-                    .map_err(|e| Error::Signing(format!("{}: Invalid settings: {}", error_prefix, e)))?;
-
+                    .map_err(|e| {
+                        Error::Signing(format!("{error_prefix}: Invalid settings: {e}"))
+                    })?;
                 Ok(Some(context))
             } else if js_value.is_a::<JsNull, _>(cx) || js_value.is_a::<JsUndefined, _>(cx) {
                 Ok(None)
             } else {
                 Err(Error::Signing(format!(
-                    "{}: Settings must be a string, null, or undefined",
-                    error_prefix
+                    "{error_prefix}: Settings must be a string, null, or undefined",
                 )))
             }
         }
         None => Ok(None),
     }
 }
-

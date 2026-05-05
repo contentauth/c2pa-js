@@ -15,12 +15,13 @@
 import { Buffer } from "buffer";
 import type {
   BuilderIntent,
+  C2paReason,
   Ingredient,
   Manifest,
   ManifestStore,
 } from "@contentauth/c2pa-types";
 
-export type { Ingredient } from "@contentauth/c2pa-types";
+export type { C2paReason, Ingredient } from "@contentauth/c2pa-types";
 
 /**
  * Describes the digital signature algorithms allowed by the C2PA spec
@@ -331,6 +332,15 @@ export interface BuilderInterface {
    * @returns The manifest definition
    */
   updateManifestProperty(property: string, value: string | ClaimVersion): void;
+
+  /**
+   * Redact an assertion from an ingredient manifest and record the reason.
+   * Adds the URI to `definition.redactions` and appends a `c2pa.redacted` action
+   * with `parameters.redacted` pointing to the same URI.
+   * @param uri JUMBF URI of the assertion to redact (e.g. `self#jumbf=/c2pa/{label}/c2pa.assertions/{name}`)
+   * @param reason Why the assertion is being redacted. Use `"c2pa.PII.present"` for PII removal.
+   */
+  addRedaction(uri: string, reason: C2paReason): void;
 
   /**
    * Get the internal handle for use with Neon bindings

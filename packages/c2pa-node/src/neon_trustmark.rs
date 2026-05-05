@@ -242,9 +242,7 @@ pub fn fetch_model(variant: Variant, dir_path: &std::path::Path) -> Result<PathB
                             ))
                         })?;
                     file.write_all(&model_bytes).map_err(|e| {
-                        Error::ModelDownload(format!(
-                            "Failed to write model to {tmp_path:?}: {e}"
-                        ))
+                        Error::ModelDownload(format!("Failed to write model to {tmp_path:?}: {e}"))
                     })?;
                     std::fs::rename(&tmp_path, &model_path).map_err(|e| {
                         Error::ModelDownload(format!(
@@ -271,11 +269,7 @@ pub fn fetch_model(variant: Variant, dir_path: &std::path::Path) -> Result<PathB
     Ok(dir_path.to_path_buf())
 }
 
-fn download_model(
-    rt: &tokio::runtime::Runtime,
-    client: &Client,
-    url: &str,
-) -> Result<Vec<u8>> {
+fn download_model(rt: &tokio::runtime::Runtime, client: &Client, url: &str) -> Result<Vec<u8>> {
     rt.block_on(async {
         let response = client
             .get(url)
