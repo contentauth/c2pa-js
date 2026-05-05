@@ -1,5 +1,14 @@
 # @contentauth/c2pa-web
 
+## 0.8.1
+
+### Patch Changes
+
+- 9e03683: Add redaction logic
+- Updated dependencies [9e03683]
+  - @contentauth/c2pa-types@0.4.4
+  - @contentauth/c2pa-wasm@0.6.1
+
 ## 0.8.0
 
 ### Minor Changes
