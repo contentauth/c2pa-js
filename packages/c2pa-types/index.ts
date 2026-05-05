@@ -64,3 +64,5 @@ export type {
 } from './types/Builder.js';
 
 export type { Action } from './types/Action.js';
+
+export type { C2PaReason as C2paReason } from './types/Action.js';

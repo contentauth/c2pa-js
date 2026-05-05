@@ -9,13 +9,14 @@
 
 import { test, describe, expect } from 'test/methods.js';
 import { ManifestDefinition, Ingredient } from '@contentauth/c2pa-types';
-import { getBlobForAsset } from 'test/utils.js';
+import { getBlobForAsset, createTestSigner } from 'test/utils.js';
 import { Settings } from './settings.js';
 import { createC2pa } from './c2pa.js';
 import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 
 import C_JPG from 'test/assets/C.jpg';
 import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';
+import C_with_CAWG_data from 'test/assets/C_with_CAWG_data.jpg';
 
 describe('builder', () => {
   describe('creation', () => {
@@ -27,7 +28,6 @@ describe('builder', () => {
         const definition = await builder.getDefinition();
         expect(definition).toEqual({
           assertions: [],
-          claim_generator_info: [],
           format: '',
           ingredients: [],
           instance_id: ''
@@ -118,7 +118,8 @@ describe('builder', () => {
         const definitionFromArchivedBuilder =
           await builderFromArchive.getDefinition();
 
-        expect(definitionFromArchivedBuilder).toMatchObject(manifestDefinition);
+        const { assertions: _assertions, ...manifestDefinitionWithoutAssertions } = manifestDefinition;
+        expect(definitionFromArchivedBuilder).toMatchObject(manifestDefinitionWithoutAssertions);
       });
 
       test('should re-create a builder from an archive with ingredient from blob', async ({
@@ -269,11 +270,97 @@ describe('builder', () => {
               label: 'c2pa.actions.v2'
             }
           ],
-          claim_generator_info: [],
           format: '',
           ingredients: [],
           instance_id: ''
         });
+      });
+    });
+
+    describe('addRedaction', () => {
+      test('should redact a thumbnail from an ingredient manifest', async ({
+        c2pa
+      }) => {
+        const blob = await getBlobForAsset(C_with_CAWG_data);
+
+        const originalReader = await c2pa.reader.fromBlob('image/jpeg', blob);
+        const parentLabel = await originalReader!.activeLabel();
+
+        const originalManifest = await originalReader!.activeManifest();
+        expect(originalManifest.thumbnail).toBeDefined();
+        expect(originalManifest.thumbnail).not.toBeNull();
+
+        const thumbnailUri = `self#jumbf=/c2pa/${parentLabel}/c2pa.assertions/c2pa.thumbnail.claim`;
+
+        const builder = await c2pa.builder.new();
+        await builder.setIntent('edit');
+        await builder.addRedaction(thumbnailUri, 'c2pa.PII.present');
+
+        const signer = await createTestSigner();
+        const signedBytes = await builder.sign(signer, 'image/jpeg', blob);
+
+        const readerSettings: Settings = {
+          verify: { verifyAfterReading: false }
+        };
+        const signedReader = await c2pa.reader.fromBlob(
+          'image/jpeg',
+          new Blob([signedBytes], { type: 'image/jpeg' }),
+          readerSettings
+        );
+
+        const manifestStore = await signedReader!.manifestStore();
+        const parentManifest = manifestStore.manifests![parentLabel!];
+        expect(parentManifest.thumbnail).toBeUndefined();
+      });
+
+      test('should redact an assertion from an ingredient manifest', async ({
+        c2pa
+      }) => {
+        const blob = await getBlobForAsset(C_with_CAWG_data);
+
+        // Read the original image to get its active manifest label
+        const originalReader = await c2pa.reader.fromBlob('image/jpeg', blob);
+        const parentLabel = await originalReader!.activeLabel();
+        expect(parentLabel).toBeDefined();
+
+        // C_with_CAWG_data.jpg has 3 assertions: c2pa.actions.v2, cawg.training-mining, cawg.identity
+        const originalStore = await originalReader!.manifestStore();
+        const originalLabels = originalStore.manifests![parentLabel!].assertions!.map(
+          (a) => a.label
+        );
+        expect(originalLabels).toContain('cawg.training-mining');
+
+        // Construct JUMBF URI for the assertion to redact
+        const redactionUri = `self#jumbf=/c2pa/${parentLabel}/c2pa.assertions/cawg.training-mining`;
+
+        const builder = await c2pa.builder.new();
+        await builder.setIntent('edit');
+        await builder.addRedaction(redactionUri, 'c2pa.PII.present');
+
+        const signer = await createTestSigner();
+        const signedBytes = await builder.sign(signer, 'image/jpeg', blob);
+
+        const readerSettings: Settings = {
+          verify: { verifyAfterReading: false }
+        };
+        const signedReader = await c2pa.reader.fromBlob(
+          'image/jpeg',
+          new Blob([signedBytes], { type: 'image/jpeg' }),
+          readerSettings
+        );
+        expect(signedReader).not.toBeNull();
+
+        const activeManifest = await signedReader!.activeManifest();
+        expect(activeManifest.ingredients).toHaveLength(1);
+
+        const manifestStore = await signedReader!.manifestStore();
+        const parentManifest = manifestStore.manifests![parentLabel!];
+        expect(parentManifest).toBeDefined();
+
+        const assertionLabels = parentManifest.assertions!.map((a) => a.label);
+        expect(assertionLabels).not.toContain('cawg.training-mining');
+        expect(assertionLabels).toContain('c2pa.actions.v2');
+        expect(assertionLabels).toContain('cawg.identity');
       });
     });
 
