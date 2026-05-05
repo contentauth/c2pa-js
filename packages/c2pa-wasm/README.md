@@ -55,7 +55,7 @@ cargo install wasm-bindgen-cli@0.2.120
 ```
 
 > [!IMPORTANT] 
-> The version of `wasm-bindgen-cli` **must** match the version of the `wasm-bindgen` dependency in [`Cargo.toml`](./Cargo.toml). A version mismatch will cause build failures with errors like _"rust Wasm file schema version: X.X.X, this binary schema version: Y.Y.Y"_. If you encounter this, check `Cargo.toml` for the correct version and reinstall the CLI accordingly.
+> The version of `wasm-bindgen-cli` **must** match the version of the `wasm-bindgen` dependency in [`Cargo.toml`](https://github.com/contentauth/c2pa-js/blob/main/packages/c2pa-wasm/Cargo.toml). A version mismatch will cause build failures with errors like _"rust Wasm file schema version: X.X.X, this binary schema version: Y.Y.Y"_. If you encounter this, check `Cargo.toml` for the correct version and reinstall the CLI accordingly.
 
 #### wasm-pack
 
