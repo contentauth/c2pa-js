@@ -1,5 +1,11 @@
 # @contentauth/c2pa-wasm
 
+## 0.6.1
+
+### Patch Changes
+
+- 9e03683: Add redaction logic
+
 ## 0.6.0
 
 ### Minor Changes
