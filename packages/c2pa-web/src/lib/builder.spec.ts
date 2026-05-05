@@ -278,6 +278,41 @@ describe('builder', () => {
     });
 
     describe('addRedaction', () => {
+      test('should redact a thumbnail from an ingredient manifest', async ({
+        c2pa
+      }) => {
+        const blob = await getBlobForAsset(C_with_CAWG_data);
+
+        const originalReader = await c2pa.reader.fromBlob('image/jpeg', blob);
+        const parentLabel = await originalReader!.activeLabel();
+
+        const originalManifest = await originalReader!.activeManifest();
+        expect(originalManifest.thumbnail).toBeDefined();
+        expect(originalManifest.thumbnail).not.toBeNull();
+
+        const thumbnailUri = `self#jumbf=/c2pa/${parentLabel}/c2pa.assertions/c2pa.thumbnail.claim`;
+
+        const builder = await c2pa.builder.new();
+        await builder.setIntent('edit');
+        await builder.addRedaction(thumbnailUri, 'c2pa.PII.present');
+
+        const signer = await createTestSigner();
+        const signedBytes = await builder.sign(signer, 'image/jpeg', blob);
+
+        const readerSettings: Settings = {
+          verify: { verifyAfterReading: false }
+        };
+        const signedReader = await c2pa.reader.fromBlob(
+          'image/jpeg',
+          new Blob([signedBytes], { type: 'image/jpeg' }),
+          readerSettings
+        );
+
+        const manifestStore = await signedReader!.manifestStore();
+        const parentManifest = manifestStore.manifests![parentLabel!];
+        expect(parentManifest.thumbnail).toBeUndefined();
+      });
+
       test('should redact an assertion from an ingredient manifest', async ({
         c2pa
       }) => {
