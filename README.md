@@ -1,105 +1,100 @@
 # c2pa-js
 
 > [!NOTE]
-> Looking for the old `c2pa-js` repo? It's available [here](https://github.com/contentauth/c2pa-js-legacy) as `c2pa-js-legacy`. Those packages are now deprecated and implementors wishing to interact with C2PA metadata on the web should use the libraries in this repo instead.
+> The old `c2pa-js` repository is now in [c2pa-js-legacy](https://github.com/contentauth/c2pa-js-legacy) and is deprecated. If you need to work with C2PA metadata in the browser, use the libraries in this repository instead.
 
-A collection of libraries and tools that enable interaction with [C2PA metadata](https://c2pa.org/) in JavaScript. Part of the [Content Authenticity Initiative](https://contentauthenticity.org/).
+JavaScript libraries and tools for working with [C2PA metadata](https://c2pa.org/). This repository is part of the [Content Authenticity Initiative](https://contentauthenticity.org/).
 
-## Using This Monorepo
+## Using this monorepo
 
-This monorepo is managed by [NX](https://nx.dev/getting-started/intro) and [pnpm](https://pnpm.io/).
+This monorepo uses [Nx](https://nx.dev/getting-started/intro) and [pnpm](https://pnpm.io/).
 
 ### Prerequisites
 
-The following must be installed before working with this monorepo:
+Install the following before you work in this repository.
 
 #### Node.js
 
-Node.js **v22 or later** is required (earlier versions may fail with build errors related to unknown file extensions).
+Node.js **v22 or later** is required. Older versions may fail to build because of unrecognized file extensions.
 
-If you use [nvm](https://github.com/nvm-sh/nvm), you can install the required version with:
+If you use [nvm](https://github.com/nvm-sh/nvm), install a supported v22 release (for example, `nvm install 22` or `nvm install 22.22.0`).
 
-```sh
-nvm install <version>
-nvm install 22.22.0
-```
+#### pnpm and Nx
 
-#### pnpm and NX
-
-Install pnpm and NX.
+Install `pnpm` and the Nx CLI globally:
 
 ```sh
 npm install -g pnpm
 npm install -g nx
 ```
 
-#### Rust Toolchain (for building `c2pa-wasm`)
+#### Rust toolchain for building `c2pa-wasm`
 
-If you plan to build from source (rather than only consuming published packages), the Rust toolchain and additional prerequisites are required. See [`c2pa-wasm`'s prerequisites](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm#prerequisites) for full details.
+To build from source instead of using published packages only, you need the Rust toolchain and other prerequisites. See [Prerequisites in `packages/c2pa-wasm/README.md`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm#prerequisites).
 
-### Recommended Setup Order
+### Recommended setup order
 
-1. Install Node.js, pnpm, and NX (see above).
-2. Install the Rust toolchain and `c2pa-wasm` prerequisites (see [`packages/c2pa-wasm/README.md`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm#prerequisites)).
-3. Run `pnpm install` from the repo root to install the project's dependencies.
+1. Install Node.js, `pnpm`, and the Nx CLI (see the previous sections).
+2. Install the Rust toolchain and `c2pa-wasm` prerequisites ([`packages/c2pa-wasm/README.md`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm#prerequisites)).
+3. From the repository root, run `pnpm install` to install dependencies.
 
-### Running Commands with Nx
+### Running commands with Nx
 
-Commands are run in the following format: `nx [target] [project]`, e.g.:
+Run tasks as `nx <target> <project>`. For example:
 
 ```sh
-nx build c2pa-web # This will build c2pa-web and all of its dependencies
-nx test c2pa-web # This will build and run the tests defined in the c2pa-web package
-nx lint c2pa-web # This will run ESLint on the c2pa-web package
-nx lint c2pa-web --fix # This will run ESLint on the c2pa-web package and fix any errors
+nx build c2pa-web   # Builds c2pa-web and its dependencies
+nx test c2pa-web    # Builds and runs tests for c2pa-web
+nx lint c2pa-web    # Runs ESLint on c2pa-web
+nx lint c2pa-web --fix   # Runs ESLint and applies fixes
 ```
 
-### Committing Changes for Release
+### Committing changes for a release
 
-If your changes should be part of a release, you will need to create and commit a changeset.
+Include a changeset when your change should ship in a release.
 
-To create a new changeset, from the root repo directory, run:
+From the repository root:
 
 ```sh
 pnpm changeset
 ```
 
-Follow the prompts to bump the version numbers of affected packages as appropriate. This will generate a new changeset markdown file in the `.changeset` directory, which should then be committed as part of your PR.
+Follow the prompts to bump affected packages. The command adds a Markdown file under `.changeset/`; commit that file with your pull request.
 
-Once the PR is merge into `main`, the changeset bot will create a release PR, which will then be reviewed, merged, and result in a new release being published.
+After the pull request merges to `main`, the changeset bot opens a release pull request. When that pull request merges, a new release is published.
 
-## Packages
+## Directory layout
 
-Please see the individual package directories for more detailed information.
+See each package directory for full details.
 
-### `packages/`
+### packages
 
-Published libraries intended for production use.
+The `/packages` directory contains libraries published for production use.
 
-#### [c2pa-web](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-web)
+#### c2pa-web
 
-The SDK for interacting with [C2PA metadata](https://c2pa.org/) on the web.
+SDK for [C2PA](https://c2pa.org/) metadata in the browser. Source: [`packages/c2pa-web`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-web).
 
-#### [c2pa-wasm](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm)
+#### c2pa-wasm
 
-The WebAssembly wrapper for [c2pa-rs](https://github.com/contentauth/c2pa-rs) that powers c2pa-web, built with [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen). While these bindings can be used directly, most users will prefer the convenience of c2pa-web.
+WebAssembly bindings for [`c2pa-rs`](https://github.com/contentauth/c2pa-rs), built with [`wasm-bindgen`](https://github.com/wasm-bindgen/wasm-bindgen). They power `c2pa-web`; most applications should use `c2pa-web` instead of calling the bindings directly. Source: [`packages/c2pa-wasm`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm).
 
-#### [c2pa-types](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-types)
+#### c2pa-types
 
-Exports TypeScript types autogenerated from [c2pa-rs](https://github.com/contentauth/c2pa-rs) structs, used by c2pa-web.
+TypeScript types generated from `c2pa-rs` structs for use by `c2pa-web`. Source: [`packages/c2pa-types`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-types).
 
-### `tools/`
+### tools
 
-Other tools that provide utilities for local development.
+The `/tools` directory contains utilities for local development.
 
-#### [testbed](https://github.com/contentauth/c2pa-js/tree/main/tools/testbed)
+#### testbed
 
-A minimal website that can be used to view c2pa-web output and as a sandbox for local development.
+Minimal site for inspecting `c2pa-web` output and experimenting locally. Source: [`tools/testbed`](https://github.com/contentauth/c2pa-js/tree/main/tools/testbed).
 
-#### [nx-wasm-bindgen](https://github.com/contentauth/c2pa-js/tree/main/tools/nx-wasm-bindgen)
+#### nx-wasm-bindgen
 
-A custom [NX executor](https://nx.dev/concepts/executors-and-configurations) that contains the logic for building c2pa-wasm using [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen).
+Custom [Nx executor](https://nx.dev/concepts/executors-and-configurations) that builds `c2pa-wasm` with `wasm-bindgen`. Source: [`tools/nx-wasm-bindgen`](https://github.com/contentauth/c2pa-js/tree/main/tools/nx-wasm-bindgen).
 
 ## License
 
-This project is licensed under the terms of the [MIT license](https://github.com/contentauth/c2pa-js-v2/blob/main/LICENSE).
+This project is licensed under the [MIT license](https://github.com/contentauth/c2pa-js/blob/main/LICENSE).

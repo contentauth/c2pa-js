@@ -288,7 +288,7 @@ For the full list, see the [API reference](https://contentauth.github.io/c2pa-js
 
 ### Prerequisites
 
-Ensure the repo-wide prerequisites are installed.:
+Ensure the repo-wide prerequisites are installed:
 
 - ([Node.js](https://nodejs.org/) v22+
 - [NX](https://nx.dev/getting-started/intro)
