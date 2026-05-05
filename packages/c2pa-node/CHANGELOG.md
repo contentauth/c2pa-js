@@ -1,5 +1,13 @@
 # @contentauth/c2pa-node
 
+## 0.5.5
+
+### Patch Changes
+
+- 1bdc7bf: Update trustmark model url
+- f40b882: Fix x86 mac release. Allow custom index.node
+- 4ed8b65: Add method for adding redactions to builder
+
 ## 0.5.4
 
 ### Patch Changes
