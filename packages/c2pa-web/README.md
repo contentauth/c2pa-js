@@ -12,7 +12,7 @@ npm install @contentauth/c2pa-web
 
 ## Importing the library
 
-There are two ways to import the library, due to [specific requirements](https://developer.mozilla.org/en-US/docs/WebAssembly/Guides/Loading_and_running) for handling Wasm modules:
+Due to [specific requirements](https://developer.mozilla.org/en-US/docs/WebAssembly/Guides/Loading_and_running) for handling Wasm modules, there are two ways to import the library:
 
 - Using a separate Wasm binary, which provides better performance.
 - Using an inline Wasm binary, which is more convenient.
@@ -22,7 +22,7 @@ There are two ways to import the library, due to [specific requirements](https:/
 The recommended way to import the library is to fetch the Wasm binary over the network at runtime.
 This requires that the Wasm binary be hosted separately.
 
-With Vite:
+Use a solution appropriate to your tooling; for example, using Vite:
 
 ```typescript
 import { createC2pa } from '@contentauth/c2pa-web';
@@ -32,7 +32,7 @@ import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 const c2pa = createC2pa({ wasmSrc });
 ```
 
-Use a solution appropriate to your tooling. Alternatively, you can request the binary from a CDN:
+Alternatively, you can request the binary from a CDN:
 
 ```typescript
 import { createC2pa } from '@contentauth/c2pa-web';
@@ -288,9 +288,15 @@ For the full list, see the [API reference](https://contentauth.github.io/c2pa-js
 
 ### Prerequisites
 
-Ensure the repo-wide prerequisites ([Node.js](https://nodejs.org/) v22+, [NX](https://nx.dev/getting-started/intro), and [pnpm](https://pnpm.io/)) are installed. See the [top-level README](https://github.com/contentauth/c2pa-js#prerequisites) for details.
+Ensure the repo-wide prerequisites are installed:
 
-[`c2pa-wasm`'s prerequisites](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm#prerequisites) must also be installed.
+- [Node.js](https://nodejs.org/) v22+
+- [NX](https://nx.dev/getting-started/intro)
+- [pnpm](https://pnpm.io/)
+
+See the [c2pa-js README](../../README.md#prerequisites) for details.
+
+Then, install [the additional prerequisites for `c2pa-wasm`](../c2pa-wasm/README.md#prerequisites).
 
 ### Building
 
