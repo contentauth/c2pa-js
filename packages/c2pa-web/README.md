@@ -61,6 +61,41 @@ const c2pa = await createC2pa();
 
 See also the [API reference documentation](https://contentauth.github.io/c2pa-js/modules/_contentauth_c2pa-web.html).
 
+### Configuring verification settings
+
+You can configure verification behavior globally when creating the SDK:
+
+```typescript
+const c2pa = await createC2pa({
+  wasmSrc,
+  settings: {
+    verify: {
+      verifyTrust: true,
+      verifyAfterReading: true,
+      verifyAfterSign: false
+    }
+  }
+});
+```
+
+### Configuring trust anchors and allowed EKUs
+
+To validate signing certificates against your own trust anchors and a custom list of allowed Extended Key Usage (EKU) OIDs:
+
+```typescript
+const c2pa = await createC2pa({
+  wasmSrc,
+  settings: {
+    trust: {
+      // PEM bundle of trusted root certificate(s).
+      trustAnchors: rootCertPem,
+      // Newline-delimited list of additional EKU OIDs that signing certificates may have.
+      trustConfig: additionalEkus
+    }
+  }
+});
+```
+
 ### Reading C2PA manifests
 
 Fetch an image and provide it to the `Reader`:
