@@ -77,6 +77,14 @@ export interface TrustSettings {
   allowedList?: string | string[];
 }
 
+const TRUST_SETTINGS_KEY_MAP: Record<keyof TrustSettings, true> = {
+  userAnchors: true,
+  trustAnchors: true,
+  trustConfig: true,
+  allowedList: true
+};
+const TRUST_SETTINGS_KEYS = Object.keys(TRUST_SETTINGS_KEY_MAP) as (keyof TrustSettings)[];
+
 export interface CawgTrustSettings extends TrustSettings {
   /**
    * Enable CAWG trust validation. The default value is "true."
@@ -111,6 +119,9 @@ const DEFAULT_SETTINGS: Settings = {
     generateC2paArchive: true
   }
 };
+
+export const MAX_RESPONSE_SIZE = 1 * 1024 * 1024; // 1MB
+export const MAX_URLS_PER_TRUST_SETTING = 25;
 
 /**
  * Resolves any trust list URLs and serializes the resulting object into a JSON string of the structure expected by c2pa-rs.
@@ -161,9 +172,16 @@ function snakeCase(str: string): string {
  */
 async function resolveTrustSettings(settings: TrustSettings): Promise<void> {
   try {
-    const promises = Object.entries(settings).map(async ([key, val]) => {
-      if (Array.isArray(val)) {
-        const promises = val.map(async (val) => {
+    const promises = Object.entries(settings)
+    .filter(([key]) => TRUST_SETTINGS_KEYS.includes(key as keyof TrustSettings))
+    .map(async ([key, val]) => {
+      if (val && typeof val === 'object' && Array.isArray(val)) {
+        // Only fetch the first MAX_URLS_PER_TRUST_SETTING URLs to prevent excessive resource consumption.
+        const promises = val.slice(0, MAX_URLS_PER_TRUST_SETTING).map(async (val) => {
+          if (typeof val !== 'string') {
+            throw new Error('Expected a string value for array item');
+          }
+
           const text = await fetchResource(val);
 
           if (shouldValidateKey(key) && !containsCerts(text)) {
@@ -176,7 +194,7 @@ async function resolveTrustSettings(settings: TrustSettings): Promise<void> {
         const result = await Promise.all(promises);
         const combined = result.join('');
         settings[key as keyof TrustSettings] = combined;
-      } else if (val && isUrl(val)) {
+      } else if (val && typeof val === 'string' && isUrl(val)) {
         const text = await fetchResource(val);
 
         if (shouldValidateKey(key) && !containsCerts(text)) {
@@ -206,6 +224,10 @@ const isUrl = (str: string): boolean => str.startsWith('http');
 async function fetchResource(url: string): Promise<string> {
   const res = await fetch(url);
   const text = await res.text();
+
+  if (text.length > MAX_RESPONSE_SIZE) {
+    throw new Error(`Response from ${url} is too large. Max size is ${MAX_RESPONSE_SIZE} bytes.`);
+  }
 
   return text;
 }

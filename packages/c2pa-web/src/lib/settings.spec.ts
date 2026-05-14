@@ -9,7 +9,7 @@
 
 import { test, describe, expect } from 'test/methods.js';
 import { http, HttpResponse } from 'msw';
-import { settingsToWasmJson } from './settings.js';
+import { settingsToWasmJson, MAX_RESPONSE_SIZE, MAX_URLS_PER_TRUST_SETTING } from './settings.js';
 
 describe('settings', () => {
   describe('settingsToWasmJson', () => {
@@ -158,6 +158,84 @@ describe('settings', () => {
         const settingsStringPromise = settingsToWasmJson({
           trust: {
             userAnchors: 'http://userAnchorsShouldFail'
+          }
+        });
+
+        await expect(settingsStringPromise).rejects.toThrow(
+          'Failed to resolve trust settings.'
+        );
+      });
+
+      test('should not fetch URLs for unknown keys not defined in TrustSettings', async ({
+        requestMock
+      }) => {
+        let unknownKeyFetched = false;
+        requestMock.use(
+          http.get('http://unknownKey', () => {
+            unknownKeyFetched = true;
+            return HttpResponse.text('should not be fetched');
+          }),
+          http.get('http://trustAnchors', () =>
+            HttpResponse.text(
+              '-----BEGIN CERTIFICATE-----bar-----END CERTIFICATE-----'
+            )
+          )
+        );
+
+        const settingsString = await settingsToWasmJson({
+          trust: {
+            trustAnchors: 'http://trustAnchors',
+            ...(({ unknownKey: 'http://unknownKey' }) as any)
+          }
+        });
+
+        expect(unknownKeyFetched).toBe(false);
+        expect(settingsString).toContain('trust_anchors');
+      });
+
+      test('should not crash when a CawgTrustSettings boolean field is present', async () => {
+        const settingsStringPromise = settingsToWasmJson({
+          cawgTrust: {
+            verifyTrustList: true
+          }
+        });
+
+        await expect(settingsStringPromise).resolves.not.toThrow();
+      });
+
+      test('should only fetch the first MAX_URLS_PER_TRUST_SETTING URLs in an array', async ({
+        requestMock
+      }) => {
+        const CERT = '-----BEGIN CERTIFICATE-----x-----END CERTIFICATE-----';
+        const fetchedUrls: string[] = [];
+
+        requestMock.use(
+          http.get(/http:\/\/anchor-\d+/, ({ request }) => {
+            fetchedUrls.push(request.url);
+            return HttpResponse.text(CERT);
+          })
+        );
+
+        const urls = Array.from({ length: MAX_URLS_PER_TRUST_SETTING + 1 }, (_, i) => `http://anchor-${i}`);
+
+        await settingsToWasmJson({
+          trust: { userAnchors: urls }
+        });
+
+        expect(fetchedUrls.length).toBe(MAX_URLS_PER_TRUST_SETTING);
+      });
+
+      test('should throw when a fetched response exceeds the size limit', async ({
+        requestMock
+      }) => {
+        const oversizedBody = 'x'.repeat(MAX_RESPONSE_SIZE + 1);
+        requestMock.use(
+          http.get('http://oversized', () => HttpResponse.text(oversizedBody))
+        );
+
+        const settingsStringPromise = settingsToWasmJson({
+          trust: {
+            trustConfig: 'http://oversized'
           }
         });
 
