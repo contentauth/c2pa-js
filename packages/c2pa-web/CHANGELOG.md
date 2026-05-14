@@ -1,5 +1,12 @@
 # @contentauth/c2pa-web
 
+## 0.8.2
+
+### Patch Changes
+
+- d4ee9cd: Add checks for valid trust keys, response size, and URL fetch limits
+- c3421cb: Add null check to avoid potential crashes.
+
 ## 0.8.1
 
 ### Patch Changes
