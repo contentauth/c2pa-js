@@ -152,7 +152,7 @@ function snakeCaseify(object: SettingsObjectType): SettingsObjectType {
   const formattedObject = Object.entries(object).reduce(
     (formattedObject, [key, val]) => {
       formattedObject[snakeCase(key)] =
-        typeof val === 'object' ? snakeCaseify(val) : val;
+        typeof val === 'object' && val !== null ? snakeCaseify(val) : val;
       return formattedObject;
     },
     {} as SettingsObjectType
