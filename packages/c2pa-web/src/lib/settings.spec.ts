@@ -21,6 +21,30 @@ describe('settings', () => {
           JSON.stringify({ builder: { generate_c2pa_archive: true } })
         );
       });
+
+      test('should not throw when a settings value is null', async () => {
+        // typeof null === 'object' in JS — without a null guard this crashes
+        const settingsString = await settingsToWasmJson({
+          verify: null as any
+        });
+
+        expect(settingsString).toEqual(
+          JSON.stringify({ builder: { generate_c2pa_archive: true }, verify: null })
+        );
+      });
+
+      test('should not throw when a nested settings value is null', async () => {
+        const settingsString = await settingsToWasmJson({
+          trust: { userAnchors: null as any }
+        });
+
+        expect(settingsString).toEqual(
+          JSON.stringify({
+            builder: { generate_c2pa_archive: true },
+            trust: { user_anchors: null }
+          })
+        );
+      });
     });
 
     describe('trust', () => {
