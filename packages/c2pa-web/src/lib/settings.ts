@@ -121,7 +121,6 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 export const MAX_RESPONSE_SIZE = 1 * 1024 * 1024; // 1MB
-export const MAX_URLS_PER_TRUST_SETTING = 25;
 
 /**
  * Resolves any trust list URLs and serializes the resulting object into a JSON string of the structure expected by c2pa-rs.
@@ -176,8 +175,7 @@ async function resolveTrustSettings(settings: TrustSettings): Promise<void> {
     .filter(([key]) => TRUST_SETTINGS_KEYS.includes(key as keyof TrustSettings))
     .map(async ([key, val]) => {
       if (val && typeof val === 'object' && Array.isArray(val)) {
-        // Only fetch the first MAX_URLS_PER_TRUST_SETTING URLs to prevent excessive resource consumption.
-        const promises = val.slice(0, MAX_URLS_PER_TRUST_SETTING).map(async (val) => {
+        const promises = val.map(async (val) => {
           if (typeof val !== 'string') {
             throw new Error('Expected a string value for array item');
           }

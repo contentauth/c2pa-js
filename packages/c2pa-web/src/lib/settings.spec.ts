@@ -227,28 +227,6 @@ describe('settings', () => {
         await expect(settingsStringPromise).resolves.not.toThrow();
       });
 
-      test('should only fetch the first MAX_URLS_PER_TRUST_SETTING URLs in an array', async ({
-        requestMock
-      }) => {
-        const CERT = '-----BEGIN CERTIFICATE-----x-----END CERTIFICATE-----';
-        const fetchedUrls: string[] = [];
-
-        requestMock.use(
-          http.get(/http:\/\/anchor-\d+/, ({ request }) => {
-            fetchedUrls.push(request.url);
-            return HttpResponse.text(CERT);
-          })
-        );
-
-        const urls = Array.from({ length: MAX_URLS_PER_TRUST_SETTING + 1 }, (_, i) => `http://anchor-${i}`);
-
-        await settingsToWasmJson({
-          trust: { userAnchors: urls }
-        });
-
-        expect(fetchedUrls.length).toBe(MAX_URLS_PER_TRUST_SETTING);
-      });
-
       test('should throw when a fetched response exceeds the size limit', async ({
         requestMock
       }) => {
