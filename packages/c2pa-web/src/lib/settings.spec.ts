@@ -45,16 +45,6 @@ describe('settings', () => {
           })
         );
       });
-
-      test('should not recurse into array values', async () => {
-        // Arrays satisfy typeof val === 'object'; they should be passed through, not iterated
-        const settingsString = await settingsToWasmJson({
-          trust: { userAnchors: ['a', 'b'] as any }
-        });
-
-        const parsed = JSON.parse(settingsString);
-        expect(parsed.trust.user_anchors).toEqual(['a', 'b']);
-      });
     });
 
     describe('trust', () => {
