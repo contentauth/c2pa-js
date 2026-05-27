@@ -4,4 +4,4 @@
 '@contentauth/c2pa-web': patch
 ---
 
-Bumpt c2pa-rs version to v0.85.0
+Bump c2pa-rs version to v0.85.0
