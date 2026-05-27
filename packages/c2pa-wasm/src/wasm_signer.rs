@@ -73,7 +73,8 @@ impl WasmSigner {
     }
 }
 
-#[async_trait(?Send)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl AsyncSigner for WasmSigner {
     async fn sign(&self, data: Vec<u8>) -> C2paResult<Vec<u8>> {
         let len: u32 = data.len().try_into().unwrap();
