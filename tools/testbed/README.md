@@ -6,7 +6,7 @@ The `testbed` app is a minimal local app for experimenting with [`c2pa-web`](../
 
 Install these before running the testbed. Full details are in the [c2pa-js README](../../README.md#prerequisites).
 
-- **Node.js** v22 or later
+- **Node.js** v22.22 or later
 - **pnpm** and the **Nx** CLI (`npm install -g pnpm nx`)
 - **Rust toolchain** and related tools to build `c2pa-wasm` from source:
   - Rust 1.88.0+ with the `wasm32-unknown-unknown` target

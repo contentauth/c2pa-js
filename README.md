@@ -15,9 +15,9 @@ Install the following before you work in this repository.
 
 #### Node.js
 
-Node.js **v22 or later** is required. Older versions may fail to build because of unrecognized file extensions.
+Node.js **v22.22.0 or later** is required. Older versions may fail to build because of unrecognized file extensions.
 
-If you use [nvm](https://github.com/nvm-sh/nvm), install a supported v22 release (for example, `nvm install 22` or `nvm install 22.22.0`).
+If you use [nvm](https://github.com/nvm-sh/nvm), install a supported v22 release (for example, `nvm install 22.22.0`).
 
 #### pnpm and Nx
 
