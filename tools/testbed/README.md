@@ -1,8 +1,6 @@
-# testbed
+# Testbed app
 
-Minimal local app for experimenting with [`c2pa-web`](../../packages/c2pa-web) and inspecting C2PA manifest data in the browser.
-
-Drop an image onto the page. The app reads its C2PA manifest store using `c2pa-web` and logs the result (plus timing) to the browser developer console.
+The `testbed` app is a minimal local app for experimenting with [`c2pa-web`](../../packages/c2pa-web) and inspecting C2PA manifest data in the browser.
 
 ## Prerequisites
 
@@ -26,7 +24,7 @@ pnpm install
 nx build c2pa-web
 ```
 
-`nx build c2pa-web` builds `c2pa-wasm` and other dependencies the testbed needs at runtime.
+`nx build c2pa-web` builds `c2pa-wasm` and other dependencies the app needs at runtime.
 
 ## Run
 

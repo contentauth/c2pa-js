@@ -10,7 +10,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "echo \"No tests to run\" && exit 0",
-    "build": "zx build.ts"
+    "build": "zx build.mjs"
   },
   "files": [
     "dist/**/*",
