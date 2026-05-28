@@ -1,5 +1,16 @@
 # @contentauth/c2pa-web
 
+## 0.8.2
+
+### Patch Changes
+
+- d4ee9cd: Add checks for valid trust keys, response size, and URL fetch limits
+- c3421cb: Add null check to avoid potential crashes.
+- dedccb0: Bump c2pa-rs version to v0.85.0.
+- Updated dependencies [dedccb0]
+  - @contentauth/c2pa-wasm@0.6.2
+  - @contentauth/c2pa-types@0.4.5
+
 ## 0.8.1
 
 ### Patch Changes
