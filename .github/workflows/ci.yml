@@ -22,8 +22,9 @@ jobs:
       - uses: ./.github/actions/install-dependencies
         name: Install dependencies
 
-      # ubuntu-24.04 runner has google-chrome-stable + chromedriver pre-installed.
-      # Point playwright at system Chrome to skip the 167MB download that hangs post-extract.
+      # Install chrome + chromedriver for vitest + wasm-pack test
+      - name: Install headless Chromium + Chromedriver
+        working-directory: ./packages/c2pa-web
+        run: pnpm exec playwright install --with-deps
+
       - run: pnpm ci:check
-        env:
-          PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
