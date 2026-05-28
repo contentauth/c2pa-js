@@ -25,6 +25,6 @@ jobs:
       # Install chrome + chromedriver for vitest + wasm-pack test
       - name: Install headless Chromium + Chromedriver
         working-directory: ./packages/c2pa-web
-        run: pnpm exec playwright install --with-deps
+        run: pnpm exec playwright install --with-deps chromium
 
       - run: pnpm ci:check
