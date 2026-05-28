@@ -22,10 +22,8 @@ jobs:
       - uses: ./.github/actions/install-dependencies
         name: Install dependencies
 
-      # Install playwright's chromium for vitest browser tests
-      # wasm-pack uses system chromedriver (pre-installed on ubuntu-24.04 runner)
-      - name: Install Playwright Chromium
-        working-directory: ./packages/c2pa-web
-        run: pnpm exec playwright install chromium
-
+      # ubuntu-24.04 runner has google-chrome-stable + chromedriver pre-installed.
+      # Point playwright at system Chrome to skip the 167MB download that hangs post-extract.
       - run: pnpm ci:check
+        env:
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
