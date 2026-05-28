@@ -1,5 +1,11 @@
 # @contentauth/c2pa-types
 
+## 0.4.5
+
+### Patch Changes
+
+- dedccb0: Bump c2pa-rs version to v0.85.0.
+
 ## 0.4.4
 
 ### Patch Changes
