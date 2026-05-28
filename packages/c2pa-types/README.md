@@ -6,7 +6,7 @@ Exports TypeScript types used by c2pa-web that are auto-generated from [c2pa-rs]
 
 Ensure the repo-wide prerequisites are installed:
 
-- [Node.js](https://nodejs.org/) v22+
+- [Node.js](https://nodejs.org/) v22.22+
 - [NX](https://nx.dev/getting-started/intro)
 - [pnpm](https://pnpm.io/)
 
