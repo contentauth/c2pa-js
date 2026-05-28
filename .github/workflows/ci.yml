@@ -22,9 +22,38 @@ jobs:
       - uses: ./.github/actions/install-dependencies
         name: Install dependencies
 
+      - name: Debug - system info
+        run: |
+          echo "=== Ubuntu version ==="
+          lsb_release -a
+          echo "=== Available browsers ==="
+          which google-chrome-stable || echo "google-chrome-stable: not found"
+          which chromium-browser || echo "chromium-browser: not found"
+          which chromedriver || echo "chromedriver: not found"
+          google-chrome-stable --version || true
+          chromedriver --version || true
+          echo "=== Node/pnpm/wasm-pack ==="
+          node --version
+          pnpm --version
+          which wasm-pack && wasm-pack --version || echo "wasm-pack: not found"
+          echo "=== PLAYWRIGHT_BROWSERS_PATH ==="
+          echo "${PLAYWRIGHT_BROWSERS_PATH:-not set}"
+
       # Install chrome + chromedriver for vitest + wasm-pack test
       - name: Install headless Chromium + Chromedriver
         working-directory: ./packages/c2pa-web
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps
+        timeout-minutes: 10
 
-      - run: pnpm ci:check
+      - name: Debug - playwright install result
+        run: |
+          echo "=== Playwright browser paths ==="
+          pnpm exec playwright --version || true
+          ls -la ~/.cache/ms-playwright/ || echo "~/.cache/ms-playwright not found"
+          echo "=== Process list after install ==="
+          ps aux | grep -E "chrome|chromium|firefox|webkit|playwright" | grep -v grep || echo "none"
+        working-directory: ./packages/c2pa-web
+
+      - name: Debug - run ci:check
+        run: pnpm ci:check
+        timeout-minutes: 20
