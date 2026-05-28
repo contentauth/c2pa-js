@@ -19,7 +19,8 @@ const runExecutor: PromiseExecutor<TestExecutorSchema> = async (
   const $$ = $({ cwd: projectPath });
 
   try {
-    await $$`wasm-pack test --headless --chrome`;
+    const chromeArgs = process.env.CI ? ['--', '--no-sandbox', '--disable-setuid-sandbox'] : [];
+    await $$`wasm-pack test --headless --chrome ${chromeArgs}`;
 
     return {
       success: true
