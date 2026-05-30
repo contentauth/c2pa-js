@@ -190,6 +190,26 @@ describe('settings', () => {
         );
       });
 
+      test('should report a meaningful error when a trust URL returns a non-OK HTTP response', async ({
+        requestMock
+      }) => {
+        requestMock.use(
+          http.get('http://userAnchors429', () =>
+            new HttpResponse(null, { status: 429, statusText: 'Too Many Requests' })
+          )
+        );
+
+        const settingsStringPromise = settingsToWasmJson({
+          trust: {
+            userAnchors: 'http://userAnchors429'
+          }
+        });
+
+        await expect(settingsStringPromise).rejects.toThrow(
+          'Failed to fetch http://userAnchors429: 429'
+        );
+      });
+
       test('should not fetch URLs for unknown keys not defined in TrustSettings', async ({
         requestMock
       }) => {
