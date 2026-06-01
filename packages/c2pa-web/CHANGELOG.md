@@ -1,5 +1,11 @@
 # @contentauth/c2pa-web
 
+## 0.8.3
+
+### Patch Changes
+
+- 657c09a: Improve error handling when resolving trust anchors.
+
 ## 0.8.2
 
 ### Patch Changes
