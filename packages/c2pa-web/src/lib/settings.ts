@@ -207,7 +207,8 @@ async function resolveTrustSettings(settings: TrustSettings): Promise<void> {
 
     await Promise.all(promises);
   } catch (e) {
-    throw new Error('Failed to resolve trust settings.', { cause: e });
+    const message = e instanceof Error ? e.message : String(e);
+    throw new Error(`Failed to resolve trust settings. ${message}`, { cause: e });
   }
 }
 
@@ -220,7 +221,18 @@ const containsCerts = (content: string): boolean =>
 const isUrl = (str: string): boolean => str.startsWith('http');
 
 async function fetchResource(url: string): Promise<string> {
-  const res = await fetch(url);
+  let res: Response;
+  try {
+    res = await fetch(url);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    throw new Error(`Network error fetching ${url}: ${message}`, { cause: e });
+  }
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
+  }
+
   const text = await res.text();
 
   if (text.length > MAX_RESPONSE_SIZE) {
