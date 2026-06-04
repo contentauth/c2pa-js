@@ -1,5 +1,11 @@
 # @contentauth/c2pa-web
 
+## 0.9.0
+
+### Minor Changes
+
+- 39ea594: Update settings resolution logic and functions to properly merge with base settings.
+
 ## 0.8.4
 
 ### Patch Changes
