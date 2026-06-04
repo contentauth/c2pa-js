@@ -26,6 +26,11 @@
       "types": "./dist/inline.d.ts",
       "import": "./dist/inline.js",
       "default": "./dist/inline.js"
+    },
+    "./worker": {
+      "development": "./src/lib/worker.ts",
+      "import": "./dist/worker.js",
+      "default": "./dist/worker.js"
     }
   },
   "publishConfig": {
@@ -41,6 +46,10 @@
         "types": "./dist/inline.d.ts",
         "import": "./dist/inline.js",
         "default": "./dist/inline.js"
+      },
+      "./worker": {
+        "import": "./dist/worker.js",
+        "default": "./dist/worker.js"
       }
     }
   },

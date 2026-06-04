@@ -9,7 +9,7 @@
 
 import { Signer } from '../signer.js';
 import { createTx, workerRx } from './rpc.js';
-import Worker from '../worker?worker&inline';
+import InlineWorker from '../worker?worker&inline';
 import { transfer } from 'highgain';
 
 export interface WorkerManager {
@@ -21,6 +21,7 @@ export interface WorkerManager {
 export interface CreateWorkerManagerConfig {
   wasm: WebAssembly.Module;
   settingsString?: string;
+  workerSrc?: string;
 }
 
 /**
@@ -34,10 +35,12 @@ export interface CreateWorkerManagerConfig {
 export async function createWorkerManager(
   config: CreateWorkerManagerConfig
 ): Promise<WorkerManager> {
-  const { wasm, settingsString } = config;
+  const { wasm, settingsString, workerSrc } = config;
   let signerRequestId = 0;
 
-  const worker = new Worker();
+  const worker = workerSrc
+    ? new Worker(workerSrc, { type: 'module' })
+    : new InlineWorker();
 
   const tx = createTx(worker);
 
