@@ -94,7 +94,83 @@ describe('reader', () => {
 
         const manifestStore = await reader!.manifestStore();
 
+        // Using the overrideSettings, the asset is trusted.
         expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
+
+        c2pa.dispose();
+      });
+
+      test('should inherit global settings when per-call settings are provided', async () => {
+        // Global settings contain trust anchors and enable trust verification.
+        const globalSettings: Settings = {
+          trust: {
+            trustAnchors: anchor_correct
+          },
+          cawgTrust: {
+            trustAnchors: anchor_cawg
+          },
+          verify: {
+            verifyTrust: true
+          }
+        };
+
+        // Per-call settings touch an unrelated key and do NOT specify trust anchors.
+        const perCallSettings: Settings = {
+          verify: {
+            verifyAfterReading: true
+          }
+        };
+
+        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
+
+        const blob = await getBlobForAsset(C_with_CAWG_data);
+
+        const reader = await c2pa.reader.fromBlob(blob.type, blob, perCallSettings);
+
+        expect(reader).not.toBeNull();
+
+        const manifestStore = await reader!.manifestStore();
+
+        // Trust anchors from globalSettings should still be in effect, so the asset is trusted.
+        expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
+
+        c2pa.dispose();
+      });
+
+      test('should allow per-call settings to override conflicting global settings', async () => {
+        // Global settings contain trust anchors and enable trust verification.
+        const globalSettings: Settings = {
+          trust: {
+            trustAnchors: anchor_correct
+          },
+          cawgTrust: {
+            trustAnchors: anchor_cawg
+          },
+          verify: {
+            verifyTrust: true
+          }
+        };
+
+        // Per-call settings replace trustAnchors with an incorrect anchor, so the
+        // asset should come back untrusted despite the correct anchor in globalSettings.
+        const perCallSettings: Settings = {
+          trust: {
+            trustAnchors: anchor_incorrect
+          }
+        };
+
+        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
+
+        const blob = await getBlobForAsset(C_with_CAWG_data);
+
+        const reader = await c2pa.reader.fromBlob(blob.type, blob, perCallSettings);
+
+        expect(reader).not.toBeNull();
+
+        const manifestStore = await reader!.manifestStore();
+
+        // Per-call anchor wins over the global one, so the result is untrusted.
+        expect(manifestStore).toEqual(C_with_CAWG_data_untrusted_ManifestStore);
 
         c2pa.dispose();
       });
@@ -133,6 +209,44 @@ describe('reader', () => {
         );
 
         expect(reader).toBeNull();
+      });
+
+      test('should inherit global settings when per-call settings are provided', async () => {
+        // Enable trust verification globally.
+        const globalSettings: Settings = {
+          verify: {
+            verifyTrust: true
+          }
+        };
+
+        // Per-call settings touch an unrelated key only.
+        const perCallSettings: Settings = {
+          verify: {
+            verifyAfterReading: true
+          }
+        };
+
+        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
+
+        const initBlob = await getBlobForAsset(dashinit);
+        const fragmentBlob = await getBlobForAsset(dash1);
+
+        const reader = await c2pa.reader.fromBlobFragment(
+          initBlob.type,
+          initBlob,
+          fragmentBlob,
+          perCallSettings
+        );
+
+        expect(reader).not.toBeNull();
+
+        const manifestStore = await reader!.manifestStore();
+
+        // Trust verification from globalSettings should still be in effect, so the
+        // result should match the manifest store produced with trust verification on.
+        expect(manifestStore).toEqual(dashinit_ManifestStore);
+
+        c2pa.dispose();
       });
     });
   });
