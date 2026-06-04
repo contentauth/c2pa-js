@@ -16,6 +16,7 @@ import type {
   Ingredient,
   ManifestDefinition
 } from '@contentauth/c2pa-types';
+import { merge } from 'ts-deepmerge';
 import { Settings, settingsToWasmJson } from './settings.js';
 
 /**
@@ -185,7 +186,7 @@ export interface ManifestAndAssetBytes {
  * @param worker - Worker (via WorkerManager) to be associated with this reader factory.
  * @returns A {@link BuilderFactory} object containing builder creation methods.
  */
-export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
+export function createBuilderFactory(worker: WorkerManager, globalSettings?: Settings): BuilderFactory {
   const { tx } = worker;
 
   const registry = new FinalizationRegistry<number>((id) => {
@@ -194,7 +195,8 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
 
   return {
     async new(settings?: Settings) {
-      const settingsJson = settings && (await settingsToWasmJson(settings));
+      const effectiveSettings = settings ? merge(globalSettings ?? {}, settings) : globalSettings;
+      const settingsJson = effectiveSettings && (await settingsToWasmJson(effectiveSettings));
       const builderId = await tx.builder_new(settingsJson);
 
       const builder = createBuilder(worker, builderId, () => {
@@ -207,7 +209,8 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
 
     async fromDefinition(definition: ManifestDefinition, settings?: Settings) {
       const json = JSON.stringify(definition);
-      const settingsJson = settings && (await settingsToWasmJson(settings));
+      const effectiveSettings = settings ? merge(globalSettings ?? {}, settings) : globalSettings;
+      const settingsJson = effectiveSettings && (await settingsToWasmJson(effectiveSettings));
       const builderId = await tx.builder_fromJson(json, settingsJson);
 
       const builder = createBuilder(worker, builderId, () => {
@@ -219,7 +222,8 @@ export function createBuilderFactory(worker: WorkerManager): BuilderFactory {
     },
 
     async fromArchive(archive: Blob, settings?: Settings) {
-      const settingsJson = settings && (await settingsToWasmJson(settings));
+      const effectiveSettings = settings ? merge(globalSettings ?? {}, settings) : globalSettings;
+      const settingsJson = effectiveSettings && (await settingsToWasmJson(effectiveSettings));
       const builderId = await tx.builder_fromArchive(archive, settingsJson);
 
       const builder = createBuilder(worker, builderId, () => {

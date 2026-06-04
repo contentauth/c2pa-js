@@ -11,6 +11,7 @@ import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
 import { AssetTooLargeError, UnsupportedFormatError } from './error.js';
 import { isSupportedReaderFormat } from './supportedFormats.js';
 import type { WorkerManager } from './worker/workerManager.js';
+import { merge } from 'ts-deepmerge';
 import { Settings, settingsToWasmJson } from './settings.js';
 
 // 1 GB
@@ -115,7 +116,7 @@ export interface Reader {
  * @param worker - Worker (via WorkerManager) to be associated with this reader factory.
  * @returns A {@link ReaderFactory} object containing reader creation methods.
  */
-export function createReaderFactory(worker: WorkerManager): ReaderFactory {
+export function createReaderFactory(worker: WorkerManager, globalSettings?: Settings): ReaderFactory {
   const { tx } = worker;
 
   const registry = new FinalizationRegistry<number>(async (id) => {
@@ -137,7 +138,8 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
       }
 
       try {
-        const settingsJson = settings && (await settingsToWasmJson(settings));
+        const effectiveSettings = settings ? merge(globalSettings ?? {}, settings) : globalSettings;
+        const settingsJson = effectiveSettings && (await settingsToWasmJson(effectiveSettings));
 
         const readerId = await tx.reader_fromBlob(format, blob, settingsJson);
 
@@ -167,7 +169,8 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
       }
 
       try {
-        const settingsJson = settings && (await settingsToWasmJson(settings));
+        const effectiveSettings = settings ? merge(globalSettings ?? {}, settings) : globalSettings;
+        const settingsJson = effectiveSettings && (await settingsToWasmJson(effectiveSettings));
 
         const readerId = await tx.reader_fromBlobFragment(
           format,

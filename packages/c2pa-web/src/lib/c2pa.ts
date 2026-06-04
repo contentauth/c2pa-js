@@ -53,8 +53,8 @@ export async function createC2pa(config: Config): Promise<C2paSdk> {
   const worker = await createWorkerManager({ wasm, settingsString });
 
   return {
-    reader: createReaderFactory(worker),
-    builder: createBuilderFactory(worker),
+    reader: createReaderFactory(worker, settings),
+    builder: createBuilderFactory(worker, settings),
     dispose: worker.terminate
   };
 }
