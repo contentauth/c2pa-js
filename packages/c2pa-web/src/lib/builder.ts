@@ -184,6 +184,7 @@ export interface ManifestAndAssetBytes {
 
 /**
  * @param worker - Worker (via WorkerManager) to be associated with this reader factory.
+ * @param globalSettings - Optional global settings to be used for all builders.
  * @returns A {@link BuilderFactory} object containing builder creation methods.
  */
 export function createBuilderFactory(worker: WorkerManager, globalSettings?: Settings): BuilderFactory {

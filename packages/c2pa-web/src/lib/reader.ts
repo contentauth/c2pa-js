@@ -114,6 +114,7 @@ export interface Reader {
 
 /**
  * @param worker - Worker (via WorkerManager) to be associated with this reader factory.
+ * @param globalSettings - Optional global settings to be used for all readers.
  * @returns A {@link ReaderFactory} object containing reader creation methods.
  */
 export function createReaderFactory(worker: WorkerManager, globalSettings?: Settings): ReaderFactory {
