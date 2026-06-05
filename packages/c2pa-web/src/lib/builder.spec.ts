@@ -64,6 +64,149 @@ describe('builder', () => {
 
         expect(ingredientFailureCodes).toContain('signingCredential.untrusted');
       });
+
+      test('should inherit global settings when per-call settings are provided', async () => {
+        // Global settings enable trust verification.
+        const globalSettings: Settings = {
+          verify: {
+            verifyTrust: true
+          }
+        };
+
+        // Per-call settings touch an unrelated key only.
+        const perCallSettings: Settings = {
+          builder: {
+            generateC2paArchive: true
+          }
+        };
+
+        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
+
+        const builder = await c2pa.builder.new(perCallSettings);
+
+        const blob = await getBlobForAsset(C_JPG);
+
+        await builder.addIngredientFromBlob({}, blob.type, blob);
+
+        const definition = await builder.getDefinition();
+
+        // Trust verification from globalSettings should still be in effect, so the
+        // results should report untrusted.
+        const ingredientFailureCodes =
+          definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
+            (entry) => entry.code
+          );
+
+        expect(ingredientFailureCodes).toContain('signingCredential.untrusted');
+
+        c2pa.dispose();
+      });
+
+      test('should allow per-call settings to override conflicting global settings', async () => {
+        // Global settings enable trust verification.
+        const globalSettings: Settings = {
+          verify: {
+            verifyTrust: true
+          }
+        };
+
+        // Per-call settings disable trust verification and should override the global setting.
+        const perCallSettings: Settings = {
+          verify: {
+            verifyTrust: false
+          }
+        };
+
+        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
+
+        const builder = await c2pa.builder.new(perCallSettings);
+
+        const blob = await getBlobForAsset(C_JPG);
+
+        await builder.addIngredientFromBlob({}, blob.type, blob);
+
+        const definition = await builder.getDefinition();
+
+        const ingredientFailureCodes =
+          definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
+            (entry) => entry.code
+          ) ?? [];
+
+        // Per-call settings should overwrite, so no trust failure should be reported.
+        expect(ingredientFailureCodes).not.toContain('signingCredential.untrusted');
+
+        c2pa.dispose();
+      });
+    });
+
+    describe('fromDefinition', () => {
+      test('should inherit global settings when per-call settings are provided', async () => {
+        const globalSettings: Settings = {
+          verify: {
+            verifyTrust: true
+          }
+        };
+
+        const perCallSettings: Settings = {
+          builder: {
+            generateC2paArchive: true
+          }
+        };
+
+        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
+
+        const builder = await c2pa.builder.fromDefinition({}, perCallSettings);
+
+        const blob = await getBlobForAsset(C_JPG);
+
+        await builder.addIngredientFromBlob({}, blob.type, blob);
+
+        const definition = await builder.getDefinition();
+
+        const ingredientFailureCodes =
+          definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
+            (entry) => entry.code
+          );
+
+        // Global settings are configured to verify trust, so the result should be untrusted.
+        expect(ingredientFailureCodes).toContain('signingCredential.untrusted');
+
+        c2pa.dispose();
+      });
+
+      test('should allow per-call settings to override conflicting global settings', async () => {
+        const globalSettings: Settings = {
+          verify: {
+            verifyTrust: true
+          }
+        };
+
+        const perCallSettings: Settings = {
+          verify: {
+            verifyTrust: false
+          }
+        };
+
+        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
+
+        const builder = await c2pa.builder.fromDefinition({}, perCallSettings);
+
+        const blob = await getBlobForAsset(C_JPG);
+
+        await builder.addIngredientFromBlob({}, blob.type, blob);
+
+        const definition = await builder.getDefinition();
+
+        const ingredientFailureCodes =
+          definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
+            (entry) => entry.code
+          ) ?? [];
+
+        // Per-call settings should overwrite and not do trust verification, so the result should be trusted
+        expect(ingredientFailureCodes).not.toContain('signingCredential.untrusted');
+
+        c2pa.dispose();
+      });
     });
 
     describe('manifestDefinition', () => {
@@ -93,6 +236,77 @@ describe('builder', () => {
     });
 
     describe('fromArchive', () => {
+      test('should inherit global settings when per-call settings are provided', async () => {
+        const globalSettings: Settings = {
+          verify: {
+            verifyTrust: true
+          }
+        };
+
+        const perCallSettings: Settings = {
+          builder: {
+            generateC2paArchive: true
+          }
+        };
+
+        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
+
+        // Build and serialise an archive to restore from.
+        const archive = await (await c2pa.builder.new()).toArchive();
+
+        const builder = await c2pa.builder.fromArchive(new Blob([archive]), perCallSettings);
+
+        const blob = await getBlobForAsset(C_JPG);
+
+        await builder.addIngredientFromBlob({}, blob.type, blob);
+
+        const definition = await builder.getDefinition();
+
+        const ingredientFailureCodes =
+          definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
+            (entry) => entry.code
+          );
+
+        expect(ingredientFailureCodes).toContain('signingCredential.untrusted');
+
+        c2pa.dispose();
+      });
+
+      test('should allow per-call settings to override conflicting global settings', async () => {
+        const globalSettings: Settings = {
+          verify: {
+            verifyTrust: true
+          }
+        };
+
+        const perCallSettings: Settings = {
+          verify: {
+            verifyTrust: false
+          }
+        };
+
+        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
+
+        const archive = await (await c2pa.builder.new()).toArchive();
+
+        const builder = await c2pa.builder.fromArchive(new Blob([archive]), perCallSettings);
+
+        const blob = await getBlobForAsset(C_JPG);
+
+        await builder.addIngredientFromBlob({}, blob.type, blob);
+
+        const definition = await builder.getDefinition();
+
+        const ingredientFailureCodes =
+          definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
+            (entry) => entry.code
+          ) ?? [];
+
+        expect(ingredientFailureCodes).not.toContain('signingCredential.untrusted');
+
+        c2pa.dispose();
+      });
+
       test('should re-create a builder from an archive', async ({ c2pa }) => {
         const manifestDefinition: ManifestDefinition = {
           claim_generator_info: [

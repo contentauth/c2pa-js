@@ -123,28 +123,42 @@ const DEFAULT_SETTINGS: Settings = {
 export const MAX_RESPONSE_SIZE = 1 * 1024 * 1024; // 1MB
 
 /**
- * Resolves any trust list URLs and serializes the resulting object into a JSON string of the structure expected by c2pa-rs.
- * Will merge any provided values on top of the default settings.
+ * Resolves settings by merging override settings on top of base settings, resolving any embedded
+ * trust list URLs on top of those, and then finally serializing the result for consumption by c2pa-rs.
  *
- * @param settings Settings configuration object
+ * @param baseSettings Settings established at SDK initialization time.
+ * @param overrideSettings Optional override settings. Keys present in overrideSettings win over keys in baseSettings.
  * @returns A JSON-serialized string containing all resolved settings values, ready to be consumed by c2pa-rs.
+ * Returns undefined when neither argument is provided.
  */
-export async function settingsToWasmJson(settings: Settings): Promise<string> {
-  const mergedSettings: Settings = merge(DEFAULT_SETTINGS, settings);
+export async function resolveSettings(
+  baseSettings: Settings | undefined,
+  overrideSettings: Settings | undefined
+): Promise<string | undefined> {
+  const effectiveSettings = overrideSettings
+    ? merge(baseSettings ?? {}, overrideSettings)
+    : baseSettings;
+
+  if (!effectiveSettings) {
+    return undefined;
+  }
+
+  const finalSettings: Settings = merge(DEFAULT_SETTINGS, effectiveSettings);
 
   const resolvePromises: Promise<void>[] = [];
 
-  if (mergedSettings.trust) {
-    resolvePromises.push(resolveTrustSettings(mergedSettings.trust));
+  if (finalSettings.trust) {
+    resolvePromises.push(resolveTrustSettings(finalSettings.trust));
   }
 
-  if (mergedSettings.cawgTrust) {
-    resolvePromises.push(resolveTrustSettings(mergedSettings.cawgTrust));
+  if (finalSettings.cawgTrust) {
+    resolvePromises.push(resolveTrustSettings(finalSettings.cawgTrust));
   }
 
+  // Wait for all trust list resolutions to complete.
   await Promise.all(resolvePromises);
 
-  return JSON.stringify(snakeCaseify(mergedSettings as SettingsObjectType));
+  return JSON.stringify(snakeCaseify(finalSettings as SettingsObjectType));
 }
 
 function snakeCaseify(object: SettingsObjectType): SettingsObjectType {

@@ -11,7 +11,7 @@ import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
 import { AssetTooLargeError, UnsupportedFormatError } from './error.js';
 import { isSupportedReaderFormat } from './supportedFormats.js';
 import type { WorkerManager } from './worker/workerManager.js';
-import { Settings, settingsToWasmJson } from './settings.js';
+import { Settings, resolveSettings } from './settings.js';
 
 // 1 GB
 export const MAX_SIZE_IN_BYTES = 10 ** 9;
@@ -113,10 +113,12 @@ export interface Reader {
 
 /**
  * @param worker - Worker (via WorkerManager) to be associated with this reader factory.
+ * @param settings - Optional settings to be used for all readers.
  * @returns A {@link ReaderFactory} object containing reader creation methods.
  */
-export function createReaderFactory(worker: WorkerManager): ReaderFactory {
+export function createReaderFactory(worker: WorkerManager, settings?: Settings): ReaderFactory {
   const { tx } = worker;
+  const baseSettings = settings;
 
   const registry = new FinalizationRegistry<number>(async (id) => {
     await tx.reader_free(id);
@@ -137,7 +139,7 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
       }
 
       try {
-        const settingsJson = settings && (await settingsToWasmJson(settings));
+        const settingsJson = await resolveSettings(baseSettings, settings);
 
         const readerId = await tx.reader_fromBlob(format, blob, settingsJson);
 
@@ -167,7 +169,7 @@ export function createReaderFactory(worker: WorkerManager): ReaderFactory {
       }
 
       try {
-        const settingsJson = settings && (await settingsToWasmJson(settings));
+        const settingsJson = await resolveSettings(baseSettings, settings);
 
         const readerId = await tx.reader_fromBlobFragment(
           format,

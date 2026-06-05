@@ -9,36 +9,86 @@
 
 import { test, describe, expect } from 'test/methods.js';
 import { http, HttpResponse } from 'msw';
-import { settingsToWasmJson, MAX_RESPONSE_SIZE, MAX_URLS_PER_TRUST_SETTING } from './settings.js';
+import { resolveSettings, MAX_RESPONSE_SIZE } from './settings.js';
 
 describe('settings', () => {
-  describe('settingsToWasmJson', () => {
+  describe('resolveSettings', () => {
     describe('general behavior', () => {
-      test('should accept an empty object', async () => {
-        const settingsString = await settingsToWasmJson({});
+      test('should return undefined when neither argument is provided', async () => {
+        const result = await resolveSettings(undefined, undefined);
+        expect(result).toBeUndefined();
+      });
 
-        expect(settingsString).toEqual(
+      test('should serialize base settings when only base is provided', async () => {
+        const result = await resolveSettings({ verify: { verifyTrust: false } }, undefined);
+        expect(result).toEqual(
+          JSON.stringify({ builder: { generate_c2pa_archive: true }, verify: { verify_trust: false } })
+        );
+      });
+
+      test('should serialize override settings when only override is provided', async () => {
+        const result = await resolveSettings(undefined, { verify: { verifyTrust: false } });
+        expect(result).toEqual(
+          JSON.stringify({ builder: { generate_c2pa_archive: true }, verify: { verify_trust: false } })
+        );
+      });
+
+      test('should accept an empty object as override', async () => {
+        const result = await resolveSettings(undefined, {});
+        expect(result).toEqual(
           JSON.stringify({ builder: { generate_c2pa_archive: true } })
+        );
+      });
+
+      test('should merge override settings on top of base settings', async () => {
+        const base = {
+          verify: { verifyTrust: true, verifyAfterReading: true }
+        };
+        const override = {
+          verify: { verifyTrust: false }
+        };
+
+        const result = await resolveSettings(base, override);
+
+        // verifyTrust from override wins; verifyAfterReading from base is preserved
+        expect(result).toEqual(
+          JSON.stringify({
+            builder: { generate_c2pa_archive: true },
+            verify: { verify_trust: false, verify_after_reading: true }
+          })
+        );
+      });
+
+      test('should preserve base settings keys not present in override', async () => {
+        const base = {
+          verify: { verifyAfterReading: false },
+          builder: { generateC2paArchive: false }
+        };
+        const override = {
+          verify: { verifyTrust: true }
+        };
+
+        const result = await resolveSettings(base, override);
+
+        expect(result).toEqual(
+          JSON.stringify({
+            builder: { generate_c2pa_archive: false },
+            verify: { verify_after_reading: false, verify_trust: true }
+          })
         );
       });
 
       test('should not throw when a settings value is null', async () => {
         // typeof null === 'object' in JS — without a null guard this crashes
-        const settingsString = await settingsToWasmJson({
-          verify: null as any
-        });
-
-        expect(settingsString).toEqual(
+        const result = await resolveSettings(undefined, { verify: null as any });
+        expect(result).toEqual(
           JSON.stringify({ builder: { generate_c2pa_archive: true }, verify: null })
         );
       });
 
       test('should not throw when a nested settings value is null', async () => {
-        const settingsString = await settingsToWasmJson({
-          trust: { userAnchors: null as any }
-        });
-
-        expect(settingsString).toEqual(
+        const result = await resolveSettings(undefined, { trust: { userAnchors: null as any } });
+        expect(result).toEqual(
           JSON.stringify({
             builder: { generate_c2pa_archive: true },
             trust: { user_anchors: null }
@@ -49,7 +99,7 @@ describe('settings', () => {
 
     describe('trust', () => {
       test('should pass through a non-url value', async () => {
-        const settingsString = await settingsToWasmJson({
+        const result = await resolveSettings(undefined, {
           trust: {
             userAnchors: 'foo',
             trustAnchors: 'bar',
@@ -64,7 +114,7 @@ describe('settings', () => {
           }
         });
 
-        expect(settingsString).toEqual(
+        expect(result).toEqual(
           JSON.stringify({
             builder: { generate_c2pa_archive: true },
             trust: {
@@ -101,7 +151,7 @@ describe('settings', () => {
           ]
         );
 
-        const settingsString = await settingsToWasmJson({
+        const result = await resolveSettings(undefined, {
           trust: {
             userAnchors: 'http://userAnchors',
             trustAnchors: 'http://trustAnchors',
@@ -116,7 +166,7 @@ describe('settings', () => {
           }
         });
 
-        expect(settingsString).toEqual(
+        expect(result).toEqual(
           JSON.stringify({
             builder: { generate_c2pa_archive: true },
             trust: {
@@ -139,6 +189,24 @@ describe('settings', () => {
         );
       });
 
+      test('should fetch URL trust values from base settings', async ({ requestMock }) => {
+        requestMock.use(
+          http.get('http://baseTrustAnchors', () =>
+            HttpResponse.text(
+              '-----BEGIN CERTIFICATE-----base-----END CERTIFICATE-----'
+            )
+          )
+        );
+
+        // URL in base settings should be fetched even when override is also present.
+        const result = await resolveSettings(
+          { trust: { trustAnchors: 'http://baseTrustAnchors' } },
+          { verify: { verifyTrust: true } }
+        );
+
+        expect(result).toContain('-----BEGIN CERTIFICATE-----base-----END CERTIFICATE-----');
+      });
+
       test('should concatenate the fetched results of URLs when given as an array', async ({
         requestMock
       }) => {
@@ -150,7 +218,7 @@ describe('settings', () => {
           )
         );
 
-        const settingsString = await settingsToWasmJson({
+        const result = await resolveSettings(undefined, {
           trust: {
             userAnchors: [
               'http://userAnchorsConcat',
@@ -159,7 +227,7 @@ describe('settings', () => {
           }
         });
 
-        expect(settingsString).toEqual(
+        expect(result).toEqual(
           JSON.stringify({
             builder: { generate_c2pa_archive: true },
             trust: {
@@ -179,13 +247,13 @@ describe('settings', () => {
           )
         );
 
-        const settingsStringPromise = settingsToWasmJson({
+        const resultPromise = resolveSettings(undefined, {
           trust: {
             userAnchors: 'http://userAnchorsShouldFail'
           }
         });
 
-        await expect(settingsStringPromise).rejects.toThrow(
+        await expect(resultPromise).rejects.toThrow(
           'Failed to resolve trust settings.'
         );
       });
@@ -199,13 +267,13 @@ describe('settings', () => {
           )
         );
 
-        const settingsStringPromise = settingsToWasmJson({
+        const resultPromise = resolveSettings(undefined, {
           trust: {
             userAnchors: 'http://userAnchors429'
           }
         });
 
-        await expect(settingsStringPromise).rejects.toThrow(
+        await expect(resultPromise).rejects.toThrow(
           'Failed to fetch http://userAnchors429: 429'
         );
       });
@@ -226,7 +294,7 @@ describe('settings', () => {
           )
         );
 
-        const settingsString = await settingsToWasmJson({
+        const result = await resolveSettings(undefined, {
           trust: {
             trustAnchors: 'http://trustAnchors',
             ...(({ unknownKey: 'http://unknownKey' }) as any)
@@ -234,17 +302,17 @@ describe('settings', () => {
         });
 
         expect(unknownKeyFetched).toBe(false);
-        expect(settingsString).toContain('trust_anchors');
+        expect(result).toContain('trust_anchors');
       });
 
       test('should not crash when a CawgTrustSettings boolean field is present', async () => {
-        const settingsStringPromise = settingsToWasmJson({
+        const resultPromise = resolveSettings(undefined, {
           cawgTrust: {
             verifyTrustList: true
           }
         });
 
-        await expect(settingsStringPromise).resolves.not.toThrow();
+        await expect(resultPromise).resolves.not.toThrow();
       });
 
       test('should throw when a fetched response exceeds the size limit', async ({
@@ -255,13 +323,13 @@ describe('settings', () => {
           http.get('http://oversized', () => HttpResponse.text(oversizedBody))
         );
 
-        const settingsStringPromise = settingsToWasmJson({
+        const resultPromise = resolveSettings(undefined, {
           trust: {
             trustConfig: 'http://oversized'
           }
         });
 
-        await expect(settingsStringPromise).rejects.toThrow(
+        await expect(resultPromise).rejects.toThrow(
           'Failed to resolve trust settings.'
         );
       });
