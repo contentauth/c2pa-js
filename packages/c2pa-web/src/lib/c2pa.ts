@@ -19,14 +19,14 @@ export interface Config {
   wasmSrc: string | WebAssembly.Module;
 
   /**
-   * URL to the worker script. When provided the worker is loaded from this
-   * HTTPS URL instead of an inline blob URL, which is required in environments
+   * HTTPS URL to the worker script. When provided the worker is loaded from this
+   * URL instead of an inline blob URL, which is required in environments
    * with a strict Content Security Policy that disallows blob: worker sources.
    *
    * Host the file exported as `@contentauth/c2pa-web/worker` alongside your
    * application and pass its URL here.
    */
-  workerSrc?: string;
+  workerSrc?: URL;
 
   /**
    * Settings for the SDK. Will be inherited by created builders and readers.
