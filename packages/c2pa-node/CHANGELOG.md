@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+> **Note:** As of v0.5.6, development has moved to the
+> [contentauth/c2pa-js](https://github.com/contentauth/c2pa-js) monorepo
+> under `packages/c2pa-node`. History prior to that migration was preserved
+> from [contentauth/c2pa-node-v2](https://github.com/contentauth/c2pa-node-v2)
+> (now archived).
+
 ## 0.5.5
 
 ### Patch Changes

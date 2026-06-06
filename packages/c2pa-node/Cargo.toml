@@ -3,6 +3,7 @@ name = "c2pa-node"
 version = "0.1.0"
 license = "MIT"
 edition = "2021"
+rust-version.workspace = true
 exclude = ["index.node"]
 
 [lib]
