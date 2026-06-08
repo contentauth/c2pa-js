@@ -7,4 +7,5 @@ onlyBuiltDependencies:
   - '@swc/core'
   - esbuild
   - nx
+  - sharp
   - unrs-resolver

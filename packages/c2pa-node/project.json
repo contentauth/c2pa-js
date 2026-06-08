@@ -1,5 +1,5 @@
 {
-  "name": "@contentauth/c2pa-node",
+  "name": "c2pa-node",
   "targets": {
     "build": {
       "executor": "nx:run-commands",
@@ -24,10 +24,13 @@
         "command": "pnpm run test",
         "cwd": "packages/c2pa-node"
       },
-      "dependsOn": ["build"],
       "inputs": [
-        "{projectRoot}/js-src/**/*.spec.ts",
-        "{projectRoot}/tests/**/*"
+        "{projectRoot}/src/**/*.rs",
+        "{projectRoot}/js-src/**/*.ts",
+        "{projectRoot}/tests/**/*",
+        "{projectRoot}/Cargo.toml",
+        "{workspaceRoot}/Cargo.toml",
+        "{workspaceRoot}/Cargo.lock"
       ],
       "cache": true
     },
