@@ -1,5 +1,11 @@
 # @contentauth/c2pa-types
 
+## 0.5.0
+
+### Minor Changes
+
+- 2195d86: add workerSrc config option for CSP-restricted environments
+
 ## 0.4.6
 
 ### Patch Changes
