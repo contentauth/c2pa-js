@@ -85,3 +85,4 @@ cross.log
 
 # Generated documentation
 /docs
+packages/c2pa-node/tsconfig.tsbuildinfo
