@@ -29,6 +29,7 @@
         "{projectRoot}/js-src/**/*.ts",
         "{projectRoot}/tests/**/*",
         "{projectRoot}/Cargo.toml",
+        "{projectRoot}/tsconfig.json",
         "{workspaceRoot}/Cargo.toml",
         "{workspaceRoot}/Cargo.lock"
       ],
