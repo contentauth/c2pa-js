@@ -17,6 +17,9 @@ jobs:
       pull-requests: write
     outputs:
       published: ${{ steps.changesets.outputs.published }}
+      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
+    env:
+      COREPACK_ENABLE_STRICT: 0
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,6 +39,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Check object
+        run: |
+          cat << OBJECT
+          ${{ toJson(steps.changesets.outputs) }}
+          OBJECT
+
   release-node-binaries:
     needs: release
     if: |
@@ -44,6 +53,7 @@ jobs:
     name: Build native binary for ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
     env:
+      PUBLISHED_VERSION: ${{ fromJson(needs.release.outputs.publishedPackages)[0].version }}
       COREPACK_ENABLE_STRICT: 0
     strategy:
       fail-fast: false
@@ -60,6 +70,10 @@ jobs:
           - target: x86_64-pc-windows-msvc
             runner: windows-latest
     steps:
+      - name: Show published packages
+        run: |
+          echo '${{ needs.release.outputs.publishedPackages }}'
+
       - uses: actions/checkout@v4
         with:
           filter: tree:0
@@ -106,23 +120,28 @@ jobs:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
           CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
           CXX_aarch64_unknown_linux_gnu: aarch64-linux-gnu-g++
-        run: pnpm run build:rust --target=${{ matrix.target }}
+        run: |
+          mkdir -p generated/${{ matrix.target }}
+          pnpm run build:rust --target=${{ matrix.target }}
+          cp index.node generated
 
       - name: Build library
+        id: build-library
         if: matrix.target != 'aarch64-unknown-linux-gnu'
         working-directory: packages/c2pa-node
-        run: pnpm run build:rust --target=${{ matrix.target }}
+        run: |
+          mkdir -p generated/${{ matrix.target }}
+          pnpm run build:rust --target=${{ matrix.target }}
+          cp index.node generated
 
       - name: Package artifact
         id: package-artifact
+        # This needs to be set so that this works on a Windows runner
         shell: bash
         working-directory: packages/c2pa-node
         env:
-          PUBLISHED_VERSION: ${{ fromJson(needs.release.outputs.publishedPackages)[0].version }}
-          ARCHIVE_FILENAME: c2pa-node_${{ matrix.target }}-v${{ fromJson(needs.release.outputs.publishedPackages)[0].version }}.zip
+          ARCHIVE_FILENAME: c2pa-node_${{ matrix.target }}-v${{ env.PUBLISHED_VERSION || '-dev' }}.zip
         run: |
-          mkdir -p generated
-          cp index.node generated/
           cd generated
           7z a -tzip "${{ env.ARCHIVE_FILENAME }}" index.node
           echo "archive=${{ env.ARCHIVE_FILENAME }}" >> "$GITHUB_OUTPUT"
@@ -131,7 +150,6 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PUBLISHED_VERSION: ${{ fromJson(needs.release.outputs.publishedPackages)[0].version }}
         run: |
           echo "id=$(curl -s -L \
             -H 'Accept: application/vnd.github+json' \
@@ -140,6 +158,7 @@ jobs:
             https://api.github.com/repos/${{ github.repository }}/releases/tags/v${{ env.PUBLISHED_VERSION }} | jq '.id')" >> "$GITHUB_OUTPUT"
 
       - name: Upload release asset
+        if: needs.release.outputs.published == 'true'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
