@@ -1,18 +1,14 @@
 # C2PA Node.js library
 
-The [c2pa-node-v2](https://github.com/contentauth/c2pa-node-v2) repository implements a Node.js API that can:
+`@contentauth/c2pa-node` is a Node.js library in the [c2pa-js](https://github.com/contentauth/c2pa-js) monorepo that can:
 - Read and validate C2PA data from media files in supported formats.
 - Add signed manifests to media files in supported formats.
 
-**WARNING**: This is an early version of this library, and there may be bugs and unimplemented features.
-
 ## Prerequisites
 
-To use the C2PA Node library, you must install:
-- A [supported version of Node](https://github.com/neon-bindings/neon#platform-support).
-- [Rust](https://www.rust-lang.org/tools/install).
+To use the C2PA Node library you need Node.js **>=22**. If you need to manage multiple versions of Node on your machine, use a tool such as [nvm](https://github.com/nvm-sh/nvm).
 
-If you need to manage multiple versions of Node on your machine, use a tool such as [nvm](https://github.com/nvm-sh/nvm).
+To **build from source** you also need [Rust](https://www.rust-lang.org/tools/install). This is not required when installing the package normally — precompiled binaries are downloaded automatically during installation.
 
 ## Installation
 
@@ -47,15 +43,15 @@ This command will download precompiled binaries for the following systems:
 
 ## Documentation
 
-Complete API documentation is generated from TypeScript source using [TypeDoc](https://typedoc.org/) and published to GitHub Pages at [https://contentauth.github.io/c2pa-node-v2/](https://contentauth.github.io/c2pa-node-v2/).
+Complete API documentation is generated from TypeScript source using [TypeDoc](https://typedoc.org/) and published to GitHub Pages at [https://contentauth.github.io/c2pa-js/](https://contentauth.github.io/c2pa-js/).
 
-To generate documentation locally:
+To generate documentation locally, run the following from the monorepo root:
 
 ```bash
-pnpm build:docs
+pnpm ci:docs
 ```
 
-This generates HTML documentation in the `docs/` directory. The `docs/` directory is not checked into version control. It's automatically generated and published to GitHub Pages whenever a new release is published.
+This generates HTML documentation in the `docs/` directory at the repo root. It is not checked into version control and is automatically published to GitHub Pages whenever a new release is published.
 
 ## Components
 
@@ -640,11 +636,11 @@ const builder = Builder.new(urlSettings);
 
 
 ### Build and use custom binary
-**Build rust binary:**
+**Build Rust binary:**
+```bash
+pnpm run build:rust
 ```
-npm run build:rust
-```
-**Use custom rust binary:**
+**Use custom Rust binary:**
 ```bash
 export C2PA_LIBRARY_PATH=<path-to-binary-folder>/index.node
 ```
