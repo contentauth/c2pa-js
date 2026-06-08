@@ -9,7 +9,7 @@
 
 import { Signer } from '../signer.js';
 import { createTx, workerRx } from './rpc.js';
-import Worker from '../worker?worker&inline';
+import InlineWorker from '../worker?worker&inline';
 import { transfer } from 'highgain';
 
 export interface WorkerManager {
@@ -21,6 +21,26 @@ export interface WorkerManager {
 export interface CreateWorkerManagerConfig {
   wasm: WebAssembly.Module;
   settingsString?: string;
+  workerSrc?: URL;
+}
+
+/**
+ * Validates a worker source URL before it is loaded into a Worker. The value
+ * must be a structurally valid URL served over https, since arbitrary or
+ * insecure sources would let untrusted code run in the worker context.
+ *
+ * @param workerSrc - the worker source URL to validate
+ * @returns the normalized URL string, safe to pass to `new Worker`
+ * @throws if the value is not a valid URL or does not use https
+ */
+export function validateWorkerSrc(workerSrc: URL): string {
+  if (workerSrc.protocol !== 'https:') {
+    throw new Error(
+      `Worker source URL must use https, but got ${workerSrc.protocol}`
+    );
+  }
+
+  return workerSrc.toString();
 }
 
 /**
@@ -34,10 +54,12 @@ export interface CreateWorkerManagerConfig {
 export async function createWorkerManager(
   config: CreateWorkerManagerConfig
 ): Promise<WorkerManager> {
-  const { wasm, settingsString } = config;
+  const { wasm, settingsString, workerSrc } = config;
   let signerRequestId = 0;
 
-  const worker = new Worker();
+  const worker = workerSrc
+    ? new Worker(validateWorkerSrc(workerSrc))
+    : new InlineWorker();
 
   const tx = createTx(worker);
 
