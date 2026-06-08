@@ -24,7 +24,7 @@ export default defineConfig({
     noExternal: ["index.node"]
   },
   esbuild: {
-    target: "node18"
+    target: "node22"
   },
   testTimeout: 10000
 });
