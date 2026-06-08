@@ -1,5 +1,11 @@
 # @contentauth/c2pa-wasm
 
+## 0.7.0
+
+### Minor Changes
+
+- 2195d86: add workerSrc config option for CSP-restricted environments
+
 ## 0.6.3
 
 ### Patch Changes
