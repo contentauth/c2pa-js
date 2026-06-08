@@ -44,7 +44,8 @@ export default defineConfig(() => ({
     lib: {
       entry: {
         index: 'src/index.ts',
-        inline: 'src/inline.ts'
+        inline: 'src/inline.ts',
+        worker: 'src/lib/worker.ts'
       },
       name: '@contentauth/c2pa-web',
       // Change this to the formats you want to support.

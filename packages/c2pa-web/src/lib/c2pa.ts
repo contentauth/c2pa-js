@@ -19,6 +19,16 @@ export interface Config {
   wasmSrc: string | WebAssembly.Module;
 
   /**
+   * HTTPS URL to the worker script. When provided the worker is loaded from this
+   * URL instead of an inline blob URL, which is required in environments
+   * with a strict Content Security Policy that disallows blob: worker sources.
+   *
+   * Host the file exported as `@contentauth/c2pa-web/worker` alongside your
+   * application and pass its URL here.
+   */
+  workerSrc?: URL;
+
+  /**
    * Settings for the SDK. Will be inherited by created builders and readers.
    */
   settings?: Settings;
@@ -42,13 +52,13 @@ export interface C2paSdk {
 }
 
 export async function createC2pa(config: Config): Promise<C2paSdk> {
-  const { wasmSrc, settings } = config;
+  const { wasmSrc, workerSrc, settings } = config;
 
   const wasm =
     typeof wasmSrc === 'string' ? await fetchAndCompileWasm(wasmSrc) : wasmSrc;
 
   const settingsString = await resolveSettings(settings, undefined);
-  const worker = await createWorkerManager({ wasm, settingsString });
+  const worker = await createWorkerManager({ wasm, workerSrc, settingsString });
 
   return {
     reader: createReaderFactory(worker, settings),
