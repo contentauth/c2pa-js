@@ -23,8 +23,6 @@
   "scripts": {
     "build": "run-s build:rust build:ts",
     "build:debug": "run-s build:rust-debug build:ts",
-    "build": "run-s build:rust build:ts",
-    "build:debug": "run-s build:rust-debug build:ts",
     "build:rust": "pnpm run build:rust-debug --release",
     "build:rust-debug": "cargo build --message-format=json-render-diagnostics > cargo.log",
     "build:ts": "tsc -b && cpy index.node dist && cpy index.node js-src && cpy --flat js-src/types.d.ts dist/types",
@@ -37,11 +35,11 @@
     "postbuild:rust-debug": "neon dist < cargo.log",
     "postcross-build": "neon dist -m /target < cross.log",
     "postinstall": "node scripts/postinstall.cjs",
-    "test": "pnpm build:debug && vitest run",
-    "test:watch": "pnpm build:debug && vitest",
-    "test:ui": "pnpm build:debug && vitest --ui"
+    "test": "pnpm build:debug && vitest run --config ./vitest.config.ts",
+    "test:watch": "pnpm build:debug && vitest --config ./vitest.config.ts",
+    "test:ui": "pnpm build:debug && vitest --ui --config ./vitest.config.ts"
   },
-  "author": "Colin Murphy <colmurph@adobe.com>",
+  "author": "Colin Murphy <colmurph@adobe.com>, Austin Le <ale@adobe.com>",
   "license": "MIT",
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
