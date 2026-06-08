@@ -8,8 +8,13 @@
 use std::io::Cursor;
 
 use js_sys::Uint8Array;
+use serde_wasm_bindgen::Serializer;
 
 use crate::error::WasmError;
+
+pub(crate) fn make_serializer() -> Serializer {
+    Serializer::new().serialize_maps_as_objects(true)
+}
 
 pub fn cursor_to_u8array(cursor: Cursor<Vec<u8>>) -> Result<Uint8Array, WasmError> {
     let data = cursor.into_inner();

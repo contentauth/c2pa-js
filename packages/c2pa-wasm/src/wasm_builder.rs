@@ -20,7 +20,7 @@ use web_sys::Blob;
 use crate::{
     error::WasmError,
     stream::BlobStream,
-    utils::cursor_to_u8array,
+    utils::{cursor_to_u8array, make_serializer},
     wasm_signer::{SignerDefinition, WasmSigner},
 };
 
@@ -120,11 +120,9 @@ impl WasmBuilder {
     }
 
     fn from_builder(builder: Builder) -> WasmBuilder {
-        let serializer = Serializer::new().serialize_maps_as_objects(true);
-
         WasmBuilder {
             builder,
-            serializer,
+            serializer: make_serializer(),
         }
     }
 

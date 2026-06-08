@@ -29,12 +29,12 @@ impl WasmError {
 
 impl From<WasmError> for JsError {
     fn from(value: WasmError) -> Self {
-        JsError::new(&format!("{value:?}"))
+        JsError::new(&format!("{value}"))
     }
 }
 
 impl From<WasmError> for JsString {
     fn from(value: WasmError) -> Self {
-        format!("{value:?}").into()
+        format!("{value}").into()
     }
 }

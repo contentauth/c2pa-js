@@ -14,7 +14,7 @@ use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 use web_sys::Blob;
 
-use crate::{error::WasmError, stream::BlobStream, utils::cursor_to_u8array};
+use crate::{error::WasmError, stream::BlobStream, utils::{cursor_to_u8array, make_serializer}};
 
 /// Wraps a `c2pa::Reader`.
 #[wasm_bindgen]
@@ -63,7 +63,7 @@ impl WasmReader {
                 .map_err(WasmError::from)?
         };
 
-        Ok(WasmReader::from_reader(reader).await)
+        Ok(WasmReader::from_reader(reader))
     }
 
     /// Attempts to create a new `WasmReader` from an asset format, a `Blob` of the bytes of the initial segment, and a fragment `Blob`.
@@ -101,13 +101,14 @@ impl WasmReader {
                 .map_err(WasmError::from)?
         };
 
-        Ok(WasmReader::from_reader(reader).await)
+        Ok(WasmReader::from_reader(reader))
     }
 
-    async fn from_reader(reader: Reader) -> WasmReader {
-        let serializer = Serializer::new().serialize_maps_as_objects(true);
-
-        WasmReader { reader, serializer }
+    fn from_reader(reader: Reader) -> WasmReader {
+        WasmReader {
+            reader,
+            serializer: make_serializer(),
+        }
     }
 
     /// Returns the label of the asset's active manifest.

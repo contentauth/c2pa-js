@@ -25,10 +25,11 @@ impl<'a> BlobStream<'a> {
 
 impl Read for BlobStream<'_> {
     fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
-        let mut slice: &[u8] = &get_vec_u8_from_blob(self.blob, self.offset, buf.len())?;
-        let bytes_read = slice.read(buf)?;
-        self.offset += bytes_read as u64;
-        Ok(bytes_read)
+        let data = get_vec_u8_from_blob(self.blob, self.offset, buf.len())?;
+        let n = data.len().min(buf.len());
+        buf[..n].copy_from_slice(&data[..n]);
+        self.offset += n as u64;
+        Ok(n)
     }
 }
 
