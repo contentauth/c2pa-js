@@ -58,7 +58,7 @@ export async function createWorkerManager(
   let signerRequestId = 0;
 
   const worker = workerSrc
-    ? new Worker(validateWorkerSrc(workerSrc))
+    ? new Worker(validateWorkerSrc(workerSrc), { type: 'module' })
     : new InlineWorker();
 
   const tx = createTx(worker);
