@@ -45,7 +45,6 @@ export default defineConfig(() => ({
       entry: {
         index: 'src/index.ts',
         inline: 'src/inline.ts',
-        c2pa_worker: 'src/lib/worker.ts'
       },
       name: '@contentauth/c2pa-web',
       // Change this to the formats you want to support.
@@ -105,9 +104,6 @@ function createBuildPlugin(): Plugin {
       linkSync(wasmResourcePath, pkgResourcePath);
     },
     async closeBundle() {
-      // Overwrite the Vite-built worker.js with a fully self-contained bundle
-      // so that consumers can use it directly via workerSrc without needing
-      // a bundler to resolve bare specifiers like 'highgain'.
       await build({
         configFile: false,
         build: {
