@@ -6,7 +6,7 @@
  * accordance with the terms of the Adobe license agreement accompanying
  * it.
  */
-import { defineConfig, Plugin } from 'vite';
+import { defineConfig, Plugin, build } from 'vite';
 import dts from 'vite-plugin-dts';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { workspaceRoot } from '@nx/devkit';
@@ -45,7 +45,7 @@ export default defineConfig(() => ({
       entry: {
         index: 'src/index.ts',
         inline: 'src/inline.ts',
-        worker: 'src/lib/worker.ts'
+        c2pa_worker: 'src/lib/worker.ts'
       },
       name: '@contentauth/c2pa-web',
       // Change this to the formats you want to support.
@@ -103,6 +103,26 @@ function createBuildPlugin(): Plugin {
 
       mkdirSync(pkgResourceDir, { recursive: true });
       linkSync(wasmResourcePath, pkgResourcePath);
+    },
+    async closeBundle() {
+      // Overwrite the Vite-built worker.js with a fully self-contained bundle
+      // so that consumers can use it directly via workerSrc without needing
+      // a bundler to resolve bare specifiers like 'highgain'.
+      await build({
+        configFile: false,
+        build: {
+          lib: {
+            entry: join(__dirname, 'src/lib/worker.ts'),
+            formats: ['es'],
+            fileName: () => 'c2pa_worker.js',
+          },
+          outDir: join(__dirname, 'dist'),
+          emptyOutDir: false,
+          rollupOptions: {
+            external: ['@contentauth/c2pa-types'],
+          },
+        },
+      });
     }
   };
 }
