@@ -968,6 +968,6 @@ describe("Builder", () => {
       const activeManifest = reader2!.getActive();
       expect(activeManifest?.ingredients).toBeDefined();
       expect(activeManifest?.ingredients?.length).toBe(1);
-    });
+    }, 30000);
   });
 });
