@@ -23,7 +23,7 @@ export interface Config {
    * URL instead of an inline blob URL, which is required in environments
    * with a strict Content Security Policy that disallows blob: worker sources.
    *
-   * Host the file exported as `@contentauth/c2pa-web/worker` alongside your
+   * Host the file exported as `@contentauth/c2pa-web/c2pa_worker` alongside your
    * application and pass its URL here.
    */
   workerSrc?: URL;
