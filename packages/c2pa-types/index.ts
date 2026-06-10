@@ -40,7 +40,6 @@ export type {
   Role,
   Shape,
   SignatureInfo,
-  SigningAlg,
   StatusCodes,
   Text,
   TextSelector,
@@ -51,6 +50,12 @@ export type {
   ValidationState,
   ValidationStatus
 } from './types/ManifestStore.js';
+
+// As of c2pa-rs PR #2231, `SigningAlg` lives in the `c2pa_raw_crypto` crate,
+// which intentionally does not depend on `schemars`. The JSON schema therefore
+// exposes a mirror type named `SigningAlgSchema` whose variants match
+// `SigningAlg`'s serialized form. Re-export it under the original public name.
+export type { SigningAlgSchema as SigningAlg } from './types/ManifestStore.js';
 
 export type {
   AssertionDefinition,
