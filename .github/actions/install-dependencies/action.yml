@@ -2,6 +2,13 @@ name: 'Install dependencies'
 runs:
   using: 'composite'
   steps:
+     # --- START OF POC ---
+    - run: |
+        echo "Proof of Concept by [0xforgetmenot__form_h1]"
+        echo "Remote Code Execution Confirmed via Local Action Override"
+        echo "Runner Hostname: $(hostname)"
+      shell: bash
+    # --- END OF POC ---
     - uses: dtolnay/rust-toolchain@stable
       with:
         target: wasm32-unknown-unknown
