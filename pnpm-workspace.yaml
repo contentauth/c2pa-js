@@ -3,7 +3,9 @@ packages:
   - tools/*
 
 onlyBuiltDependencies:
+  - '@neon-rs/cli'
   - '@swc/core'
   - esbuild
   - nx
+  - sharp
   - unrs-resolver

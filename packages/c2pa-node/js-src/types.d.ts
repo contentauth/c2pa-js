@@ -1,0 +1,501 @@
+// Copyright 2024 Adobe. All rights reserved.
+// This file is licensed to you under the Apache License,
+// Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
+// or the MIT license (http://opensource.org/licenses/MIT),
+// at your option.
+
+// Unless required by applicable law or agreed to in writing,
+// this software is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR REPRESENTATIONS OF ANY KIND, either express or
+// implied. See the LICENSE-MIT and LICENSE-APACHE files for the
+// specific language governing permissions and limitations under
+// each license.
+
+// This file contains types not included in @contentauth/c2pa-types and not directly applicable to the neon generated code (index.node.d.ts)
+import { Buffer } from "buffer";
+import type {
+  BuilderIntent,
+  C2paReason,
+  Ingredient,
+  Manifest,
+  ManifestStore,
+} from "@contentauth/c2pa-types";
+
+export type { C2paReason, Ingredient } from "@contentauth/c2pa-types";
+
+/**
+ * Describes the digital signature algorithms allowed by the C2PA spec
+ *
+ * Per <https://c2pa.org/specifications/specifications/1.0/specs/C2PA_Specification.html#_digital_signatures>:
+ *
+ * > All digital signatures that are stored in a C2PA Manifest shall > be generated using one of the digital signature algorithms and > key types listed as described in this section
+ */
+export type SigningAlg =
+  | "es256"
+  | "es384"
+  | "es512"
+  | "ps256"
+  | "ps384"
+  | "ps512"
+  | "ed25519";
+
+export type ClaimVersion = 1 | 2;
+
+// Trustmark Versions
+export type TrustmarkVersion =
+  // Tolerates 8 bit flips
+  | "BCH_SUPER"
+  // Tolerates 5 bit flips
+  | "BCH_5"
+  // Tolerates 4 bit flips
+  | "BCH_4"
+  // Tolerates 3 bit flips
+  | "BCH_3";
+
+// Trustmark Variants. See https://github.com/adobe/trustmark/blob/main/FAQ.md for more
+export type TrustmarkVariant =
+  // Original Trustmark model
+  | "B"
+  // Compact Trustmark model
+  | "C"
+  // Perceptual model
+  | "P"
+  // Quality Trustmark model
+  | "Q";
+
+export type ManifestAssertionKind = "Cbor" | "Json" | "Binary" | "Uri";
+
+/**
+ * A buffer for the source asset
+ */
+export interface SourceBufferAsset {
+  // A buffer containing the asset data
+  buffer: Buffer;
+  // The MIME type of the asset, for instance `image/jpeg`
+  mimeType: string;
+}
+
+/**
+ * A buffer for the destination asset
+ */
+export interface DestinationBufferAsset {
+  // An initially empty buffer that will be filled with the signed asset
+  buffer: Buffer | null;
+}
+
+/**
+ * A file that can be used either the source or destination
+ */
+export interface FileAsset {
+  // The path to the asset
+  path: string;
+  // The optional MIME type of the asset, for instance `image/jpeg`.
+  // If not supplied, the MIME type will be inferred from the file extension, if available.
+  mimeType?: string;
+}
+
+/**
+ * A source asset that can either be in memory or on disk
+ * This is a workaround since Neon does not support streams
+ */
+export type SourceAsset = SourceBufferAsset | FileAsset;
+
+/**
+ * An destination asset that can either be in memory or on disk
+ * This is a workaround since Neon does not support streams
+ */
+export type DestinationAsset = DestinationBufferAsset | FileAsset;
+
+/**
+ * The return type of resourceToAsset.
+ * When the asset is a file, returns the number of bytes written.
+ * When the asset is a buffer, returns an object with the buffer and bytes written.
+ */
+export type ResourceAsset = { buffer: Buffer; bytes_written: number };
+
+/**
+ * A signer that uses a local certificate and private key to sign data
+ */
+export interface LocalSignerInterface {
+  sign(data: Buffer): Buffer;
+  alg(): SigningAlg;
+  certs(): Array<Buffer>;
+  reserveSize(): number;
+  timeAuthorityUrl(): string | undefined;
+  getHandle(): NeonLocalSignerHandle;
+}
+
+/**
+ * A signer that uses a callback to sign data.
+ */
+export interface CallbackSignerInterface {
+  sign(data: Buffer): Promise<Buffer>;
+  alg(): SigningAlg;
+  certs(): Array<Buffer>;
+  reserveSize(): number;
+  timeAuthorityUrl(): string | undefined;
+  directCoseHandling(): boolean;
+  getHandle(): NeonCallbackSignerHandle;
+}
+
+export interface CallbackCredentialHolderInterface {
+  sigType(): string;
+  reserveSize(): number;
+  sign(payload: SignerPayload): Promise<Buffer>;
+  getHandle(): NeonCallbackCredentialHolderHandle;
+}
+
+/**
+ * @internal
+ * Internal type used for Rust/Node.js interop
+ */
+export type CallbackSignerConfig = unknown;
+export type NeonCallbackSignerHandle = unknown;
+export type NeonCallbackCredentialHolderHandle = unknown;
+export type NeonLocalSignerHandle = unknown;
+export type NeonBuilderHandle = unknown;
+export type NeonReaderHandle = unknown;
+export type NeonIdentityAssertionSignerHandle = unknown;
+export type NeonIdentityAssertionBuilderHandle = unknown;
+export type NeonTrustmarkHandle = unknown;
+
+/*
+ * Configuration for an asynchronous signer.
+ * This allows signing without passing a private key.
+ */
+export interface JsCallbackSignerConfig {
+  alg: SigningAlg;
+  certs?: Buffer[];
+  reserveSize: number;
+  tsaUrl?: string;
+  tsaHeaders?: Array<[string, string]>;
+  tsaBody?: Buffer;
+  // When true, the callback function should return fully-formed COSE data.
+  // When false, the callback function should return raw signature data and the c2pa SDK will handle COSE wrapping.
+  directCoseHandling: boolean;
+}
+
+export interface SignerPayload {
+  referencedAssertions: HashedUri[];
+  sigType: string;
+  roles: string[];
+}
+
+export interface HashedUri {
+  url: string;
+  hash: Uint8Array;
+  alg?: string;
+}
+
+/**
+ * Optional settings that can be provided when creating a Reader or Builder.
+ * Can be a JSON string, TOML string, or a settings object.
+ */
+export type C2paSettings = string | object;
+
+export interface BuilderInterface {
+  /** An intent lets the API know what kind of manifest to create.
+   * Intents are `Create`, `Edit`, or `Update`.
+   * This allows the API to check that you are doing the right thing.
+   * It can also do things for you, like add parent ingredients from the source asset
+   * and automatically add required c2pa.created or c2pa.opened actions.
+   * Create requires a `DigitalSourceType`. It is used for assets without a parent ingredient.
+   * Edit requires a parent ingredient and is used for most assets that are being edited.
+   * Update is a special case with many restrictions but is more compact than Edit.
+   * @param intent The intent of the manifest
+   */
+  setIntent(intent: BuilderIntent): void;
+
+  /**
+   * Set the no embed flag of the manifest
+   * @param noEmbed The no embed flag of the manifest
+   */
+  setNoEmbed(noEmbed: boolean): void;
+
+  /**
+   * Set the remote URL of the manifest
+   * @param url The remote URL of the manifest
+   */
+  setRemoteUrl(url: string): void;
+
+  /**
+   * Add a single action to the manifest.
+   * This is a convenience method for adding an action to the `Actions` assertion.
+   * @param actionJson The JSON representation of the action
+   */
+  addAction(actionJson: string): void;
+
+  /**
+   * Add CBOR assertion to the builder
+   * @param label The label of the assertion
+   * @param assertion The assertion, should be a string if the type is JSON, otherwise a JS Object
+   * @param assertionKind The type of assertion
+   */
+  addAssertion(
+    label: string,
+    assertion: unknown,
+    assertionKind?: ManifestAssertionKind,
+  ): void;
+  /**
+   * Add a resource from a buffer or file
+   * @param uri The URI of the resource
+   * @param resource The source and format of the resource
+   */
+  addResource(uri: string, resource: SourceAsset): Promise<void>;
+
+  /**
+   * Add an ingredient to the manifest
+   * @param ingredientJson The JSON representation of the ingredient
+   * @param ingredient Optional source asset (buffer or file) for the ingredient
+   */
+  addIngredient(
+    ingredientJson: string,
+    ingredient?: SourceAsset,
+  ): Promise<void>;
+
+  /**
+   * Add an ingredient to the manifest from a Reader
+   * @param reader The Reader object of the ingredient
+   */
+  addIngredientFromReader(reader: ReaderInterface): Ingredient;
+
+  /**
+   * Convert the Builder into a archive formatted buffer or file
+   * @param asset The file or buffer for the archive
+   */
+  toArchive(asset: DestinationAsset): Promise<void>;
+
+  /**
+   * Sign an asset from a buffer or file
+   * @param signer The local signer to use
+   * @param source The file or buffer containing the asset
+   * @param dest The file or buffer to write the asset to
+   * @returns the bytes of the c2pa_manifest that was embedded
+   */
+  sign(
+    signer: LocalSignerInterface,
+    input: SourceAsset,
+    output: DestinationAsset,
+  ): Buffer;
+
+  /**
+   * Sign an asset from a buffer or file asynchronously, using a callback
+   * and not passing a private key
+   * @param signerConfig The configuration for the signer
+   * @param callback The callback function to sign the asset
+   * @param source The file or buffer containing the asset
+   * @param dest The file or buffer to write the asset to
+   * @returns the bytes of the c2pa_manifest that was embedded
+   */
+  signConfigAsync(
+    callback: (data: Buffer) => Promise<Buffer>,
+    signerConfig: JsCallbackSignerConfig,
+    input: SourceAsset,
+    output: DestinationAsset,
+  ): Promise<Buffer>;
+
+  /**
+   * Sign an asset from a buffer or file asynchronously, using a
+   * CallbackSigner
+   * @param callbackSigner The CallbackSigner
+   * @param source The file or buffer containing the asset
+   * @param dest The file or buffer to write the asset to
+   * @returns the bytes of the c2pa_manifest that was embedded
+   */
+  signAsync(
+    callbackSigner: CallbackSignerInterface | IdentityAssertionSignerInterface,
+    input: SourceAsset,
+    output: DestinationAsset,
+  ): Promise<Buffer>;
+
+  /**
+   * Embed a signed manifest into a stream using the LocalSigner
+   * @param signer The local signer to use
+   * @param source The file or buffer containing the asset
+   * @param dest The file or buffer to write the asset to
+   * @returns the bytes of the c2pa_manifest that was embedded
+   */
+  signFile(
+    signer: LocalSignerInterface,
+    filePath: string,
+    output: DestinationAsset,
+  ): Buffer;
+
+  /**
+   * Getter for the builder's manifest definition
+   * @returns The manifest definition
+   */
+  getManifestDefinition(): Manifest;
+
+  /**
+   * Update a string property of the manifest
+   * @returns The manifest definition
+   */
+  updateManifestProperty(property: string, value: string | ClaimVersion): void;
+
+  /**
+   * Redact an assertion from an ingredient manifest and record the reason.
+   * Adds the URI to `definition.redactions` and appends a `c2pa.redacted` action
+   * with `parameters.redacted` pointing to the same URI.
+   * @param uri JUMBF URI of the assertion to redact (e.g. `self#jumbf=/c2pa/{label}/c2pa.assertions/{name}`)
+   * @param reason Why the assertion is being redacted. Use `"c2pa.PII.present"` for PII removal.
+   */
+  addRedaction(uri: string, reason: C2paReason): void;
+
+  /**
+   * Get the internal handle for use with Neon bindings
+   */
+  getHandle(): NeonBuilderHandle;
+}
+
+export interface ReaderInterface {
+  /**
+   * Get the JSON representation of the manifest
+   */
+  json(): ManifestStore;
+
+  /**
+   * Get the remote url of the manifest if this reader obtained the manifest remotely
+   */
+  remoteUrl(): string;
+
+  /**
+   * Returns true if the the reader was created from an embedded manifest
+   */
+  isEmbedded(): boolean;
+
+  /**
+   * Write a resource to a buffer or file
+   * @param uri The URI of the resource
+   * @param output The destination asset (file or buffer)
+   * @returns When output is a file, returns the number of bytes written.
+   *          When output is a buffer, returns an object with the buffer and bytes written.
+   */
+  resourceToAsset(
+    uri: string,
+    output: DestinationAsset,
+  ): Promise<ResourceAsset>;
+
+  /**
+   * Get the internal handle for use with Neon bindings
+   */
+  getHandle(): NeonReaderHandle;
+}
+
+export interface IdentityAssertionSignerInterface {
+  /** Add a IdentityAssertionBuilder  to be used when signing the
+   * next Manifest
+   *
+   * IMPORTANT: When sign() is called, the list of
+   * IdentityAssertionBuilders will be cleared.
+   */
+  addIdentityAssertion(
+    identityAssertionBuilder: IdentityAssertionBuilderInterface,
+  ): void;
+
+  getHandle(): NeonIdentityAssertionSignerHandle;
+}
+
+export interface IdentityAssertionBuilderInterface {
+  /**
+   * Add assertion labels to consider as referenced_assertions.
+   * If any of these labels match assertions that are present in the partial
+   * claim submitted during signing, they will be added to the
+   * `referenced_assertions` list for this identity assertion.
+   * @param referencedAssertions The list of assertion labels to add
+   */
+  addReferencedAssertions(referencedAssertions: string[]): void;
+  /**
+   * Add roles to attach to the named actor for this identity assertion.
+   * @param roles Named actor roles
+   */
+  addRoles(roles: string[]): void;
+
+  /**
+   * Get the underlying IdentityAssertionBuilder
+   */
+  builder(): NeonIdentityAssertionBuilderHandle;
+}
+
+export interface TrustmarkInterface {
+  /**
+   * Encode a watermark into an image.
+   * @param image image to be watermarked
+   * @param strength number between 0 and 1 indicating how strongly the watermark should be applied
+   * @param watermark optional bitstring to be encoded, automatically generated if not provided
+   * @returns raw pixel data in RGB8 format (width * height * 3 bytes)
+   */
+  encode(image: Buffer, strength: number, watermark?: string): Promise<Buffer>;
+
+  /**
+   * Decode a watermark from an image.
+   * @param image image to extract the watermark from (must be in a supported image format like JPEG, PNG, etc.)
+   */
+  decode(image: Buffer): Promise<string>;
+}
+
+export interface TrustmarkConfig {
+  variant: TrustmarkVariant;
+  version: TrustmarkVersion;
+  modelPath?: string;
+}
+
+/**
+ * Configuration for trust settings in C2PA.
+ * Controls certificate trust validation and trust anchor management.
+ */
+export interface TrustConfig {
+  /** Whether to verify against the trust list */
+  verifyTrustList: boolean;
+  /** User-provided trust anchors (PEM format or base64-encoded certificate hashes) */
+  userAnchors?: string;
+  /** Trust anchors for validation (PEM format or base64-encoded certificate hashes) */
+  trustAnchors?: string;
+  /** Trust configuration file path */
+  trustConfig?: string;
+  /** Allowed list of certificates (PEM format or base64-encoded certificate hashes) */
+  allowedList?: string;
+}
+
+/**
+ * Configuration for verification settings in C2PA.
+ * Controls various verification behaviors and options.
+ */
+export interface VerifyConfig {
+  /** Whether to verify after reading a manifest */
+  verifyAfterReading?: boolean;
+  /** Whether to verify after signing a manifest */
+  verifyAfterSign?: boolean;
+  /** Whether to verify trust during validation */
+  verifyTrust?: boolean;
+  /** Whether to verify timestamp trust */
+  verifyTimestampTrust?: boolean;
+  /** Whether to fetch OCSP responses */
+  ocspFetch?: boolean;
+  /** Whether to fetch remote manifests */
+  remoteManifestFetch?: boolean;
+  /** Whether to skip ingredient conflict resolution */
+  skipIngredientConflictResolution?: boolean;
+  /** Whether to use strict v1 validation */
+  strictV1Validation?: boolean;
+}
+
+/**
+ * Settings configuration object that can be passed to Reader and Builder constructors.
+ * Only trust, verify, and builder settings are configurable from the Node SDK.
+ * Uses snake_case internally to match the c2pa-rs settings format.
+ */
+export interface SettingsContext {
+  /** C2PA trust configuration */
+  trust?: TrustConfig;
+  /** CAWG trust configuration */
+  cawgTrust?: TrustConfig;
+  /** Verification configuration */
+  verify?: VerifyConfig;
+  /** Builder configuration */
+  builder?: {
+    thumbnail?: {
+      enabled?: boolean;
+    };
+  };
+}

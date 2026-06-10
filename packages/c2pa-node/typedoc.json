@@ -1,0 +1,6 @@
+{
+  "entryPoints": ["js-src/index.ts"],
+  "out": "docs",
+  "readme": "README.md",
+  "includeVersion": false
+}
