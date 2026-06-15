@@ -696,9 +696,11 @@ describe('builder', () => {
       }) => {
         const blob = await getBlobForAsset(SAMPLE1_JXL);
 
+        const jxlMimetype = 'image/jxl';
+
         const builder = await c2pa.builder.new();
         const signer = await createTestSigner();
-        const signedBytes = await builder.sign(signer, 'image/jxl', blob);
+        const signedBytes = await builder.sign(signer, jxlMimetype, blob);
 
         expect(signedBytes).toBeDefined();
         expect(signedBytes.byteLength).toBeGreaterThan(0);
@@ -707,8 +709,8 @@ describe('builder', () => {
           verify: { verifyAfterReading: false }
         };
         const reader = await c2pa.reader.fromBlob(
-          'image/jxl',
-          new Blob([signedBytes], { type: 'image/jxl' }),
+          jxlMimetype,
+          new Blob([signedBytes], { type: jxlMimetype }),
           readerSettings
         );
 
