@@ -17,6 +17,7 @@ import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 import C_JPG from 'test/assets/C.jpg';
 import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';
 import C_with_CAWG_data from 'test/assets/C_with_CAWG_data.jpg';
+import SAMPLE1_JXL from 'test/assets/sample1.jxl';
 
 describe('builder', () => {
   describe('creation', () => {
@@ -686,6 +687,37 @@ describe('builder', () => {
 
         expect(definition.ingredients).toHaveLength(1);
         expect(definition.ingredients?.[0]).toMatchObject(ingredient);
+      });
+    });
+
+    describe('sign', () => {
+      test('should sign a jxl asset and read back the signed result', async ({
+        c2pa
+      }) => {
+        const blob = await getBlobForAsset(SAMPLE1_JXL);
+
+        const builder = await c2pa.builder.new();
+        const signer = await createTestSigner();
+        const signedBytes = await builder.sign(signer, 'image/jxl', blob);
+
+        expect(signedBytes).toBeDefined();
+        expect(signedBytes.byteLength).toBeGreaterThan(0);
+
+        const readerSettings: Settings = {
+          verify: { verifyAfterReading: false }
+        };
+        const reader = await c2pa.reader.fromBlob(
+          'image/jxl',
+          new Blob([signedBytes], { type: 'image/jxl' }),
+          readerSettings
+        );
+
+        expect(reader).not.toBeNull();
+
+        const manifestStore = await reader!.manifestStore();
+        expect(manifestStore).toBeDefined();
+        expect(manifestStore.manifests).toBeDefined();
+        expect(manifestStore.active_manifest).toBeDefined();
       });
     });
   });
