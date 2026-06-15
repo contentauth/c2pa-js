@@ -690,7 +690,7 @@ describe('builder', () => {
       });
     });
 
-    describe('sign', () => {
+    describe('sign JXL file, thenr ead it back', () => {
       test('should sign a jxl asset and read back the signed result', async ({
         c2pa
       }) => {
