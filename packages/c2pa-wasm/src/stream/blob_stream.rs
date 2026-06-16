@@ -5,31 +5,76 @@
 // accordance with the terms of the Adobe license agreement accompanying
 // it.
 
-use std::io::{Error as IoError, Read, Result as IoResult, Seek, SeekFrom};
+use std::{
+    cmp::min,
+    io::{Cursor, Error as IoError, Read, Result as IoResult, Seek, SeekFrom},
+};
 
 use js_sys::Uint8Array;
 use web_sys::{Blob, FileReaderSync};
 
-/// Wraps a JS-space Blob and a byte offset to support the implementation of Read + Seek.
-pub struct BlobStream<'a> {
-    offset: u64,
-    blob: &'a Blob,
+/// Files at or below this size are read entirely into WASM memory on construction,
+/// eliminating repeated JS/WASM boundary crossings. Larger files fall back to
+/// per-read `Blob.slice()` to avoid excessive memory duplication.
+const BUFFER_THRESHOLD_BYTES: usize = 50 * 1024 * 1024; // 50 MB
+
+enum StreamImpl {
+    /// Entire blob pre-loaded into WASM memory. All Read/Seek ops are pure in-memory.
+    Buffered(Cursor<Vec<u8>>),
+    /// Original lazy approach: each read() crosses the JS/WASM boundary via Blob.slice().
+    Lazy { offset: usize, blob: Blob },
 }
 
-impl<'a> BlobStream<'a> {
+/// Wraps a JS-space Blob to support Read + Seek.
+///
+/// For blobs <= 50 MB the data is eagerly copied into WASM linear memory so that
+/// subsequent reads and seeks are pure in-memory operations - no JS interop overhead.
+/// Larger blobs use a lazy per-read strategy to avoid doubling memory usage.
+pub struct BlobStream {
+    inner: StreamImpl,
+}
+
+impl BlobStream {
     /// Create a new BlobStream from a `web_sys::Blob`.
-    pub fn new(blob: &'a Blob) -> Self {
-        Self { offset: 0, blob }
+    pub fn new(blob: &Blob) -> Self {
+        let size = blob.size() as usize;
+        if size <= BUFFER_THRESHOLD_BYTES {
+            let data = read_entire_blob(blob).unwrap_or_default();
+            Self {
+                inner: StreamImpl::Buffered(Cursor::new(data)),
+            }
+        } else {
+            Self {
+                inner: StreamImpl::Lazy {
+                    offset: 0,
+                    blob: blob.clone(),
+                },
+            }
+        }
     }
 }
 
-impl Read for BlobStream<'_> {
-    fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
-        let mut slice: &[u8] = &get_vec_u8_from_blob(self.blob, self.offset, buf.len())?;
-        let bytes_read = slice.read(buf)?;
-        self.offset += bytes_read as u64;
-        Ok(bytes_read)
+fn read_entire_blob(blob: &Blob) -> IoResult<Vec<u8>> {
+    let size = blob.size() as usize;
+    if size == 0 {
+        return Ok(Vec::new());
     }
+
+    let reader_sync = FileReaderSync::new().map_err(|err| {
+        IoError::other(format!(
+            "Failed to create FileReaderSync. Details: {err:?}"
+        ))
+    })?;
+
+    let array_buffer = reader_sync
+        .read_as_array_buffer(blob)
+        .map_err(|err| IoError::other(format!("Failed to read blob. Details: {err:?}")))?;
+
+    let u8array = Uint8Array::new(&array_buffer);
+    let mut buf = vec![0u8; u8array.byte_length() as usize];
+    u8array.copy_to(&mut buf);
+
+    Ok(buf)
 }
 
 fn get_vec_u8_from_blob(blob: &Blob, offset: u64, len: usize) -> IoResult<Vec<u8>> {
@@ -59,42 +104,44 @@ fn get_vec_u8_from_blob(blob: &Blob, offset: u64, len: usize) -> IoResult<Vec<u8
     Ok(buf)
 }
 
-impl Seek for BlobStream<'_> {
-    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        let new_offset: u64 = match pos {
-            SeekFrom::Start(offset) => offset,
-            SeekFrom::End(offset) => {
-                let pos = (self.blob.size() as i64)
-                    .checked_add(offset)
-                    .ok_or_else(|| IoError::other("seek overflow"))?;
-                if pos < 0 {
-                    return Err(IoError::new(
-                        std::io::ErrorKind::InvalidInput,
-                        "seek before start of stream",
-                    ));
-                }
-                pos as u64
+impl Read for BlobStream {
+    fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
+        match &mut self.inner {
+            StreamImpl::Buffered(cursor) => cursor.read(buf),
+            StreamImpl::Lazy { offset, blob } => {
+                let mut slice: &[u8] = &get_vec_u8_from_blob(blob, *offset, buf.len())?;
+                let bytes_read = slice.read(buf)?;
+                *offset += bytes_read;
+                Ok(bytes_read)
             }
-            SeekFrom::Current(offset) => {
-                let pos = (self.offset as i64)
-                    .checked_add(offset)
-                    .ok_or_else(|| IoError::other("seek overflow"))?;
-                if pos < 0 {
-                    return Err(IoError::new(
-                        std::io::ErrorKind::InvalidInput,
-                        "seek before start of stream",
-                    ));
+        }
+    }
+}
+
+impl Seek for BlobStream {
+    fn seek(&mut self, pos: SeekFrom) -> IoResult<u64> {
+        match &mut self.inner {
+            StreamImpl::Buffered(cursor) => cursor.seek(pos),
+            StreamImpl::Lazy { offset, blob } => {
+                match pos {
+                    SeekFrom::Start(o) => {
+                        *offset = o as usize;
+                    }
+                    SeekFrom::End(o) => {
+                        *offset = (blob.size() as i64 + o) as usize;
+                    }
+                    SeekFrom::Current(o) => {
+                        *offset = (*offset as i64 + o) as usize;
+                    }
                 }
-                pos as u64
+                Ok(*offset as u64)
             }
-        };
-        self.offset = new_offset;
-        Ok(self.offset)
+        }
     }
 }
 
 // SAFETY: WASM is single-threaded.
-unsafe impl Send for BlobStream<'_> {}
+unsafe impl Send for BlobStream {}
 
 #[cfg(test)]
 mod tests {
