@@ -14,7 +14,8 @@ const cliProgress = require('cli-progress');
 const unzipper = require('unzipper');
 const os = require('node:os');
 const { mkdirp } = require('mkdirp');
-const { resolve } = require('node:path');
+const path = require('node:path');
+const { resolve } = path;
 const { exec } = require('node:child_process');
 const { promisify } = require('node:util');
 // node-fetch v3 is ES module only, so we'll import it dynamically
@@ -22,6 +23,16 @@ const { promisify } = require('node:util');
 // pkg-dir is ES module only, so we'll import it dynamically
 
 const pExec = promisify(exec);
+
+async function isInPnpmWorkspace(startDir) {
+	let dir = path.dirname(startDir);
+	while (true) {
+		const parent = path.dirname(dir);
+		if (parent === dir) return false;
+		if (await fileExists(path.join(parent, 'pnpm-workspace.yaml'))) return true;
+		dir = parent;
+	}
+}
 
 const execCallback = (err, stdout, stderr) => {
 	if (err) {
@@ -175,6 +186,12 @@ async function buildRust(root) {
 async function main() {
 	const { packageDirectory } = await import('pkg-dir');
 	const appRoot = await packageDirectory(__filename);
+
+	if (await isInPnpmWorkspace(appRoot)) {
+		console.log('Skipping Rust build: package is installed inside a pnpm workspace');
+		return;
+	}
+
 	const distRoot = resolve(appRoot, 'dist');
 	const cargoDistPath = resolve(distRoot, 'Cargo.toml');
 	const libraryOverridePath = process.env.C2PA_LIBRARY_PATH;
