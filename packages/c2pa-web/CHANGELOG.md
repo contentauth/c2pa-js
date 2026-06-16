@@ -1,5 +1,18 @@
 # @contentauth/c2pa-web
 
+## 0.12.0
+
+### Minor Changes
+
+- 2847a0c: Add JXL to list of supported formats for read
+- ec2af45: Bump c2pa-rs version to v0.88.0
+
+### Patch Changes
+
+- Updated dependencies [ec2af45]
+  - @contentauth/c2pa-types@0.7.0
+  - @contentauth/c2pa-wasm@0.9.0
+
 ## 0.11.0
 
 ### Minor Changes
