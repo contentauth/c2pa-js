@@ -101,6 +101,12 @@ export interface VerifySettings {
    * Whether to verify the manifest after reading in the Reader. The default value is "true."
    */
   verifyAfterReading?: boolean;
+  /**
+   * Whether to fetch remote manifests when reading assets or adding ingredients.
+   * Only applicable when compiled with the `fetch_remote_manifests` feature.
+   * The default value is "true."
+   */
+  remoteManifestFetch?: boolean;
 }
 
 export interface BuilderSettings {
