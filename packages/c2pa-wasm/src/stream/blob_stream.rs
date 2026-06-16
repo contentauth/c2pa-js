@@ -5,10 +5,7 @@
 // accordance with the terms of the Adobe license agreement accompanying
 // it.
 
-use std::{
-    cmp::min,
-    io::{Cursor, Error as IoError, Read, Result as IoResult, Seek, SeekFrom},
-};
+use std::io::{Cursor, Error as IoError, Read, Result as IoResult, Seek, SeekFrom};
 
 use js_sys::Uint8Array;
 use web_sys::{Blob, FileReaderSync};
@@ -109,7 +106,7 @@ impl Read for BlobStream {
         match &mut self.inner {
             StreamImpl::Buffered(cursor) => cursor.read(buf),
             StreamImpl::Lazy { offset, blob } => {
-                let mut slice: &[u8] = &get_vec_u8_from_blob(blob, *offset, buf.len())?;
+                let mut slice: &[u8] = &get_vec_u8_from_blob(blob, *offset as u64, buf.len())?;
                 let bytes_read = slice.read(buf)?;
                 *offset += bytes_read;
                 Ok(bytes_read)
