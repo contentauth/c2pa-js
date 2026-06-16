@@ -1,5 +1,11 @@
 # @contentauth/c2pa-wasm
 
+## 0.9.0
+
+### Minor Changes
+
+- ec2af45: Bump c2pa-rs version to v0.88.0
+
 ## 0.8.0
 
 ### Minor Changes
