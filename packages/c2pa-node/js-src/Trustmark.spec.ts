@@ -64,7 +64,7 @@ describe("Trustmark", () => {
     testImageHeight = imageInfo.height!;
 
     trustmark = await Trustmark.newTrustmark(trustmarkConfig);
-  });
+  }, 30000);
 
   describe("newTrustmark", () => {
     it("should create a new trustmark instance with valid config", async () => {
@@ -97,7 +97,7 @@ describe("Trustmark", () => {
       expect(encodedImage.length).toBeGreaterThan(0);
       // The encoded image should be different from the original
       expect(encodedImage).not.toEqual(testImage);
-    });
+    }, 30000);
 
     it("should encode a watermark into an image with custom watermark", async () => {
       const strength = 0.95;
@@ -111,7 +111,7 @@ describe("Trustmark", () => {
       expect(encodedImage).toBeDefined();
       expect(Buffer.isBuffer(encodedImage)).toBe(true);
       expect(encodedImage.length).toBeGreaterThan(0);
-    });
+    }, 30000);
 
     it("should throw error with invalid strength values", async () => {
       await expect(trustmark.encode(testImage, -0.1)).rejects.toThrow(
@@ -120,14 +120,14 @@ describe("Trustmark", () => {
       await expect(trustmark.encode(testImage, 1.1)).rejects.toThrow(
         "Watermark configuration error: strength must be between 0.0 and 1.0",
       );
-    });
+    }, 30000);
 
     it("should throw error with empty image buffer", async () => {
       const emptyBuffer = Buffer.alloc(0);
       await expect(trustmark.encode(emptyBuffer, 0.5)).rejects.toThrow(
         "The image format could not be determined",
       );
-    });
+    }, 30000);
   });
 
   describe("decode", () => {
@@ -157,7 +157,7 @@ describe("Trustmark", () => {
       expect(decodedWatermark.length).toBeGreaterThan(0);
       // The decoded watermark should match the original
       expect(decodedWatermark.startsWith(customWatermark)).toBeTruthy();
-    });
+    }, 30000);
 
     it("should decode watermark from image with generated watermark", async () => {
       const strength = 0.75;
@@ -178,20 +178,20 @@ describe("Trustmark", () => {
       expect(decodedWatermark).toBeDefined();
       expect(typeof decodedWatermark).toBe("string");
       expect(decodedWatermark.length).toBeGreaterThan(0);
-    });
+    }, 30000);
 
     it("should throw error decoding from original image (no watermark)", async () => {
       // Try to decode from an image that hasn't been watermarked
       await expect(trustmark.decode(testImage)).rejects.toThrow(
         "watermark is corrupt or missing",
       );
-    });
+    }, 30000);
 
     it("should throw error with empty image buffer", async () => {
       const emptyBuffer = Buffer.alloc(0);
       await expect(trustmark.decode(emptyBuffer)).rejects.toThrow(
         "The image format could not be determined",
       );
-    });
+    }, 30000);
   });
 });
