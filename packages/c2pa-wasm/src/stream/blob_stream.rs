@@ -15,7 +15,7 @@ use web_sys::{Blob, FileReaderSync};
 /// per-read `Blob.slice()` to avoid excessive memory duplication.
 const BUFFER_THRESHOLD_BYTES: usize = 50 * 1024 * 1024; // 50 MB
 
-enum StreamImpl {
+pub(crate) enum StreamImpl {
     /// Entire blob pre-loaded into WASM memory. All Read/Seek ops are pure in-memory.
     Buffered(Cursor<Vec<u8>>),
     /// Original lazy approach: each read() crosses the JS/WASM boundary via Blob.slice().
@@ -28,14 +28,18 @@ enum StreamImpl {
 /// subsequent reads and seeks are pure in-memory operations - no JS interop overhead.
 /// Larger blobs use a lazy per-read strategy to avoid doubling memory usage.
 pub struct BlobStream {
-    inner: StreamImpl,
+    pub(crate) inner: StreamImpl,
 }
 
 impl BlobStream {
     /// Create a new BlobStream from a `web_sys::Blob`.
     pub fn new(blob: &Blob) -> Self {
+        Self::new_with_threshold(blob, BUFFER_THRESHOLD_BYTES)
+    }
+
+    fn new_with_threshold(blob: &Blob, threshold: usize) -> Self {
         let size = blob.size() as usize;
-        if size <= BUFFER_THRESHOLD_BYTES {
+        if size <= threshold {
             let data = read_entire_blob(blob).unwrap_or_default();
             Self {
                 inner: StreamImpl::Buffered(Cursor::new(data)),
@@ -246,5 +250,102 @@ mod tests {
         parts.push(&u8array);
 
         Blob::new_with_u8_array_sequence(&parts).unwrap()
+    }
+
+    /// Creates a BlobStream that always uses the Lazy strategy, regardless of blob size.
+    fn lazy_stream(blob: &Blob) -> BlobStream {
+        // threshold of 0 forces the Lazy path for any non-empty blob
+        BlobStream::new_with_threshold(blob, 0)
+    }
+
+    // Lazy-path equivalents of the Buffered tests
+
+    #[wasm_bindgen_test]
+    fn test_lazy_read_in_sequence() {
+        let blob = blob_from_vec(vec![0, 1, 2, 3]);
+        let mut stream = lazy_stream(&blob);
+
+        let mut buf = vec![0; 2];
+        let bytes_read = stream.read(&mut buf).unwrap();
+        assert_eq!(buf, vec![0, 1]);
+        assert_eq!(bytes_read, 2);
+
+        let mut next_buf = vec![0; 2];
+        let next_bytes_read = stream.read(&mut next_buf).unwrap();
+        assert_eq!(next_buf, vec![2, 3]);
+        assert_eq!(next_bytes_read, 2);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_lazy_read_into_oversize_buffer() {
+        let blob = blob_from_vec(vec![0, 1, 2, 3]);
+        let mut stream = lazy_stream(&blob);
+
+        let mut buf = vec![0; 6];
+        let bytes_read = stream.read(&mut buf).unwrap();
+        assert_eq!(buf, vec![0, 1, 2, 3, 0, 0]);
+        assert_eq!(bytes_read, 4);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_lazy_read_and_seek() {
+        let blob = blob_from_vec(vec![0, 1, 2, 3]);
+        let mut stream = lazy_stream(&blob);
+
+        stream.seek(SeekFrom::Start(2)).unwrap();
+        let mut buf = vec![0; 2];
+        stream.read(&mut buf).unwrap();
+        assert_eq!(buf, vec![2, 3]);
+
+        stream.seek(SeekFrom::Current(-4)).unwrap();
+        let mut next_buf = vec![0; 2];
+        stream.read(&mut next_buf).unwrap();
+        assert_eq!(next_buf, vec![0, 1]);
+
+        stream.seek(SeekFrom::End(-2)).unwrap();
+        let mut final_buf = vec![0; 2];
+        stream.read(&mut final_buf).unwrap();
+        assert_eq!(final_buf, vec![2, 3]);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_lazy_seek_past_end_and_read() {
+        let blob = blob_from_vec(vec![0, 1, 2, 3]);
+        let mut stream = lazy_stream(&blob);
+
+        stream.seek(SeekFrom::Start(10)).unwrap();
+        let mut buf = vec![0; 2];
+        let bytes_read = stream.read(&mut buf).unwrap();
+        assert_eq!(bytes_read, 0);
+    }
+
+    // Threshold boundary
+
+    #[wasm_bindgen_test]
+    fn test_blob_at_threshold_uses_buffered_path() {
+        // A blob exactly at the threshold should use the Buffered path.
+        let data = vec![42u8; 4];
+        let blob = blob_from_vec(data.clone());
+        // threshold == blob size => Buffered
+        let mut stream = BlobStream::new_with_threshold(&blob, 4);
+        assert!(matches!(stream.inner, StreamImpl::Buffered(_)));
+
+        let mut buf = vec![0u8; 4];
+        stream.read(&mut buf).unwrap();
+        assert_eq!(buf, data);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_blob_above_threshold_uses_lazy_path() {
+        // A blob one byte above the threshold should use the Lazy path.
+        let data = vec![7u8; 5];
+        let blob = blob_from_vec(data.clone());
+        // threshold == blob size - 1 => Lazy
+        let mut stream = BlobStream::new_with_threshold(&blob, 4);
+        assert!(matches!(stream.inner, StreamImpl::Lazy { .. }));
+
+        let mut buf = vec![0u8; 5];
+        stream.read(&mut buf).unwrap();
+        assert_eq!(buf, data);
     }
 }
