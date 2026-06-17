@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "declaration": true,
+    "declarationDir": "./dist/types",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "outDir": "./dist",
+    "resolveJsonModule": true,
+    "rootDir": "./js-src",
+    "strict": true,
+    "target": "ES2023",
+    "types": ["node", "vitest/globals"],
+    "paths": {
+      "index.node": ["./js-src/index.node"]
+    },
+  },
+  "include": [
+    "js-src/*.ts"
+  ]
+}

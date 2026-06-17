@@ -1,0 +1,122 @@
+// Copyright 2024 Adobe. All rights reserved.
+// This file is licensed to you under the Apache License,
+// Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
+// or the MIT license (http://opensource.org/licenses/MIT),
+// at your option.
+
+// Unless required by applicable law or agreed to in writing,
+// this software is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR REPRESENTATIONS OF ANY KIND, either express or
+// implied. See the LICENSE-MIT and LICENSE-APACHE files for the
+// specific language governing permissions and limitations under
+// each license.
+
+import { getNeonBinary } from "./binary.js";
+import type {
+  CallbackCredentialHolderInterface,
+  IdentityAssertionBuilderInterface,
+  IdentityAssertionSignerInterface,
+  NeonCallbackCredentialHolderHandle,
+  NeonIdentityAssertionSignerHandle,
+  NeonIdentityAssertionBuilderHandle,
+  SignerPayload,
+  NeonCallbackSignerHandle,
+} from "./types.d.ts";
+
+export class IdentityAssertionBuilder
+  implements IdentityAssertionBuilderInterface
+{
+  constructor(private _builder: NeonIdentityAssertionBuilderHandle) {}
+
+  static async identityBuilderForCredentialHolder(
+    credentialHolder: CallbackCredentialHolderInterface,
+  ): Promise<IdentityAssertionBuilder> {
+    const builder = getNeonBinary().identityBuilderForCredentialHolder(
+      credentialHolder.getHandle(),
+    );
+    return new IdentityAssertionBuilder(builder);
+  }
+
+  addReferencedAssertions(referencedAssertions: string[]): void {
+    getNeonBinary().identityBuilderAddReferencedAssertions.call(
+      this._builder,
+      referencedAssertions,
+    );
+  }
+
+  addRoles(roles: string[]): void {
+    getNeonBinary().identityBuilderAddRoles.call(this._builder, roles);
+  }
+
+  builder(): NeonIdentityAssertionBuilderHandle {
+    return this._builder;
+  }
+}
+
+export class IdentityAssertionSigner
+  implements IdentityAssertionSignerInterface
+{
+  constructor(private _signer: NeonIdentityAssertionSignerHandle) {}
+
+  static new(signer: NeonCallbackSignerHandle): IdentityAssertionSigner {
+    const identitySigner = getNeonBinary().identitySignerNew(signer);
+    return new IdentityAssertionSigner(identitySigner);
+  }
+
+  addIdentityAssertion(
+    identityAssertionBuilder: IdentityAssertionBuilder,
+  ): void {
+    getNeonBinary().identitySignerAddIdentityAssertion.call(
+      this._signer,
+      identityAssertionBuilder.builder(),
+    );
+  }
+
+  getHandle(): NeonIdentityAssertionSignerHandle {
+    return this._signer;
+  }
+}
+
+export class CallbackCredentialHolder
+  implements CallbackCredentialHolderInterface
+{
+  constructor(
+    private callbackCredentialHolder: NeonCallbackCredentialHolderHandle,
+  ) {}
+
+  getHandle(): NeonCallbackCredentialHolderHandle {
+    return this.callbackCredentialHolder;
+  }
+
+  static newCallbackCredentialHolder(
+    reserveSize: number,
+    sigType: string,
+    callback: (signerPayload: SignerPayload) => Promise<Buffer>,
+  ) {
+    const credentialHolder = getNeonBinary().newCallbackCredentialHolder(
+      reserveSize,
+      sigType,
+      callback,
+    );
+    return new CallbackCredentialHolder(credentialHolder);
+  }
+
+  async sign(payload: SignerPayload): Promise<Buffer> {
+    return getNeonBinary().callbackSignerSignPayload.call(
+      this.callbackCredentialHolder,
+      payload,
+    );
+  }
+
+  reserveSize(): number {
+    return getNeonBinary().callbackCredentialHolderReserveSize.call(
+      this.callbackCredentialHolder,
+    );
+  }
+
+  sigType(): string {
+    return getNeonBinary().callbackCredentialHolderSigType.call(
+      this.callbackCredentialHolder,
+    );
+  }
+}

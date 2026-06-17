@@ -1,0 +1,52 @@
+{
+  "name": "c2pa-node",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm run build",
+        "cwd": "packages/c2pa-node"
+      },
+      "inputs": [
+        "{projectRoot}/src/**/*.rs",
+        "{projectRoot}/js-src/**/*.ts",
+        "{projectRoot}/Cargo.toml",
+        "{projectRoot}/tsconfig.json",
+        "{workspaceRoot}/Cargo.toml",
+        "{workspaceRoot}/Cargo.lock"
+      ],
+      "outputs": ["{projectRoot}/dist"],
+      "cache": true
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm run test",
+        "cwd": "packages/c2pa-node"
+      },
+      "inputs": [
+        "{projectRoot}/src/**/*.rs",
+        "{projectRoot}/js-src/**/*.ts",
+        "{projectRoot}/tests/**/*",
+        "{projectRoot}/Cargo.toml",
+        "{projectRoot}/tsconfig.json",
+        "{workspaceRoot}/Cargo.toml",
+        "{workspaceRoot}/Cargo.lock"
+      ],
+      "cache": true
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm run lint",
+        "cwd": "packages/c2pa-node"
+      },
+      "inputs": [
+        "{projectRoot}/src/**/*.rs",
+        "{projectRoot}/js-src/**/*.ts",
+        "{projectRoot}/eslint.config.cjs"
+      ],
+      "cache": true
+    }
+  }
+}
