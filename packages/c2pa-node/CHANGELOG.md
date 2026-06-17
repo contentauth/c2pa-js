@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+## 0.6.0
+
+### Minor Changes
+
+- 40d779d: Release v0.6.0 from c2pa-node's new home in the c2pa-js monorepo.
+
 > **Note:** As of v0.5.6, development has moved to the
 > [contentauth/c2pa-js](https://github.com/contentauth/c2pa-js) monorepo
 > under `packages/c2pa-node`. History prior to that migration was preserved
