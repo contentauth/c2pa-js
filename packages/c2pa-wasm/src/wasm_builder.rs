@@ -104,7 +104,7 @@ impl WasmBuilder {
         archive: &Blob,
         context_json: Option<String>,
     ) -> Result<WasmBuilder, JsString> {
-        let stream = BlobStream::new(archive);
+        let stream = BlobStream::new(archive).map_err(WasmError::other)?;
         let builder = if let Some(ctx_json) = context_json {
             let context = Context::new()
                 .with_settings(ctx_json.as_str())
@@ -180,7 +180,7 @@ impl WasmBuilder {
     /// Sets a thumbnail from a [`Blob`] to be included in the manifest. The thumbnail should represent the asset being signed.
     #[wasm_bindgen(js_name = setThumbnailFromBlob)]
     pub fn set_thumbnail_from_blob(&mut self, format: &str, blob: &Blob) -> Result<(), JsString> {
-        let mut stream = BlobStream::new(blob);
+        let mut stream = BlobStream::new(blob).map_err(WasmError::other)?;
         self.builder
             .set_thumbnail(format, &mut stream)
             .map_err(WasmError::from)?;
@@ -213,7 +213,7 @@ impl WasmBuilder {
         format: &str,
         blob: &Blob,
     ) -> Result<(), JsString> {
-        let mut stream = BlobStream::new(blob);
+        let mut stream = BlobStream::new(blob).map_err(WasmError::other)?;
         self.builder
             .add_ingredient_from_stream_async(json, format, &mut stream)
             .await
@@ -225,7 +225,7 @@ impl WasmBuilder {
     /// Add a [`Blob`] to the manifest as a resource. The ID must match an identifier in the manifest.
     #[wasm_bindgen(js_name = addResourceFromBlob)]
     pub fn add_resource_from_blob(&mut self, id: &str, blob: &Blob) -> Result<(), JsString> {
-        let mut stream = BlobStream::new(blob);
+        let mut stream = BlobStream::new(blob).map_err(WasmError::other)?;
         self.builder
             .add_resource(id, &mut stream)
             .map_err(WasmError::from)?;
@@ -305,7 +305,7 @@ impl WasmBuilder {
         dest: &mut Vec<u8>,
     ) -> Result<Vec<u8>, JsString> {
         let signer = WasmSigner::from_definition(signer_definition)?;
-        let mut stream = BlobStream::new(source);
+        let mut stream = BlobStream::new(source).map_err(WasmError::other)?;
 
         let mut cursor = Cursor::new(dest);
 
