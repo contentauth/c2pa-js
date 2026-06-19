@@ -78,7 +78,7 @@ impl NeonCallbackCredentialHolder {
 /// - `Sync`: Allows the type to be shared between threads
 ///
 /// The type needs these capabilities because it:
-/// - Implements `AsyncSigner` and `AsyncRawSigner` traits for asynchronous signing operations
+/// - Implements the `AsyncSigner` trait for asynchronous signing operations
 /// - Is used in the `identity_sign_async` function which performs asynchronous operations
 /// - Is part of a Node.js binding where async operations are common
 unsafe impl Send for NeonCallbackCredentialHolder {}
