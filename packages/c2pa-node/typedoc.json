@@ -1,0 +1,4 @@
+{
+  "entryPoints": ["js-src/index.ts"],
+  "includeVersion": false
+}
