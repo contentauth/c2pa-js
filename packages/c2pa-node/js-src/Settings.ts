@@ -14,7 +14,12 @@
 import * as fs from "fs-extra";
 import fetch from "node-fetch";
 
-import type { TrustConfig, VerifyConfig, SettingsContext } from "./types.d.ts";
+import type {
+  TrustConfig,
+  VerifyConfig,
+  SettingsContext,
+  C2paSettings,
+} from "./types.d.ts";
 
 type SettingsObjectType = {
   [k: string]: string | boolean | undefined | SettingsObjectType;
@@ -101,6 +106,28 @@ export function mergeSettings(...settings: SettingsContext[]): SettingsContext {
  */
 export function settingsToJson(settings: SettingsContext): string {
   return JSON.stringify(snakeCaseify(settings as SettingsObjectType));
+}
+
+/**
+ * Normalize a settings argument into the JSON string the native binding
+ * expects, or `undefined` when no settings were provided.
+ *
+ * A string is passed through unchanged. An object is converted with
+ * {@link settingsToJson} so that camelCase keys (as produced by
+ * {@link createTrustSettings}, {@link createVerifySettings}, {@link mergeSettings},
+ * etc.) are mapped to the snake_case keys c2pa-rs reads. Calling
+ * `JSON.stringify` on the object directly would leave camelCase keys in place,
+ * and the native layer silently ignores keys it does not recognize.
+ * @param settings A settings string or object, or undefined
+ * @returns The snake_case JSON string, or undefined
+ */
+export function normalizeSettings(
+  settings?: C2paSettings,
+): string | undefined {
+  if (!settings) return undefined;
+  return typeof settings === "string"
+    ? settings
+    : settingsToJson(settings as SettingsContext);
 }
 
 /**

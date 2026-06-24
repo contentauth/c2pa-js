@@ -19,6 +19,7 @@ import type {
 } from "@contentauth/c2pa-types";
 
 import { getNeonBinary } from "./binary.js";
+import { normalizeSettings } from "./Settings.js";
 import type {
   BuilderInterface,
   C2paSettings,
@@ -40,11 +41,7 @@ export class Builder implements BuilderInterface {
   constructor(private builder: NeonBuilderHandle) {}
 
   static new(settings?: C2paSettings): Builder {
-    const settingsStr = settings
-      ? typeof settings === "string"
-        ? settings
-        : JSON.stringify(settings)
-      : undefined;
+    const settingsStr = normalizeSettings(settings);
     const builder: NeonBuilderHandle = getNeonBinary().builderNew(settingsStr);
     return new Builder(builder);
   }
@@ -64,11 +61,7 @@ export class Builder implements BuilderInterface {
         "Failed to stringify JSON Manifest Definition: Unknown error",
       );
     }
-    const settingsStr = settings
-      ? typeof settings === "string"
-        ? settings
-        : JSON.stringify(settings)
-      : undefined;
+    const settingsStr = normalizeSettings(settings);
     const builder: NeonBuilderHandle = getNeonBinary().builderWithJson(
       jsonString,
       settingsStr,
@@ -145,11 +138,7 @@ export class Builder implements BuilderInterface {
     asset: SourceAsset,
     settings?: C2paSettings,
   ): Promise<Builder> {
-    const settingsStr = settings
-      ? typeof settings === "string"
-        ? settings
-        : JSON.stringify(settings)
-      : undefined;
+    const settingsStr = normalizeSettings(settings);
     return new Builder(
       await getNeonBinary().builderFromArchive(asset, settingsStr),
     );

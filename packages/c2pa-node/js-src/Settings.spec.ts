@@ -10,6 +10,7 @@ import {
   createVerifySettings,
   mergeSettings,
   settingsToJson,
+  normalizeSettings,
   loadSettingsFromFile,
   loadSettingsFromUrl,
 } from "./Settings.js";
@@ -320,6 +321,44 @@ verify_after_sign = false`;
       await expect(
         loadSettingsFromUrl("https://example.com/settings.json"),
       ).rejects.toThrow("Network error");
+    });
+  });
+
+  describe("normalizeSettings", () => {
+    it("returns undefined when no settings are provided", () => {
+      expect(normalizeSettings(undefined)).toBeUndefined();
+    });
+
+    it("passes a string through unchanged", () => {
+      const json = '{"verify":{"verify_trust":true}}';
+      expect(normalizeSettings(json)).toBe(json);
+    });
+
+    it("converts a camelCase settings object to snake_case JSON", () => {
+      // Regression: Reader/Builder previously used JSON.stringify directly,
+      // which left camelCase keys in place so c2pa-rs silently ignored them.
+      const settings = createTrustSettings({
+        verifyTrustList: true,
+        trustAnchors: "ANCHORS",
+      });
+
+      const result = normalizeSettings(settings);
+      expect(result).toBeDefined();
+      const parsed = JSON.parse(result as string);
+
+      expect(parsed.trust.verify_trust_list).toBe(true);
+      expect(parsed.trust.trust_anchors).toBe("ANCHORS");
+      // The camelCase keys must NOT survive.
+      expect(parsed.trust.verifyTrustList).toBeUndefined();
+      expect(parsed.trust.trustAnchors).toBeUndefined();
+    });
+
+    it("matches settingsToJson for object input", () => {
+      const settings = mergeSettings(
+        createTrustSettings({ verifyTrustList: true, trustAnchors: "A" }),
+        createVerifySettings({ verifyAfterReading: true, verifyTrust: true }),
+      );
+      expect(normalizeSettings(settings)).toBe(settingsToJson(settings));
     });
   });
 });
