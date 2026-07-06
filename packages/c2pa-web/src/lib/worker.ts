@@ -17,6 +17,7 @@ import {
 } from '@contentauth/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
 import { createWorkerTx, rx } from './worker/rpc.js';
+import { sanitizeManifestStore } from './worker/sanitizeManifestStore.js';
 import { transfer } from 'highgain';
 
 const readerMap = createWorkerObjectMap<WasmReader>();
@@ -53,7 +54,7 @@ rx(
     },
     reader_manifestStore(readerId) {
       const reader = readerMap.get(readerId);
-      return reader.manifestStore();
+      return sanitizeManifestStore(reader.manifestStore());
     },
     reader_activeManifest(readerId) {
       const reader = readerMap.get(readerId);
