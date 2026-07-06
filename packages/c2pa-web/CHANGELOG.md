@@ -1,5 +1,11 @@
 # @contentauth/c2pa-web
 
+## 0.12.1
+
+### Patch Changes
+
+- cb697aa: Sanitize manifest labels.
+
 ## 0.12.0
 
 ### Minor Changes
