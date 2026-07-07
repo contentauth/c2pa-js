@@ -40,7 +40,7 @@ impl WasmReader {
         blob: &Blob,
         context_json: Option<String>,
     ) -> Result<WasmReader, JsString> {
-        let stream = BlobStream::new(blob);
+        let stream = BlobStream::new(blob).map_err(WasmError::other)?;
         WasmReader::from_stream(format, stream, context_json).await
     }
 
@@ -75,8 +75,8 @@ impl WasmReader {
         fragment: &Blob,
         context_json: Option<String>,
     ) -> Result<WasmReader, JsString> {
-        let init_stream = BlobStream::new(init);
-        let fragment_stream = BlobStream::new(fragment);
+        let init_stream = BlobStream::new(init).map_err(WasmError::other)?;
+        let fragment_stream = BlobStream::new(fragment).map_err(WasmError::other)?;
 
         WasmReader::from_stream_fragment(format, init_stream, fragment_stream, context_json).await
     }
