@@ -73,15 +73,29 @@ The `/packages` directory contains libraries published for production use.
 
 #### c2pa-web
 
-SDK for [C2PA](https://c2pa.org/) metadata in the browser. Source: [`packages/c2pa-web`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-web).
+JavaScript library for working with C2PA data in a web browser.
+
+Source: [`packages/c2pa-web`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-web).
+
+#### c2pa-node
+
+Node.js library that can:
+- Read and validate C2PA data from media files in supported formats.
+- Add signed manifests to media files in supported formats.
+
+Source: [`packages/c2pa-node`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-node).
 
 #### c2pa-wasm
 
-WebAssembly bindings for [`c2pa-rs`](https://github.com/contentauth/c2pa-rs), built with [`wasm-bindgen`](https://github.com/wasm-bindgen/wasm-bindgen). They power `c2pa-web`; most applications should use `c2pa-web` instead of calling the bindings directly. Source: [`packages/c2pa-wasm`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm).
+WebAssembly bindings for [`c2pa-rs`](https://github.com/contentauth/c2pa-rs), built with [`wasm-bindgen`](https://github.com/wasm-bindgen/wasm-bindgen). They power `c2pa-web`; most applications should use `c2pa-web` instead of calling the bindings directly. 
+
+Source: [`packages/c2pa-wasm`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm).
 
 #### c2pa-types
 
-TypeScript types generated from `c2pa-rs` structs for use by `c2pa-web`. Source: [`packages/c2pa-types`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-types).
+TypeScript types generated from `c2pa-rs` structs for use by `c2pa-web`. 
+
+Source: [`packages/c2pa-types`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-types).
 
 ### tools
 
