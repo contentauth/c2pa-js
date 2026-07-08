@@ -15,6 +15,7 @@ Additionally, the repo contains these intermediate and internal libraries:
 - [**c2pa-types**](c2pa-js/packages/c2pa-types/README.md): TypeScript types generated from c2pa-rs structs for use by c2pa-web and c2pa-node.
 
 > [!NOTE]
+> In June, 2026, the c2pa-node-v2 repo was merged into the c2pa-js repo.
 > The old `c2pa-js` repository is now in [c2pa-js-legacy](https://github.com/contentauth/c2pa-js-legacy) and is deprecated. If you need to work with C2PA metadata in the browser, use the libraries in this repository instead.
 
 ### Learning videos
