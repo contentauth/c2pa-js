@@ -1,9 +1,29 @@
 # c2pa-js
 
+## Overview
+
+The c2pa-js repository is a monorepo containing JavaScript libraries and tools for working with [C2PA metadata](https://c2pa.org/). It provides several libraries published for production use.
+
+These libraries are of primary interest to developers:
+
+- [**c2pa-web**](packages/c2pa-web/README.md): Library for C2PA metadata in the browser. Import and use this package in browser client JavaScript code.
+- [**c2pa-node**](packages/c2pa-node/README.md): Node.js library that can read and validate C2PA manifest data that is attached to media assets and add signed manifests to media assets.
+
+Additionally, the repo contains these intermediate and internal libraries:
+
+- [**c2pa-wasm**](c2pa-js/packages/c2pa-wasm/README.md): WebAssembly bindings for [c2pa-rs](https://github.com/contentauth/c2pa-rs) that power c2pa-web, built with [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen). Most applications should use c2pa-web instead of calling the bindings directly.
+- [**c2pa-types**](c2pa-js/packages/c2pa-types/README.md): TypeScript types generated from c2pa-rs structs for use by c2pa-web and c2pa-node.
+
 > [!NOTE]
+> In June 2026, the c2pa-node-v2 repo was merged into the c2pa-js repo.
 > The old `c2pa-js` repository is now in [c2pa-js-legacy](https://github.com/contentauth/c2pa-js-legacy) and is deprecated. If you need to work with C2PA metadata in the browser, use the libraries in this repository instead.
 
-JavaScript libraries and tools for working with [C2PA metadata](https://c2pa.org/). This repository is part of the [Content Authenticity Initiative](https://contentauthenticity.org/).
+### Learning videos
+
+For video walkthroughs on using the JavaScript SDK, see the following lessons from the Content Credentials Foundations course:
+
+- [Reading and validating C2PA data with Javascript in the browser](https://learn.contentauthenticity.org/reading-and-validating-content-credentials)
+- [Formatting C2PA data for L1 - L3 disclosures](https://learn.contentauthenticity.org/formatting-c2pa-data-for-display)
 
 ## Using this monorepo
 
@@ -65,25 +85,22 @@ After the pull request merges to `main`, the changeset bot opens a release pull 
 
 ## Directory layout
 
-See each package directory for full details.
-
-### packages
+### Packages
 
 The `/packages` directory contains libraries published for production use.
 
-#### c2pa-web
+<div class="packages-table" markdown="1">
 
-SDK for [C2PA](https://c2pa.org/) metadata in the browser. Source: [`packages/c2pa-web`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-web).
+| Package | Description | Source |
+|---------|-------------|--------|
+| c2pa-web | JavaScript library for working with C2PA data in a web browser. | [`packages/c2pa-web`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-web) |
+| c2pa-node | Node.js library that can read and validate C2PA manifest data that is attached to media assets and add signed manifests to media assets. | [`packages/c2pa-node`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-node) |
+| c2pa-wasm | WebAssembly bindings for [c2pa-rs](https://github.com/contentauth/c2pa-rs) that power power c2pa-web, built with [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen). Most applications should use c2pa-web instead of calling the bindings directly. | [`packages/c2pa-wasm`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm) |
+| c2pa-types | TypeScript types generated from `c2pa-rs` structs for use by `c2pa-web`. | [`packages/c2pa-types`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-types) |
 
-#### c2pa-wasm
+</div>
 
-WebAssembly bindings for [`c2pa-rs`](https://github.com/contentauth/c2pa-rs), built with [`wasm-bindgen`](https://github.com/wasm-bindgen/wasm-bindgen). They power `c2pa-web`; most applications should use `c2pa-web` instead of calling the bindings directly. Source: [`packages/c2pa-wasm`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm).
-
-#### c2pa-types
-
-TypeScript types generated from `c2pa-rs` structs for use by `c2pa-web`. Source: [`packages/c2pa-types`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-types).
-
-### tools
+### Tools
 
 The `/tools` directory contains utilities for local development.
 
