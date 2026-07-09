@@ -94,7 +94,7 @@ The `/packages` directory contains libraries published for production use.
 | Package | Description | Source |
 |---------|-------------|--------|
 | c2pa-web | JavaScript library for working with C2PA data in a web browser. | [`packages/c2pa-web`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-web) |
-| c2pa-node | Node.js library that can read and validate C2PA data from and add signed manifests to media files in supported formats. | [`packages/c2pa-node`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-node) |
+| c2pa-node | Node.js library that can read and validate C2PA manifest data that is attached to media assets and add signed manifests to media assets. | [`packages/c2pa-node`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-node) |
 | c2pa-wasm | WebAssembly bindings for [c2pa-rs](https://github.com/contentauth/c2pa-rs) that power power c2pa-web, built with [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen). Most applications should use c2pa-web instead of calling the bindings directly. | [`packages/c2pa-wasm`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-wasm) |
 | c2pa-types | TypeScript types generated from `c2pa-rs` structs for use by `c2pa-web`. | [`packages/c2pa-types`](https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-types) |
 
