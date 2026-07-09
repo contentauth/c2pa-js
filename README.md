@@ -7,7 +7,7 @@ The c2pa-js repository is a monorepo containing JavaScript libraries and tools f
 These libraries are of primary interest to developers:
 
 - [**c2pa-web**](packages/c2pa-web/README.md): Library for C2PA metadata in the browser. Import and use this package in browser client JavaScript code.
-- [**c2pa-node**](packages/c2pa-node/README.md): Node.js library that can read and validate C2PA data from and add signed manifests to media files in supported formats.
+- [**c2pa-node**](packages/c2pa-node/README.md): Node.js library that can read and validate C2PA manifest data that is attached to media assets and add signed manifests to media assets.
 
 Additionally, the repo contains these intermediate and internal libraries:
 
