@@ -1,5 +1,16 @@
 # C2PA Node.js library
 
+> **This branch (`ale/koffi-poc`) is a proof of concept**, not the shipping
+> package: it replaces the Neon native binding described below with a koffi
+> FFI binding, as proposed in [RFC.md](./RFC.md). Public API usage in this
+> document is still accurate (that was a deliberate goal of the rewrite),
+> but the **installation/build story below is not** — there's no
+> precompiled-binary download or npm install step for the native library
+> yet. Instead, set `C2PA_LIBRARY_PATH` to a built `libadobe_c2pa` (macOS:
+> `.dylib`, Linux: `.so`, Windows: `.dll`) — see RFC.md for how to build one
+> from the `adobe_api` repo. This is rollout step 4 in RFC.md ("Build/release
+> integration"), not yet attempted.
+
 `@contentauth/c2pa-node` is a Node.js library in the [c2pa-js](https://github.com/contentauth/c2pa-js) monorepo that can:
 - Read and validate C2PA data from media files in supported formats.
 - Add signed manifests to media files in supported formats.
@@ -635,12 +646,17 @@ const builder = Builder.new(urlSettings);
 **Note:** Settings are passed as per-instance configuration. There are no global settings that affect all Readers and Builders.
 
 
-### Build and use custom binary
-**Build Rust binary:**
+### Build and use a custom native library
+
+On this branch, `C2PA_LIBRARY_PATH` points at a prebuilt `libadobe_c2pa`
+(or plain `libc2pa_c`) shared library rather than a `.node` addon:
+
 ```bash
-pnpm run build:rust
-```
-**Use custom Rust binary:**
-```bash
-export C2PA_LIBRARY_PATH=<path-to-binary-folder>/index.node
+# Build libadobe_c2pa from the adobe_api repo (needed for AdobeSigner/CAWG;
+# it's a superset of plain c2pa-rs's libc2pa_c, so it covers Reader/Builder
+# too):
+cd /path/to/adobe_api
+cargo build --release -p adobe_c2pa
+
+export C2PA_LIBRARY_PATH=/path/to/adobe_api/target/release/libadobe_c2pa.dylib
 ```

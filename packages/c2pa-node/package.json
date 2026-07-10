@@ -11,33 +11,19 @@
   "type": "module",
   "types": "dist/types/index.d.ts",
   "files": [
-    "dist",
-    "scripts",
-    "src",
-    "Cargo.toml",
-    "Cargo.lock"
+    "dist"
   ],
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "build": "run-s build:rust build:ts",
-    "build:debug": "run-s build:rust-debug build:ts",
-    "build:rust": "pnpm run build:rust-debug --release",
-    "build:rust-debug": "cargo build --message-format=json-render-diagnostics > cargo.log",
-    "build:ts": "tsc -b && cpy index.node dist && cpy index.node js-src && cpy --flat js-src/types.d.ts dist/types",
-    "ci": "run-s build:rust-debug build:ts test",
-    "clean": "rimraf dist target",
-    "cross": "pnpm run cross-build --release",
-    "cross-build": "cross build --message-format=json-render-diagnostics > cross.log",
-    "debug": "pnpm run cargo-build --",
-    "lint": "cargo clippy && pnpm eslint",
-    "postbuild:rust-debug": "neon dist < cargo.log",
-    "postcross-build": "neon dist -m /target < cross.log",
-    "postinstall": "node scripts/postinstall.cjs",
-    "test": "pnpm build:debug && vitest run --config ./vitest.config.ts",
-    "test:watch": "pnpm build:debug && vitest --config ./vitest.config.ts",
-    "test:ui": "pnpm build:debug && vitest --ui --config ./vitest.config.ts"
+    "build": "tsc -b && cpy --flat js-src/types.d.ts dist/types",
+    "ci": "run-s build test",
+    "clean": "rimraf dist",
+    "lint": "pnpm eslint",
+    "test": "pnpm build && vitest run --config ./vitest.config.ts",
+    "test:watch": "pnpm build && vitest --config ./vitest.config.ts",
+    "test:ui": "pnpm build && vitest --ui --config ./vitest.config.ts"
   },
   "author": "Colin Murphy <colmurph@adobe.com>, Austin Le <ale@adobe.com>",
   "license": "MIT",
@@ -45,9 +31,6 @@
     "@changesets/cli": "^2.31.0",
     "@contentauth/c2pa-types": "workspace:*",
     "@eslint/js": "^9.39.4",
-    "@neon-rs/cli": "0.1.82",
-    "@types/cli-progress": "^3.11.6",
-    "@types/debug": "^4.1.13",
     "@types/fs-extra": "^11.0.4",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.19.17",
@@ -75,15 +58,9 @@
   },
   "homepage": "https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-node#readme",
   "dependencies": {
-    "cargo-cp-artifact": "^0.1.9",
-    "cli-progress": "^3.12.0",
-    "debug": "^4.4.3",
     "fs-extra": "^11.3.4",
-    "mkdirp": "^3.0.1",
-    "node-fetch": "^3.3.2",
-    "pkg-dir": "^8.0.0",
-    "pretty-bytes": "^6.1.1",
-    "unzipper": "^0.10.14"
+    "koffi": "^2.9.0",
+    "node-fetch": "^3.3.2"
   },
   "packageManager": "pnpm@10.15.0",
   "nx": {

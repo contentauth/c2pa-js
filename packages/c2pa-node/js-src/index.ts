@@ -23,3 +23,9 @@ export {
 export { Trustmark } from "./Trustmark.js";
 export { isActionsAssertion } from "./assertions.js";
 export * from "./Settings.js";
+
+// New in the koffi PoC: Adobe claims-signer/CAWG-identity signing,
+// implemented in shared Rust (adobe_api) rather than reimplemented per
+// language binding. See RFC.md.
+export { AdobeSigner } from "./AdobeSigner.js";
+export type { AdobeIdentity } from "./native/adobeContext.js";

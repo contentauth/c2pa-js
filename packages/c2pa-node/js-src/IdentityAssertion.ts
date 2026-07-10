@@ -11,112 +11,87 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import { getNeonBinary } from "./binary.js";
+// This is the generic X.509/CAWG-identity signing path (distinct from the
+// Adobe IMS-identity path in AdobeSigner.ts). The plain c2pa-rs C API does
+// expose c2pa_identity_signer_create, but marshaling its char** identity
+// arrays through koffi was left as an unfinished stub in the koffi
+// prototype this is based on — not attempted here either. See RFC.md.
+
 import type {
   CallbackCredentialHolderInterface,
   IdentityAssertionBuilderInterface,
   IdentityAssertionSignerInterface,
-  NeonCallbackCredentialHolderHandle,
-  NeonIdentityAssertionSignerHandle,
-  NeonIdentityAssertionBuilderHandle,
   SignerPayload,
-  NeonCallbackSignerHandle,
 } from "./types.d.ts";
 
-export class IdentityAssertionBuilder
-  implements IdentityAssertionBuilderInterface
-{
-  constructor(private _builder: NeonIdentityAssertionBuilderHandle) {}
+function notImplemented(): Error {
+  return new Error(
+    "CAWG X.509 identity signing is not implemented in this koffi PoC. See RFC.md.",
+  );
+}
+
+export class IdentityAssertionBuilder implements IdentityAssertionBuilderInterface {
+  private constructor() {}
 
   static async identityBuilderForCredentialHolder(
-    credentialHolder: CallbackCredentialHolderInterface,
+    _credentialHolder: CallbackCredentialHolderInterface,
   ): Promise<IdentityAssertionBuilder> {
-    const builder = getNeonBinary().identityBuilderForCredentialHolder(
-      credentialHolder.getHandle(),
-    );
-    return new IdentityAssertionBuilder(builder);
+    throw notImplemented();
   }
 
-  addReferencedAssertions(referencedAssertions: string[]): void {
-    getNeonBinary().identityBuilderAddReferencedAssertions.call(
-      this._builder,
-      referencedAssertions,
-    );
+  addReferencedAssertions(_referencedAssertions: string[]): void {
+    throw notImplemented();
   }
 
-  addRoles(roles: string[]): void {
-    getNeonBinary().identityBuilderAddRoles.call(this._builder, roles);
+  addRoles(_roles: string[]): void {
+    throw notImplemented();
   }
 
-  builder(): NeonIdentityAssertionBuilderHandle {
-    return this._builder;
+  builder(): unknown {
+    throw notImplemented();
   }
 }
 
-export class IdentityAssertionSigner
-  implements IdentityAssertionSignerInterface
-{
-  constructor(private _signer: NeonIdentityAssertionSignerHandle) {}
+export class IdentityAssertionSigner implements IdentityAssertionSignerInterface {
+  private constructor() {}
 
-  static new(signer: NeonCallbackSignerHandle): IdentityAssertionSigner {
-    const identitySigner = getNeonBinary().identitySignerNew(signer);
-    return new IdentityAssertionSigner(identitySigner);
+  static new(_signer: unknown): IdentityAssertionSigner {
+    throw notImplemented();
   }
 
-  addIdentityAssertion(
-    identityAssertionBuilder: IdentityAssertionBuilder,
-  ): void {
-    getNeonBinary().identitySignerAddIdentityAssertion.call(
-      this._signer,
-      identityAssertionBuilder.builder(),
-    );
+  addIdentityAssertion(_identityAssertionBuilder: IdentityAssertionBuilder): void {
+    throw notImplemented();
   }
 
-  getHandle(): NeonIdentityAssertionSignerHandle {
-    return this._signer;
+  getHandle(): unknown {
+    throw notImplemented();
   }
 }
 
-export class CallbackCredentialHolder
-  implements CallbackCredentialHolderInterface
-{
-  constructor(
-    private callbackCredentialHolder: NeonCallbackCredentialHolderHandle,
-  ) {}
-
-  getHandle(): NeonCallbackCredentialHolderHandle {
-    return this.callbackCredentialHolder;
-  }
+export class CallbackCredentialHolder implements CallbackCredentialHolderInterface {
+  private constructor() {}
 
   static newCallbackCredentialHolder(
-    reserveSize: number,
-    sigType: string,
-    callback: (signerPayload: SignerPayload) => Promise<Buffer>,
-  ) {
-    const credentialHolder = getNeonBinary().newCallbackCredentialHolder(
-      reserveSize,
-      sigType,
-      callback,
-    );
-    return new CallbackCredentialHolder(credentialHolder);
+    _reserveSize: number,
+    _sigType: string,
+    _callback: (signerPayload: SignerPayload) => Promise<Buffer>,
+  ): CallbackCredentialHolder {
+    throw notImplemented();
   }
 
-  async sign(payload: SignerPayload): Promise<Buffer> {
-    return getNeonBinary().callbackSignerSignPayload.call(
-      this.callbackCredentialHolder,
-      payload,
-    );
+  getHandle(): unknown {
+    throw notImplemented();
+  }
+
+  async sign(_payload: SignerPayload): Promise<Buffer> {
+    throw notImplemented();
   }
 
   reserveSize(): number {
-    return getNeonBinary().callbackCredentialHolderReserveSize.call(
-      this.callbackCredentialHolder,
-    );
+    throw notImplemented();
   }
 
   sigType(): string {
-    return getNeonBinary().callbackCredentialHolderSigType.call(
-      this.callbackCredentialHolder,
-    );
+    throw notImplemented();
   }
 }

@@ -4,7 +4,6 @@ resolver = '2'
 members = [
 	'packages/c2pa-wasm',
 	'packages/c2pa-types',
-	'packages/c2pa-node',
 ]
 
 [workspace.package]
