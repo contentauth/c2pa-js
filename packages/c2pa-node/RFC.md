@@ -230,7 +230,7 @@ koffi binding + public TS types, and buffer/pointer lifetime management.
 | `Reader.spec.ts` | **11/11 pass** | Full parity, including CAWG assertion reading and the `cloud.jpg` remote-manifest case. |
 | `Settings.spec.ts` | **17/17 pass** | No native calls to begin with. |
 | `Signer.spec.ts` | **8/9 pass** | The 1 failure is `signAsync()` with a genuine async JS `CallbackSigner` — expected, see "Key finding" above: koffi's signer callback must be synchronous, so a callback typed `Promise<Buffer>` can never work through it. Now fails with a clear, specific message pointing at this RFC instead of an opaque native COSE error. |
-| `Builder.spec.ts` | **1/21 pass** | Looks dramatic but isn't 20 independent gaps: nearly all failures cascade from one shared `beforeEach` calling `updateManifestProperty()`, which — like `addAssertion()`, `addRedaction()`, `getManifestDefinition()`, and ingredient-without-an-asset — **has no equivalent in the plain c2pa-rs C API at all** (confirmed via `grep` against `c2pa.h`). These were bespoke Rust glue in `neon_builder.rs`, not thin C-API wrappers; closing this gap means either extending the c2pa-rs C API upstream or reimplementing manifest-definition tracking in Rust (`adobe_api`) or hand-rolled JS — not attempted here. |
+| `Builder.spec.ts` | **1/21 pass** | Looks dramatic but isn't 20 independent gaps: nearly all failures cascade from one shared `beforeEach` calling `updateManifestProperty()`, which — like `addAssertion()`, `addRedaction()`, `getManifestDefinition()`, and ingredient-without-an-asset — **has no equivalent in the plain c2pa-rs C API at all** (confirmed via `grep` against `c2pa.h`). These were bespoke Rust glue in `neon_builder.rs`, calling `c2pa::Builder` methods/fields directly (Neon isn't restricted to a C ABI) — not thin C-API wrappers. The underlying Rust methods/fields *do* exist upstream (`Builder::add_assertion`, `Builder::add_ingredient` without a stream, the public `Builder.definition` field for redactions/property updates/reading the definition back — all confirmed against `c2pa-rs/sdk/src/builder.rs`); they're just not exposed as C functions yet. **Closing this gap means a small, upstream PR to the public `c2pa_c_ffi` crate** (`github.com/contentauth/c2pa-rs/tree/main/c2pa_c_ffi`) — e.g. `c2pa_builder_add_assertion` following the existing `c2pa_builder_add_action` as a template — not a private/Adobe-only extension: this package is open source, so its core Builder functionality can't depend on Adobe's internal `adobe_api` repo the way `AdobeSigner.ts` (explicitly, visibly Adobe-specific) can. Confirmed this isn't c2pa-node-specific: `c2pa-python` (same upstream authors, also a ctypes/C-ABI binding over this exact `c2pa_c_ffi` layer) has the identical gap — its `Builder` class has no `add_assertion`/`add_redaction`/`get_manifest_definition`/`update_manifest_property` either. Every C-ABI language binding is blocked on the same upstream work; not attempted in this PoC. |
 | `Trustmark.spec.ts` | 0/10 (skipped) | Stubbed per plan — needs the separate `trustmark` crate. |
 | `IdentityAssertion.spec.ts` | 0/1 | Stubbed per plan — generic X.509 CAWG path. |
 
@@ -270,8 +270,12 @@ Adobe signer works, off-thread, inside the real rewritten package.
 - Real, non-trivial gap in `Builder`: `addAssertion`, `addRedaction`,
   `getManifestDefinition`, `updateManifestProperty`, and ingredient-without-
   asset have no C API today. This is the single biggest blocker to a real
-  cutover and needs either upstream c2pa-rs C API work or new `adobe_api`
-  surface — it is not a koffi limitation.
+  cutover. It is not a koffi limitation and not something this package can
+  fix alone — it needs a small upstream PR to the public `c2pa_c_ffi` crate
+  (the underlying Rust methods/fields already exist); routing it through
+  Adobe's private `adobe_api` instead would tie this open source package's
+  core functionality to a non-public dependency, so that's off the table.
+  `c2pa-python` has the identical gap for the same structural reason.
 - Trustmark and the generic X.509 CAWG identity path aren't ported (not
   attempted here; both are plausible follow-ups, not blocked on anything
   fundamental).

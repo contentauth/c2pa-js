@@ -33,18 +33,49 @@ import type {
 } from "./types.d.ts";
 
 /**
- * The plain c2pa-rs C API has no equivalent for a handful of methods that
- * were previously implemented directly against c2pa-rs's Rust API in
- * packages/c2pa-node/src/neon_builder.rs (now removed): there's no C
- * function to read back or mutate a builder's in-progress manifest
- * definition, add an arbitrary assertion, add a redaction, or add an
- * ingredient with no accompanying asset. See RFC.md.
+ * These five methods cannot be implemented against koffi (or any other C-ABI
+ * binding) today, and the fix is NOT something this package can do on its
+ * own — it requires new functions in c2pa-rs's own public C FFI crate,
+ * `c2pa_c_ffi` (github.com/contentauth/c2pa-rs/tree/main/c2pa_c_ffi), which
+ * is what `c2pa.h` is generated from.
+ *
+ * Why: the previous Neon binding (packages/c2pa-node/src/neon_builder.rs,
+ * now removed) called `c2pa::Builder::add_assertion`, direct field access on
+ * `builder.definition` (for redactions/property updates/reading the
+ * definition back), etc. *directly against the Rust crate* — Neon addons
+ * aren't restricted to a C ABI, they can call any public Rust API. koffi
+ * (like any FFI binding for a non-Rust language) can only reach whatever's
+ * exposed as a `#[no_mangle] extern "C"` function, and `c2pa_c_ffi` doesn't
+ * currently export these.
+ *
+ * The underlying Rust methods/fields do exist (confirmed against
+ * c2pa-rs/sdk/src/builder.rs): `Builder::add_assertion(label, &impl
+ * Serialize)`, `Builder::add_ingredient(impl Into<Ingredient>)` (no stream
+ * required), and the public `Builder.definition: ManifestDefinition` field
+ * (redactions, property updates, and reading the definition back are all
+ * just reads/writes of that field or `serde_json::to_string(&builder)`,
+ * since `Builder` derives `Serialize`). None of this is Adobe-specific, so
+ * the right place to add C wrappers is upstream in the public,
+ * MIT/Apache-2.0-licensed `c2pa_c_ffi` crate (e.g. following the existing
+ * `c2pa_builder_add_action` as a template) — NOT in Adobe's private
+ * `adobe_api` repo, which would tie this open source package's core
+ * Builder functionality to a non-public dependency.
+ *
+ * Confirmed this isn't a c2pa-node-specific problem: c2pa-python
+ * (~/Repos/c2pa-python, same authors, also a ctypes/C-ABI binding over this
+ * exact `c2pa_c_ffi` layer) has the identical gap — its `Builder` class
+ * (src/c2pa/c2pa.py) has no `add_assertion`/`add_redaction`/
+ * `get_manifest_definition`/`update_manifest_property` either, for the same
+ * reason. Every C-ABI language binding is blocked on the same upstream work.
+ *
+ * See RFC.md for the full writeup.
  */
 function notImplemented(name: string): Error {
   return new Error(
-    `${name}() is not implemented in this koffi PoC — the plain c2pa-rs C ` +
-      `API has no equivalent function for it (previously bespoke Rust glue ` +
-      `in neon_builder.rs). See RFC.md.`,
+    `${name}() is not implemented in this koffi PoC — it requires new ` +
+      `functions in c2pa-rs's public c2pa_c_ffi crate (not present today, ` +
+      `and not something this package can add on its own). See the comment ` +
+      `above this function in Builder.ts, and RFC.md.`,
   );
 }
 
