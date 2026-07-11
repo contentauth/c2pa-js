@@ -234,6 +234,63 @@ koffi binding + public TS types, and buffer/pointer lifetime management.
 | `Trustmark.spec.ts` | 0/10 (skipped) | Stubbed per plan — needs the separate `trustmark` crate. |
 | `IdentityAssertion.spec.ts` | 0/1 | Stubbed per plan — generic X.509 CAWG path. |
 
+### Decision point: `Builder` convenience methods with no C API
+
+**Not a Node-specific invention.** `addAssertion`, `addRedaction`,
+`getManifestDefinition`, and `updateManifestProperty` map to genuine,
+documented, first-class parts of `c2pa-rs`'s own public Rust API —
+`Builder::add_assertion` (and `add_assertion_json`), and the public
+`Builder.definition: ManifestDefinition` field for the rest. `add_assertion`
+appears in the crate's own **top-level doc example** (`sdk/src/lib.rs`), is
+exercised 76+ times across the SDK's own test suite, and dates to the
+original V2 `Builder` design (`#437`), not a later add-on.
+
+**But every consumer that crosses the C ABI lacks them, not just us.**
+Consumers that link `c2pa-rs` directly in Rust — the crate itself, the
+reference `c2patool` CLI, and our own outgoing Neon binding — get these for
+free, because they're just normal Rust method/field access. Consumers that
+must go through the C FFI layer (`c2pa_c_ffi`) don't, because nobody has
+written the `extern "C"` wrapper: confirmed `c2pa-python` (ctypes over the
+same `c2pa_c_ffi`) has the identical gap, and `c2patool` itself never needed
+these methods because its whole interface is upfront JSON manifest files —
+the same pattern `c2pa-python`'s docs use exclusively. This is a structural
+property of every non-Rust binding today, not a temporary koffi shortcoming.
+
+That leaves two real options — not a "fix it ourselves in this package"
+option, since (per the correction earlier this session) routing it through
+Adobe's private `adobe_api` is off the table for this open source package's
+core functionality:
+
+**Option A — Drop these from Node's public API.**
+- *Pros:* Brings this package's capability set in line with every other
+  non-Rust C2PA binding that exists today (`c2pa-python`, and — for this
+  specific interaction pattern — `c2patool`); removes a footgun where our
+  own tests exercise capabilities no other language binding can reproduce;
+  zero new work, no dependency on an external repo's timeline.
+- *Cons:* Breaking change for any consumer relying on the incremental
+  `Builder.withJson(x); builder.addAssertion(...)` pattern (still exercised
+  by our own `Builder.spec.ts`); the redaction workflow tests also depend
+  on `updateManifestProperty`/`getManifestDefinition`, so redaction support
+  would need reworking too, unless upfront-JSON redactions cover real
+  consumer usage (worth checking against actual usage, not just specs,
+  before committing to this).
+
+**Option B — Add the C API upstream, support them properly via koffi.**
+- *Pros:* Restores full feature parity with the Neon binding, with no
+  private dependency; benefits every other C-ABI consumer too —
+  `c2pa-python` would gain the same capability for free once merged; the
+  Rust-side change is small (`c2pa_builder_add_action` in
+  `c2pa_c_ffi/src/c_api.rs` is close to a working template for
+  `add_assertion`).
+- *Cons:* Depends on an external repo's review/release cadence
+  (`contentauth/c2pa-rs`); until merged, this package either carries a
+  patched fork (extra maintenance burden) or ships without these methods in
+  the interim; someone has to actually write and shepherd the PR.
+
+This is a decision for the team (and, since `c2pa-rs`/`c2pa_c_ffi` are
+public, potentially for the wider C2PA developer community) — not something
+this PoC resolves on its own.
+
 ### Live Adobe CAWG demo (real stage IMS, this session)
 
 Ran `AdobeSigner` end-to-end through the actual rewritten package (not a
@@ -252,7 +309,7 @@ CAWG assertion present: true
 This is the concrete, working proof of the RFC's central claim: the async
 Adobe signer works, off-thread, inside the real rewritten package.
 
-### Pros / cons for the team
+### Pros / cons — for the team, and any other developer evaluating this
 
 **Pros:**
 - Real reduction in surface area: ~2754 lines of Rust and a whole native
@@ -265,17 +322,20 @@ Adobe signer works, off-thread, inside the real rewritten package.
   end-to-end, off-thread, against real stage IMS.
 - Errors are more specific by default (`ManifestNotFoundError` etc.) for
   synchronous calls.
+- Puts this package on the same footing as every other non-Rust C2PA
+  binding (`c2pa-python`, etc.) instead of a bespoke Rust-linked one — one
+  fewer "how does Node do this differently" question for anyone working
+  across the C2PA language bindings.
 
 **Cons:**
 - Real, non-trivial gap in `Builder`: `addAssertion`, `addRedaction`,
   `getManifestDefinition`, `updateManifestProperty`, and ingredient-without-
   asset have no C API today. This is the single biggest blocker to a real
-  cutover. It is not a koffi limitation and not something this package can
-  fix alone — it needs a small upstream PR to the public `c2pa_c_ffi` crate
-  (the underlying Rust methods/fields already exist); routing it through
-  Adobe's private `adobe_api` instead would tie this open source package's
-  core functionality to a non-public dependency, so that's off the table.
-  `c2pa-python` has the identical gap for the same structural reason.
+  cutover — see "Decision point" above for the two real options (drop them,
+  or land a small upstream PR) and their own pros/cons; there is no third
+  option where this package fixes it alone, since routing it through
+  Adobe's private `adobe_api` would tie this open source package's core
+  functionality to a non-public dependency.
 - Trustmark and the generic X.509 CAWG identity path aren't ported (not
   attempted here; both are plausible follow-ups, not blocked on anything
   fundamental).

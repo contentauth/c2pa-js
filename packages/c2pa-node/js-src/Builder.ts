@@ -67,8 +67,14 @@ import type {
  * (src/c2pa/c2pa.py) has no `add_assertion`/`add_redaction`/
  * `get_manifest_definition`/`update_manifest_property` either, for the same
  * reason. Every C-ABI language binding is blocked on the same upstream work.
+ * Notably, `c2patool` (the reference CLI, pure Rust, no C ABI) never needed
+ * these either — its whole interface is upfront JSON manifest files, same
+ * pattern c2pa-python's own docs use exclusively.
  *
- * See RFC.md for the full writeup.
+ * This is an open decision, not just a to-do: land the upstream PR (this
+ * comment's plan) OR drop these five methods from this package's public API
+ * to match every other non-Rust binding — see RFC.md's "Decision point"
+ * section for the pros/cons of each option.
  */
 function notImplemented(name: string): Error {
   return new Error(
