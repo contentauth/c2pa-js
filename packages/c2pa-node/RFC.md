@@ -1,8 +1,8 @@
-# RFC: Rebase c2pa-node on the Adobe C API via koffi
+# RFC: Rebase c2pa-node on c2pa-rs's public C API via koffi, with Adobe signing as an additive layer
 
 **Status:** Draft / for discussion — now backed by a working PoC (see below)
 **Author:** (spike + analysis)
-**Date:** 2026-07-09
+**Date:** 2026-07-09 (revised 2026-07-11 to correct the public/Adobe split — see below)
 **Target:** `packages/c2pa-node` in the `c2pa-js` monorepo
 
 ## This branch (`ale/koffi-poc`)
@@ -20,15 +20,53 @@ this package's existing public API wherever the C API allows it.
 ## Summary
 
 Replace the current Neon (N-API) binding with a [koffi](https://koffi.dev) FFI
-binding over the **`adobe_api` C API** (`libadobe_c2pa`), and move signing,
-manifest upload, identity, and AI-compliance business logic out of TypeScript
-and into the shared Rust `adobe_api` crate.
+binding, in two layers:
 
-The Neon→koffi change is a *consequence*; the actual goal is **one Rust core,
-thin language bindings**. Today the `@cai/adobe-node` wrapper (in the separate
-`adobe-js-sdk` repo) reimplements in TypeScript what `adobe_api` already
-implements in Rust — and what `sdk-python`, `sdk-c`, and the C++/WASM SDKs
-already consume through the same C API.
+1. **Core** (`Reader`/`Builder`/`Signer`/`Settings`) moves from Neon to koffi
+   over **c2pa-rs's own public, open source C API** (`c2pa_c_ffi`, the crate
+   that produces `c2pa.h` and the `libc2pa_c` dylib). This is what every
+   consumer of `@contentauth/c2pa-node` gets, and — because this package is
+   open source — it can only depend on the public `contentauth/c2pa-rs`
+   repo, never on Adobe's private `adobe_api`.
+2. **An additive, optional Adobe extension** (`AdobeSigner`: claims-signer
+   HTTP signing + CAWG-verified-identity signing) moves that business logic
+   out of TypeScript (currently duplicated in the separate `adobe-js-sdk`
+   repo's `@cai/adobe-node` wrapper) and into the shared Rust `adobe_api`
+   crate, reached via the same koffi mechanism but a different,
+   Adobe-controlled native library (`libadobe_c2pa`). See "Two-layer
+   architecture" below.
+
+The Neon→koffi change is a *consequence* for the core; for the Adobe layer,
+the actual goal is **one Rust core, thin language bindings** for Adobe's own
+business logic — today `adobe-js-sdk`'s `@cai/adobe-node` wrapper
+reimplements in TypeScript what `adobe_api` already implements in Rust, and
+what Adobe's own internal `sdk-python` (distinct from the public
+`c2pa-python` project), `sdk-c`, and the C++/WASM SDKs already consume
+through the same Adobe C API.
+
+## Two-layer architecture
+
+| | Core (this package's baseline) | Adobe extension (additive) |
+|---|---|---|
+| Depends on | `contentauth/c2pa-rs`'s `c2pa_c_ffi` crate (public, MIT/Apache-2.0) | Adobe's private `adobe_api` repo |
+| Native library | `libc2pa_c` | `libadobe_c2pa` (a superset — statically links `c2pa-rs`, so it also exports every `libc2pa_c` symbol) |
+| Covers | `Reader`, `Builder` (see "Decision point" for known gaps), `LocalSigner`, `CallbackSigner`, `Settings` | `AdobeSigner` (claims-signer HTTP signing, CAWG-verified-identity signing) |
+| Required for | Every consumer of `@contentauth/c2pa-node` | Only consumers who explicitly use `AdobeSigner` |
+| On `ale/koffi-poc` | `js-src/native/{lib,error,stream,context,signer}.ts` | `js-src/native/adobeContext.ts`, `js-src/AdobeSigner.ts` |
+
+In the PoC, both layers happen to load from the *same* dylib
+(`libadobe_c2pa`, since it's a strict superset) for convenience — that's a
+packaging choice, not an architectural requirement. `native/lib.ts` already
+degrades gracefully: it tries `libadobe_c2pa` first, falls back to plain
+`libc2pa_c`, and only throws — from `AdobeSigner`/`native/adobeContext.ts`
+specifically, via `isAdobeApiAvailable()` — if code that actually needs the
+Adobe layer runs against a library that doesn't have it. A real release
+still needs to decide packaging: ship `libadobe_c2pa` as the default
+(simpler for consumers, but means every install of this open source package
+pulls in an Adobe-built binary), or ship plain `libc2pa_c` by default with
+`AdobeSigner` requiring an explicit `C2PA_LIBRARY_PATH` override to the
+Adobe build (cleaner separation, more packaging complexity for anyone who
+wants `AdobeSigner`) — see "Open questions".
 
 ## Motivation
 
@@ -39,10 +77,22 @@ already consume through the same C API.
 - **Bespoke binding glue.** This package carries ~10 `neon_*.rs` files
   (`packages/c2pa-node/src/`) and is coupled to N-API version churn (`.node` is
   ABI-tied to the Node runtime).
-- **A first-party, multi-consumer C API already exists** (`c2pa.h` +
-  `adobe_c2pa.h`) and is the surface Python/C/C++/WASM bind to.
+- **First-party C APIs already exist for both layers.** `c2pa.h` (public,
+  from `c2pa-rs`'s `c2pa_c_ffi` crate) is the surface `c2pa-python`,
+  `c2patool`, and the C++/WASM SDKs already bind to for core functionality.
+  `adobe_c2pa.h` (Adobe-private, from `adobe_api/sdk-c`) is the equivalent
+  for Adobe's signing/identity business logic, consumed by `sdk-python`
+  (Adobe's internal Python SDK, distinct from the public `c2pa-python`),
+  `sdk-c`, and the C++/WASM SDKs that need Adobe features. Neither this
+  package's core nor its Adobe extension would be inventing a new binding
+  strategy — both already have a working multi-consumer precedent.
 
 ## Evidence — spikes (all run against real `libadobe_c2pa.dylib`, koffi 3.1.0, Node 22)
+
+Spikes 1–4 exercise plain `c2pa-rs`/`c2pa_c_ffi` functionality (core layer);
+5–6 exercise the Adobe-specific layer. All were run against
+`libadobe_c2pa.dylib` for convenience (it's a superset, see "Two-layer
+architecture" above) — 1–4 would work identically against plain `libc2pa_c`.
 
 | # | Exercised | Result |
 |---|---|---|
@@ -75,8 +125,21 @@ signers go away) that we accept in exchange for a simpler, shared implementation
 
 ## Proposed architecture
 
+**Core** — `c2pa-node`'s own koffi binding over the public C API:
+
 ```
-c2pa-node / adobe-node (TS)         shared Rust (adobe_api, via libadobe_c2pa C API)
+c2pa-node core (TS)                 c2pa-rs's c2pa_c_ffi crate (public, via libc2pa_c)
+────────────────────                ──────────────────────────────────────────────────
+koffi binding + types                c2pa Builder / Reader / streams
+memory/lifetime discipline           LocalSigner / CallbackSigner (sync only — see below)
+                                      Settings
+```
+
+**Adobe extension** — additive, only loaded/used if a consumer actually
+imports `AdobeSigner`:
+
+```
+c2pa-node (TS)                      shared Rust (adobe_api, via libadobe_c2pa C API)
 ───────────────────────────         ───────────────────────────────────────────────
 IMS token acquisition   ─token──▶   adobe_context_create(auth_token, api_key)
 thin koffi binding + types          adobe_context_create_signer            (claims-signer HTTP)
@@ -84,12 +147,15 @@ memory/lifetime discipline          adobe_context_create_signer_with_identities 
                                      adobe_context_create_uploader          (manifest upload)
                                      adobe_context_create_ai_compliance_workflow
                                      profile client / identities / DNI-DNT / trust settings
-                                     c2pa Builder / Reader / streams
 ```
 
-### What moves to Rust
+### What moves to Rust (Adobe extension only)
 `createAdobeSigner`, `cawgSigner`, `ManifestService`, compliance builder,
-profile/identity/AI-model helpers, DNI/DNT checks.
+profile/identity/AI-model helpers, DNI/DNT checks. Core `Builder`/`Reader`
+functionality was never in `adobe-js-sdk`'s TypeScript to begin with — it
+already lives in `c2pa-rs`, and the koffi rebase for it means reaching the
+existing public C API instead of a Rust addon, not moving new logic into
+Rust for the first time.
 
 ### What stays in JS
 IMS token acquisition (Rust explicitly does **not** do token exchange), the
@@ -113,11 +179,11 @@ koffi binding + public TS types, and buffer/pointer lifetime management.
 
 | Risk | Mitigation |
 |---|---|
-| Manual memory management (koffi `c2pa_free`, pointer lifetimes) | Thin RAII-style TS wrappers; `sdk-python` (ctypes) is a working reference against this exact API |
-| Ship `libadobe_c2pa` per platform (5 targets) | Same packaging burden as today's prebuilt `.node`; plain cdylib downloaded at install |
+| Manual memory management (koffi `c2pa_free`, pointer lifetimes) | Thin RAII-style TS wrappers; for the core layer, the public `c2pa-python` (ctypes) is a working reference against the same `c2pa_c_ffi` API; for the Adobe layer, Adobe's internal `sdk-python` is the equivalent reference against `adobe_c2pa.h` |
+| Packaging the native library | **Core:** ship/fetch `libc2pa_c` per platform — `c2pa-rs` already publishes prebuilt binaries (same pattern the `c2pa-koffi` prototype's `fetch:c2pa` script uses), comparable packaging burden to today's prebuilt `.node`. **Adobe extension:** `libadobe_c2pa` is a separate, Adobe-built artifact required only by consumers who use `AdobeSigner` — see "Two-layer architecture" for the open question of whether it ships by default or via opt-in `C2PA_LIBRARY_PATH` override |
 | Reader validation needs trust settings | `load_trust_settings_for_current_thread` (network load) before read |
 | Loss of BYO **async** JS signer | Adobe service + local-key signers cover real cases; revisit if a real consumer needs it |
-| Two Rust crates now in the critical path (`c2pa-rs` C API + `adobe_api`) | Both are first-party; versioned via the shipped dylib |
+| Two Rust crates now in the dependency graph (`c2pa-rs`'s `c2pa_c_ffi` + Adobe's `adobe_api`) | `c2pa_c_ffi` is required for every consumer and is public/first-party to the C2PA project; `adobe_api` is only in the critical path for consumers of `AdobeSigner`, and is Adobe-private — this asymmetry is why the two layers are packaged/versioned separately rather than as one dylib in the real release (unlike this PoC's convenience shortcut) |
 
 ## Open questions / follow-up spikes
 
@@ -179,8 +245,17 @@ koffi binding + public TS types, and buffer/pointer lifetime management.
 2. **Streaming vs. data-hashed embeddable** for asset I/O (avoid per-chunk
    main-thread hops on large assets).
 3. **Token refresh lifecycle** for long-lived signing services.
-4. **Build/release integration with nx** — how the prebuilt `libadobe_c2pa`
-   artifacts slot into this monorepo's existing `@neon-rs/cli` packaging.
+4. **Build/release integration with nx** — this branch already removes
+   `@neon-rs/cli`/`cargo-cp-artifact` and the old prebuilt-`.node` pipeline
+   entirely (see "PoC results"), but real packaging for **both** native
+   libraries still needs a decision: how the core `libc2pa_c` gets
+   fetched/shipped by default (following `c2pa-rs`'s own prebuilt-binary
+   releases, similar to the `c2pa-koffi` prototype's `fetch:c2pa` script),
+   and whether/how the Adobe extension's `libadobe_c2pa` is offered — bundled
+   by default (simplest for consumers, but ships an Adobe-built binary to
+   every installer of this open source package) or strictly opt-in via
+   `C2PA_LIBRARY_PATH` (cleaner separation, more setup for anyone who wants
+   `AdobeSigner`). See "Two-layer architecture" above.
 
 ## Rollout
 
@@ -318,8 +393,9 @@ Adobe signer works, off-thread, inside the real rewritten package.
 - Read path and local/callback signing reach full parity with today's
   Neon binding (Reader/Settings/Signer specs pass in full or in the one
   expected/documented case).
-- The Adobe-specific piece — the actual point of this RFC — works,
-  end-to-end, off-thread, against real stage IMS.
+- The Adobe extension — the harder half of this RFC, and the reason the
+  async-signer question mattered at all — works, end-to-end, off-thread,
+  against real stage IMS.
 - Errors are more specific by default (`ManifestNotFoundError` etc.) for
   synchronous calls.
 - Puts this package on the same footing as every other non-Rust C2PA
