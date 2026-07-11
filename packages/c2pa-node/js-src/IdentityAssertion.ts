@@ -11,10 +11,9 @@
 // specific language governing permissions and limitations under
 // each license.
 
-// This is the generic X.509/CAWG-identity signing path (distinct from the
-// Adobe IMS-identity path in AdobeSigner.ts). The plain c2pa-rs C API does
-// expose c2pa_identity_signer_create, but marshaling its char** identity
-// arrays through koffi was left as an unfinished stub in the koffi
+// This is the generic X.509/CAWG-identity signing path. The plain c2pa-rs
+// C API does expose c2pa_identity_signer_create, but marshaling its char**
+// identity arrays through koffi was left as an unfinished stub in the koffi
 // prototype this is based on — not attempted here either. See RFC.md.
 
 import type {

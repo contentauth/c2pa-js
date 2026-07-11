@@ -2,14 +2,14 @@
 
 > **This branch (`ale/koffi-poc`) is a proof of concept**, not the shipping
 > package: it replaces the Neon native binding described below with a koffi
-> FFI binding, as proposed in [RFC.md](./RFC.md). Public API usage in this
-> document is still accurate (that was a deliberate goal of the rewrite),
-> but the **installation/build story below is not** — there's no
-> precompiled-binary download or npm install step for the native library
-> yet. Instead, set `C2PA_LIBRARY_PATH` to a built `libadobe_c2pa` (macOS:
-> `.dylib`, Linux: `.so`, Windows: `.dll`) — see RFC.md for how to build one
-> from the `adobe_api` repo. This is rollout step 4 in RFC.md ("Build/release
-> integration"), not yet attempted.
+> FFI binding over `c2pa-rs`'s public C API, as proposed in
+> [RFC.md](./RFC.md). Public API usage in this document is still accurate
+> (that was a deliberate goal of the rewrite), but the
+> **installation/build story below is not** — there's no precompiled-binary
+> download or npm install step for the native library yet. Instead, set
+> `C2PA_LIBRARY_PATH` to a built `libc2pa_c` (macOS: `.dylib`, Linux: `.so`,
+> Windows: `.dll`) — see RFC.md for details. This is rollout step 4 in
+> RFC.md ("Build/release integration"), not yet attempted.
 
 `@contentauth/c2pa-node` is a Node.js library in the [c2pa-js](https://github.com/contentauth/c2pa-js) monorepo that can:
 - Read and validate C2PA data from media files in supported formats.
@@ -648,15 +648,14 @@ const builder = Builder.new(urlSettings);
 
 ### Build and use a custom native library
 
-On this branch, `C2PA_LIBRARY_PATH` points at a prebuilt `libadobe_c2pa`
-(or plain `libc2pa_c`) shared library rather than a `.node` addon:
+On this branch, `C2PA_LIBRARY_PATH` points at a prebuilt `libc2pa_c` shared
+library (from `c2pa-rs`'s public `c2pa_c_ffi` crate) rather than a `.node`
+addon:
 
 ```bash
-# Build libadobe_c2pa from the adobe_api repo (needed for AdobeSigner/CAWG;
-# it's a superset of plain c2pa-rs's libc2pa_c, so it covers Reader/Builder
-# too):
-cd /path/to/adobe_api
-cargo build --release -p adobe_c2pa
+# Build libc2pa_c from the c2pa-rs repo:
+cd /path/to/c2pa-rs
+cargo build --release -p c2pa-c-ffi
 
-export C2PA_LIBRARY_PATH=/path/to/adobe_api/target/release/libadobe_c2pa.dylib
+export C2PA_LIBRARY_PATH=/path/to/c2pa-rs/target/release/libc2pa_c.dylib
 ```

@@ -160,20 +160,18 @@ export class CallbackSigner implements CallbackSignerInterface, HasNativeSigner 
       // completed. koffi's signer callback must return synchronously, so a
       // genuine async JS callback signer cannot be bridged through it at
       // all. This is not a bug to fix here — it's the exact limitation
-      // RFC.md documents ("Async / threading model") and the reason
-      // Adobe-specific signing moves the network call into Rust instead
-      // (see AdobeSigner.ts). native/signer.ts's koffi callback wrapper
-      // swallows thrown errors (returns -1) since koffi callbacks can't
-      // propagate JS exceptions, so this message is stashed on
-      // `lastSyncError()` for Builder to surface instead of a generic
-      // "COSE signature invalid" error from the native signing failure.
+      // RFC.md documents ("Async / threading model"). native/signer.ts's
+      // koffi callback wrapper swallows thrown errors (returns -1) since
+      // koffi callbacks can't propagate JS exceptions, so this message is
+      // stashed on `lastSyncError()` for Builder to surface instead of a
+      // generic "COSE signature invalid" error from the native signing
+      // failure.
       const syncBridge = (): Buffer => {
         this._lastSyncError = new Error(
           "CallbackSigner cannot be used with Builder.sign()/signAsync(): " +
             "koffi's native signer callback must return synchronously, and " +
             "this signer's callback is async. See RFC.md, 'Async / " +
-            "threading model'. Use AdobeSigner for Adobe service signing, " +
-            "or LocalSigner for local-key signing.",
+            "threading model'. Use LocalSigner for local-key signing instead.",
         );
         throw this._lastSyncError;
       };

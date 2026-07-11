@@ -11,11 +11,9 @@
 // specific language governing permissions and limitations under
 // each license.
 
-// koffi FFI binding over the c2pa-rs C API (and, when the loaded library is
-// `libadobe_c2pa` rather than plain `libc2pa_c`, the additional Adobe
-// `adobe_c2pa` C API in native/adobeContext.ts). Adapted from a koffi
-// binding prototype (github.com/gpeacock/c2pa-koffi) exploring the same
-// replacement for this package's Neon binding.
+// koffi FFI binding over c2pa-rs's public C API (c2pa_c_ffi, libc2pa_c).
+// Adapted from a koffi binding prototype (github.com/gpeacock/c2pa-koffi)
+// exploring the same replacement for this package's Neon binding.
 
 import koffi from "koffi";
 import { existsSync } from "fs";
@@ -82,17 +80,7 @@ function findLibraryPath(): string {
   if (process.env.C2PA_LIBRARY_PATH) return process.env.C2PA_LIBRARY_PATH;
 
   const plat = platform();
-  // libadobe_c2pa is a superset of libc2pa_c (it links c2pa-rs statically
-  // and re-exports every c2pa_* symbol alongside the adobe_* ones), so a
-  // single library covers both the plain reader/builder path and the
-  // Adobe-specific signer/identity path in native/adobeContext.ts.
-  const adobeLibName =
-    plat === "darwin"
-      ? "libadobe_c2pa.dylib"
-      : plat === "win32"
-        ? "adobe_c2pa.dll"
-        : "libadobe_c2pa.so";
-  const plainLibName =
+  const libName =
     plat === "darwin"
       ? "libc2pa_c.dylib"
       : plat === "win32"
@@ -100,28 +88,14 @@ function findLibraryPath(): string {
         : "libc2pa_c.so";
 
   const searchPaths = [
-    join(__dirname, "..", "..", "libs", adobeLibName),
-    join(__dirname, "..", "..", "libs", plainLibName),
-    // Sibling checkout of the Adobe `adobe_api` repo, built via
-    // `cargo build --release -p adobe_c2pa` — see README.md.
-    join(
-      __dirname,
-      "..",
-      "..",
-      "..",
-      "..",
-      "..",
-      "adobe_api",
-      "target",
-      "release",
-      adobeLibName,
-    ),
+    join(__dirname, "..", "..", "libs", libName),
+    join(__dirname, "..", "..", "artifacts", libName),
   ];
 
   for (const p of searchPaths) {
     if (existsSync(p)) return p;
   }
-  return adobeLibName;
+  return libName;
 }
 
 // ── Function declarations ────────────────────────────────────────────────────
@@ -138,37 +112,8 @@ export function loadLibrary(path?: string): void {
   _lib = createLib(path ?? findLibraryPath());
 }
 
-/** True if the loaded library exports the Adobe adobe_c2pa API (i.e. it's
- * libadobe_c2pa, not plain libc2pa_c). */
-export function isAdobeApiAvailable(): boolean {
-  return !(getLib().adobe_context_create as unknown as { unavailable?: true })
-    .unavailable;
-}
-
 function createLib(libPath: string) {
   const lib = koffi.load(libPath);
-  // Adobe-specific symbols aren't present when the loaded library is plain
-  // libc2pa_c rather than libadobe_c2pa. Rather than typing these as
-  // `T | null` (which forces a null-check at every call site), return a
-  // stub that throws only if actually called, marked with `.unavailable`
-  // so isAdobeApiAvailable() can check for it up front.
-  const optionalFunc = (
-    name: string,
-    resultType: string,
-    argTypes: unknown[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): any => {
-    try {
-      return lib.func(name, resultType, argTypes as never[]);
-    } catch {
-      const stub = (...args: unknown[]) => {
-        void args;
-        throw new Error(`Native function ${name} is not available in this library`);
-      };
-      (stub as typeof stub & { unavailable: true }).unavailable = true;
-      return stub;
-    }
-  };
 
   return {
     // Version / error
@@ -326,61 +271,6 @@ function createLib(libPath: string) {
       "int64",
       ["C2paSigner *"],
     ),
-
-    // Adobe-specific (only present when the loaded library is
-    // libadobe_c2pa) — declared optional so this file still loads against
-    // plain libc2pa_c. See native/adobeContext.ts for the higher-level API.
-    adobe_context_create: optionalFunc("adobe_context_create", "int", [
-      "str",
-      "str",
-      koffi.out(koffi.pointer("void *")),
-    ]),
-    adobe_context_create_ims_user_client: optionalFunc(
-      "adobe_context_create_ims_user_client",
-      "int",
-      [koffi.inout(koffi.pointer("void *")), koffi.out(koffi.pointer("void *"))],
-    ),
-    adobe_context_get_identities: optionalFunc(
-      "adobe_context_get_identities",
-      "int",
-      [koffi.inout(koffi.pointer("void *")), koffi.out(koffi.pointer("void *"))],
-    ),
-    adobe_identity_type: optionalFunc("adobe_identity_type", "str", [
-      "void *",
-    ]),
-    adobe_identity_display_name: optionalFunc(
-      "adobe_identity_display_name",
-      "str",
-      ["void *"],
-    ),
-    adobe_identity_username: optionalFunc("adobe_identity_username", "str", [
-      "void *",
-    ]),
-    adobe_identity_is_verified: optionalFunc(
-      "adobe_identity_is_verified",
-      "bool",
-      ["void *"],
-    ),
-    adobe_context_create_signer_with_options: optionalFunc(
-      "adobe_context_create_signer_with_options",
-      "int",
-      [
-        koffi.inout(koffi.pointer("void *")),
-        koffi.out(koffi.pointer("void *")),
-        koffi.pointer(
-          koffi.struct("AdobeSignerOptions", {
-            identities: "str *",
-            identities_count: "size_t",
-            disable_timestamping: "bool",
-          }),
-        ),
-      ],
-    ),
-    free_adobe_context: optionalFunc("free_adobe_context", "void", [
-      "void *",
-    ]),
-    free_ims_client: optionalFunc("free_ims_client", "void", ["void *"]),
-    free_identities: optionalFunc("free_identities", "void", ["void *"]),
   };
 }
 

@@ -31,8 +31,8 @@ export interface SignerInfo {
 
 /**
  * Thin wrapper over a native C2paSigner*, used internally by this package's
- * public LocalSigner/CallbackSigner/AdobeSigner classes to actually sign
- * through Builder.sign()/signAsync().
+ * public LocalSigner/CallbackSigner classes to actually sign through
+ * Builder.sign()/signAsync().
  */
 export class Signer {
   /** @internal */ ptr: unknown;
@@ -107,15 +107,6 @@ export class Signer {
     const s = new Signer(ptr);
     s._cb = wrapped;
     return s;
-  }
-
-  /**
-   * Wrap a C2paSigner* created elsewhere (e.g. by native/adobeContext.ts's
-   * adobe_context_create_signer_with_options) so it can be used with
-   * Builder.sign()/signAsync() like any other Signer.
-   */
-  static fromPointer(ptr: unknown): Signer {
-    return new Signer(checkPtr(ptr, "Signer.fromPointer: null pointer"));
   }
 
   reserveSize(): number {

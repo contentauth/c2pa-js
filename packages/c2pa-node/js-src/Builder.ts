@@ -285,20 +285,8 @@ export class Builder implements BuilderInterface {
     return this._signWithAsync(signer, input, output);
   }
 
-  /**
-   * New capability, not present in the Neon binding: accepts AdobeSigner in
-   * addition to the existing signer types. Unlike a JS async callback
-   * signer, AdobeSigner's network round-trip runs entirely inside Rust as
-   * one blocking C call, dispatched off the main thread by koffi's
-   * .async() below — the event loop stays responsive during the sign, as
-   * verified against real stage IMS this session. See AdobeSigner.ts and
-   * RFC.md.
-   */
   async signAsync(
-    signer:
-      | CallbackSignerInterface
-      | IdentityAssertionSignerInterface
-      | HasNativeSigner,
+    signer: CallbackSignerInterface | IdentityAssertionSignerInterface,
     input: SourceAsset,
     output: DestinationAsset,
   ): Promise<Buffer> {
@@ -340,8 +328,8 @@ export class Builder implements BuilderInterface {
   /**
    * Async sign path used by signAsync()/signConfigAsync() — dispatches the
    * native call via koffi's .async() (libuv threadpool) instead of calling
-   * it synchronously, so a slow signer (e.g. AdobeSigner's network
-   * round-trip) doesn't block the event loop.
+   * it synchronously, matching the Neon binding's own async behavior for
+   * these methods.
    */
   private async _signWithAsync(
     signer: HasNativeSigner,
