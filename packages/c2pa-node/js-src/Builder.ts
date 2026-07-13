@@ -73,15 +73,15 @@ import type {
  *
  * This is an open decision, not just a to-do: land the upstream PR (this
  * comment's plan) OR drop these five methods from this package's public API
- * to match every other non-Rust binding — see RFC.md's "Decision point"
- * section for the pros/cons of each option.
+ * to match every other non-Rust binding. Pros/cons of each option are
+ * written up in the team's koffi migration proposal.
  */
 function notImplemented(name: string): Error {
   return new Error(
     `${name}() is not implemented in this koffi PoC — it requires new ` +
       `functions in c2pa-rs's public c2pa_c_ffi crate (not present today, ` +
       `and not something this package can add on its own). See the comment ` +
-      `above this function in Builder.ts, and RFC.md.`,
+      `above this function in Builder.ts.`,
   );
 }
 

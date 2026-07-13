@@ -63,7 +63,6 @@ export class Signer {
    * Create a signer backed by a JS callback. The callback must return the
    * DER-encoded signature *synchronously* — koffi callbacks run on the main
    * thread and cannot await real async work (e.g. a network round-trip).
-   * See RFC.md, "Async / threading model".
    */
   static fromCallback(
     sign: (data: Buffer) => Buffer,

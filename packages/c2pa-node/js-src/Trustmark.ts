@@ -17,7 +17,7 @@ function notImplemented(): Error {
   return new Error(
     "Trustmark is not implemented in this koffi PoC: it depends on the " +
       "separate `trustmark` Rust crate and its watermark model downloads, " +
-      "which are not part of plain c2pa-rs's C API. See RFC.md.",
+      "which are not part of plain c2pa-rs's C API.",
   );
 }
 

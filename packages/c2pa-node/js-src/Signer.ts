@@ -147,10 +147,10 @@ export class CallbackSigner implements CallbackSignerInterface, HasNativeSigner 
   /**
    * Build the native signer used by Builder.signAsync(). koffi's signer
    * callback runs synchronously on the main thread and cannot await real
-   * async work (e.g. a network round-trip) — see RFC.md, "Async / threading
-   * model". This only works if the callback's promise happens to already be
-   * settled by the time koffi calls it synchronously, which in practice
-   * means it will fail for any callback that performs genuine async I/O.
+   * async work (e.g. a network round-trip). This only works if the
+   * callback's promise happens to already be settled by the time koffi
+   * calls it synchronously, which in practice means it will fail for any
+   * callback that performs genuine async I/O.
    */
   nativeSigner(): NativeSigner {
     if (!this._native) {
@@ -159,19 +159,20 @@ export class CallbackSigner implements CallbackSignerInterface, HasNativeSigner 
       // unwrap that synchronously, even when the underlying work already
       // completed. koffi's signer callback must return synchronously, so a
       // genuine async JS callback signer cannot be bridged through it at
-      // all. This is not a bug to fix here — it's the exact limitation
-      // RFC.md documents ("Async / threading model"). native/signer.ts's
-      // koffi callback wrapper swallows thrown errors (returns -1) since
-      // koffi callbacks can't propagate JS exceptions, so this message is
-      // stashed on `lastSyncError()` for Builder to surface instead of a
-      // generic "COSE signature invalid" error from the native signing
-      // failure.
+      // all. This is not a bug to fix here — it's a fundamental mismatch
+      // between koffi's synchronous callback model and a Promise-based
+      // signer API. native/signer.ts's koffi callback wrapper swallows
+      // thrown errors (returns -1) since koffi callbacks can't propagate JS
+      // exceptions, so this message is stashed on `lastSyncError()` for
+      // Builder to surface instead of a generic "COSE signature invalid"
+      // error from the native signing failure.
       const syncBridge = (): Buffer => {
         this._lastSyncError = new Error(
           "CallbackSigner cannot be used with Builder.sign()/signAsync(): " +
             "koffi's native signer callback must return synchronously, and " +
-            "this signer's callback is async. See RFC.md, 'Async / " +
-            "threading model'. Use LocalSigner for local-key signing instead.",
+            "this signer's callback is async — a genuine async JS signer " +
+            "callback cannot be bridged through koffi. Use LocalSigner for " +
+            "local-key signing instead.",
         );
         throw this._lastSyncError;
       };

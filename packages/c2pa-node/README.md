@@ -2,14 +2,14 @@
 
 > **This branch (`ale/koffi-poc`) is a proof of concept**, not the shipping
 > package: it replaces the Neon native binding described below with a koffi
-> FFI binding over `c2pa-rs`'s public C API, as proposed in
-> [RFC.md](./RFC.md). Public API usage in this document is still accurate
-> (that was a deliberate goal of the rewrite), but the
+> FFI binding over `c2pa-rs`'s public C API (see the team's koffi migration
+> proposal for full background). Public API usage in this document is still
+> accurate (that was a deliberate goal of the rewrite), but the
 > **installation/build story below is not** — there's no precompiled-binary
 > download or npm install step for the native library yet. Instead, set
 > `C2PA_LIBRARY_PATH` to a built `libc2pa_c` (macOS: `.dylib`, Linux: `.so`,
-> Windows: `.dll`) — see RFC.md for details. This is rollout step 4 in
-> RFC.md ("Build/release integration"), not yet attempted.
+> Windows: `.dll`). Deciding how `libc2pa_c` gets fetched/shipped by default
+> is still an open follow-up, not yet attempted here.
 
 `@contentauth/c2pa-node` is a Node.js library in the [c2pa-js](https://github.com/contentauth/c2pa-js) monorepo that can:
 - Read and validate C2PA data from media files in supported formats.

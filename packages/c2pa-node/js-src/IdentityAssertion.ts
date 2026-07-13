@@ -14,7 +14,7 @@
 // This is the generic X.509/CAWG-identity signing path. The plain c2pa-rs
 // C API does expose c2pa_identity_signer_create, but marshaling its char**
 // identity arrays through koffi was left as an unfinished stub in the koffi
-// prototype this is based on — not attempted here either. See RFC.md.
+// prototype this is based on — not attempted here either.
 
 import type {
   CallbackCredentialHolderInterface,
@@ -25,7 +25,7 @@ import type {
 
 function notImplemented(): Error {
   return new Error(
-    "CAWG X.509 identity signing is not implemented in this koffi PoC. See RFC.md.",
+    "CAWG X.509 identity signing is not implemented in this koffi PoC.",
   );
 }
 
