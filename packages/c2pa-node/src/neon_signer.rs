@@ -15,10 +15,7 @@ use crate::runtime::runtime;
 use async_trait::async_trait;
 use c2pa::{
     create_signer,
-    crypto::{
-        raw_signature::{AsyncRawSigner, RawSigner, RawSignerError},
-        time_stamp::{AsyncTimeStampProvider, TimeStampProvider},
-    },
+    crypto::time_stamp::{AsyncTimeStampProvider, TimeStampProvider},
     AsyncSigner,
     Error::OtherError,
     Signer, SigningAlg,
@@ -232,10 +229,6 @@ impl NeonCallbackSigner {
 
         Ok(promise)
     }
-
-    pub fn as_raw_signer(&self) -> &dyn AsyncRawSigner {
-        self
-    }
 }
 
 /// # Safety
@@ -257,7 +250,7 @@ impl NeonCallbackSigner {
 /// - `Sync`: Allows the type to be shared between threads
 ///
 /// The type needs these capabilities because it:
-/// - Implements `AsyncSigner` and `AsyncRawSigner` traits for asynchronous signing operations
+/// - Implements the `AsyncSigner` trait for asynchronous signing operations
 /// - Is used in the `identity_sign_async` function which performs asynchronous operations
 /// - Is part of a Node.js binding where async operations are common
 unsafe impl Send for NeonCallbackSigner {}
@@ -328,10 +321,6 @@ impl AsyncSigner for NeonCallbackSigner {
     fn direct_cose_handling(&self) -> bool {
         self.config.direct_cose_handling
     }
-
-    fn async_raw_signer(&self) -> Option<Box<&dyn AsyncRawSigner>> {
-        Some(Box::new(self))
-    }
 }
 
 impl TimeStampProvider for NeonCallbackSigner {
@@ -349,93 +338,6 @@ impl AsyncTimeStampProvider for NeonCallbackSigner {
     }
     fn time_stamp_request_headers(&self) -> Option<Vec<(String, String)>> {
         self.config.tsa_headers.clone()
-    }
-}
-
-#[async_trait]
-impl AsyncRawSigner for NeonCallbackSigner {
-    async fn sign(&self, data: Vec<u8>) -> Result<Vec<u8>, RawSignerError> {
-        let (tx, rx) = oneshot::channel();
-        let sign_fn = self.callback.clone();
-        let data = data.to_vec();
-
-        // Send the signing request to the JavaScript side
-        self.channel
-            .try_send(move |mut cx| {
-                let to_be_signed = JsBuffer::from_slice(&mut cx, &data)?;
-                let sign_fn = sign_fn.to_inner(&mut cx);
-
-                let sign_fut = sign_fn
-                    .call_with(&cx)
-                    .arg(to_be_signed)
-                    .apply::<JsPromise, _>(&mut cx)?
-                    .to_future(&mut cx, |mut cx, result| match result {
-                        Ok(value) => {
-                            let buffer = value.downcast_or_throw::<JsBuffer, _>(&mut cx)?;
-                            Ok(Ok(buffer.as_slice(&cx).to_vec()))
-                        }
-                        Err(err) => {
-                            let err_string = match err.to_string(&mut cx) {
-                                Ok(js_string) => js_string.value(&mut cx),
-                                Err(e) => return Err(e),
-                            };
-                            Ok(Err(RawSignerError::CryptoLibraryError(err_string)))
-                        }
-                    })?;
-
-                let _ = tx.send(sign_fut);
-                Ok(())
-            })
-            .map_err(|err| RawSignerError::CryptoLibraryError(err.to_string()))?;
-
-        // Wait for the JavaScript promise to resolve
-        let sign_fut = rx
-            .await
-            .map_err(|err| RawSignerError::CryptoLibraryError(err.to_string()))?;
-
-        // Get the result from the future
-        sign_fut
-            .await
-            .map_err(|err| RawSignerError::CryptoLibraryError(err.to_string()))?
-    }
-
-    fn alg(&self) -> SigningAlg {
-        self.config.alg
-    }
-
-    fn cert_chain(&self) -> Result<Vec<Vec<u8>>, RawSignerError> {
-        let pems = pem::parse_many(&self.config.certs)
-            .map_err(|e| RawSignerError::CryptoLibraryError(e.to_string()))?;
-        Ok(pems.into_iter().map(|p| p.into_contents()).collect())
-    }
-
-    fn reserve_size(&self) -> usize {
-        self.config.reserve_size
-    }
-
-    async fn ocsp_response(&self) -> Option<Vec<u8>> {
-        None
-    }
-}
-
-impl RawSigner for NeonCallbackSigner {
-    fn sign(&self, _data: &[u8]) -> Result<Vec<u8>, RawSignerError> {
-        // Synchronous signing is not supported; use AsyncRawSigner instead
-        Err(RawSignerError::InternalError(
-            "Synchronous signing not supported - use AsyncRawSigner instead".to_string(),
-        ))
-    }
-
-    fn alg(&self) -> SigningAlg {
-        AsyncRawSigner::alg(self)
-    }
-
-    fn cert_chain(&self) -> Result<Vec<Vec<u8>>, RawSignerError> {
-        AsyncRawSigner::cert_chain(self)
-    }
-
-    fn reserve_size(&self) -> usize {
-        AsyncRawSigner::reserve_size(self)
     }
 }
 

@@ -11,7 +11,11 @@ members = [
 rust-version = "1.88.0"
 
 [workspace.dependencies]
-c2pa = { version = "=0.88.0", features = ["pdf", "rust_native_crypto", "fetch_remote_manifests", "json_schema", "http_reqwest"], default-features = false }
+# TEMPORARY: tracking c2pa-rs PR #2231 (https://github.com/contentauth/c2pa-rs/pull/2231),
+# which splits out the `c2pa_raw_crypto` crate. Revert to a published crates.io
+# version (currently `version = "=0.88.0"`) once that change is released. Do not
+# merge while this points at a branch.
+c2pa = { git = "https://github.com/contentauth/c2pa-rs.git", branch = "split-out-c2pa-raw-crypto-take-2", features = ["pdf", "rust_native_crypto", "fetch_remote_manifests", "json_schema", "http_reqwest"], default-features = false }
 
 [profile.release]
 opt-level = "s"
