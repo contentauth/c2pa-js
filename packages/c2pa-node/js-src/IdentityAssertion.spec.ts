@@ -189,8 +189,7 @@ describe("IdentityAssertionBuilder", () => {
     });
   });
 
-  // Decision 4 in the migration proposal: unlike the async
-  // CallbackCredentialHolder path above (which hits the same koffi
+  // Unlike the async CallbackCredentialHolder path above (which hits the same koffi
   // synchronous-callback wall as CallbackSigner — see Decision 2), the
   // synchronous, local-key identity path has no upstream blocker at all.
   // This proves that claim end-to-end: sign with a LocalSigner (manifest)
