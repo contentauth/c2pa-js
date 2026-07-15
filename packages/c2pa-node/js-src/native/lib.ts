@@ -271,6 +271,19 @@ function createLib(libPath: string) {
       "int64",
       ["C2paSigner *"],
     ),
+
+    // Identity (generic X.509/CAWG) — combines an already-built C2PA signer
+    // and an already-built identity/credential signer into one signer that
+    // embeds a cawg.identity assertion (sig_type cawg.x509.cose) into every
+    // manifest it signs. Both input signers are consumed by this call.
+    // referenced_assertions/roles are NULL-terminated arrays of C strings;
+    // koffi marshals a plain JS array (with a trailing `null`) into a
+    // `char **` directly, no manual pointer-array construction needed.
+    c2pa_identity_signer_create: lib.func(
+      "c2pa_identity_signer_create",
+      "C2paSigner *",
+      ["C2paSigner *", "C2paSigner *", "char **", "char **"],
+    ),
   };
 }
 

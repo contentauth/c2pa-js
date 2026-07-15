@@ -108,8 +108,44 @@ export class Signer {
     return s;
   }
 
+  /**
+   * Combine an already-built C2PA (manifest) signer and an already-built
+   * identity/credential signer into one signer that embeds a
+   * cawg.identity assertion (sig_type cawg.x509.cose) into every manifest
+   * it signs — see Decision 4 in the migration proposal. Both `c2paSigner`
+   * and `identitySigner` are consumed by the native call: their pointers
+   * become invalid, so they're marked as already-disposed here rather than
+   * freed again later.
+   */
+  static fromIdentity(
+    c2paSigner: Signer,
+    identitySigner: Signer,
+    referencedAssertions: string[],
+    roles: string[],
+  ): Signer {
+    const ptr = checkPtr(
+      getLib().c2pa_identity_signer_create(
+        c2paSigner.ptr,
+        identitySigner.ptr,
+        [...referencedAssertions, null],
+        [...roles, null],
+      ),
+      "Failed to create identity signer",
+    );
+    c2paSigner._markConsumed();
+    identitySigner._markConsumed();
+    return new Signer(ptr);
+  }
+
   reserveSize(): number {
     return Number(getLib().c2pa_signer_reserve_size(this.ptr));
+  }
+
+  /** @internal Mark as consumed by a native call that took ownership of
+   * this signer's pointer (e.g. fromIdentity), without freeing it here —
+   * the callee now owns it. */
+  _markConsumed(): void {
+    this._disposed = true;
   }
 
   dispose(): void {

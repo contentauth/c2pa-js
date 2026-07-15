@@ -71,6 +71,14 @@ interface StreamBackend {
   size(): number;
   close(): void;
   getBytes?(): Buffer;
+  /**
+   * Optional zero-copy fast path: return a view of up to `n` bytes directly
+   * from the backend's own storage (advancing its position), instead of
+   * requiring the caller to supply a scratch buffer to copy into. Backends
+   * that already hold their data in JS memory (e.g. BufferBackend) can
+   * implement this to save a redundant copy on every read() call.
+   */
+  readView?(n: number): Buffer | undefined;
 }
 
 /** In-memory backend. Grows on write; the whole asset is held in JS memory. */
@@ -90,6 +98,14 @@ class BufferBackend implements StreamBackend {
     this._buf.copy(out, 0, this._pos, this._pos + available);
     this._pos += available;
     return available;
+  }
+
+  readView(n: number): Buffer | undefined {
+    const available = Math.min(n, this._size - this._pos);
+    if (available <= 0) return undefined;
+    const view = this._buf.subarray(this._pos, this._pos + available);
+    this._pos += available;
+    return view;
   }
 
   write(data: Buffer): number {
@@ -199,6 +215,15 @@ export class C2paStream {
       (_ctx: unknown, outPtr: unknown, len: number | bigint): number => {
         try {
           const n = toNum(len);
+          // Fast path: backends that already hold their bytes in JS memory
+          // (BufferBackend) can hand back a view directly, skipping the
+          // scratch-buffer copy below.
+          const view = this._backend.readView?.(n);
+          if (view !== undefined) {
+            if (view.length === 0) return 0;
+            koffi.encode(outPtr, "uint8_t", view, view.length);
+            return view.length;
+          }
           if (this._scratch.length < n) this._scratch = Buffer.alloc(n);
           const actual = this._backend.read(this._scratch.subarray(0, n));
           if (actual <= 0) return 0;
@@ -227,7 +252,11 @@ export class C2paStream {
         try {
           const n = toNum(len);
           const arr = koffi.decode(inPtr, "uint8_t", n) as Uint8Array;
-          return this._backend.write(Buffer.from(arr));
+          // Buffer.from(typedArray) copies; view the same ArrayBuffer koffi
+          // already allocated instead of copying it again before the
+          // backend's own write() copies it a third time.
+          const view = Buffer.from(arr.buffer, arr.byteOffset, arr.byteLength);
+          return this._backend.write(view);
         } catch {
           return -1;
         }
