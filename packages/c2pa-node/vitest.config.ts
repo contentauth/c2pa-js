@@ -11,17 +11,17 @@ export default defineConfig({
       forks: {
         singleFork: true
       }
-    }
-  },
-  assetsInclude: ["**/*.node"],
-  optimizeDeps: {
-    exclude: ["index.node"]
+    },
+    // koffi's opaque/struct/proto type registrations (native/lib.ts) are
+    // global native-library state, not per-module state — vitest's default
+    // per-file module isolation re-runs those top-level registrations for
+    // each spec file even within the single fork above, which koffi
+    // rejects as duplicates. These are integration tests against one real
+    // shared native library anyway, so disable isolation.
+    isolate: false
   },
   define: {
     global: "globalThis"
-  },
-  ssr: {
-    noExternal: ["index.node"]
   },
   esbuild: {
     target: "node22"

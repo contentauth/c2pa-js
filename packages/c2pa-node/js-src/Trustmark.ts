@@ -11,36 +11,28 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import { getNeonBinary } from "./binary.js";
-import type {
-  TrustmarkInterface,
-  TrustmarkConfig,
-  NeonTrustmarkHandle,
-} from "./types.d.ts";
+import type { TrustmarkInterface, TrustmarkConfig } from "./types.d.ts";
+
+function notImplemented(): Error {
+  return new Error(
+    "Trustmark is not implemented in this koffi PoC: it depends on the " +
+      "separate `trustmark` Rust crate and its watermark model downloads, " +
+      "which are not part of plain c2pa-rs's C API.",
+  );
+}
 
 export class Trustmark implements TrustmarkInterface {
-  constructor(private trustmark: NeonTrustmarkHandle) {}
+  private constructor() {}
 
-  static async newTrustmark(config: TrustmarkConfig): Promise<Trustmark> {
-    const trustmark: NeonTrustmarkHandle =
-      await getNeonBinary().trustmarkNew(config);
-    return new Trustmark(trustmark);
+  static async newTrustmark(_config: TrustmarkConfig): Promise<Trustmark> {
+    throw notImplemented();
   }
 
-  async encode(
-    image: Buffer,
-    strength: number,
-    watermark?: string,
-  ): Promise<Buffer> {
-    return getNeonBinary().trustmarkEncode.call(
-      this.trustmark,
-      image,
-      strength,
-      watermark,
-    );
+  async encode(_image: Buffer, _strength: number, _watermark?: string): Promise<Buffer> {
+    throw notImplemented();
   }
 
-  async decode(image: Buffer): Promise<string> {
-    return getNeonBinary().trustmarkDecode.call(this.trustmark, image);
+  async decode(_image: Buffer): Promise<string> {
+    throw notImplemented();
   }
 }

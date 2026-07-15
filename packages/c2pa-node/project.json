@@ -8,12 +8,8 @@
         "cwd": "packages/c2pa-node"
       },
       "inputs": [
-        "{projectRoot}/src/**/*.rs",
         "{projectRoot}/js-src/**/*.ts",
-        "{projectRoot}/Cargo.toml",
-        "{projectRoot}/tsconfig.json",
-        "{workspaceRoot}/Cargo.toml",
-        "{workspaceRoot}/Cargo.lock"
+        "{projectRoot}/tsconfig.json"
       ],
       "outputs": ["{projectRoot}/dist"],
       "cache": true
@@ -25,13 +21,9 @@
         "cwd": "packages/c2pa-node"
       },
       "inputs": [
-        "{projectRoot}/src/**/*.rs",
         "{projectRoot}/js-src/**/*.ts",
         "{projectRoot}/tests/**/*",
-        "{projectRoot}/Cargo.toml",
-        "{projectRoot}/tsconfig.json",
-        "{workspaceRoot}/Cargo.toml",
-        "{workspaceRoot}/Cargo.lock"
+        "{projectRoot}/tsconfig.json"
       ],
       "cache": true
     },
@@ -42,7 +34,6 @@
         "cwd": "packages/c2pa-node"
       },
       "inputs": [
-        "{projectRoot}/src/**/*.rs",
         "{projectRoot}/js-src/**/*.ts",
         "{projectRoot}/eslint.config.cjs"
       ],

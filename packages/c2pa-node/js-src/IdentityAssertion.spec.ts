@@ -188,4 +188,64 @@ describe("IdentityAssertionBuilder", () => {
       mimeType: "image/jpeg",
     });
   });
+
+  // Unlike the async CallbackCredentialHolder path above (which hits the same koffi
+  // synchronous-callback wall as CallbackSigner — see Decision 2), the
+  // synchronous, local-key identity path has no upstream blocker at all.
+  // This proves that claim end-to-end: sign with a LocalSigner (manifest)
+  // and a LocalCredentialHolder (identity), and confirm the resulting
+  // manifest embeds a valid cawg.identity assertion.
+  it("should sign and validate with a synchronous LocalCredentialHolder", async () => {
+    const { LocalSigner } = await import("./Signer");
+    const { Reader } = await import("./Reader");
+    const { Builder } = await import("./Builder");
+    const { IdentityAssertionBuilder, IdentityAssertionSigner, LocalCredentialHolder } =
+      await import("./IdentityAssertion");
+
+    const c2paPrivateKey = await fs.readFile("./tests/fixtures/certs/es256.pem");
+    const c2paPublicKey = await fs.readFile("./tests/fixtures/certs/es256.pub");
+    const identityPrivateKey = await fs.readFile("./tests/fixtures/certs/ed25519.pem");
+    const identityPublicKey = await fs.readFile("./tests/fixtures/certs/ed25519.pub");
+
+    const c2paSigner = LocalSigner.newSigner(c2paPublicKey, c2paPrivateKey, "es256");
+    const identityHolder = LocalCredentialHolder.newCredentialHolder(
+      identityPublicKey,
+      identityPrivateKey,
+      "ed25519",
+    );
+
+    const source = {
+      buffer: await fs.readFile("./tests/fixtures/CA.jpg"),
+      mimeType: "image/jpeg",
+    };
+    const dest: DestinationBufferAsset = { buffer: null };
+
+    const builder = Builder.withJson(manifestDefinition);
+    await builder.addResource("thumbnail.jpg", {
+      mimeType: "image/jpeg",
+      buffer: await fs.readFile("./tests/fixtures/thumbnail.jpg"),
+    });
+    await builder.addResource("ingredient-thumb.jpg", {
+      mimeType: "image/jpeg",
+      buffer: await fs.readFile("./tests/fixtures/thumbnail.jpg"),
+    });
+
+    const iaSigner = IdentityAssertionSigner.new(c2paSigner.getHandle());
+    const iab =
+      await IdentityAssertionBuilder.identityBuilderForCredentialHolder(identityHolder);
+    iab.addReferencedAssertions(["cawg.training-mining"]);
+    iaSigner.addIdentityAssertion(iab);
+
+    await builder.signAsync(iaSigner, source, dest);
+
+    const reader = await Reader.fromAsset({
+      buffer: dest.buffer! as Buffer,
+      mimeType: "image/jpeg",
+    });
+    expect(reader).not.toBeNull();
+    const activeManifest = reader!.getActive();
+    expect(
+      activeManifest?.assertions?.some((a: any) => a.label.includes("cawg.identity")),
+    ).toBe(true);
+  });
 });

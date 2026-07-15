@@ -12,12 +12,9 @@
     "rootDir": "./js-src",
     "strict": true,
     "target": "ES2023",
-    "types": ["node", "vitest/globals"],
-    "paths": {
-      "index.node": ["./js-src/index.node"]
-    },
+    "types": ["node", "vitest/globals"]
   },
   "include": [
-    "js-src/*.ts"
+    "js-src/**/*.ts"
   ]
 }

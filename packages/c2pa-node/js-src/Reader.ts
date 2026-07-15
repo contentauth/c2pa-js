@@ -13,40 +13,91 @@
 
 import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
 
-import { getNeonBinary } from "./binary.js";
+import { getLib, decodeAndFree, callAsync } from "./native/lib.js";
+import { checkPtr, checkIntAsync, ManifestNotFoundError } from "./native/error.js";
+import { Context } from "./native/context.js";
+import { C2paStream, mimeTypeOf } from "./native/stream.js";
 import type {
   C2paSettings,
   DestinationAsset,
   ReaderInterface,
   ResourceAsset,
   SourceAsset,
-  NeonReaderHandle,
 } from "./types.d.ts";
 
 export class Reader implements ReaderInterface {
-  constructor(private reader: NeonReaderHandle) { }
+  // Keeps the owning Context alive for the lifetime of this Reader.
+  private _ctx?: Context;
+
+  constructor(private reader: unknown) {}
 
   json(): ManifestStore {
-    return JSON.parse(getNeonBinary().readerJson.call(this.reader));
+    const ptr = checkPtr(getLib().c2pa_reader_json(this.reader), "Failed to get manifest JSON");
+    return JSON.parse(decodeAndFree(ptr));
   }
 
   remoteUrl(): string {
-    return getNeonBinary().readerRemoteUrl.call(this.reader);
+    return (getLib().c2pa_reader_remote_url(this.reader) as string | null) ?? "";
   }
 
   isEmbedded(): boolean {
-    return getNeonBinary().readerIsEmbedded.call(this.reader);
+    return getLib().c2pa_reader_is_embedded(this.reader) as boolean;
   }
 
-  async resourceToAsset(uri: string, asset: DestinationAsset): Promise<ResourceAsset> {
-    return getNeonBinary().readerResourceToAsset.call(this.reader, uri, asset);
+  async resourceToAsset(
+    uri: string,
+    asset: DestinationAsset,
+  ): Promise<ResourceAsset> {
+    const stream = C2paStream.forDestination(asset);
+    try {
+      const bytesWritten = checkIntAsync(
+        await callAsync<number | bigint>(
+          getLib().c2pa_reader_resource_to_stream,
+          this.reader,
+          uri,
+          stream.ptr,
+        ),
+        `Failed to get resource: ${uri}`,
+      );
+      return C2paStream.finalizeDestination(asset, stream, bytesWritten);
+    } finally {
+      stream.dispose();
+    }
   }
 
-  static async fromAsset(asset: SourceAsset, settings?: C2paSettings): Promise<Reader | null> {
-    const settingsStr = settings ? (typeof settings === 'string' ? settings : JSON.stringify(settings)) : undefined;
-    const reader: NeonReaderHandle | null =
-      await getNeonBinary().readerFromAsset(asset, settingsStr);
-    return reader ? new Reader(reader) : null;
+  /**
+   * Note: reads synchronously under the hood (unlike the Neon binding,
+   * which read off-thread). Returns a Promise for API compatibility, and to
+   * preserve ManifestNotFoundError detection — c2pa's last-error state is
+   * thread-local and can't be read reliably across koffi's async boundary.
+   */
+  static async fromAsset(
+    asset: SourceAsset,
+    settings?: C2paSettings,
+  ): Promise<Reader | null> {
+    const ctx = Context.create(settings);
+    try {
+      const readerPtr = checkPtr(
+        getLib().c2pa_reader_from_context(ctx.ptr),
+        "Failed to create C2paReader",
+      );
+      const stream = C2paStream.fromSource(asset);
+      try {
+        const newPtr = checkPtr(
+          getLib().c2pa_reader_with_stream(readerPtr, mimeTypeOf(asset) ?? "", stream.ptr),
+          "Failed to read asset",
+        );
+        const reader = new Reader(newPtr);
+        reader._ctx = ctx;
+        return reader;
+      } finally {
+        stream.dispose();
+      }
+    } catch (e) {
+      ctx.dispose();
+      if (e instanceof ManifestNotFoundError) return null;
+      throw e;
+    }
   }
 
   static async fromManifestDataAndAsset(
@@ -54,13 +105,35 @@ export class Reader implements ReaderInterface {
     asset: SourceAsset,
     settings?: C2paSettings,
   ): Promise<Reader> {
-    const settingsStr = settings ? (typeof settings === 'string' ? settings : JSON.stringify(settings)) : undefined;
-    const reader: NeonReaderHandle =
-      await getNeonBinary().readerFromManifestDataAndAsset(manifestData, asset, settingsStr);
-    return new Reader(reader);
+    const ctx = Context.create(settings);
+    const readerPtr = checkPtr(
+      getLib().c2pa_reader_from_context(ctx.ptr),
+      "Failed to create C2paReader",
+    );
+    const stream = C2paStream.fromSource(asset);
+    try {
+      const newPtr = checkPtr(
+        getLib().c2pa_reader_with_manifest_data_and_stream(
+          readerPtr,
+          mimeTypeOf(asset) ?? "",
+          stream.ptr,
+          manifestData,
+          manifestData.length,
+        ),
+        "Failed to read asset with manifest data",
+      );
+      const reader = new Reader(newPtr);
+      reader._ctx = ctx;
+      return reader;
+    } catch (e) {
+      ctx.dispose();
+      throw e;
+    } finally {
+      stream.dispose();
+    }
   }
 
-  // Non-neon methods, copied from c2pa-js
+  // Non-native methods, copied from c2pa-js
 
   activeLabel(): string | undefined {
     const manifestStore = this.json();
@@ -78,7 +151,7 @@ export class Reader implements ReaderInterface {
     return manifestStore.manifests?.[activeManifest];
   }
 
-  getHandle(): NeonReaderHandle {
+  getHandle(): unknown {
     return this.reader;
   }
 }
