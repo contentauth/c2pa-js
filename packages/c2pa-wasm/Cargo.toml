@@ -29,8 +29,7 @@ serde = "1.0.219"
 serde_bytes = "0.11.19"
 
 # Enable the JS-backed randomness backend for both getrandom majors pulled in
-# transitively (0.3 via c2pa, 0.4 via lopdf/rand). Paired with the
-# getrandom_backend="wasm_js" cfg in .cargo/config.toml.
+# transitively (0.3 via c2pa, 0.4 via lopdf/rand).
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom_03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
 getrandom_04 = { package = "getrandom", version = "0.4", features = ["wasm_js"] }
