@@ -1,5 +1,12 @@
 # @contentauth/c2pa-wasm
 
+## 0.9.1
+
+### Patch Changes
+
+- c5dd375: Update for c2pa 0.89.3
+- 2214c82: Eliminate repeated JS/WASM boundary crossings in BlobStream
+
 ## 0.9.0
 
 ### Minor Changes

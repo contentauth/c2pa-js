@@ -1,5 +1,15 @@
 # @contentauth/c2pa-web
 
+## 0.12.2
+
+### Patch Changes
+
+- c5dd375: Update for c2pa 0.89.3
+- Updated dependencies [c5dd375]
+- Updated dependencies [2214c82]
+  - @contentauth/c2pa-wasm@0.9.1
+  - @contentauth/c2pa-types@0.7.1
+
 ## 0.12.1
 
 ### Patch Changes
