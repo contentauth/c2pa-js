@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+## 0.6.2
+
+### Patch Changes
+
+- a18cf0e: Update C2PA version to 0.90.0.
+
 ## 0.6.1
 
 ### Patch Changes
