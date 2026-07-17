@@ -11,9 +11,7 @@ members = [
 rust-version = "1.88.0"
 
 [workspace.dependencies]
-# DO NOT MERGE: temporary GitHub reference to c2pa-v0.90.0-rc.3 release tag.
-# Restore the crates.io version dependency before merging.
-c2pa = { git = "https://github.com/contentauth/c2pa-rs.git", tag = "c2pa-v0.90.0-rc.3", features = ["pdf", "rust_native_crypto", "fetch_remote_manifests", "json_schema", "http_reqwest"], default-features = false }
+c2pa = { version = "=0.90.0", features = ["pdf", "rust_native_crypto", "fetch_remote_manifests", "json_schema", "http_reqwest"], default-features = false }
 
 [profile.release]
 opt-level = "s"

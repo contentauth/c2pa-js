@@ -1,8 +1,8 @@
 ---
-'@contentauth/c2pa-node': minor
-'@contentauth/c2pa-types': minor
-'@contentauth/c2pa-wasm': minor
-'@contentauth/c2pa-web': minor
+'@contentauth/c2pa-node': patch
+'@contentauth/c2pa-types': patch
+'@contentauth/c2pa-wasm': patch
+'@contentauth/c2pa-web': patch
 ---
 
-Update C2PA version to 0.90.0-rc.3.
+Update C2PA version to 0.90.0.
