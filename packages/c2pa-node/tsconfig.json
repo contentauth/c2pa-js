@@ -15,9 +15,12 @@
     "types": ["node", "vitest/globals"],
     "paths": {
       "index.node": ["./js-src/index.node"]
-    },
+    }
   },
-  "include": [
-    "js-src/*.ts"
+  "include": ["js-src/*.ts"],
+  "references": [
+    {
+      "path": "../c2pa-types"
+    }
   ]
 }
