@@ -57,7 +57,7 @@
     "@contentauth/c2pa-types": "workspace:*",
     "@contentauth/c2pa-wasm": "workspace:*",
     "highgain": "^0.1.0",
-    "ts-deepmerge": "^7.0.3"
+    "ts-deepmerge": "^8.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
