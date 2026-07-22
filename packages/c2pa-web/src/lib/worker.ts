@@ -140,10 +140,12 @@ rx(
     },
     async builder_sign(builderId, requestId, payload, format, blob) {
       const builder = builderMap.get(builderId);
-      const signedBytes = (await builder.sign(
+      const signedBytes = await builder.sign(
         {
           reserveSize: payload.reserveSize,
           alg: payload.alg,
+          directCoseHandling: payload.directCoseHandling,
+          certs: payload.certs,
           sign: async (bytes) => {
             const result = await tx.sign(
               requestId,
@@ -155,8 +157,11 @@ rx(
         },
         format,
         blob
-      )) as Uint8Array<ArrayBuffer>;
-      return transfer(signedBytes, signedBytes.buffer);
+      );
+      return transfer(
+        signedBytes as Uint8Array<ArrayBuffer>,
+        signedBytes.buffer
+      );
     },
     async builder_signAndGetManifestBytes(
       builderId,
@@ -170,6 +175,8 @@ rx(
         {
           reserveSize: payload.reserveSize,
           alg: payload.alg,
+          directCoseHandling: payload.directCoseHandling,
+          certs: payload.certs,
           sign: async (bytes) => {
             const result = await tx.sign(
               requestId,
