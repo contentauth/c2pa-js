@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+## 0.6.4
+
+### Patch Changes
+
+- 2cf74c2: Update ts-deepmerge to 8.0.0
+
 ## 0.6.3
 
 ### Patch Changes
