@@ -66,6 +66,24 @@ impl WasmReader {
         Ok(WasmReader::from_reader(reader).await)
     }
 
+    /// Attempts to create a new `WasmReader` from an asset format and the asset's raw bytes.
+    ///
+    /// Unlike [`WasmReader::from_blob`], this entry point does not use any browser-only Web
+    /// APIs (`Blob`, `FileReaderSync`). The bytes are read from an in-memory [`Cursor`], which
+    /// implements [`Read`] + [`Seek`], so this can be called from non-browser JavaScript
+    /// runtimes such as Node.js, Deno, Bun, and Cloudflare Workers (workerd).
+    ///
+    /// Optionally accepts a context JSON string to configure the reader.
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub async fn from_bytes(
+        format: &str,
+        bytes: Vec<u8>,
+        context_json: Option<String>,
+    ) -> Result<WasmReader, JsString> {
+        let stream = Cursor::new(bytes);
+        WasmReader::from_stream(format, stream, context_json).await
+    }
+
     /// Attempts to create a new `WasmReader` from an asset format, a `Blob` of the bytes of the initial segment, and a fragment `Blob`.
     /// Optionally accepts a context JSON string to configure the reader.
     #[wasm_bindgen(js_name = fromBlobFragment)]
@@ -162,5 +180,41 @@ impl WasmReader {
             .map_err(WasmError::from)?;
 
         Ok(cursor_to_u8array(stream)?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    use super::*;
+
+    // A JPEG with a real embedded C2PA manifest (Adobe/CAI test asset).
+    const SIGNED_JPEG: &[u8] = include_bytes!("../tests/fixtures/C.jpg");
+
+    // `fromBytes` reads the asset from an in-memory buffer with no `Blob` / `FileReaderSync`, so
+    // verification works in non-browser runtimes (Node.js, Deno, Bun, Cloudflare Workers). The
+    // crate-wide `run_in_dedicated_worker` config (from the BlobStream tests) still governs the test
+    // harness itself; the runtime portability is exercised outside wasm-bindgen-test.
+
+    #[wasm_bindgen_test]
+    async fn from_bytes_reads_active_manifest() {
+        let reader = WasmReader::from_bytes("image/jpeg", SIGNED_JPEG.to_vec(), None)
+            .await
+            .expect("fromBytes should read the embedded manifest");
+
+        assert!(
+            reader.active_label().is_some(),
+            "a signed asset should expose an active manifest"
+        );
+    }
+
+    #[wasm_bindgen_test]
+    async fn from_bytes_without_manifest_errors() {
+        // A minimal JPEG (SOI + EOI) with no C2PA data must be rejected, not silently accepted.
+        let empty_jpeg = vec![0xff, 0xd8, 0xff, 0xd9];
+        let result = WasmReader::from_bytes("image/jpeg", empty_jpeg, None).await;
+
+        assert!(result.is_err(), "an asset without C2PA data must error");
     }
 }
