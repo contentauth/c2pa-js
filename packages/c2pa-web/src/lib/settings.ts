@@ -234,24 +234,96 @@ const containsCerts = (content: string): boolean =>
 
 const isUrl = (str: string): boolean => str.startsWith('http');
 
+const TRUST_FETCH_RETRIES = 2;
+const TRUST_INITIAL_RETRY_DELAY_MS = 200;
+const TRUST_MAX_RETRY_DELAY_MS = 2_000;
+export const TRUST_MAX_RETRY_AFTER_MS = 30_000;
+
+function calculateBackoffMs(attempt: number): number {
+  const backoff = Math.min(
+    TRUST_INITIAL_RETRY_DELAY_MS * 2 ** attempt,
+    TRUST_MAX_RETRY_DELAY_MS
+  );
+  const jitter = Math.floor(Math.random() * 200);
+  return Math.min(backoff + jitter, TRUST_MAX_RETRY_DELAY_MS); // jitter, capped
+}
+
+/**
+ * Parses a `Retry-After` header value, which per HTTP spec is either a number of
+ * seconds or an HTTP date. Returns the delay in milliseconds, or null if the header
+ * is absent or unparseable.
+ */
+function parseRetryAfterMs(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const seconds = Number(value);
+  if (!Number.isNaN(seconds)) {
+    return seconds * 1000;
+  }
+
+  const dateMs = Date.parse(value);
+  if (Number.isNaN(dateMs)) {
+    return null;
+  }
+
+  return dateMs - Date.now();
+}
+
 async function fetchResource(url: string): Promise<string> {
-  let res: Response;
-  try {
-    res = await fetch(url);
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    throw new Error(`Network error fetching ${url}: ${message}`, { cause: e });
+  for (let attempt = 0; ; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(url);
+    } catch (e) {
+      if (attempt < TRUST_FETCH_RETRIES) {
+        await new Promise((resolve) => setTimeout(resolve, calculateBackoffMs(attempt)));
+        continue;
+      }
+      const message = e instanceof Error ? e.message : String(e);
+      throw new Error(`Network error fetching ${url}: ${message}`, { cause: e });
+    }
+
+    if (!res.ok) {
+      const retryable = res.status === 429 || res.status >= 500;
+
+      if (retryable) {
+        if (res.status === 429) {
+          const retryAfterMs = parseRetryAfterMs(res.headers.get('retry-after'));
+          if (retryAfterMs !== null) {
+            if (retryAfterMs > TRUST_MAX_RETRY_AFTER_MS) {
+              throw new Error(
+                `Failed to fetch ${url}: server requested a Retry-After delay of ` +
+                  `${Math.ceil(retryAfterMs / 1000)}s, which exceeds the maximum allowed delay of ` +
+                  `${TRUST_MAX_RETRY_AFTER_MS / 1000}s`
+              );
+            }
+
+            if (attempt < TRUST_FETCH_RETRIES) {
+              await new Promise((resolve) => setTimeout(resolve, Math.max(retryAfterMs, 0)));
+              continue;
+            }
+
+            throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
+          }
+        }
+
+        if (attempt < TRUST_FETCH_RETRIES) {
+          await new Promise((resolve) => setTimeout(resolve, calculateBackoffMs(attempt)));
+          continue;
+        }
+      }
+
+      throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
+    }
+
+    const text = await res.text();
+
+    if (text.length > MAX_RESPONSE_SIZE) {
+      throw new Error(`Response from ${url} is too large. Max size is ${MAX_RESPONSE_SIZE} bytes.`);
+    }
+
+    return text;
   }
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
-  }
-
-  const text = await res.text();
-
-  if (text.length > MAX_RESPONSE_SIZE) {
-    throw new Error(`Response from ${url} is too large. Max size is ${MAX_RESPONSE_SIZE} bytes.`);
-  }
-
-  return text;
 }
