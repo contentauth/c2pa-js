@@ -9,7 +9,7 @@
 
 import { test, describe, expect } from 'test/methods.js';
 import { http, HttpResponse } from 'msw';
-import { resolveSettings, MAX_RESPONSE_SIZE } from './settings.js';
+import { resolveSettings, MAX_RESPONSE_SIZE, TRUST_MAX_RETRY_AFTER_MS } from './settings.js';
 
 describe('settings', () => {
   describe('resolveSettings', () => {
@@ -275,6 +275,60 @@ describe('settings', () => {
 
         await expect(resultPromise).rejects.toThrow(
           'Failed to fetch http://userAnchors429: 429'
+        );
+      });
+
+      test('should respect a reasonable Retry-After header and retry', async ({
+        requestMock
+      }) => {
+        let requestCount = 0;
+        requestMock.use(
+          http.get('http://userAnchorsRetryAfter', () => {
+            requestCount++;
+            if (requestCount === 1) {
+              return new HttpResponse(null, {
+                status: 429,
+                headers: { 'Retry-After': '1' }
+              });
+            }
+            return HttpResponse.text(
+              '-----BEGIN CERTIFICATE-----retryAfter-----END CERTIFICATE-----'
+            );
+          })
+        );
+
+        const result = await resolveSettings(undefined, {
+          trust: {
+            userAnchors: 'http://userAnchorsRetryAfter'
+          }
+        });
+
+        expect(result).toContain('BEGIN CERTIFICATE-----retryAfter');
+      });
+
+      test('should fail immediately when Retry-After exceeds the maximum allowed delay', async ({
+        requestMock
+      }) => {
+        const tooLongSeconds = TRUST_MAX_RETRY_AFTER_MS / 1000 + 1;
+        requestMock.use(
+          http.get(
+            'http://userAnchorsRetryAfterTooLong',
+            () =>
+              new HttpResponse(null, {
+                status: 429,
+                headers: { 'Retry-After': String(tooLongSeconds) }
+              })
+          )
+        );
+
+        const resultPromise = resolveSettings(undefined, {
+          trust: {
+            userAnchors: 'http://userAnchorsRetryAfterTooLong'
+          }
+        });
+
+        await expect(resultPromise).rejects.toThrow(
+          'exceeds the maximum allowed delay'
         );
       });
 
