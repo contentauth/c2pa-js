@@ -234,24 +234,47 @@ const containsCerts = (content: string): boolean =>
 
 const isUrl = (str: string): boolean => str.startsWith('http');
 
+const TRUST_FETCH_RETRIES = 2;
+const TRUST_INITIAL_RETRY_DELAY_MS = 200;
+const TRUST_MAX_RETRY_DELAY_MS = 2_000;
+
+function calculateBackoffMs(attempt: number): number {
+  const backoff = Math.min(
+    TRUST_INITIAL_RETRY_DELAY_MS * 2 ** attempt,
+    TRUST_MAX_RETRY_DELAY_MS
+  );
+  return backoff + Math.floor(Math.random() * 200); // jitter
+}
+
 async function fetchResource(url: string): Promise<string> {
-  let res: Response;
-  try {
-    res = await fetch(url);
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    throw new Error(`Network error fetching ${url}: ${message}`, { cause: e });
+  for (let attempt = 0; ; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(url);
+    } catch (e) {
+      if (attempt < TRUST_FETCH_RETRIES) {
+        await new Promise((resolve) => setTimeout(resolve, calculateBackoffMs(attempt)));
+        continue;
+      }
+      const message = e instanceof Error ? e.message : String(e);
+      throw new Error(`Network error fetching ${url}: ${message}`, { cause: e });
+    }
+
+    if (!res.ok) {
+      const retryable = res.status === 429 || res.status >= 500;
+      if (retryable && attempt < TRUST_FETCH_RETRIES) {
+        await new Promise((resolve) => setTimeout(resolve, calculateBackoffMs(attempt)));
+        continue;
+      }
+      throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
+    }
+
+    const text = await res.text();
+
+    if (text.length > MAX_RESPONSE_SIZE) {
+      throw new Error(`Response from ${url} is too large. Max size is ${MAX_RESPONSE_SIZE} bytes.`);
+    }
+
+    return text;
   }
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
-  }
-
-  const text = await res.text();
-
-  if (text.length > MAX_RESPONSE_SIZE) {
-    throw new Error(`Response from ${url} is too large. Max size is ${MAX_RESPONSE_SIZE} bytes.`);
-  }
-
-  return text;
 }

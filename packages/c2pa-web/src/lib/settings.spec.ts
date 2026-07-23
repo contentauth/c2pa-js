@@ -278,6 +278,31 @@ describe('settings', () => {
         );
       });
 
+      test('should recover after a transient 500 by retrying', async ({
+        requestMock
+      }) => {
+        requestMock.use(
+          http.get(
+            'http://userAnchorsTransient500',
+            () => new HttpResponse(null, { status: 500 }),
+            { once: true }
+          ),
+          http.get('http://userAnchorsTransient500', () =>
+            HttpResponse.text(
+              '-----BEGIN CERTIFICATE-----baz-----END CERTIFICATE-----'
+            )
+          )
+        );
+
+        const result = await resolveSettings(undefined, {
+          trust: {
+            userAnchors: 'http://userAnchorsTransient500'
+          }
+        });
+
+        expect(result).toContain('BEGIN CERTIFICATE-----baz');
+      });
+
       test('should not fetch URLs for unknown keys not defined in TrustSettings', async ({
         requestMock
       }) => {
