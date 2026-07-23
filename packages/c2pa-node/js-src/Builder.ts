@@ -12,10 +12,12 @@
 // each license.
 
 import type {
+  Action,
   BuilderIntent,
   C2paReason,
   Ingredient,
   Manifest,
+  ManifestStore,
 } from "@contentauth/c2pa-types";
 
 import { getNeonBinary } from "./binary.js";
@@ -262,6 +264,19 @@ export class Builder implements BuilderInterface {
 
   addRedaction(uri: string, reason: C2paReason): void {
     getNeonBinary().builderAddRedaction.call(this.builder, uri, reason);
+  }
+
+  filterActions(keep: (action: Action) => boolean): void {
+    getNeonBinary().builderFilterActions.call(this.builder, keep);
+  }
+
+  filterIngredients(
+    rescue: (
+      ingredient: Ingredient,
+      provenance: ManifestStore | null,
+    ) => boolean,
+  ): void {
+    getNeonBinary().builderFilterIngredients.call(this.builder, rescue);
   }
 
   getHandle(): NeonBuilderHandle {

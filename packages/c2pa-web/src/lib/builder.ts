@@ -11,6 +11,7 @@ import { WorkerManager } from './worker/workerManager.js';
 import { getSerializablePayload, type Signer } from './signer.js';
 import type {
   Action,
+  AssertionDefinition,
   BuilderIntent,
   C2paReason,
   Ingredient,
@@ -105,6 +106,34 @@ export interface Builder {
   addRedaction: (uri: string, reason: C2paReason) => Promise<void>;
 
   /**
+   * Retains only the actions for which `keep` returns true. **Experimental.**
+   *
+   * The inception action (`c2pa.created`/`c2pa.opened`) is always kept regardless of `keep`,
+   * and is moved to index 0 if needed, so the manifest stays valid per the C2PA spec. Sets
+   * `allActionsIncluded = false` when anything is removed. This does not touch ingredients —
+   * call {@link Builder.filterIngredients} (`filterIngredients(() => false)` to drop all
+   * orphans) afterwards if you also want to drop ingredients now orphaned by the removed
+   * actions.
+   *
+   * @param keep A predicate; the action is retained when it returns true.
+   */
+  filterActions: (keep: (action: Action) => boolean) => Promise<void>;
+
+  /**
+   * Retains ingredients, then rewrites positional ingredient references so linked actions
+   * stay valid. **Experimental.**
+   *
+   * An ingredient is kept if it is referenced by a current action, is a `parentOf` ingredient,
+   * or `rescue` returns true for it. `rescue` therefore only ever rescues an otherwise-orphaned
+   * ingredient — it can never drop a referenced or lineage ingredient. Call
+   * {@link Builder.filterActions} first if you are also removing actions: the keep-set is
+   * computed from whatever actions currently remain.
+   *
+   * @param rescue A predicate that can rescue an otherwise-orphaned ingredient by returning true.
+   */
+  filterIngredients: (rescue: (ingredient: Ingredient) => boolean) => Promise<void>;
+
+  /**
    * Add an ingredient to the builder from a definition only.
    *
    * @param ingredientDefinition {@link Ingredient} definition.
@@ -174,6 +203,20 @@ export interface Builder {
    * Dispose of this Builder, freeing the memory it occupied and preventing further use. Call this whenever the Builder is no longer needed.
    */
   free: () => Promise<void>;
+}
+
+/**
+ * Flattens the actions from every `c2pa.actions` assertion (a manifest may carry both a
+ * created-list and a gathered-list assertion) in positional order. This ordering must match the
+ * running index the wasm `filterActionsAt` binding applies across those same assertions.
+ */
+function getActionsFromDefinition(definition: ManifestDefinition): Action[] {
+  return (definition.assertions ?? [])
+    .filter((a: AssertionDefinition) => a.label.startsWith('c2pa.actions'))
+    .flatMap((a: AssertionDefinition) => {
+      const data = a.data as { actions?: Action[] } | undefined;
+      return data?.actions ?? [];
+    });
 }
 
 export interface ManifestAndAssetBytes {
@@ -264,6 +307,30 @@ function createBuilder(
 
     async setThumbnailFromBlob(format, blob) {
       await tx.builder_setThumbnailFromBlob(id, format, blob);
+    },
+
+    async filterActions(keep: (action: Action) => boolean) {
+      const definition: ManifestDefinition = await tx.builder_getDefinition(id);
+      const actions = getActionsFromDefinition(definition);
+      const indices = actions.reduce<number[]>((kept, action, i) => {
+        if (keep(action)) {
+          kept.push(i);
+        }
+        return kept;
+      }, []);
+      await tx.builder_filterActionsAt(id, indices);
+    },
+
+    async filterIngredients(rescue: (ingredient: Ingredient) => boolean) {
+      const definition: ManifestDefinition = await tx.builder_getDefinition(id);
+      const ingredients: Ingredient[] = definition.ingredients ?? [];
+      const indices = ingredients.reduce<number[]>((rescued, ingredient, i) => {
+        if (rescue(ingredient)) {
+          rescued.push(i);
+        }
+        return rescued;
+      }, []);
+      await tx.builder_filterIngredientsAt(id, indices);
     },
 
     async addIngredient(ingredientDefinition: Ingredient) {

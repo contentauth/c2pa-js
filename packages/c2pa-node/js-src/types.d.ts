@@ -14,6 +14,7 @@
 // This file contains types not included in @contentauth/c2pa-types and not directly applicable to the neon generated code (index.node.d.ts)
 import { Buffer } from "buffer";
 import type {
+  Action,
   BuilderIntent,
   C2paReason,
   Ingredient,
@@ -21,7 +22,7 @@ import type {
   ManifestStore,
 } from "@contentauth/c2pa-types";
 
-export type { C2paReason, Ingredient } from "@contentauth/c2pa-types";
+export type { Action, C2paReason, Ingredient } from "@contentauth/c2pa-types";
 
 /**
  * Describes the digital signature algorithms allowed by the C2PA spec
@@ -341,6 +342,41 @@ export interface BuilderInterface {
    * @param reason Why the assertion is being redacted. Use `"c2pa.PII.present"` for PII removal.
    */
   addRedaction(uri: string, reason: C2paReason): void;
+
+  /**
+   * Retains only the actions for which `keep` returns true. **Experimental.**
+   *
+   * The inception action (`c2pa.created`/`c2pa.opened`) is always kept regardless of `keep`,
+   * and is moved to index 0 if needed, so the manifest stays valid per the C2PA spec. Sets
+   * `allActionsIncluded = false` when anything is removed. This does not touch ingredients —
+   * call {@link filterIngredients} (`filterIngredients(() => false)` to drop all orphans)
+   * afterwards if you also want to drop ingredients now orphaned by the removed actions.
+   * @param keep A predicate; the action is retained when it returns true.
+   */
+  filterActions(keep: (action: Action) => boolean): void;
+
+  /**
+   * Retains ingredients, then rewrites positional ingredient references so linked actions
+   * stay valid. **Experimental.**
+   *
+   * An ingredient is kept if it is referenced by a current action, is a `parentOf` ingredient,
+   * or `rescue` returns true for it. `rescue` therefore only ever rescues an otherwise-orphaned
+   * ingredient — it can never drop a referenced or lineage ingredient. Call {@link filterActions}
+   * first if you are also removing actions: the keep-set is computed from whatever actions
+   * currently remain.
+   *
+   * `rescue` receives the ingredient and its `provenance`: the ingredient's embedded
+   * `manifest_data` parsed into a {@link ManifestStore}, or `null` when it has no embedded
+   * manifest. This lets the predicate make provenance-aware decisions (e.g. "this ingredient's
+   * chain contains AI") without re-reading the whole builder first.
+   * @param rescue A predicate that can rescue an otherwise-orphaned ingredient by returning true.
+   */
+  filterIngredients(
+    rescue: (
+      ingredient: Ingredient,
+      provenance: ManifestStore | null,
+    ) => boolean,
+  ): void;
 
   /**
    * Get the internal handle for use with Neon bindings

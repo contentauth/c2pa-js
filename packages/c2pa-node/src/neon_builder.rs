@@ -18,11 +18,12 @@ use crate::neon_reader::NeonReader;
 use crate::neon_signer::{CallbackSignerConfig, NeonCallbackSigner, NeonLocalSigner};
 use crate::runtime::runtime;
 use crate::utils::parse_settings;
-use c2pa::{assertions::Action, Builder, BuilderIntent, Ingredient};
+use c2pa::{assertions::Action, Builder, BuilderIntent, Ingredient, Reader};
 use neon::context::Context as NeonContext;
 use neon::prelude::*;
 use neon_serde4;
 use serde_json;
+use std::io::Cursor;
 use std::ops::Deref;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -613,6 +614,59 @@ impl NeonBuilder {
         Ok(cx.string(json).upcast())
     }
 
+    /// Retains only the actions for which the JS `keep` predicate returns true. The inception
+    /// action (`c2pa.created`/`c2pa.opened`) is always kept, per `Builder::filter_actions`.
+    pub fn filter_actions(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<Self>>()?;
+        let keep = cx.argument::<JsFunction>(0)?;
+        let undefined = cx.undefined();
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+        builder
+            .filter_actions(|action| {
+                let js_action = match neon_serde4::to_value(&mut cx, action) {
+                    Ok(v) => v,
+                    Err(_) => return false,
+                };
+                callback_returns_true(&mut cx, &keep, undefined, js_action)
+            })
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+        Ok(cx.undefined())
+    }
+
+    /// Retains ingredients, rescuing an otherwise-orphaned ingredient when the JS `rescue`
+    /// predicate returns true for it. Referenced and `parentOf` ingredients are always kept,
+    /// per `Builder::filter_ingredients`.
+    ///
+    /// The `rescue` predicate is called with two arguments: the ingredient, and its parsed
+    /// provenance as a manifest store (`ManifestStore`) derived from the ingredient's embedded
+    /// `manifest_data`, or `null` when the ingredient has no embedded manifest. This lets the
+    /// predicate make provenance-aware decisions (e.g. "the ingredient's chain contains AI")
+    /// without the caller having to re-read the whole builder first.
+    pub fn filter_ingredients(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<Self>>()?;
+        let rescue = cx.argument::<JsFunction>(0)?;
+        let undefined = cx.undefined();
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+        builder
+            .filter_ingredients(|ingredient| {
+                let js_ingredient = match neon_serde4::to_value(&mut cx, ingredient) {
+                    Ok(v) => v,
+                    Err(_) => return false,
+                };
+                let js_provenance = ingredient_provenance_value(&mut cx, ingredient);
+                callback_returns_true_with(
+                    &mut cx,
+                    &rescue,
+                    undefined,
+                    &[js_ingredient, js_provenance],
+                )
+            })
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+        Ok(cx.undefined())
+    }
+
     /// Update a manifest property. Available properties are limited to strings and numbers.
     /// There are other methods for thumbnails, ingredients and assertions, etc.
     pub fn update_manifest_property(mut cx: FunctionContext) -> JsResult<JsUndefined> {
@@ -672,3 +726,51 @@ impl NeonBuilder {
 }
 
 impl Finalize for NeonBuilder {}
+
+/// Synchronously calls a JS predicate with a single argument and coerces the result to `bool`.
+/// A thrown or non-boolean result is treated as `false` (i.e. does not keep/rescue the item).
+fn callback_returns_true(
+    cx: &mut FunctionContext,
+    callback: &Handle<JsFunction>,
+    this: Handle<JsUndefined>,
+    arg: Handle<JsValue>,
+) -> bool {
+    callback_returns_true_with(cx, callback, this, &[arg])
+}
+
+/// Like [`callback_returns_true`] but forwards multiple arguments to the JS predicate.
+fn callback_returns_true_with(
+    cx: &mut FunctionContext,
+    callback: &Handle<JsFunction>,
+    this: Handle<JsUndefined>,
+    args: &[Handle<JsValue>],
+) -> bool {
+    callback
+        .call(cx, this, args)
+        .ok()
+        .and_then(|result| result.downcast::<JsBoolean, _>(cx).ok())
+        .map(|b| b.value(cx))
+        .unwrap_or(false)
+}
+
+/// Parses an ingredient's embedded `manifest_data` into a manifest-store JSON value for the JS
+/// predicate. Returns `null` when the ingredient has no embedded manifest or it cannot be parsed.
+fn ingredient_provenance_value<'a>(
+    cx: &mut FunctionContext<'a>,
+    ingredient: &Ingredient,
+) -> Handle<'a, JsValue> {
+    let null = cx.null().upcast::<JsValue>();
+    let Some(data) = ingredient.manifest_data() else {
+        return null;
+    };
+    let Ok(reader) = Reader::default().with_stream("c2pa", Cursor::new(data.as_ref())) else {
+        return null;
+    };
+    match serde_json::from_str::<serde_json::Value>(&reader.json())
+        .ok()
+        .and_then(|value| neon_serde4::to_value(cx, &value).ok())
+    {
+        Some(value) => value,
+        None => null,
+    }
+}
