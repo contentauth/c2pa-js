@@ -243,7 +243,8 @@ function calculateBackoffMs(attempt: number): number {
     TRUST_INITIAL_RETRY_DELAY_MS * 2 ** attempt,
     TRUST_MAX_RETRY_DELAY_MS
   );
-  return backoff + Math.floor(Math.random() * 200); // jitter
+  const jitter = Math.floor(Math.random() * 200);
+  return Math.min(backoff + jitter, TRUST_MAX_RETRY_DELAY_MS); // jitter, capped
 }
 
 async function fetchResource(url: string): Promise<string> {
