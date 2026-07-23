@@ -616,21 +616,48 @@ impl NeonBuilder {
 
     /// Retains only the actions for which the JS `keep` predicate returns true. The inception
     /// action (`c2pa.created`/`c2pa.opened`) is always kept, per `Builder::filter_actions`.
+    ///
+    /// If `keep` throws or returns a non-boolean, the exception is surfaced to the caller. Because
+    /// the underlying filter mutates in place, the builder may be left partially filtered when the
+    /// predicate throws midway; callers should discard it on error.
     pub fn filter_actions(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let rt = runtime();
         let this = cx.this::<JsBox<Self>>()?;
         let keep = cx.argument::<JsFunction>(0)?;
         let undefined = cx.undefined();
         let mut builder = rt.block_on(async { this.builder.lock().await });
-        builder
+
+        // The c2pa filter closure is `FnMut(&Action) -> bool` with no error channel, so capture a
+        // JS exception out-of-band and re-raise it after filtering. Once a throw is pending we
+        // stop invoking JS entirely (calling more JS APIs with an exception pending is unsound).
+        let mut pending: Option<neon::result::Throw> = None;
+        let filter_result = builder
             .filter_actions(|action| {
+                if pending.is_some() {
+                    return false;
+                }
                 let js_action = match neon_serde4::to_value(&mut cx, action) {
                     Ok(v) => v,
-                    Err(_) => return false,
+                    Err(e) => {
+                        pending = cx.throw_error::<_, ()>(e.to_string()).err();
+                        return false;
+                    }
                 };
-                callback_returns_true(&mut cx, &keep, undefined, js_action)
+                match callback_returns_true(&mut cx, &keep, undefined, js_action) {
+                    Ok(keep) => keep,
+                    Err(throw) => {
+                        pending = Some(throw);
+                        false
+                    }
+                }
             })
-            .or_else(|err| cx.throw_error(err.to_string()))?;
+            .map(|_| ());
+
+        // A pending JS exception is the root cause and takes precedence over any Rust-side error.
+        if let Some(throw) = pending {
+            return Err(throw);
+        }
+        filter_result.or_else(|err| cx.throw_error(err.to_string()))?;
         Ok(cx.undefined())
     }
 
@@ -643,27 +670,52 @@ impl NeonBuilder {
     /// `manifest_data`, or `null` when the ingredient has no embedded manifest. This lets the
     /// predicate make provenance-aware decisions (e.g. "the ingredient's chain contains AI")
     /// without the caller having to re-read the whole builder first.
+    ///
+    /// If `rescue` throws or returns a non-boolean, the exception is surfaced to the caller. As
+    /// with [`Self::filter_actions`], the builder may be left partially filtered when the
+    /// predicate throws midway; callers should discard it on error.
     pub fn filter_ingredients(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let rt = runtime();
         let this = cx.this::<JsBox<Self>>()?;
         let rescue = cx.argument::<JsFunction>(0)?;
         let undefined = cx.undefined();
         let mut builder = rt.block_on(async { this.builder.lock().await });
-        builder
+
+        // See `filter_actions`: capture a JS exception out-of-band and re-raise it afterwards,
+        // short-circuiting once a throw is pending.
+        let mut pending: Option<neon::result::Throw> = None;
+        let filter_result = builder
             .filter_ingredients(|ingredient| {
+                if pending.is_some() {
+                    return false;
+                }
                 let js_ingredient = match neon_serde4::to_value(&mut cx, ingredient) {
                     Ok(v) => v,
-                    Err(_) => return false,
+                    Err(e) => {
+                        pending = cx.throw_error::<_, ()>(e.to_string()).err();
+                        return false;
+                    }
                 };
                 let js_provenance = ingredient_provenance_value(&mut cx, ingredient);
-                callback_returns_true_with(
+                match callback_returns_true_with(
                     &mut cx,
                     &rescue,
                     undefined,
                     &[js_ingredient, js_provenance],
-                )
+                ) {
+                    Ok(rescue) => rescue,
+                    Err(throw) => {
+                        pending = Some(throw);
+                        false
+                    }
+                }
             })
-            .or_else(|err| cx.throw_error(err.to_string()))?;
+            .map(|_| ());
+
+        if let Some(throw) = pending {
+            return Err(throw);
+        }
+        filter_result.or_else(|err| cx.throw_error(err.to_string()))?;
         Ok(cx.undefined())
     }
 
@@ -727,14 +779,15 @@ impl NeonBuilder {
 
 impl Finalize for NeonBuilder {}
 
-/// Synchronously calls a JS predicate with a single argument and coerces the result to `bool`.
-/// A thrown or non-boolean result is treated as `false` (i.e. does not keep/rescue the item).
+/// Synchronously calls a JS predicate with a single argument and returns its boolean result.
+/// Propagates the pending JS exception if the predicate throws, and raises a `TypeError` if it
+/// returns a non-boolean value.
 fn callback_returns_true(
     cx: &mut FunctionContext,
     callback: &Handle<JsFunction>,
     this: Handle<JsUndefined>,
     arg: Handle<JsValue>,
-) -> bool {
+) -> NeonResult<bool> {
     callback_returns_true_with(cx, callback, this, &[arg])
 }
 
@@ -744,13 +797,12 @@ fn callback_returns_true_with(
     callback: &Handle<JsFunction>,
     this: Handle<JsUndefined>,
     args: &[Handle<JsValue>],
-) -> bool {
-    callback
-        .call(cx, this, args)
-        .ok()
-        .and_then(|result| result.downcast::<JsBoolean, _>(cx).ok())
-        .map(|b| b.value(cx))
-        .unwrap_or(false)
+) -> NeonResult<bool> {
+    let result = callback.call(cx, this, args)?;
+    let boolean = result
+        .downcast::<JsBoolean, _>(cx)
+        .or_else(|_| cx.throw_error("filter predicate must return a boolean"))?;
+    Ok(boolean.value(cx))
 }
 
 /// Parses an ingredient's embedded `manifest_data` into a manifest-store JSON value for the JS

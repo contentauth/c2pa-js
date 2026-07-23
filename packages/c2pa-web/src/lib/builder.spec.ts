@@ -333,8 +333,11 @@ describe('builder', () => {
         const definitionFromArchivedBuilder =
           await builderFromArchive.getDefinition();
 
-        const { assertions: _assertions, ...manifestDefinitionWithoutAssertions } = manifestDefinition;
-        expect(definitionFromArchivedBuilder).toMatchObject(manifestDefinitionWithoutAssertions);
+        const manifestDefinitionWithoutAssertions = { ...manifestDefinition };
+        delete manifestDefinitionWithoutAssertions.assertions;
+        expect(definitionFromArchivedBuilder).toMatchObject(
+          manifestDefinitionWithoutAssertions
+        );
       });
 
       test('should re-create a builder from an archive with ingredient from blob', async ({
@@ -687,6 +690,98 @@ describe('builder', () => {
 
         expect(definition.ingredients).toHaveLength(1);
         expect(definition.ingredients?.[0]).toMatchObject(ingredient);
+      });
+    });
+
+    describe('filterActions', () => {
+      test('invokes the predicate for each action and honors its return', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.new();
+        await builder.addAction({ action: 'c2pa.created' });
+        await builder.addAction({ action: 'c2pa.edited' });
+        await builder.addAction({ action: 'c2pa.color_adjustments' });
+
+        const seen: string[] = [];
+        await builder.filterActions((action) => {
+          seen.push(action.action);
+          return action.action !== 'c2pa.color_adjustments';
+        });
+
+        // The binding enumerated every action and passed it to the predicate.
+        expect(seen).toEqual([
+          'c2pa.created',
+          'c2pa.edited',
+          'c2pa.color_adjustments'
+        ]);
+
+        // The predicate's return value decided what survives.
+        const definition = await builder.getDefinition();
+        const actionsAssertion = definition.assertions?.find((a) =>
+          a.label.startsWith('c2pa.actions')
+        );
+        const names = (
+          actionsAssertion?.data as { actions: { action: string }[] }
+        ).actions.map((a) => a.action);
+        expect(names).toContain('c2pa.created');
+        expect(names).toContain('c2pa.edited');
+        expect(names).not.toContain('c2pa.color_adjustments');
+      });
+
+      test('surfaces an error thrown by the predicate', async ({ c2pa }) => {
+        const builder = await c2pa.builder.new();
+        await builder.addAction({ action: 'c2pa.created' });
+        await builder.addAction({ action: 'c2pa.edited' });
+
+        await expect(
+          builder.filterActions(() => {
+            throw new Error('boom from predicate');
+          })
+        ).rejects.toThrow('boom from predicate');
+      });
+    });
+
+    describe('filterIngredients', () => {
+      test('invokes the predicate and prunes ingredients it does not rescue', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.new();
+        await builder.addAction({ action: 'c2pa.created' });
+        await builder.addIngredient({
+          title: 'orphan',
+          format: 'image/jpeg',
+          instance_id: 'orphan-1',
+          relationship: 'componentOf'
+        });
+
+        const seen: (string | null | undefined)[] = [];
+        // Rescue nothing, so the orphan should be pruned.
+        await builder.filterIngredients((ingredient) => {
+          seen.push(ingredient.title);
+          return false;
+        });
+
+        // The binding passed the ingredient to the predicate.
+        expect(seen).toEqual(['orphan']);
+
+        const definition = await builder.getDefinition();
+        expect(definition.ingredients ?? []).toHaveLength(0);
+      });
+
+      test('surfaces an error thrown by the predicate', async ({ c2pa }) => {
+        const builder = await c2pa.builder.new();
+        await builder.addAction({ action: 'c2pa.created' });
+        await builder.addIngredient({
+          title: 'orphan',
+          format: 'image/jpeg',
+          relationship: 'componentOf'
+        });
+
+        await expect(
+          builder.filterIngredients(() => {
+            throw new Error('ingredient boom');
+          })
+        ).rejects.toThrow('ingredient boom');
       });
     });
 
