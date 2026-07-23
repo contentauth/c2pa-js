@@ -1,5 +1,12 @@
 # @contentauth/c2pa-web
 
+## 0.12.4
+
+### Patch Changes
+
+- 2cf74c2: Update ts-deepmerge to 8.0.0
+- 51f67eb: Add retry with exponential backoff for fetching trust resources.
+
 ## 0.12.3
 
 ### Patch Changes
