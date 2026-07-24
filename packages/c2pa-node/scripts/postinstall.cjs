@@ -25,6 +25,10 @@ const { promisify } = require('node:util');
 const pExec = promisify(exec);
 
 async function isInPnpmWorkspace(startDir) {
+	if (startDir.split(path.sep).includes('node_modules')) {
+		return false;
+	}
+
 	let dir = path.dirname(startDir);
 	while (true) {
 		const parent = path.dirname(dir);
