@@ -1076,7 +1076,7 @@ describe("Builder", () => {
         return false;
       });
 
-      // The predicate saw the orphan with null provenance (no embedded manifest).
+      // The predicate saw the orphan with null provenance, meaning no embedded manifest.
       expect(provenanceArgs).toEqual([null]);
       const definition = builder.getManifestDefinition();
       expect(definition.ingredients ?? []).toHaveLength(0);

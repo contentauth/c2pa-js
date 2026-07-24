@@ -165,16 +165,16 @@ impl WasmBuilder {
     /// Retains only the actions at the given 0-based indices into the actions currently returned
     /// by [`Self::get_definition`]'s `c2pa.actions` assertion.
     ///
-    /// The inception action (`c2pa.created`/`c2pa.opened`) is always kept regardless of
+    /// The inception action, `c2pa.created` or `c2pa.opened`, is always kept regardless of
     /// `indices`, and is moved to index 0 if needed, so the manifest stays valid per the C2PA
     /// spec. Sets `allActionsIncluded = false` when anything is removed.
     ///
-    /// Indices are resolved on the JS side (rather than accepting a predicate here) because the
+    /// Indices are resolved on the JS side, rather than accepting a predicate here, because the
     /// builder lives in a worker and JS callbacks can't be invoked synchronously across that
     /// boundary.
     ///
-    /// This does not touch ingredients — call [`Self::filter_ingredients_at`] (with an empty list
-    /// to drop all orphans) afterwards if you also want to drop ingredients now orphaned by the
+    /// This does not touch ingredients. Call [`Self::filter_ingredients_at`] with an empty list
+    /// to drop all orphans afterwards if you also want to drop ingredients now orphaned by the
     /// removed actions.
     #[wasm_bindgen(js_name = filterActionsAt)]
     pub fn filter_actions_at(&mut self, indices: Vec<u32>) -> Result<(), JsString> {

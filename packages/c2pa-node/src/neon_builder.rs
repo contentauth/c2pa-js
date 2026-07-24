@@ -615,15 +615,15 @@ impl NeonBuilder {
     }
 
     /// Retains only the actions for which the JS `keep` predicate returns true. The inception
-    /// action (`c2pa.created`/`c2pa.opened`) is always kept, per `Builder::filter_actions`.
+    /// action, `c2pa.created` or `c2pa.opened`, is always kept, per `Builder::filter_actions`.
     ///
     /// If `keep` throws or returns a non-boolean, the exception is surfaced to the caller. Because
     /// the underlying filter mutates in place, the builder may be left partially filtered when the
     /// predicate throws midway; callers should discard it on error.
     ///
     /// # Deadlock
-    /// The builder's lock is held for the entire call, so the `keep` predicate MUST NOT call back
-    /// into the same builder (e.g. `getManifestDefinition`, another filter): the lock is not
+    /// The builder's lock is held for the entire call, so the `keep` predicate must not call back
+    /// into the same builder, for example `getManifestDefinition` or another filter: the lock is not
     /// re-entrant and re-entry would deadlock. The predicate should only inspect the `action`
     /// argument it is given.
     pub fn filter_actions(mut cx: FunctionContext) -> JsResult<JsUndefined> {
@@ -635,9 +635,9 @@ impl NeonBuilder {
 
         // The c2pa filter closure is `FnMut(&Action) -> bool` with no error channel, so capture a
         // JS exception out-of-band and re-raise it after filtering. Once a throw is pending we
-        // stop invoking JS entirely (calling more JS APIs with an exception pending is unsound).
+        // stop invoking JS entirely, since calling more JS APIs with an exception pending is unsound.
         // This means the predicate is not run for the remaining actions, which is intentional: we
-        // abort and re-raise, and the caller must discard the (partially mutated) builder anyway,
+        // abort and re-raise, and the caller must discard the partially mutated builder anyway,
         // so their side effects would not be observable regardless.
         let mut pending: Option<neon::result::Throw> = None;
         let filter_result = builder
@@ -675,9 +675,9 @@ impl NeonBuilder {
     /// per `Builder::filter_ingredients`.
     ///
     /// The `rescue` predicate is called with two arguments: the ingredient, and its parsed
-    /// provenance as a manifest store (`ManifestStore`) derived from the ingredient's embedded
+    /// provenance as a manifest store, `ManifestStore`, derived from the ingredient's embedded
     /// `manifest_data`, or `null` when the ingredient has no embedded manifest. This lets the
-    /// predicate make provenance-aware decisions (e.g. "the ingredient's chain contains AI")
+    /// predicate make provenance-aware decisions, for example "the ingredient's chain contains AI",
     /// without the caller having to re-read the whole builder first.
     ///
     /// If `rescue` throws or returns a non-boolean, the exception is surfaced to the caller. As
@@ -686,7 +686,7 @@ impl NeonBuilder {
     ///
     /// # Deadlock
     /// As with [`Self::filter_actions`], the builder's lock is held for the whole call, so `rescue`
-    /// MUST NOT call back into the same builder; doing so would deadlock. It should only inspect
+    /// must not call back into the same builder; doing so would deadlock. It should only inspect
     /// the `ingredient` and `provenance` arguments it is given.
     pub fn filter_ingredients(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let rt = runtime();

@@ -106,14 +106,14 @@ export interface Builder {
   addRedaction: (uri: string, reason: C2paReason) => Promise<void>;
 
   /**
-   * **Experimental.**
+   * Experimental.
    * Retains only the actions for which `keep` returns true.
    *
-   * The inception action (`c2pa.created`/`c2pa.opened`) is always kept regardless of `keep`,
+   * The inception action, `c2pa.created` or `c2pa.opened`, is always kept regardless of `keep`,
    * and is moved to index 0 if needed, so the manifest stays valid per the C2PA spec. Sets
-   * `allActionsIncluded = false` when anything is removed. This does not touch ingredients —
-   * call {@link Builder.filterIngredients} (`filterIngredients(() => false)` to drop all
-   * orphans) afterwards if you also want to drop ingredients now orphaned by the removed
+   * `allActionsIncluded = false` when anything is removed. This does not touch ingredients.
+   * Call {@link Builder.filterIngredients}, using `filterIngredients(() => false)` to drop all
+   * orphans, afterwards if you also want to drop ingredients now orphaned by the removed
    * actions.
    *
    * @param keep The action is retained when the predicate returns true.
@@ -121,19 +121,21 @@ export interface Builder {
   filterActions: (keep: (action: Action) => boolean) => Promise<void>;
 
   /**
-   * **Experimental.**
+   * Experimental.
    * Retains ingredients, then rewrites positional ingredient references so linked actions
    * stay valid.
    *
    * An ingredient is kept if it is referenced by a current action, is a `parentOf` ingredient,
    * or `rescue` returns true for it. `rescue` therefore only ever rescues an otherwise-orphaned
-   * ingredient — it can never drop a referenced or lineage ingredient. Call
+   * ingredient. It can never drop a referenced or lineage ingredient. Call
    * {@link Builder.filterActions} first if you are also removing actions: the keep-set is
    * computed from whatever actions currently remain.
    *
    * @param rescue Can rescue an otherwise-orphaned ingredient by returning true.
    */
-  filterIngredients: (rescue: (ingredient: Ingredient) => boolean) => Promise<void>;
+  filterIngredients: (
+    rescue: (ingredient: Ingredient) => boolean
+  ) => Promise<void>;
 
   /**
    * Add an ingredient to the builder from a definition only.
@@ -208,9 +210,17 @@ export interface Builder {
 }
 
 /**
- * Flattens the actions from every `c2pa.actions` assertion (a manifest may carry both a
- * created-list and a gathered-list assertion) in positional order. This ordering must match the
- * running index the wasm `filterActionsAt` binding applies across those same assertions.
+ * Flattens the actions from every `c2pa.actions` assertion, since a manifest may carry both a
+ * created-list and a gathered-list assertion, in positional order.
+ *
+ * This enumeration is coupled to c2pa-rs. `filterActions` maps the caller's predicate
+ * over this flat list to compute a set of indices, and the wasm `filterActionsAt` binding walks
+ * c2pa-rs `Builder::filter_actions`, which visits actions in the same order: every assertion
+ * whose label starts with `c2pa.actions`, in `definition.assertions` order, each assertion's
+ * `actions` array in order. If the two orderings ever diverge, filtering silently targets the
+ * wrong actions. The ordering ideally comes authoritatively from Rust, but c2pa-rs exposes no
+ * public actions accessor, so we mirror the rule here. The `filterActions` "multi actions-assertion"
+ * spec pins this against real filtering.
  */
 function getActionsFromDefinition(definition: ManifestDefinition): Action[] {
   return (definition.assertions ?? [])
@@ -311,11 +321,11 @@ function createBuilder(
       await tx.builder_setThumbnailFromBlob(id, format, blob);
     },
 
-    // Unlike the Node binding (Neon), which can invoke the JS predicate synchronously from Rust,
+    // Unlike the Node binding, Neon, which can invoke the JS predicate synchronously from Rust,
     // the WASM builder lives in a Web Worker. A predicate closure can't be called across the
     // worker boundary, so we evaluate it here on the main thread and send the resulting indices
     // to the worker, where WASM applies the equivalent index-based filter. The action/ingredient
-    // ordering here must match what WASM iterates (see `filterActionsAt`/`filterIngredientsAt`).
+    // ordering here must match what WASM iterates. See `filterActionsAt` and `filterIngredientsAt`.
     async filterActions(keep: (action: Action) => boolean) {
       const definition: ManifestDefinition = await tx.builder_getDefinition(id);
       const actions = getActionsFromDefinition(definition);
