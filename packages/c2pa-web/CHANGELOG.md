@@ -1,5 +1,16 @@
 # @contentauth/c2pa-web
 
+## 0.13.0
+
+### Minor Changes
+
+- fc4f6e3: Include new experimental builder reduction methods
+
+### Patch Changes
+
+- Updated dependencies [fc4f6e3]
+  - @contentauth/c2pa-wasm@0.10.0
+
 ## 0.12.4
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+## 0.7.0
+
+### Minor Changes
+
+- fc4f6e3: Include new experimental builder reduction methods
+
 ## 0.6.4
 
 ### Patch Changes

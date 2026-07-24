@@ -1,5 +1,11 @@
 # @contentauth/c2pa-wasm
 
+## 0.10.0
+
+### Minor Changes
+
+- fc4f6e3: Include new experimental builder reduction methods
+
 ## 0.9.2
 
 ### Patch Changes
