@@ -333,8 +333,11 @@ describe('builder', () => {
         const definitionFromArchivedBuilder =
           await builderFromArchive.getDefinition();
 
-        const { assertions: _assertions, ...manifestDefinitionWithoutAssertions } = manifestDefinition;
-        expect(definitionFromArchivedBuilder).toMatchObject(manifestDefinitionWithoutAssertions);
+        const manifestDefinitionWithoutAssertions = { ...manifestDefinition };
+        delete manifestDefinitionWithoutAssertions.assertions;
+        expect(definitionFromArchivedBuilder).toMatchObject(
+          manifestDefinitionWithoutAssertions
+        );
       });
 
       test('should re-create a builder from an archive with ingredient from blob', async ({
@@ -687,6 +690,171 @@ describe('builder', () => {
 
         expect(definition.ingredients).toHaveLength(1);
         expect(definition.ingredients?.[0]).toMatchObject(ingredient);
+      });
+    });
+
+    describe('filterActions', () => {
+      test('invokes the predicate for each action and honors its return', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.new();
+        await builder.addAction({ action: 'c2pa.created' });
+        await builder.addAction({ action: 'c2pa.edited' });
+        await builder.addAction({ action: 'c2pa.color_adjustments' });
+
+        const seen: string[] = [];
+        await builder.filterActions((action) => {
+          seen.push(action.action);
+          return action.action !== 'c2pa.color_adjustments';
+        });
+
+        // The binding enumerated every action and passed it to the predicate.
+        expect(seen).toEqual([
+          'c2pa.created',
+          'c2pa.edited',
+          'c2pa.color_adjustments'
+        ]);
+
+        // The predicate's return value decided what survives.
+        const definition = await builder.getDefinition();
+        const actionsAssertion = definition.assertions?.find((a) =>
+          a.label.startsWith('c2pa.actions')
+        );
+        const names = (
+          actionsAssertion?.data as { actions: { action: string }[] }
+        ).actions.map((a) => a.action);
+        expect(names).toContain('c2pa.created');
+        expect(names).toContain('c2pa.edited');
+        expect(names).not.toContain('c2pa.color_adjustments');
+      });
+
+      // Regression guard for the JS to Rust ordering coupling documented on
+      // getActionsFromDefinition: with more than one c2pa.actions assertion, the flat order the
+      // predicate sees and the indices derived from it must line up with the order c2pa-rs
+      // Builder::filter_actions iterates.
+      test('preserves flat order across multiple actions assertions', async ({
+        c2pa
+      }) => {
+        // Two c2pa.actions assertions, a created-list plus a second list. This state can't be built
+        // with addAction, which appends to one, so seed it via fromDefinition.
+        const builder = await c2pa.builder.fromDefinition({
+          claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
+          format: 'image/jpeg',
+          instance_id: 'multi-actions-1',
+          ingredients: [],
+          assertions: [
+            {
+              label: 'c2pa.actions',
+              data: {
+                actions: [
+                  {
+                    action: 'c2pa.opened',
+                    digitalSourceType:
+                      'http://c2pa.org/digitalsourcetype/empty'
+                  },
+                  { action: 'c2pa.edited' }
+                ]
+              }
+            },
+            {
+              label: 'c2pa.actions.v2',
+              data: {
+                actions: [
+                  { action: 'c2pa.color_adjustments' },
+                  { action: 'c2pa.resized' }
+                ]
+              }
+            }
+          ]
+        } as unknown as ManifestDefinition);
+
+        const seen: string[] = [];
+        // Drop only c2pa.color_adjustments. Index 2 in the flat order: it lives in the second
+        // assertion. Correct index alignment is what proves the JS order matches Rust's.
+        await builder.filterActions((action) => {
+          seen.push(action.action);
+          return action.action !== 'c2pa.color_adjustments';
+        });
+
+        // The predicate saw both assertions' actions concatenated in assertion order.
+        expect(seen).toEqual([
+          'c2pa.opened',
+          'c2pa.edited',
+          'c2pa.color_adjustments',
+          'c2pa.resized'
+        ]);
+
+        // c2pa.color_adjustments, from the second assertion, is gone; everything else, including
+        // c2pa.resized which follows it in the same assertion, survives. A mismatch between the
+        // JS flatten and the Rust iteration would have removed a different action.
+        const definition = await builder.getDefinition();
+        const remaining = (definition.assertions ?? [])
+          .filter((a) => a.label.startsWith('c2pa.actions'))
+          .flatMap(
+            (a) => (a.data as { actions: { action: string }[] }).actions
+          )
+          .map((a) => a.action);
+        expect(remaining).toEqual([
+          'c2pa.opened',
+          'c2pa.edited',
+          'c2pa.resized'
+        ]);
+      });
+
+      test('surfaces an error thrown by the predicate', async ({ c2pa }) => {
+        const builder = await c2pa.builder.new();
+        await builder.addAction({ action: 'c2pa.created' });
+        await builder.addAction({ action: 'c2pa.edited' });
+
+        await expect(
+          builder.filterActions(() => {
+            throw new Error('boom from predicate');
+          })
+        ).rejects.toThrow('boom from predicate');
+      });
+    });
+
+    describe('filterIngredients', () => {
+      test('invokes the predicate and prunes ingredients it does not rescue', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.new();
+        await builder.addAction({ action: 'c2pa.created' });
+        await builder.addIngredient({
+          title: 'orphan',
+          format: 'image/jpeg',
+          instance_id: 'orphan-1',
+          relationship: 'componentOf'
+        });
+
+        const seen: (string | null | undefined)[] = [];
+        // Rescue nothing, so the orphan should be pruned.
+        await builder.filterIngredients((ingredient) => {
+          seen.push(ingredient.title);
+          return false;
+        });
+
+        // The binding passed the ingredient to the predicate.
+        expect(seen).toEqual(['orphan']);
+
+        const definition = await builder.getDefinition();
+        expect(definition.ingredients ?? []).toHaveLength(0);
+      });
+
+      test('surfaces an error thrown by the predicate', async ({ c2pa }) => {
+        const builder = await c2pa.builder.new();
+        await builder.addAction({ action: 'c2pa.created' });
+        await builder.addIngredient({
+          title: 'orphan',
+          format: 'image/jpeg',
+          relationship: 'componentOf'
+        });
+
+        await expect(
+          builder.filterIngredients(() => {
+            throw new Error('ingredient boom');
+          })
+        ).rejects.toThrow('ingredient boom');
       });
     });
 

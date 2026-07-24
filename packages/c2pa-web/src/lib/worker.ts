@@ -105,6 +105,14 @@ rx(
       const builder = builderMap.get(builderId);
       builder.addRedaction(uri, reason);
     },
+    builder_filterActionsAt(builderId, indices) {
+      const builder = builderMap.get(builderId);
+      builder.filterActionsAt(Uint32Array.from(indices));
+    },
+    builder_filterIngredientsAt(builderId, indices) {
+      const builder = builderMap.get(builderId);
+      builder.filterIngredientsAt(Uint32Array.from(indices));
+    },
     builder_setRemoteUrl(builderId, url) {
       const builder = builderMap.get(builderId);
       builder.setRemoteUrl(url);

@@ -51,6 +51,8 @@ const { createTx, rx } = channel<{
   builder_setIntent: (builderId: number, intent: BuilderIntent) => void;
   builder_addAction: (builderId: number, action: Action) => void;
   builder_addRedaction: (builderId: number, uri: string, reason: C2paReason) => void;
+  builder_filterActionsAt: (builderId: number, indices: number[]) => void;
+  builder_filterIngredientsAt: (builderId: number, indices: number[]) => void;
   builder_setRemoteUrl: (builderId: number, url: string) => void;
   builder_setNoEmbed: (builderId: number, noEmbed: boolean) => void;
   builder_setThumbnailFromBlob: (

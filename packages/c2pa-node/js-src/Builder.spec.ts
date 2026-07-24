@@ -970,4 +970,139 @@ describe("Builder", () => {
       expect(activeManifest?.ingredients?.length).toBe(1);
     }, 30000);
   });
+
+  describe("Filter actions and ingredients", () => {
+    // A manifest carrying an inception action plus two removable actions.
+    const actionsManifest = () => ({
+      claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
+      title: "Test_Filter",
+      format: "image/jpeg",
+      ingredients: [],
+      assertions: [
+        {
+          label: "c2pa.actions",
+          data: {
+            actions: [
+              {
+                action: "c2pa.created",
+                digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
+              },
+              { action: "c2pa.edited" },
+              { action: "c2pa.color_adjustments" },
+            ],
+          },
+        },
+      ],
+      resources: { resources: {} },
+    });
+
+    it("filterActions keeps the inception action and drops excluded actions", () => {
+      const builder = Builder.withJson(actionsManifest());
+
+      // The predicate only keeps c2pa.edited; c2pa.created must survive regardless
+      // because it is the inception action.
+      builder.filterActions((action) => action.action === "c2pa.edited");
+
+      const definition = builder.getManifestDefinition();
+      const actionsAssertion = definition.assertions!.find((a) =>
+        a.label.startsWith("c2pa.actions"),
+      );
+      expect(actionsAssertion).toBeDefined();
+      const names = (actionsAssertion!.data as any).actions.map(
+        (a: any) => a.action,
+      );
+      expect(names).toContain("c2pa.created");
+      expect(names).toContain("c2pa.edited");
+      expect(names).not.toContain("c2pa.color_adjustments");
+    });
+
+    it("filterActions surfaces an error thrown by the predicate", () => {
+      const builder = Builder.withJson(actionsManifest());
+      expect(() =>
+        builder.filterActions((action) => {
+          if (action.action === "c2pa.color_adjustments") {
+            throw new Error("boom from predicate");
+          }
+          return true;
+        }),
+      ).toThrow("boom from predicate");
+    });
+
+    it("filterActions surfaces a non-boolean predicate return", () => {
+      const builder = Builder.withJson(actionsManifest());
+      expect(() =>
+        // Returning a non-boolean is a programming error and must not be coerced.
+        builder.filterActions(() => "yes" as unknown as boolean),
+      ).toThrow(/must return a boolean/);
+    });
+
+    it("filterIngredients prunes orphans and passes provenance to the predicate", () => {
+      const builder = Builder.withJson({
+        claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
+        title: "Test_FilterIngredients",
+        format: "image/jpeg",
+        ingredients: [],
+        assertions: [
+          {
+            label: "c2pa.actions",
+            data: {
+              actions: [
+                {
+                  action: "c2pa.created",
+                  digitalSourceType:
+                    "http://c2pa.org/digitalsourcetype/empty",
+                },
+              ],
+            },
+          },
+        ],
+        resources: { resources: {} },
+      });
+
+      // An orphan ingredient: not referenced by any action, so eligible for pruning.
+      builder.addIngredient(
+        JSON.stringify({
+          title: "orphan",
+          format: "image/jpeg",
+          instance_id: "orphan-1",
+          relationship: "componentOf",
+        }),
+      );
+
+      const provenanceArgs: unknown[] = [];
+      // Rescue nothing, so the orphan should be pruned.
+      builder.filterIngredients((_ingredient, provenance) => {
+        provenanceArgs.push(provenance);
+        return false;
+      });
+
+      // The predicate saw the orphan with null provenance, meaning no embedded manifest.
+      expect(provenanceArgs).toEqual([null]);
+      const definition = builder.getManifestDefinition();
+      expect(definition.ingredients ?? []).toHaveLength(0);
+    });
+
+    it("filterIngredients surfaces an error thrown by the predicate", () => {
+      const builder = Builder.withJson({
+        claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
+        title: "Test_FilterIngredientsThrow",
+        format: "image/jpeg",
+        ingredients: [],
+        assertions: [],
+        resources: { resources: {} },
+      });
+      builder.addIngredient(
+        JSON.stringify({
+          title: "orphan",
+          format: "image/jpeg",
+          relationship: "componentOf",
+        }),
+      );
+      expect(() =>
+        builder.filterIngredients(() => {
+          throw new Error("ingredient boom");
+        }),
+      ).toThrow("ingredient boom");
+    });
+  });
 });

@@ -162,6 +162,59 @@ impl WasmBuilder {
         Ok(())
     }
 
+    /// Retains only the actions at the given 0-based indices into the actions currently returned
+    /// by [`Self::get_definition`]'s `c2pa.actions` assertion.
+    ///
+    /// The inception action, `c2pa.created` or `c2pa.opened`, is always kept regardless of
+    /// `indices`, and is moved to index 0 if needed, so the manifest stays valid per the C2PA
+    /// spec. Sets `allActionsIncluded = false` when anything is removed.
+    ///
+    /// Indices are resolved on the JS side, rather than accepting a predicate here, because the
+    /// builder lives in a worker and JS callbacks can't be invoked synchronously across that
+    /// boundary.
+    ///
+    /// This does not touch ingredients. Call [`Self::filter_ingredients_at`] with an empty list
+    /// to drop all orphans afterwards if you also want to drop ingredients now orphaned by the
+    /// removed actions.
+    #[wasm_bindgen(js_name = filterActionsAt)]
+    pub fn filter_actions_at(&mut self, indices: Vec<u32>) -> Result<(), JsString> {
+        let indices: std::collections::HashSet<u32> = indices.into_iter().collect();
+        // `usize` position counter: it can never exceed the number of actions in memory, so it
+        // cannot overflow the way a `u32` counter theoretically could.
+        let mut i: usize = 0;
+        self.builder
+            .filter_actions(|_action| {
+                let keep = u32::try_from(i).is_ok_and(|idx| indices.contains(&idx));
+                i += 1;
+                keep
+            })
+            .map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
+    /// Retains ingredients, rescuing an otherwise-orphaned ingredient when its 0-based index into
+    /// [`Self::get_definition`]'s `ingredients` array is present in `indices`. Referenced and
+    /// `parentOf` ingredients are always kept, per `Builder::filter_ingredients`; `indices` can
+    /// only rescue an orphan, never drop a referenced or lineage ingredient.
+    ///
+    /// See [`Self::filter_actions_at`] for why this takes indices rather than a predicate.
+    #[wasm_bindgen(js_name = filterIngredientsAt)]
+    pub fn filter_ingredients_at(&mut self, indices: Vec<u32>) -> Result<(), JsString> {
+        let indices: std::collections::HashSet<u32> = indices.into_iter().collect();
+        // See `filter_actions_at`: `usize` cannot overflow for an in-memory ingredient count.
+        let mut i: usize = 0;
+        self.builder
+            .filter_ingredients(|_ingredient| {
+                let rescue = u32::try_from(i).is_ok_and(|idx| indices.contains(&idx));
+                i += 1;
+                rescue
+            })
+            .map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
     /// Sets the remote_url for a remote manifest.
     ///
     /// The URL must return the manifest data and is injected into the destination asset when signing.
