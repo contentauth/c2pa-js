@@ -344,20 +344,22 @@ export interface BuilderInterface {
   addRedaction(uri: string, reason: C2paReason): void;
 
   /**
-   * Retains only the actions for which `keep` returns true. **Experimental.**
+   * **Experimental.**
+   * Retains only the actions for which `keep` returns true.
    *
    * The inception action (`c2pa.created`/`c2pa.opened`) is always kept regardless of `keep`,
    * and is moved to index 0 if needed, so the manifest stays valid per the C2PA spec. Sets
    * `allActionsIncluded = false` when anything is removed. This does not touch ingredients —
    * call {@link filterIngredients} (`filterIngredients(() => false)` to drop all orphans)
    * afterwards if you also want to drop ingredients now orphaned by the removed actions.
-   * @param keep A predicate; the action is retained when it returns true.
+   * @param keep The action is retained when the predicate returns true.
    */
   filterActions(keep: (action: Action) => boolean): void;
 
   /**
+   * **Experimental.**
    * Retains ingredients, then rewrites positional ingredient references so linked actions
-   * stay valid. **Experimental.**
+   * stay valid.
    *
    * An ingredient is kept if it is referenced by a current action, is a `parentOf` ingredient,
    * or `rescue` returns true for it. `rescue` therefore only ever rescues an otherwise-orphaned
@@ -369,7 +371,7 @@ export interface BuilderInterface {
    * `manifest_data` parsed into a {@link ManifestStore}, or `null` when it has no embedded
    * manifest. This lets the predicate make provenance-aware decisions (e.g. "this ingredient's
    * chain contains AI") without re-reading the whole builder first.
-   * @param rescue A predicate that can rescue an otherwise-orphaned ingredient by returning true.
+   * @param rescue Can rescue an otherwise-orphaned ingredient by returning true.
    */
   filterIngredients(
     rescue: (
