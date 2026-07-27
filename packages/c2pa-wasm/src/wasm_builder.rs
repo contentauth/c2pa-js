@@ -145,6 +145,19 @@ impl WasmBuilder {
         Ok(())
     }
 
+    /// Add an assertion to the manifest under `label` with the given `data`.
+    #[wasm_bindgen(js_name = addAssertion)]
+    pub fn add_assertion(&mut self, label: String, data: JsValue) -> Result<(), JsString> {
+        let data: serde_json::Value =
+            serde_wasm_bindgen::from_value(data).map_err(WasmError::from)?;
+
+        self.builder
+            .add_assertion(&label, &data)
+            .map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
     /// Add a redaction for a JUMBF URI with the given reason.
     ///
     /// Adds the URI to the builder's redaction list and appends a `c2pa.redacted` action

@@ -73,6 +73,14 @@ export interface Builder {
   addAction: (action: Action) => Promise<void>;
 
   /**
+   * Add an assertion to the manifest under the given label.
+   *
+   * @param label The assertion label (reverse-domain format).
+   * @param data The assertion data (any JSON-serializable value).
+   */
+  addAssertion: (label: string, data: unknown) => Promise<void>;
+
+  /**
    * Sets the remote URL for a remote manifest. The manifest is expected to be available at this location.
    *
    * @param url URL pointing to the location the remote manifest will be stored.
@@ -303,6 +311,10 @@ function createBuilder(
 
     async addAction(action) {
       await tx.builder_addAction(id, action);
+    },
+
+    async addAssertion(label, data) {
+      await tx.builder_addAssertion(id, label, data);
     },
 
     async addRedaction(uri, reason) {
