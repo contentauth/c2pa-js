@@ -105,7 +105,7 @@ impl WasmBuilder {
         context_json: Option<String>,
     ) -> Result<WasmBuilder, JsString> {
         let stream = BlobStream::new(archive).map_err(WasmError::other)?;
-        let builder = if let Some(ctx_json) = context_json {
+        let mut builder = if let Some(ctx_json) = context_json {
             let context = Context::new()
                 .with_settings(ctx_json.as_str())
                 .map_err(WasmError::from)?;
@@ -113,8 +113,15 @@ impl WasmBuilder {
                 .with_archive(stream)
                 .map_err(WasmError::from)?
         } else {
-            Builder::from_archive(stream).map_err(WasmError::from)?
+            Builder::default().with_archive(stream).map_err(WasmError::from)?
         };
+
+        // The ARCHIVE_METADATA assertion is merely working-store bookkeeping used to
+        // reconstruct a builder from an archive.
+        builder
+            .definition
+            .assertions
+            .retain(|a| a.label != c2pa::assertions::labels::ARCHIVE_METADATA);
 
         Ok(WasmBuilder::from_builder(builder))
     }
@@ -134,6 +141,19 @@ impl WasmBuilder {
         let action: Action = serde_wasm_bindgen::from_value(action).map_err(WasmError::from)?;
 
         self.builder.add_action(action).map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
+    /// Add an assertion to the manifest under `label` with the given `data`.
+    #[wasm_bindgen(js_name = addAssertion)]
+    pub fn add_assertion(&mut self, label: String, data: JsValue) -> Result<(), JsString> {
+        let data: serde_json::Value =
+            serde_wasm_bindgen::from_value(data).map_err(WasmError::from)?;
+
+        self.builder
+            .add_assertion(&label, &data)
+            .map_err(WasmError::from)?;
 
         Ok(())
     }

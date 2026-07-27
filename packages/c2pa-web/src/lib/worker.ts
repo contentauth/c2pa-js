@@ -101,6 +101,10 @@ rx(
       const builder = builderMap.get(builderId);
       builder.addAction(action);
     },
+    builder_addAssertion(builderId, label, data) {
+      const builder = builderMap.get(builderId);
+      builder.addAssertion(label, data);
+    },
     builder_addRedaction(builderId, uri, reason) {
       const builder = builderMap.get(builderId);
       builder.addRedaction(uri, reason);

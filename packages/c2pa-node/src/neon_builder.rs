@@ -324,11 +324,17 @@ impl NeonBuilder {
         let promise = cx
             .task(move || {
                 let source_stream = source.into_read_stream()?;
-                let builder = if let Some(context) = context_opt {
+                let mut builder = if let Some(context) = context_opt {
                     Builder::from_context(context).with_archive(source_stream)?
                 } else {
                     Builder::default().with_archive(source_stream)?
                 };
+                // The ARCHIVE_METADATA assertion is merely working-store bookkeeping
+                // used to reconstruct a builder from an archive.
+                builder
+                    .definition
+                    .assertions
+                    .retain(|a| a.label != c2pa::assertions::labels::ARCHIVE_METADATA);
                 Ok(builder)
             })
             .promise(
