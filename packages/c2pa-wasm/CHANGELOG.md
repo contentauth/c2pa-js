@@ -1,5 +1,11 @@
 # @contentauth/c2pa-wasm
 
+## 0.11.0
+
+### Minor Changes
+
+- 684942a: Strip archive metadata assertion when constructing builder from archive
+
 ## 0.10.0
 
 ### Minor Changes

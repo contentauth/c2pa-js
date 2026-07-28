@@ -1,5 +1,15 @@
 # @contentauth/c2pa-node
 
+## 0.8.0
+
+### Minor Changes
+
+- 684942a: Strip archive metadata assertion when constructing builder from archive
+
+### Patch Changes
+
+- 219c3df: Fix node binary download
+
 ## 0.7.0
 
 ### Minor Changes
