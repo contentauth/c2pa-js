@@ -23,3 +23,4 @@ export {
 export { Trustmark } from "./Trustmark.js";
 export { isActionsAssertion } from "./assertions.js";
 export * from "./Settings.js";
+export * from '@contentauth/c2pa-utilities';

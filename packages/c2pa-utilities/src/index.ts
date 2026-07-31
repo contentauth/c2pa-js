@@ -1,5 +1,5 @@
 /**
- * Copyright 2025 Adobe
+ * Copyright 2026 Adobe
  * All Rights Reserved.
  *
  * NOTICE: Adobe permits you to use, modify, and distribute this file in
@@ -7,7 +7,5 @@
  * it.
  */
 
-
-export { createC2pa } from './lib/c2pa.js';
-export * from './common.js';
-export * from '@contentauth/c2pa-utilities';
+export * from './settings.js';
+export * from './fetchWithRetry.js';

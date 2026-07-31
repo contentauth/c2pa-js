@@ -195,7 +195,9 @@ export interface HashedUri {
 export type C2paSettings = string | object;
 
 export interface BuilderInterface {
-  /** An intent lets the API know what kind of manifest to create.
+  /** 
+   * An intent lets the API know what kind of manifest to create.
+   * 
    * Intents are `Create`, `Edit`, or `Update`.
    * This allows the API to check that you are doing the right thing.
    * It can also do things for you, like add parent ingredients from the source asset
@@ -478,62 +480,26 @@ export interface TrustmarkConfig {
   modelPath?: string;
 }
 
-/**
- * Configuration for trust settings in C2PA.
- * Controls certificate trust validation and trust anchor management.
- */
-export interface TrustConfig {
-  /** Whether to verify against the trust list */
-  verifyTrustList: boolean;
-  /** User-provided trust anchors (PEM format or base64-encoded certificate hashes) */
-  userAnchors?: string;
-  /** Trust anchors for validation (PEM format or base64-encoded certificate hashes) */
-  trustAnchors?: string;
-  /** Trust configuration file path */
-  trustConfig?: string;
-  /** Allowed list of certificates (PEM format or base64-encoded certificate hashes) */
-  allowedList?: string;
-}
+import type {
+  Settings as _Settings,
+  CawgTrustSettings as _CawgTrustSettings,
+  VerifySettings as _VerifySettings
+} from "@contentauth/c2pa-utilities";
 
 /**
- * Configuration for verification settings in C2PA.
- * Controls various verification behaviors and options.
+ * @deprecated Use `CawgTrustSettings` instead. 
+ * Kept as an alias for backwards compatibility.
  */
-export interface VerifyConfig {
-  /** Whether to verify after reading a manifest */
-  verifyAfterReading?: boolean;
-  /** Whether to verify after signing a manifest */
-  verifyAfterSign?: boolean;
-  /** Whether to verify trust during validation */
-  verifyTrust?: boolean;
-  /** Whether to verify timestamp trust */
-  verifyTimestampTrust?: boolean;
-  /** Whether to fetch OCSP responses */
-  ocspFetch?: boolean;
-  /** Whether to fetch remote manifests */
-  remoteManifestFetch?: boolean;
-  /** Whether to skip ingredient conflict resolution */
-  skipIngredientConflictResolution?: boolean;
-  /** Whether to use strict v1 validation */
-  strictV1Validation?: boolean;
-}
+export type TrustConfig = _CawgTrustSettings;
 
 /**
- * Settings configuration object that can be passed to Reader and Builder constructors.
- * Only trust, verify, and builder settings are configurable from the Node SDK.
- * Uses snake_case internally to match the c2pa-rs settings format.
+ * @deprecated Use `VerifySettings` instead.
+ * Kept as an alias for backwards compatibility.
  */
-export interface SettingsContext {
-  /** C2PA trust configuration */
-  trust?: TrustConfig;
-  /** CAWG trust configuration */
-  cawgTrust?: TrustConfig;
-  /** Verification configuration */
-  verify?: VerifyConfig;
-  /** Builder configuration */
-  builder?: {
-    thumbnail?: {
-      enabled?: boolean;
-    };
-  };
-}
+export type VerifyConfig = _VerifySettings;
+
+/**
+ * @deprecated Use `Settings` instead.
+ * Kept as an alias for backwards compatibility.
+ */
+export type SettingsContext = _Settings;
