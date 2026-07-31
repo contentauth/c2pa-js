@@ -25,7 +25,6 @@ import {
   createVerifySettings,
   mergeSettings,
   settingsToJson,
-  resolveTrustAnchors,
   loadSettingsFromUrl,
   snakeCaseify,
   type TrustSettings,
@@ -642,56 +641,6 @@ describe('snakeCaseify', () => {
   it('leaves an empty array as an empty array', () => {
     const result = snakeCaseify({ someArrayField: [] } as any);
     expect(result.some_array_field).toEqual([]);
-  });
-});
-
-describe('resolveTrustAnchors', () => {
-  it('resolves a URL-valued field into its fetched, validated content', async () => {
-    server.use(
-      http.get('http://nodeAnchors', () =>
-        HttpResponse.text(
-          '-----BEGIN CERTIFICATE-----node-----END CERTIFICATE-----'
-        )
-      )
-    );
-
-    const resolved = await resolveTrustAnchors({
-      userAnchors: 'http://nodeAnchors'
-    });
-
-    expect(resolved.userAnchors).toBe(
-      '-----BEGIN CERTIFICATE-----node-----END CERTIFICATE-----'
-    );
-  });
-
-  it('does not mutate the input trustConfig', async () => {
-    server.use(
-      http.get('http://nodeAnchorsNoMutate', () =>
-        HttpResponse.text(
-          '-----BEGIN CERTIFICATE-----node-----END CERTIFICATE-----'
-        )
-      )
-    );
-
-    const original = { userAnchors: 'http://nodeAnchorsNoMutate' };
-    await resolveTrustAnchors(original);
-
-    expect(original.userAnchors).toBe('http://nodeAnchorsNoMutate');
-  });
-
-  it('respects a custom maxResponseBytes, independent of the default', async () => {
-    server.use(
-      http.get('http://nodeCustomCap', () =>
-        HttpResponse.text('x'.repeat(2048))
-      )
-    );
-
-    await expect(
-      resolveTrustAnchors(
-        { trustConfig: 'http://nodeCustomCap' },
-        { maxResponseBytes: 1024 }
-      )
-    ).rejects.toThrow('Failed to resolve trust settings.');
   });
 });
 

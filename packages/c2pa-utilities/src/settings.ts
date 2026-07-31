@@ -89,11 +89,6 @@ export interface TrustSettings {
 export interface CawgTrustSettings extends TrustSettings {
   /**
    * Enable CAWG trust validation. The default value is "true."
-   *
-   * Note: `c2pa-rs` reuses a single `Trust` struct for both `trust` and `cawgTrust`, so this
-   * field technically exists on plain `trust` too, but only ever has an effect for `cawgTrust` —
-   * it's kept off {@link TrustSettings} here so the type doesn't imply it does something it
-   * doesn't.
    */
   verifyTrustList?: boolean;
 }
@@ -172,7 +167,7 @@ const DEFAULT_SETTINGS: Settings = {
  *
  * @param baseSettings Settings established at SDK initialization time.
  * @param overrideSettings Optional override settings. Keys present in overrideSettings win over keys in baseSettings.
- * @param options Optional per-call overrides, such as the trust-anchor response size cap.
+ * @param options Optional configurations for fetch-with-retry.
  * @returns A JSON-serialized string containing all resolved settings values, ready to be consumed by c2pa-rs.
  * Returns undefined when neither argument is provided.
  */
@@ -215,17 +210,17 @@ export async function resolveSettings(
 
 /**
  * Create a Settings object with trust configuration.
- * @param trustConfig The trust configuration
- * @returns Settings object that can be passed to Reader/Builder
+ * @param trustConfig The trust configuration.
+ * @returns Settings object that can be passed to Reader/Builder.
  */
 export function createTrustSettings(trustConfig: TrustSettings): Settings {
   return { trust: { ...trustConfig } };
 }
 
 /**
- * Create a settings object with CAWG trust configuration.
- * @param trustConfig The CAWG trust configuration
- * @returns Settings object that can be passed to Reader/Builder
+ * Create a Settings object with CAWG trust configuration.
+ * @param trustConfig The CAWG trust configuration.
+ * @returns Settings object that can be passed to Reader/Builder.
  */
 export function createCawgTrustSettings(
   trustConfig: CawgTrustSettings
@@ -234,21 +229,21 @@ export function createCawgTrustSettings(
 }
 
 /**
- * Create a settings object with verify configuration.
- * @param verifyConfig The verify configuration
- * @returns Settings object that can be passed to Reader/Builder
+ * Create a Settings object with verify configuration.
+ * @param verifyConfig The verify configuration.
+ * @returns Settings object that can be passed to Reader/Builder.
  */
 export function createVerifySettings(verifyConfig: VerifySettings): Settings {
   return { verify: { ...verifyConfig } };
 }
 
 /**
- * Merge multiple settings objects into one, deep-merging nested fields (e.g.
+ * Merge multiple Settings objects into one, deep-merging nested fields (e.g.
  * `builder.thumbnail`) rather than overwriting whole sections. Later settings override
  * earlier ones.
  *
- * @param settings Settings objects to merge
- * @returns Merged settings object
+ * @param settings Settings objects to merge.
+ * @returns Merged settings object.
  */
 export function mergeSettings(...settings: Settings[]): Settings {
   return merge(...settings);
@@ -258,6 +253,14 @@ export function mergeSettings(...settings: Settings[]): Settings {
 // Serialization
 // =============================================================================
 
+/**
+ * Any value that can appear inside a resolved Settings object when `snakeCaseifyValue` walks
+ * it: the primitives Settings fields actually use (string, boolean), undefined (optional
+ * fields), a nested object, or an array of any of these — recursive so arbitrarily nested
+ * structures (including arrays of objects) get walked without losing array-ness. Deliberately
+ * narrower than "any JSON value" (no numbers, for instance) since no current Settings field
+ * needs one. We can widen this if that changes.
+ */
 type SettingsValue =
   | string
   | boolean
@@ -318,11 +321,6 @@ export function settingsToJson(settings: Settings): string {
 /**
  * Load settings from a URL.
  *
- * Unlike the trust-anchor fetch in {@link resolveTrustSettings}, this is a plain, unvalidated
- * fetch of a whole settings document — no retries, no response-size cap, no content validation.
- * It's meant for loading an app's own trusted configuration file, not untrusted trust-anchor
- * resources embedded in a manifest.
- *
  * @param url The URL to fetch the settings from
  * @returns Settings as a string
  */
@@ -352,11 +350,10 @@ const TRUST_SETTINGS_KEYS = Object.keys(
 
 /**
  * Walks a TrustSettings object and fetches trust resources if necessary, replacing URLs with
- * their fetched, validated values. Mutates `settings` in place — see {@link resolveTrustAnchors}
- * for a non-mutating convenience wrapper.
+ * their fetched, validated values. Mutates `settings` in place.
  *
  * @param settings TrustSettings object, mutated in place.
- * @param options Optional per-call overrides, such as the trust-anchor response size cap.
+ * @param options Optional configurations for fetch-with-retry.
  */
 export async function resolveTrustSettings(
   settings: TrustSettings,
@@ -406,24 +403,6 @@ export async function resolveTrustSettings(
       cause: e
     });
   }
-}
-
-/**
- * Resolves any URL-valued trust-anchor fields (`userAnchors`/`trustAnchors`/`trustConfig`/
- * `allowedList`) in a trust configuration into their fetched, validated text content —
- * without mutating the input. A convenience wrapper around {@link resolveTrustSettings}.
- *
- * @param trustConfig The trust configuration to resolve. Not mutated — a resolved copy is returned.
- * @param options Optional per-call overrides, such as the trust-anchor response size cap.
- * @returns A copy of `trustConfig` with any URLs replaced by their fetched, validated content.
- */
-export async function resolveTrustAnchors<T extends TrustSettings>(
-  trustConfig: T,
-  options?: FetchWithRetryOptions
-): Promise<T> {
-  const resolved: T = { ...trustConfig };
-  await resolveTrustSettings(resolved, options);
-  return resolved;
 }
 
 const shouldValidateKey = (key: string): boolean =>
