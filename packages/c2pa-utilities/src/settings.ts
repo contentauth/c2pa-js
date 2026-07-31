@@ -359,6 +359,14 @@ export async function resolveTrustSettings(
   settings: TrustSettings,
   options?: FetchWithRetryOptions
 ): Promise<void> {
+  const shouldValidateKey = (key: string): boolean =>
+    ['userAnchors', 'trustAnchors'].includes(key);
+
+  const containsCerts = (content: string): boolean =>
+    content.includes('-----BEGIN CERTIFICATE-----');
+
+  const isUrl = (str: string): boolean => str.startsWith('http');
+
   try {
     const promises = Object.entries(settings)
       .filter(([key]) =>
@@ -404,12 +412,3 @@ export async function resolveTrustSettings(
     });
   }
 }
-
-const shouldValidateKey = (key: string): boolean =>
-  ['userAnchors', 'trustAnchors'].includes(key);
-
-const containsCerts = (content: string): boolean =>
-  content.includes('-----BEGIN CERTIFICATE-----');
-
-const isUrl = (str: string): boolean => str.startsWith('http');
-

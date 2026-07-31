@@ -13,10 +13,10 @@
   "include": ["src/**/*.ts"],
   "references": [
     {
-      "path": "../c2pa-types"
+      "path": "../c2pa-utilities/tsconfig.lib.json"
     },
     {
-      "path": "../c2pa-utilities"
+      "path": "../c2pa-types"
     }
   ],
   "exclude": [
