@@ -8,11 +8,13 @@
  */
 
 import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
+import { UnsupportedFormatError } from './error.js';
+import { isSupportedReaderFormat } from './supportedFormats.js';
 import type { WorkerManager } from './worker/workerManager.js';
 import {
   Settings,
   resolveSettings,
-  validateAssetFormatAndSize
+  validateAssetSize
 } from '@contentauth/c2pa-utilities';
 
 // 1 GB
@@ -132,7 +134,11 @@ export function createReaderFactory(worker: WorkerManager, settings?: Settings):
       blob: Blob,
       settings?: Settings
     ): Promise<Reader | null> {
-      validateAssetFormatAndSize(format, blob.size, MAX_SIZE_IN_BYTES);
+      if (!isSupportedReaderFormat(format)) {
+        throw new UnsupportedFormatError(format);
+      }
+
+      validateAssetSize(blob.size, MAX_SIZE_IN_BYTES);
 
       try {
         const settingsJson = await resolveSettings(baseSettings, settings);
@@ -156,7 +162,11 @@ export function createReaderFactory(worker: WorkerManager, settings?: Settings):
       fragment: Blob,
       settings?: Settings
     ) {
-      validateAssetFormatAndSize(format, init.size, MAX_SIZE_IN_BYTES);
+      if (!isSupportedReaderFormat(format)) {
+        throw new UnsupportedFormatError(format);
+      }
+
+      validateAssetSize(init.size, MAX_SIZE_IN_BYTES);
 
       try {
         const settingsJson = await resolveSettings(baseSettings, settings);

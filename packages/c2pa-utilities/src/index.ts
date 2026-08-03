@@ -9,4 +9,4 @@
 
 export * from './settings.js';
 export * from './fetchWithRetry.js';
-export * from './assetValidation.js';
+export * from './assetSize.js';

@@ -9,11 +9,8 @@
 
 import { test, describe, expect } from 'test/methods.js';
 import { createC2pa } from './c2pa.js';
-import {
-  AssetTooLargeError,
-  Settings,
-  UnsupportedFormatError
-} from '@contentauth/c2pa-utilities';
+import { AssetTooLargeError, Settings } from '@contentauth/c2pa-utilities';
+import { UnsupportedFormatError } from './error.js';
 import { getBlobForAsset } from 'test/utils.js';
 import { MAX_SIZE_IN_BYTES } from './reader.js';
 

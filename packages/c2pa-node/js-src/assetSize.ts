@@ -12,8 +12,7 @@
 // each license.
 
 import * as fs from "fs-extra";
-import { extname } from "node:path";
-import { validateAssetFormatAndSize } from "@contentauth/c2pa-utilities";
+import { validateAssetSize } from "@contentauth/c2pa-utilities";
 import type { SourceAsset } from "./types.d.ts";
 
 // c2pa-node runs server-side, so it can reasonably support larger assets than
@@ -21,22 +20,16 @@ import type { SourceAsset } from "./types.d.ts";
 export const MAX_SIZE_IN_BYTES = 10 * 10 ** 9; // 10 GB
 
 /**
- * Validates a {@link SourceAsset}'s format and size before it's handed to the
- * native reader. A buffer asset's format comes from its required `mimeType`; a
- * file asset falls back to its extension when `mimeType` is omitted, matching
- * how the native side infers it.
+ * Validates a {@link SourceAsset}'s size before it's handed to the native reader.
  */
-export async function validateSourceAsset(asset: SourceAsset): Promise<void> {
+export async function validateSourceAssetSize(
+  asset: SourceAsset,
+): Promise<void> {
   if ("buffer" in asset) {
-    validateAssetFormatAndSize(
-      asset.mimeType,
-      asset.buffer.length,
-      MAX_SIZE_IN_BYTES
-    );
+    validateAssetSize(asset.buffer.length, MAX_SIZE_IN_BYTES);
     return;
   }
 
-  const format = asset.mimeType ?? extname(asset.path).slice(1).toLowerCase();
   const { size } = await fs.stat(asset.path);
-  validateAssetFormatAndSize(format, size, MAX_SIZE_IN_BYTES);
+  validateAssetSize(size, MAX_SIZE_IN_BYTES);
 }
