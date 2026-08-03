@@ -739,6 +739,100 @@ impl NeonBuilder {
         Ok(cx.undefined())
     }
 
+    /// Retains actions and ingredients together in one step, per
+    /// `Builder::filter_actions_and_ingredients`.
+    ///
+    /// `rescue_ingredient` is evaluated for every ingredient first; any action referencing an
+    /// ingredient it would rescue is force-kept regardless of `keep_action`.
+    ///
+    /// If either predicate throws or returns a non-boolean, the exception is surfaced to the
+    /// caller. As with [`Self::filter_actions`], the builder may be left partially filtered when a
+    /// predicate throws midway; callers should discard it on error.
+    ///
+    /// # Deadlock
+    /// As with [`Self::filter_actions`], the builder's lock is held for the whole call, so neither
+    /// predicate must call back into the same builder; doing so would deadlock.
+    pub fn filter_actions_and_ingredients(cx: FunctionContext) -> JsResult<JsUndefined> {
+        let rt = runtime();
+        // `cx` and `pending` are each borrowed mutably from one closure at a time, never by both
+        // closures simultaneously (calls into `filter_actions_and_ingredients` are synchronous and
+        // sequential), so `RefCell` lets both `FnMut` closures below share access without a
+        // conflicting double mutable borrow of `cx`/`pending` themselves.
+        let cx_cell = std::cell::RefCell::new(cx);
+        let pending: std::cell::RefCell<Option<neon::result::Throw>> =
+            std::cell::RefCell::new(None);
+
+        let (this, keep_action, rescue_ingredient, undefined) = {
+            let mut cx = cx_cell.borrow_mut();
+            let this = cx.this::<JsBox<Self>>()?;
+            let keep_action = cx.argument::<JsFunction>(0)?;
+            let rescue_ingredient = cx.argument::<JsFunction>(1)?;
+            let undefined = cx.undefined();
+            (this, keep_action, rescue_ingredient, undefined)
+        };
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+
+        // See `filter_actions`/`filter_ingredients`: capture a JS exception out-of-band and
+        // re-raise it afterwards, short-circuiting once a throw is pending.
+        let filter_result = builder
+            .filter_actions_and_ingredients(
+                |action| {
+                    if pending.borrow().is_some() {
+                        return false;
+                    }
+                    let mut cx = cx_cell.borrow_mut();
+                    let js_action = match neon_serde4::to_value(&mut *cx, action) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            *pending.borrow_mut() = cx.throw_error::<_, ()>(e.to_string()).err();
+                            return false;
+                        }
+                    };
+                    match callback_returns_true(&mut cx, &keep_action, undefined, js_action) {
+                        Ok(keep) => keep,
+                        Err(throw) => {
+                            *pending.borrow_mut() = Some(throw);
+                            false
+                        }
+                    }
+                },
+                |ingredient| {
+                    if pending.borrow().is_some() {
+                        return false;
+                    }
+                    let mut cx = cx_cell.borrow_mut();
+                    let js_ingredient = match neon_serde4::to_value(&mut *cx, ingredient) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            *pending.borrow_mut() = cx.throw_error::<_, ()>(e.to_string()).err();
+                            return false;
+                        }
+                    };
+                    let js_provenance = ingredient_provenance_value(&mut cx, ingredient);
+                    match callback_returns_true_with(
+                        &mut cx,
+                        &rescue_ingredient,
+                        undefined,
+                        &[js_ingredient, js_provenance],
+                    ) {
+                        Ok(rescue) => rescue,
+                        Err(throw) => {
+                            *pending.borrow_mut() = Some(throw);
+                            false
+                        }
+                    }
+                },
+            )
+            .map(|_| ());
+
+        let mut cx = cx_cell.into_inner();
+        if let Some(throw) = pending.into_inner() {
+            return Err(throw);
+        }
+        filter_result.or_else(|err| cx.throw_error(err.to_string()))?;
+        Ok(cx.undefined())
+    }
+
     /// Update a manifest property. Available properties are limited to strings and numbers.
     /// There are other methods for thumbnails, ingredients and assertions, etc.
     pub fn update_manifest_property(mut cx: FunctionContext) -> JsResult<JsUndefined> {

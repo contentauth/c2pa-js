@@ -146,6 +146,22 @@ export interface Builder {
   ) => Promise<void>;
 
   /**
+   * Experimental.
+   * Retains actions and ingredients together in one step.
+   *
+   * `rescueIngredient` is evaluated for every ingredient first; any action referencing an
+   * ingredient it would rescue is force-kept regardless of `keepAction`.
+   *
+   * @param keepAction The action is retained when the predicate returns true.
+   * @param rescueIngredient Can rescue an otherwise-orphaned ingredient (and the action
+   * referencing it) by returning true.
+   */
+  filterActionsAndIngredients: (
+    keepAction: (action: Action) => boolean,
+    rescueIngredient: (ingredient: Ingredient) => boolean
+  ) => Promise<void>;
+
+  /**
    * Add an ingredient to the builder from a definition only.
    *
    * @param ingredientDefinition {@link Ingredient} definition.
@@ -360,6 +376,35 @@ function createBuilder(
         return rescued;
       }, []);
       await tx.builder_filterIngredientsAt(id, indices);
+    },
+
+    async filterActionsAndIngredients(
+      keepAction: (action: Action) => boolean,
+      rescueIngredient: (ingredient: Ingredient) => boolean
+    ) {
+      const definition: ManifestDefinition = await tx.builder_getDefinition(id);
+      const actions = getActionsFromDefinition(definition);
+      const actionIndices = actions.reduce<number[]>((kept, action, i) => {
+        if (keepAction(action)) {
+          kept.push(i);
+        }
+        return kept;
+      }, []);
+      const ingredients: Ingredient[] = definition.ingredients ?? [];
+      const ingredientIndices = ingredients.reduce<number[]>(
+        (rescued, ingredient, i) => {
+          if (rescueIngredient(ingredient)) {
+            rescued.push(i);
+          }
+          return rescued;
+        },
+        []
+      );
+      await tx.builder_filterActionsAndIngredientsAt(
+        id,
+        actionIndices,
+        ingredientIndices
+      );
     },
 
     async addIngredient(ingredientDefinition: Ingredient) {

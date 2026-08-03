@@ -279,6 +279,20 @@ export class Builder implements BuilderInterface {
     getNeonBinary().builderFilterIngredients.call(this.builder, rescue);
   }
 
+  filterActionsAndIngredients(
+    keepAction: (action: Action) => boolean,
+    rescueIngredient: (
+      ingredient: Ingredient,
+      provenance: ManifestStore | null,
+    ) => boolean,
+  ): void {
+    getNeonBinary().builderFilterActionsAndIngredients.call(
+      this.builder,
+      keepAction,
+      rescueIngredient,
+    );
+  }
+
   getHandle(): NeonBuilderHandle {
     return this.builder;
   }

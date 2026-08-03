@@ -180,6 +180,7 @@ describe("Builder", () => {
     beforeEach(() => {
       builder = Builder.withJson(manifestDefinition);
       builder.updateManifestProperty("claim_version", 2);
+      builder.setIntent("edit");
     });
 
     beforeEach(async () => {
@@ -602,6 +603,9 @@ describe("Builder", () => {
         instance_id: "thumb-step1-1234",
         thumbnail: { format: "image/jpeg", identifier: "thumbnail.jpg" },
       });
+      step1Builder.setIntent({
+        create: "http://c2pa.org/digitalsourcetype/empty",
+      });
       await step1Builder.addResource("thumbnail.jpg", {
         mimeType: "image/jpeg",
         buffer: testThumbnail,
@@ -681,6 +685,9 @@ describe("Builder", () => {
             data: { keep: true },
           },
         ],
+      });
+      step1Builder.setIntent({
+        create: "http://c2pa.org/digitalsourcetype/empty",
       });
       const step1Dest = { buffer: null };
       await step1Builder.signAsync(signer, source, step1Dest);
@@ -835,6 +842,7 @@ describe("Builder", () => {
       };
 
       const builder = Builder.withJson(simpleManifestDefinition);
+      builder.setIntent({ create: "http://c2pa.org/digitalsourcetype/empty" });
 
       // Add an action using addAction method
       // The action needs to be a structured object matching the c2pa Action type
@@ -929,7 +937,7 @@ describe("Builder", () => {
 
     it("should add ingredient from reader", async () => {
       const builder1 = Builder.new();
-      builder1.setIntent("edit" as any);
+      builder1.setIntent("edit");
       const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
       const dest1: DestinationBufferAsset = {
         buffer: null,
@@ -945,6 +953,7 @@ describe("Builder", () => {
 
       // Create a new builder and add ingredient from the reader
       const builder2 = Builder.new();
+      builder2.setIntent("edit");
       const ingredient = builder2.addIngredientFromReader(reader!);
       expect(ingredient).toBeDefined();
 
@@ -1103,6 +1112,102 @@ describe("Builder", () => {
           throw new Error("ingredient boom");
         }),
       ).toThrow("ingredient boom");
+    });
+
+    it("filterActionsAndIngredients rescues an edited action for a kept ingredient", () => {
+      const builder = Builder.withJson({
+        claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
+        title: "Test_FilterActionsAndIngredients",
+        format: "image/jpeg",
+        ingredients: [],
+        assertions: [
+          {
+            label: "c2pa.actions",
+            data: {
+              actions: [
+                {
+                  action: "c2pa.created",
+                  digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
+                },
+                {
+                  action: "c2pa.edited",
+                  parameters: { ingredientIds: ["ai-1"] },
+                },
+              ],
+            },
+          },
+        ],
+        resources: { resources: {} },
+      });
+
+      builder.addIngredient(
+        JSON.stringify({
+          title: "ai-ingredient",
+          format: "image/jpeg",
+          instance_id: "ai-1",
+          relationship: "inputTo",
+        }),
+      );
+
+      // The action predicate alone would drop c2pa.edited; the ingredient predicate alone
+      // would rescue the ingredient. filterActionsAndIngredients keeps both together.
+      builder.filterActionsAndIngredients(
+        (action) => action.action !== "c2pa.edited",
+        (ingredient) => (ingredient as any).instance_id === "ai-1",
+      );
+
+      const definition = builder.getManifestDefinition();
+      const actionsAssertion = definition.assertions!.find((a) =>
+        a.label.startsWith("c2pa.actions"),
+      );
+      const names = (actionsAssertion!.data as any).actions.map(
+        (a: any) => a.action,
+      );
+      expect(names).toContain("c2pa.created");
+      expect(names).toContain("c2pa.edited");
+      expect(definition.ingredients ?? []).toHaveLength(1);
+    });
+
+    it("filterActionsAndIngredients drops unreferenced and unrescued", () => {
+      const builder = Builder.withJson(actionsManifest());
+
+      builder.addIngredient(
+        JSON.stringify({
+          title: "orphan",
+          format: "image/jpeg",
+          instance_id: "orphan-1",
+          relationship: "componentOf",
+        }),
+      );
+
+      builder.filterActionsAndIngredients(
+        (action) => action.action === "c2pa.edited",
+        () => false,
+      );
+
+      const definition = builder.getManifestDefinition();
+      const actionsAssertion = definition.assertions!.find((a) =>
+        a.label.startsWith("c2pa.actions"),
+      );
+      const names = (actionsAssertion!.data as any).actions.map(
+        (a: any) => a.action,
+      );
+      expect(names).toContain("c2pa.created");
+      expect(names).toContain("c2pa.edited");
+      expect(names).not.toContain("c2pa.color_adjustments");
+      expect(definition.ingredients ?? []).toHaveLength(0);
+    });
+
+    it("filterActionsAndIngredients surfaces an error thrown by either predicate", () => {
+      const builder = Builder.withJson(actionsManifest());
+      expect(() =>
+        builder.filterActionsAndIngredients(
+          () => {
+            throw new Error("action predicate boom");
+          },
+          () => false,
+        ),
+      ).toThrow("action predicate boom");
     });
   });
 });

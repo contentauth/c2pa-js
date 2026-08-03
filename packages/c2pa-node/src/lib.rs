@@ -93,6 +93,10 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         "builderFilterIngredients",
         neon_builder::NeonBuilder::filter_ingredients,
     )?;
+    cx.export_function(
+        "builderFilterActionsAndIngredients",
+        neon_builder::NeonBuilder::filter_actions_and_ingredients,
+    )?;
 
     // Reader
     cx.export_function("readerNew", neon_reader::NeonReader::new)?;
