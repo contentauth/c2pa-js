@@ -19,11 +19,8 @@ describe('validateAssetSize', () => {
     expect(() => validateAssetSize(1000, 1000)).not.toThrow();
   });
 
-  test('throws AssetTooLargeError when the size exceeds the max', () => {
+  test('throws AssetTooLargeError with a message including the size and the max when the size exceeds the max', () => {
     expect(() => validateAssetSize(1001, 1000)).toThrow(AssetTooLargeError);
-  });
-
-  test('AssetTooLargeError message includes the size and the max', () => {
     expect(() => validateAssetSize(1001, 1000)).toThrow(
       'Size: 1001 bytes. Maximum: 1000.'
     );
