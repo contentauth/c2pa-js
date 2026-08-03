@@ -16,8 +16,13 @@
 import type { ManifestStore } from "@contentauth/c2pa-types";
 import path from "path";
 import * as fs from "fs-extra";
+import {
+  AssetTooLargeError,
+  UnsupportedFormatError,
+} from "@contentauth/c2pa-utilities";
 
 import { Reader } from "./Reader.js";
+import { MAX_SIZE_IN_BYTES } from "./assetValidation.js";
 
 const tempDir = path.join(__dirname, "tmp");
 
@@ -145,6 +150,35 @@ describe("Reader", () => {
       path: "./tests/fixtures/A.jpg",
     });
     expect(reader).toBeNull();
+  });
+
+  it("should throw UnsupportedFormatError for a buffer asset with an unsupported mimeType", async () => {
+    const buffer = await fs.readFile("./tests/fixtures/CA.jpg");
+    await expect(
+      Reader.fromAsset({
+        buffer,
+        mimeType: "application/x-not-real",
+      }),
+    ).rejects.toThrow(UnsupportedFormatError);
+  });
+
+  it("should throw UnsupportedFormatError for a file asset with an unsupported extension", async () => {
+    const unsupportedPath = path.join(tempDir, "asset.xyz");
+    await fs.copyFile("./tests/fixtures/CA.jpg", unsupportedPath);
+
+    await expect(
+      Reader.fromAsset({ path: unsupportedPath }),
+    ).rejects.toThrow(UnsupportedFormatError);
+  });
+
+  it("should throw AssetTooLargeError for a file asset exceeding the max size", async () => {
+    const oversizedPath = path.join(tempDir, "oversized.jpg");
+    await fs.ensureFile(oversizedPath);
+    await fs.truncate(oversizedPath, MAX_SIZE_IN_BYTES + 1);
+
+    await expect(
+      Reader.fromAsset({ path: oversizedPath }),
+    ).rejects.toThrow(AssetTooLargeError);
   });
 
   it("should read from manifest data and buffer", async () => {
