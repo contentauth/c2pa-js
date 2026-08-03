@@ -8,9 +8,11 @@
  */
 
 /**
- * This file implements the shared Reader asset-too-large check. The size threshold is
- * always supplied by the caller — each platform (`c2pa-web`, `c2pa-node`) decides its
- * own limit explicitly rather than inheriting a hardcoded default from here.
+ * This file implements the shared Reader asset size check.
+ * 
+ * The size threshold is always supplied by the caller, since each platform
+ * (`c2pa-web` or `c2pa-node`) decides its own limit explicitly rather than
+ * inheriting a hardcoded default from here.
  */
 
 export class AssetTooLargeError extends Error {
@@ -23,12 +25,13 @@ export class AssetTooLargeError extends Error {
 }
 
 /**
- * Validates that `sizeInBytes` doesn't exceed `maxSizeInBytes`. The limit is always
- * supplied by the caller, since what's an acceptable asset size is a platform-specific
- * decision.
+ * Validates that `sizeInBytes` doesn't exceed `maxSizeInBytes`.
+ * 
+ * The limit is always supplied by the caller, since what's an acceptable
+ * asset size is a platform-specific decision.
  *
  * @param sizeInBytes Size of the asset, in bytes.
- * @param maxSizeInBytes Maximum allowed size, in bytes, for the calling platform.
+ * @param maxSizeInBytes Maximum allowed size, in bytes.
  * @throws {AssetTooLargeError} If `sizeInBytes` exceeds `maxSizeInBytes`.
  */
 export function validateAssetSize(
