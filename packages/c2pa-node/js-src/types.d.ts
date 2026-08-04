@@ -19,26 +19,18 @@ import type {
   C2paReason,
   Ingredient,
   Manifest,
+  ManifestAssertionKind,
   ManifestStore,
 } from "@contentauth/c2pa-types";
+import type { SigningAlg } from "@contentauth/c2pa-utilities";
 
-export type { Action, C2paReason, Ingredient } from "@contentauth/c2pa-types";
-
-/**
- * Describes the digital signature algorithms allowed by the C2PA spec
- *
- * Per <https://c2pa.org/specifications/specifications/1.0/specs/C2PA_Specification.html#_digital_signatures>:
- *
- * > All digital signatures that are stored in a C2PA Manifest shall > be generated using one of the digital signature algorithms and > key types listed as described in this section
- */
-export type SigningAlg =
-  | "es256"
-  | "es384"
-  | "es512"
-  | "ps256"
-  | "ps384"
-  | "ps512"
-  | "ed25519";
+export type {
+  Action,
+  C2paReason,
+  Ingredient,
+  ManifestAssertionKind,
+} from "@contentauth/c2pa-types";
+export type { SigningAlg } from "@contentauth/c2pa-utilities";
 
 export type ClaimVersion = 1 | 2;
 
@@ -63,8 +55,6 @@ export type TrustmarkVariant =
   | "P"
   // Quality Trustmark model
   | "Q";
-
-export type ManifestAssertionKind = "Cbor" | "Json" | "Binary" | "Uri";
 
 /**
  * A buffer for the source asset

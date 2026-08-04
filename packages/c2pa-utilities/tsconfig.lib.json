@@ -10,6 +10,11 @@
     "lib": ["ES2023", "DOM"]
   },
   "include": ["src/**/*.ts"],
+  "references": [
+    {
+      "path": "../c2pa-types"
+    }
+  ],
   "exclude": [
     "vitest.config.ts",
     "vitest.config.mts",
