@@ -1,5 +1,12 @@
 # @contentauth/c2pa-node
 
+## 0.8.1
+
+### Patch Changes
+
+- b558be8: feat: incorporate c2pa builder filter_actions_and_ingredients
+- a5a904b: Update c2pa to 0.90.4
+
 ## 0.8.0
 
 ### Minor Changes
