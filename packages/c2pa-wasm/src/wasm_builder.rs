@@ -53,14 +53,13 @@ impl WasmBuilder {
     /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = new)]
     pub fn new(context_json: Option<String>) -> Result<WasmBuilder, JsString> {
-        let builder = if let Some(json) = context_json {
-            let context = Context::new()
+        let context = match context_json {
+            Some(json) => Context::new()
                 .with_settings(json.as_str())
-                .map_err(WasmError::from)?;
-            Builder::from_context(context)
-        } else {
-            Builder::new()
+                .map_err(WasmError::from)?,
+            None => Context::new(),
         };
+        let builder = Builder::from_context(context);
 
         Ok(WasmBuilder::from_builder(builder))
     }
@@ -79,20 +78,15 @@ impl WasmBuilder {
     /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = fromJson)]
     pub fn from_json(json: &str, context_json: Option<String>) -> Result<WasmBuilder, JsString> {
-        let builder = if let Some(ctx_json) = context_json {
-            let context = Context::new()
+        let context = match context_json {
+            Some(ctx_json) => Context::new()
                 .with_settings(ctx_json.as_str())
-                .map_err(WasmError::from)?;
-            let mut builder = Builder::from_context(context);
-            // Parse the manifest definition and set it directly
-            let definition = Builder::from_json(json)
-                .map_err(WasmError::from)?
-                .definition;
-            builder.definition = definition;
-            builder
-        } else {
-            Builder::from_json(json).map_err(WasmError::from)?
+                .map_err(WasmError::from)?,
+            None => Context::new(),
         };
+        let builder = Builder::from_context(context)
+            .with_definition(json)
+            .map_err(WasmError::from)?;
 
         Ok(WasmBuilder::from_builder(builder))
     }
@@ -230,6 +224,46 @@ impl WasmBuilder {
                 i += 1;
                 rescue
             })
+            .map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
+    /// Retains actions and ingredients together in one step, per
+    /// `Builder::filter_actions_and_ingredients`. `action_indices`/`ingredient_indices` are
+    /// 0-based indices into [`Self::get_definition`]'s `c2pa.actions` assertion / `ingredients`
+    /// array, resolved on the JS side for the same reason as [`Self::filter_actions_at`].
+    ///
+    /// `rescue_ingredient` (driven by `ingredient_indices`) is evaluated for every ingredient
+    /// first; any action referencing an ingredient it would rescue is force-kept regardless of
+    /// `keep_action`.
+    #[wasm_bindgen(js_name = filterActionsAndIngredientsAt)]
+    pub fn filter_actions_and_ingredients_at(
+        &mut self,
+        action_indices: Vec<u32>,
+        ingredient_indices: Vec<u32>,
+    ) -> Result<(), JsString> {
+        let action_indices: std::collections::HashSet<u32> = action_indices.into_iter().collect();
+        let ingredient_indices: std::collections::HashSet<u32> =
+            ingredient_indices.into_iter().collect();
+        // See `filter_actions_at`: `usize` cannot overflow for an in-memory action/ingredient
+        // count.
+        let mut action_i: usize = 0;
+        let mut ingredient_i: usize = 0;
+        self.builder
+            .filter_actions_and_ingredients(
+                |_action| {
+                    let keep = u32::try_from(action_i).is_ok_and(|idx| action_indices.contains(&idx));
+                    action_i += 1;
+                    keep
+                },
+                |_ingredient| {
+                    let rescue = u32::try_from(ingredient_i)
+                        .is_ok_and(|idx| ingredient_indices.contains(&idx));
+                    ingredient_i += 1;
+                    rescue
+                },
+            )
             .map_err(WasmError::from)?;
 
         Ok(())

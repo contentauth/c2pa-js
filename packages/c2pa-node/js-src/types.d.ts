@@ -381,6 +381,25 @@ export interface BuilderInterface {
   ): void;
 
   /**
+   * Experimental.
+   * Retains actions and ingredients together.
+   *
+   * `rescueIngredient` is evaluated for every ingredient first; any action referencing an
+   * ingredient it would rescue is force-kept regardless of `keepAction`.
+   *
+   * @param keepAction The action is retained when the predicate returns true.
+   * @param rescueIngredient Can rescue an otherwise-orphaned ingredient and the action
+   * referencing it by returning true.
+   */
+  filterActionsAndIngredients(
+    keepAction: (action: Action) => boolean,
+    rescueIngredient: (
+      ingredient: Ingredient,
+      provenance: ManifestStore | null,
+    ) => boolean,
+  ): void;
+
+  /**
    * Get the internal handle for use with Neon bindings
    */
   getHandle(): NeonBuilderHandle;
