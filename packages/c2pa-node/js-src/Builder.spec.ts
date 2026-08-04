@@ -1131,7 +1131,7 @@ describe("Builder", () => {
                 },
                 {
                   action: "c2pa.edited",
-                  parameters: { ingredientIds: ["ai-1"] },
+                  parameters: { ingredientIds: ["my-1"] },
                 },
               ],
             },
