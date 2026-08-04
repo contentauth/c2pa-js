@@ -20,6 +20,7 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import {
   fetchWithRetry,
+  fetchWithRetryRaw,
   DEFAULT_MAX_RETRY_AFTER_MS,
   DEFAULT_MAX_RESPONSE_BYTES
 } from './fetchWithRetry.js';
@@ -226,5 +227,171 @@ describe('fetchWithRetry', () => {
       maxResponseBytes: 10
     });
     expect(result).toHaveLength(10);
+  });
+
+  test('honors a custom maxRetries, giving up sooner than the default', async () => {
+    let requestCount = 0;
+    server.use(
+      http.get('http://customMaxRetries', () => {
+        requestCount++;
+        return new HttpResponse(null, { status: 500 });
+      })
+    );
+
+    await expect(
+      fetchWithRetry('http://customMaxRetries', { maxRetries: 0 })
+    ).rejects.toThrow('Failed to fetch http://customMaxRetries: 500');
+    expect(requestCount).toBe(1);
+  });
+
+  test('honors a custom maxRetries, retrying more than the default', async () => {
+    let requestCount = 0;
+    server.use(
+      http.get('http://moreRetries', () => {
+        requestCount++;
+        if (requestCount <= 4) {
+          return new HttpResponse(null, { status: 500 });
+        }
+        return HttpResponse.text('resolved after extra retries');
+      })
+    );
+
+    const result = await fetchWithRetry('http://moreRetries', {
+      maxRetries: 4,
+      initialRetryDelayMs: 1,
+      maxRetryDelayMs: 5
+    });
+    expect(result).toBe('resolved after extra retries');
+    expect(requestCount).toBe(5);
+  });
+
+  test('honors a custom maxRetryAfterMs cap', async () => {
+    server.use(
+      http.get(
+        'http://customRetryAfterCap',
+        () =>
+          new HttpResponse(null, {
+            status: 429,
+            headers: { 'Retry-After': '2' }
+          })
+      )
+    );
+
+    await expect(
+      fetchWithRetry('http://customRetryAfterCap', { maxRetryAfterMs: 1000 })
+    ).rejects.toThrow('exceeds the maximum allowed delay');
+  });
+
+  test('honors a custom isRetryableStatus, retrying a status not retried by default', async () => {
+    let requestCount = 0;
+    server.use(
+      http.get('http://customRetryableStatus', () => {
+        requestCount++;
+        if (requestCount === 1) {
+          return new HttpResponse(null, { status: 418 });
+        }
+        return HttpResponse.text('resolved after custom-status retry');
+      })
+    );
+
+    const result = await fetchWithRetry('http://customRetryableStatus', {
+      isRetryableStatus: (status) => status === 418
+    });
+    expect(result).toBe('resolved after custom-status retry');
+  });
+
+  test('honors a custom isRetryableStatus, refusing to retry a status retried by default', async () => {
+    let requestCount = 0;
+    server.use(
+      http.get('http://noRetryOn500', () => {
+        requestCount++;
+        return new HttpResponse(null, { status: 500 });
+      })
+    );
+
+    await expect(
+      fetchWithRetry('http://noRetryOn500', {
+        isRetryableStatus: () => false
+      })
+    ).rejects.toThrow('Failed to fetch http://noRetryOn500: 500');
+    expect(requestCount).toBe(1);
+  });
+
+  test('honors a Retry-After header on a non-429 retryable status', async () => {
+    let requestCount = 0;
+    server.use(
+      http.get('http://retryAfterOn503', () => {
+        requestCount++;
+        if (requestCount === 1) {
+          return new HttpResponse(null, {
+            status: 503,
+            headers: { 'Retry-After': '0' }
+          });
+        }
+        return HttpResponse.text('resolved after 503 retry-after');
+      })
+    );
+
+    const result = await fetchWithRetry('http://retryAfterOn503');
+    expect(result).toBe('resolved after 503 retry-after');
+  });
+});
+
+describe('fetchWithRetryRaw', () => {
+  test('returns the raw Response for a successful request', async () => {
+    server.use(http.get('http://rawSuccess', () => HttpResponse.json({ a: 1 })));
+
+    const res = await fetchWithRetryRaw('http://rawSuccess');
+    expect(res.ok).toBe(true);
+    await expect(res.json()).resolves.toEqual({ a: 1 });
+  });
+
+  test('forwards method, headers, and body via RequestInit', async () => {
+    let receivedBody: unknown;
+    let receivedHeader: string | null = null;
+    server.use(
+      http.post('http://rawPost', async ({ request }) => {
+        receivedHeader = request.headers.get('x-test-header');
+        receivedBody = await request.json();
+        return HttpResponse.json({ ok: true });
+      })
+    );
+
+    const res = await fetchWithRetryRaw('http://rawPost', {
+      method: 'POST',
+      headers: { 'x-test-header': 'value', 'content-type': 'application/json' },
+      body: JSON.stringify({ hello: 'world' })
+    });
+
+    expect(res.ok).toBe(true);
+    expect(receivedHeader).toBe('value');
+    expect(receivedBody).toEqual({ hello: 'world' });
+  });
+
+  test('does not enforce a response size cap', async () => {
+    const oversizedBody = 'x'.repeat(DEFAULT_MAX_RESPONSE_BYTES + 1);
+    server.use(
+      http.get('http://rawNoSizeCap', () => HttpResponse.text(oversizedBody))
+    );
+
+    const res = await fetchWithRetryRaw('http://rawNoSizeCap');
+    const text = await res.text();
+    expect(text).toHaveLength(DEFAULT_MAX_RESPONSE_BYTES + 1);
+  });
+
+  test('still retries on a retryable status using the same policy options', async () => {
+    server.use(
+      http.get(
+        'http://rawRetry',
+        () => {
+          return new HttpResponse(null, { status: 500 });
+        },
+        { once: true }
+      ),
+      http.get('http://rawRetry', () => HttpResponse.text('recovered'))
+    );
+
+    const res = await fetchWithRetryRaw('http://rawRetry');
+    await expect(res.text()).resolves.toBe('recovered');
   });
 });
