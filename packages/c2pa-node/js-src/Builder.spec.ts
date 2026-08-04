@@ -1142,9 +1142,9 @@ describe("Builder", () => {
 
       builder.addIngredient(
         JSON.stringify({
-          title: "ai-ingredient",
+          title: "my-ingredient",
           format: "image/jpeg",
-          instance_id: "ai-1",
+          instance_id: "my-1",
           relationship: "inputTo",
         }),
       );
@@ -1153,7 +1153,7 @@ describe("Builder", () => {
       // would rescue the ingredient. filterActionsAndIngredients keeps both together.
       builder.filterActionsAndIngredients(
         (action) => action.action !== "c2pa.edited",
-        (ingredient) => (ingredient as any).instance_id === "ai-1",
+        (ingredient) => (ingredient as any).instance_id === "my-1",
       );
 
       const definition = builder.getManifestDefinition();

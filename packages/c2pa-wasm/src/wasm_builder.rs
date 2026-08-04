@@ -237,7 +237,7 @@ impl WasmBuilder {
     /// `rescue_ingredient` (driven by `ingredient_indices`) is evaluated for every ingredient
     /// first; any action referencing an ingredient it would rescue is force-kept regardless of
     /// `keep_action`.
-    /// #[wasm_bindgen(js_name = filterActionsAndIngredientsAt)]
+    #[wasm_bindgen(js_name = filterActionsAndIngredientsAt)]
     pub fn filter_actions_and_ingredients_at(
         &mut self,
         action_indices: Vec<u32>,
