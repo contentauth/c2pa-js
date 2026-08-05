@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+## 0.8.2
+
+### Patch Changes
+
+- dc1f034: Bump c2pa-rs version to v0.90.5
+
 ## 0.8.1
 
 ### Patch Changes
