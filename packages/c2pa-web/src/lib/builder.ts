@@ -162,6 +162,16 @@ export interface Builder {
   ) => Promise<void>;
 
   /**
+   * Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertion.
+   *
+   * `transform` receives the current actions (same enumeration as {@link Builder.filterActions})
+   * and returns the replacement list. Other properties are preserved as-is.
+   *
+   * @param transform Receives the current actions and returns the full replacement list.
+   */
+  updateActions: (transform: (actions: Action[]) => Action[]) => Promise<void>;
+
+  /**
    * Add an ingredient to the builder from a definition only.
    *
    * @param ingredientDefinition {@link Ingredient} definition.
@@ -405,6 +415,13 @@ function createBuilder(
         actionIndices,
         ingredientIndices
       );
+    },
+
+    async updateActions(transform: (actions: Action[]) => Action[]) {
+      const definition: ManifestDefinition = await tx.builder_getDefinition(id);
+      const actions = getActionsFromDefinition(definition);
+      const updated = transform(actions);
+      await tx.builder_updateActionsAt(id, updated);
     },
 
     async addIngredient(ingredientDefinition: Ingredient) {

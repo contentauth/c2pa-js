@@ -400,6 +400,16 @@ export interface BuilderInterface {
   ): void;
 
   /**
+   * Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertion.
+   *
+   * `transform` receives the current actions and returns the replacement list.
+   * other properties are preserved as-is.
+   *
+   * @param transform Receives the current actions and returns the full replacement list.
+   */
+  updateActions(transform: (actions: Action[]) => Action[]): void;
+
+  /**
    * Get the internal handle for use with Neon bindings
    */
   getHandle(): NeonBuilderHandle;

@@ -1209,5 +1209,100 @@ describe("Builder", () => {
         ),
       ).toThrow("action predicate boom");
     });
+
+    it("updateActions patches a parameter on an existing action", () => {
+      const builder = Builder.withJson(actionsManifest());
+
+      builder.updateActions((actions) =>
+        actions.map((action) =>
+          action.action === "c2pa.created"
+            ? {
+                ...action,
+                parameters: { ...action.parameters, genAiId: "fixed-id" },
+              }
+            : action,
+        ),
+      );
+
+      const definition = builder.getManifestDefinition();
+      const actionsAssertions = definition.assertions!.filter((a) =>
+        a.label.startsWith("c2pa.actions"),
+      );
+      expect(actionsAssertions).toHaveLength(1);
+      expect(actionsAssertions[0]!.label).toBe("c2pa.actions.v2");
+      const patched = (actionsAssertions[0]!.data as any).actions;
+      expect(patched.map((a: any) => a.action)).toEqual([
+        "c2pa.created",
+        "c2pa.edited",
+        "c2pa.color_adjustments",
+      ]);
+      expect(patched[0].parameters.genAiId).toBe("fixed-id");
+    });
+
+    it("updateActions preserves action order when transform patches in place", () => {
+      const builder = Builder.withJson(actionsManifest());
+
+      // Patch the middle entry; the transform never reorders.
+      builder.updateActions((actions) =>
+        actions.map((action) =>
+          action.action === "c2pa.edited"
+            ? { ...action, parameters: { note: "patched" } }
+            : action,
+        ),
+      );
+
+      const definition = builder.getManifestDefinition();
+      const actionsAssertion = definition.assertions!.find((a) =>
+        a.label.startsWith("c2pa.actions"),
+      );
+      const names = (actionsAssertion!.data as any).actions.map(
+        (a: any) => a.action,
+      );
+      expect(names).toEqual([
+        "c2pa.created",
+        "c2pa.edited",
+        "c2pa.color_adjustments",
+      ]);
+    });
+
+    it("updateActions surfaces an error thrown by transform", () => {
+      const builder = Builder.withJson(actionsManifest());
+      expect(() =>
+        builder.updateActions(() => {
+          throw new Error("transform boom");
+        }),
+      ).toThrow("transform boom");
+    });
+
+    it("updateActions preserves allActionsIncluded/softwareAgents/templates/metadata not seen by transform", () => {
+      const manifest = actionsManifest();
+      (manifest.assertions[0]!.data as any).allActionsIncluded = true;
+      (manifest.assertions[0]!.data as any).softwareAgents = [
+        { name: "c2pa_test", version: "1.0.0" },
+      ];
+      (manifest.assertions[0]!.data as any).templates = [
+        { action: "c2pa.edited" },
+      ];
+      (manifest.assertions[0]!.data as any).metadata = {
+        dataSource: { type: "humanEdits" },
+      };
+      const builder = Builder.withJson(manifest);
+
+      // transform only ever sees/returns the flattened actions list, never the sibling fields.
+      builder.updateActions((actions) => actions);
+
+      const definition = builder.getManifestDefinition();
+      const actionsAssertions = definition.assertions!.filter((a) =>
+        a.label.startsWith("c2pa.actions"),
+      );
+      expect(actionsAssertions).toHaveLength(1);
+      const data = actionsAssertions[0]!.data as any;
+      expect(data.allActionsIncluded).toBe(true);
+      expect(data.softwareAgents).toEqual([
+        { name: "c2pa_test", version: "1.0.0" },
+      ]);
+      expect(data.templates).toEqual([{ action: "c2pa.edited" }]);
+      expect(data.metadata).toEqual({ dataSource: { type: "humanEdits" } });
+    });
   });
 });

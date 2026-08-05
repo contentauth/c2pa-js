@@ -8,7 +8,7 @@
  */
 
 import { test, describe, expect } from 'test/methods.js';
-import { ManifestDefinition, Ingredient } from '@contentauth/c2pa-types';
+import { ManifestDefinition, Ingredient, Action } from '@contentauth/c2pa-types';
 import { getBlobForAsset, createTestSigner } from 'test/utils.js';
 import { Settings } from './settings.js';
 import { createC2pa } from './c2pa.js';
@@ -811,6 +811,164 @@ describe('builder', () => {
             throw new Error('boom from predicate');
           })
         ).rejects.toThrow('boom from predicate');
+      });
+    });
+
+    describe('updateActions', () => {
+      test('patches a parameter on an existing action and consolidates into one assertion', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.fromDefinition({
+          claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
+          format: 'image/jpeg',
+          instance_id: 'update-actions-1',
+          ingredients: [],
+          assertions: [
+            {
+              label: 'c2pa.actions',
+              data: {
+                actions: [
+                  {
+                    action: 'c2pa.created',
+                    digitalSourceType:
+                      'http://c2pa.org/digitalsourcetype/empty'
+                  }
+                ]
+              }
+            },
+            {
+              label: 'c2pa.actions.v2',
+              data: {
+                actions: [{ action: 'c2pa.edited' }]
+              }
+            }
+          ]
+        } as unknown as ManifestDefinition);
+
+        await builder.updateActions((actions) =>
+          actions.map((action) =>
+            action.action === 'c2pa.created'
+              ? {
+                  ...action,
+                  parameters: { ...action.parameters, genAiId: 'fixed-id' }
+                }
+              : action
+          )
+        );
+
+        const definition = await builder.getDefinition();
+        const actionsAssertions = (definition.assertions ?? []).filter((a) =>
+          a.label.startsWith('c2pa.actions')
+        );
+        // The two source assertions collapse into a single consolidated one.
+        expect(actionsAssertions).toHaveLength(1);
+        expect(actionsAssertions[0].label).toBe('c2pa.actions.v2');
+
+        const patched = (
+          actionsAssertions[0].data as { actions: Action[] }
+        ).actions;
+        expect(patched.map((a) => a.action)).toEqual([
+          'c2pa.created',
+          'c2pa.edited'
+        ]);
+        expect(
+          (patched[0].parameters as { genAiId?: string } | undefined)
+            ?.genAiId
+        ).toBe('fixed-id');
+      });
+
+      test('preserves action order when transform patches in place', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.new();
+        await builder.addAction({ action: 'c2pa.created' });
+        await builder.addAction({ action: 'c2pa.color_adjustments' });
+        await builder.addAction({ action: 'c2pa.edited' });
+        await builder.addAction({ action: 'c2pa.resized' });
+
+        // Patch one entry in the middle; the transform never reorders.
+        await builder.updateActions((actions) =>
+          actions.map((action) =>
+            action.action === 'c2pa.edited'
+              ? { ...action, parameters: { note: 'patched' } }
+              : action
+          )
+        );
+
+        const definition = await builder.getDefinition();
+        const actionsAssertion = definition.assertions?.find((a) =>
+          a.label.startsWith('c2pa.actions')
+        );
+        const names = (
+          actionsAssertion?.data as { actions: { action: string }[] }
+        ).actions.map((a) => a.action);
+        expect(names).toEqual([
+          'c2pa.created',
+          'c2pa.color_adjustments',
+          'c2pa.edited',
+          'c2pa.resized'
+        ]);
+      });
+
+      test('surfaces an error thrown by transform', async ({ c2pa }) => {
+        const builder = await c2pa.builder.new();
+        await builder.addAction({ action: 'c2pa.created' });
+
+        await expect(
+          builder.updateActions(() => {
+            throw new Error('boom from transform');
+          })
+        ).rejects.toThrow('boom from transform');
+      });
+
+      test('preserves allActionsIncluded/softwareAgents/templates/metadata not seen by transform', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.fromDefinition({
+          claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
+          format: 'image/jpeg',
+          instance_id: 'update-actions-2',
+          ingredients: [],
+          assertions: [
+            {
+              label: 'c2pa.actions',
+              data: {
+                actions: [
+                  {
+                    action: 'c2pa.created',
+                    digitalSourceType:
+                      'http://c2pa.org/digitalsourcetype/empty'
+                  }
+                ],
+                allActionsIncluded: true,
+                softwareAgents: [
+                  { name: 'c2pa-web-test', version: '1.0.0' }
+                ],
+                templates: [{ action: 'c2pa.edited' }],
+                metadata: { dataSource: { type: 'humanEdits' } }
+              }
+            }
+          ]
+        } as unknown as ManifestDefinition);
+
+        // transform only ever sees/returns the flattened actions list, never the sibling fields.
+        await builder.updateActions((actions) => actions);
+
+        const definition = await builder.getDefinition();
+        const actionsAssertions = (definition.assertions ?? []).filter((a) =>
+          a.label.startsWith('c2pa.actions')
+        );
+        expect(actionsAssertions).toHaveLength(1);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = actionsAssertions[0].data as any;
+        expect(data.allActionsIncluded).toBe(true);
+        expect(data.softwareAgents).toEqual([
+          { name: 'c2pa-web-test', version: '1.0.0' }
+        ]);
+        expect(data.templates).toEqual([{ action: 'c2pa.edited' }]);
+        expect(data.metadata).toEqual({
+          dataSource: { type: 'humanEdits' }
+        });
       });
     });
 

@@ -9,7 +9,7 @@ use std::io::Cursor;
 
 use c2pa::{
     Builder, BuilderIntent, Context, Ingredient,
-    assertions::{Action, C2paReason},
+    assertions::{Action, Actions, C2paReason},
 };
 use js_sys::{JsString, Uint8Array};
 use serde::{Deserialize, Serialize};
@@ -264,6 +264,40 @@ impl WasmBuilder {
                     rescue
                 },
             )
+            .map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
+    /// Replaces the actions in `c2pa.actions`/`c2pa.actions.v2` with `actions`, computed on the
+    /// JS side (see [`Self::filter_actions_at`]). `softwareAgents`/`allActionsIncluded`/
+    /// `templates`/`metadata` are preserved as-is.
+    #[wasm_bindgen(js_name = updateActionsAt)]
+    pub fn update_actions_at(&mut self, actions: JsValue) -> Result<(), JsString> {
+        let actions: Vec<Action> =
+            serde_wasm_bindgen::from_value(actions).map_err(WasmError::from)?;
+
+        // `AssertionData`/`AssertionDefinition` aren't public in the c2pa crate, so we can't name
+        // them, but field access and generic (de)serialization still work.
+        let existing = self
+            .builder
+            .definition
+            .assertions
+            .iter()
+            .find(|a| a.label.starts_with(Actions::LABEL))
+            .and_then(|a| serde_json::to_value(&a.data).ok())
+            .and_then(|v| serde_json::from_value::<Actions>(v).ok());
+
+        self.builder
+            .definition
+            .assertions
+            .retain(|a| !a.label.starts_with(Actions::LABEL));
+
+        let mut updated = existing.unwrap_or_else(Actions::new);
+        updated.actions = actions;
+
+        self.builder
+            .add_assertion(Actions::LABEL_VERSIONED, &updated)
             .map_err(WasmError::from)?;
 
         Ok(())

@@ -18,7 +18,7 @@ use crate::neon_reader::NeonReader;
 use crate::neon_signer::{CallbackSignerConfig, NeonCallbackSigner, NeonLocalSigner};
 use crate::runtime::runtime;
 use crate::utils::parse_settings;
-use c2pa::{assertions::Action, Builder, BuilderIntent, Ingredient, Reader};
+use c2pa::{assertions::{Action, Actions}, Builder, BuilderIntent, Ingredient, Reader};
 use neon::context::Context as NeonContext;
 use neon::prelude::*;
 use neon_serde4;
@@ -673,6 +673,56 @@ impl NeonBuilder {
             return Err(throw);
         }
         filter_result.or_else(|err| cx.throw_error(err.to_string()))?;
+        Ok(cx.undefined())
+    }
+
+    /// Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertion. `transform` is
+    /// called once with the current actions and its return value replaces them.
+    /// `softwareAgents`/`allActionsIncluded`/`templates`/`metadata` are preserved as-is.
+    ///
+    /// If `transform` throws or its return value doesn't deserialize into an action list, the
+    /// exception is surfaced to the caller and the builder is left unchanged.
+    ///
+    /// # Deadlock
+    /// The builder's lock is held for the whole call, so `transform` must not call back into the
+    /// same builder, for example `getManifestDefinition` or a filter: the lock is not re-entrant
+    /// and re-entry would deadlock.
+    pub fn update_actions(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<Self>>()?;
+        let transform = cx.argument::<JsFunction>(0)?;
+        let undefined = cx.undefined();
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+
+        let existing = builder
+            .definition
+            .assertions
+            .iter()
+            .find(|a| a.label.starts_with(Actions::LABEL))
+            .and_then(|a| serde_json::to_value(&a.data).ok())
+            .and_then(|v| serde_json::from_value::<Actions>(v).ok());
+        let actions = existing
+            .as_ref()
+            .map(|a| a.actions.clone())
+            .unwrap_or_default();
+
+        let js_actions = neon_serde4::to_value(&mut cx, &actions)
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+        let result = transform.call(&mut cx, undefined, [js_actions])?;
+        let updated_actions: Vec<Action> = neon_serde4::from_value(&mut cx, result)
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+
+        builder
+            .definition
+            .assertions
+            .retain(|a| !a.label.starts_with(Actions::LABEL));
+
+        let mut updated = existing.unwrap_or_else(Actions::new);
+        updated.actions = updated_actions;
+        builder
+            .add_assertion(Actions::LABEL_VERSIONED, &updated)
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+
         Ok(cx.undefined())
     }
 

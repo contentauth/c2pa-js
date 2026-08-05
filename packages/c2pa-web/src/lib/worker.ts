@@ -113,6 +113,10 @@ rx(
       const builder = builderMap.get(builderId);
       builder.filterActionsAt(Uint32Array.from(indices));
     },
+    builder_updateActionsAt(builderId, actions) {
+      const builder = builderMap.get(builderId);
+      builder.updateActionsAt(actions);
+    },
     builder_filterIngredientsAt(builderId, indices) {
       const builder = builderMap.get(builderId);
       builder.filterIngredientsAt(Uint32Array.from(indices));
