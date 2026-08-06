@@ -9,19 +9,14 @@
 
 import { merge } from 'ts-deepmerge';
 import { fetchWithRetry, type FetchWithRetryOptions } from './fetchWithRetry.js';
+import { snakeCaseify, type SettingsObjectType } from './caseConversion.js';
 
-// =============================================================================
+// =================================
 // Types
-// =============================================================================
+// =================================
 
 /**
- * Settings configuration for C2PA operations.
- *
- * Encapsulates settings and configuration options for Reader and Builder operations.
- * It provides a flexible way to configure SDK behavior including the verification configuration,
- * trust configuration, and builder options.
- *
- * This shape mirrors `c2pa-rs`'s own `Settings` struct.
+ * Settings configuration for C2PA Reader and Builder operations.
  *
  * @example
  * ```typescript
@@ -135,7 +130,7 @@ export interface BuilderSettings {
    * Note: `c2pa-rs` is deprecating the zip archive path — this setting is expected to be
    * removed in a future release and should always be left `true`.
    */
-  generateC2paArchive?: boolean;
+  generateC2paArchive: true;
   /**
    * Settings for automatic thumbnail generation.
    */
@@ -147,9 +142,9 @@ export interface BuilderSettings {
   };
 }
 
-// =============================================================================
+// =================================
 // Defaults
-// =============================================================================
+// =================================
 
 const DEFAULT_SETTINGS: Settings = {
   builder: {
@@ -157,18 +152,18 @@ const DEFAULT_SETTINGS: Settings = {
   }
 };
 
-// =============================================================================
+// =================================
 // Top-level pipeline
-// =============================================================================
+// =================================
 
 /**
  * Resolves settings by merging override settings on top of base settings, resolving any embedded
- * trust list URLs on top of those, and then finally serializing the result for consumption by c2pa-rs.
+ * trust list URLs on top of those, and then finally serializing the result for consumption by the core native SDK.
  *
  * @param baseSettings Settings established at SDK initialization time.
  * @param overrideSettings Optional override settings. Keys present in overrideSettings win over keys in baseSettings.
  * @param options Optional configurations for fetch-with-retry.
- * @returns A JSON-serialized string containing all resolved settings values, ready to be consumed by c2pa-rs.
+ * @returns A JSON-serialized string containing all resolved settings values, ready to be consumed by the core native SDK.
  * Returns undefined when neither argument is provided.
  */
 export async function resolveSettings(
@@ -204,9 +199,9 @@ export async function resolveSettings(
   return JSON.stringify(snakeCaseify(finalSettings as SettingsObjectType));
 }
 
-// =============================================================================
+// =================================
 // Settings construction
-// =============================================================================
+// =================================
 
 /**
  * Create a Settings object with trust configuration.
@@ -249,60 +244,9 @@ export function mergeSettings(...settings: Settings[]): Settings {
   return merge(...settings);
 }
 
-// =============================================================================
+// =================================
 // Serialization
-// =============================================================================
-
-/**
- * Any value that can appear inside a resolved Settings object when `snakeCaseifyValue` walks
- * it: the primitives Settings fields actually use (string, boolean), undefined (optional
- * fields), a nested object, or an array of any of these — recursive so arbitrarily nested
- * structures (including arrays of objects) get walked without losing array-ness. Deliberately
- * narrower than "any JSON value" (no numbers, for instance) since no current Settings field
- * needs one. We can widen this if that changes.
- */
-type SettingsValue =
-  | string
-  | boolean
-  | undefined
-  | SettingsObjectType
-  | SettingsValue[];
-type SettingsObjectType = {
-  [k: string]: SettingsValue;
-};
-
-/**
- * Recursively converts an object's camelCase keys to snake_case, matching the format
- * `c2pa-rs` expects for settings JSON/TOML. Arrays are preserved as arrays — only their
- * object elements (if any) get their keys snake-cased — since `typeof [] === 'object'` in
- * JS and a naive `Object.entries`-based recursion would otherwise flatten an array into a
- * `{"0": ..., "1": ...}` object instead of a JSON array.
- */
-export function snakeCaseify(object: SettingsObjectType): SettingsObjectType {
-  const formattedObject = Object.entries(object).reduce(
-    (formattedObject, [key, val]) => {
-      formattedObject[snakeCase(key)] = snakeCaseifyValue(val);
-      return formattedObject;
-    },
-    {} as SettingsObjectType
-  );
-
-  return formattedObject;
-}
-
-function snakeCaseifyValue(val: SettingsValue): SettingsValue {
-  if (Array.isArray(val)) {
-    return val.map(snakeCaseifyValue);
-  }
-  if (typeof val === 'object' && val !== null) {
-    return snakeCaseify(val);
-  }
-  return val;
-}
-
-function snakeCase(str: string): string {
-  return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-}
+// =================================
 
 /**
  * Convert a settings object to a JSON string.
@@ -314,9 +258,9 @@ export function settingsToJson(settings: Settings): string {
   return JSON.stringify(snakeCaseify(settings as SettingsObjectType));
 }
 
-// =============================================================================
+// =================================
 // Loading
-// =============================================================================
+// =================================
 
 /**
  * Load settings from a URL.
@@ -334,9 +278,9 @@ export async function loadSettingsFromUrl(url: string): Promise<string> {
   return await res.text();
 }
 
-// =============================================================================
+// =================================
 // Trust-anchor resolution
-// =============================================================================
+// =================================
 
 const TRUST_SETTINGS_KEY_MAP: Record<keyof TrustSettings, true> = {
   userAnchors: true,
