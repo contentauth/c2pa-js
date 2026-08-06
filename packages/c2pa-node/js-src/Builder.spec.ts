@@ -1401,6 +1401,49 @@ describe("Builder", () => {
       }
     });
 
+    it("updateActions preserves the created flag", () => {
+      const builder = Builder.withJson({
+        claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
+        title: "Test_CreatedFlag",
+        format: "image/jpeg",
+        ingredients: [],
+        assertions: [
+          {
+            label: "c2pa.actions.v2",
+            created: true,
+            data: {
+              actions: [
+                {
+                  action: "c2pa.created",
+                  digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
+                },
+              ],
+            },
+          },
+          {
+            label: "c2pa.actions.v2",
+            data: { actions: [{ action: "c2pa.color_adjustments" }] },
+          },
+        ],
+        resources: { resources: {} },
+      });
+
+      builder.updateActions((actions) => actions);
+
+      const definition = builder.getManifestDefinition();
+      const actionsAssertions = definition.assertions!.filter((a) =>
+        a.label.startsWith("c2pa.actions"),
+      );
+      // The created-list assertion keeps its flag and its leading position; a
+      // rebuild via add_assertion would reset the flag and move it to the end.
+      expect(actionsAssertions).toHaveLength(2);
+      expect(actionsAssertions[0]!.created).toBe(true);
+      expect(actionsAssertions[1]!.created).toBeFalsy();
+      expect(
+        (actionsAssertions[0]!.data as any).actions.map((a: any) => a.action),
+      ).toEqual(["c2pa.created"]);
+    });
+
     it("updateActions preserves action order when transform patches in place", () => {
       const builder = Builder.withJson(actionsManifest());
 

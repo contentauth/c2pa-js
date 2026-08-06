@@ -8,8 +8,8 @@
 use std::io::Cursor;
 
 use c2pa::{
-    assertions::{Action, Actions, C2paReason},
     Builder, BuilderIntent, Context, Ingredient,
+    assertions::{Action, Actions, C2paReason},
 };
 use js_sys::{JsString, Uint8Array};
 use serde::{Deserialize, Serialize};
@@ -107,9 +107,7 @@ impl WasmBuilder {
                 .with_archive(stream)
                 .map_err(WasmError::from)?
         } else {
-            Builder::default()
-                .with_archive(stream)
-                .map_err(WasmError::from)?
+            Builder::default().with_archive(stream).map_err(WasmError::from)?
         };
 
         // The ARCHIVE_METADATA assertion is merely working-store bookkeeping used to
@@ -255,8 +253,7 @@ impl WasmBuilder {
         self.builder
             .filter_actions_and_ingredients(
                 |_action| {
-                    let keep =
-                        u32::try_from(action_i).is_ok_and(|idx| action_indices.contains(&idx));
+                    let keep = u32::try_from(action_i).is_ok_and(|idx| action_indices.contains(&idx));
                     action_i += 1;
                     keep
                 },
