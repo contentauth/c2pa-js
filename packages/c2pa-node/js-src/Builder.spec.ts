@@ -1444,6 +1444,49 @@ describe("Builder", () => {
       ).toEqual(["c2pa.created"]);
     });
 
+    it("updateActions produces a signable manifest", async () => {
+      const builder = Builder.withJson({
+        claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
+        title: "Test_UpdateActionsSign",
+        format: "image/jpeg",
+        instance_id: "update-actions-sign",
+        ingredients: [],
+        assertions: [
+          {
+            label: "c2pa.actions.v2",
+            created: true,
+            data: {
+              actions: [
+                {
+                  action: "c2pa.created",
+                  digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
+                },
+              ],
+            },
+          },
+          {
+            label: "c2pa.actions.v2",
+            data: { actions: [{ action: "c2pa.color_adjustments" }] },
+          },
+        ],
+        resources: { resources: {} },
+      });
+
+      builder.updateActions((actions) => actions);
+
+      const dest = { path: path.join(tempDir, "update-actions-signed.jpg") };
+      const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
+      const bytes = builder.sign(signer, source, dest);
+      expect(bytes.length).toBeGreaterThan(0);
+
+      const reader = await Reader.fromAsset(dest);
+      expect(reader).not.toBeNull();
+      const manifestStore = reader!.json();
+      const codes = (manifestStore.validation_status ?? []).map((s) => s.code);
+      expect(codes).not.toContain("assertion.action.malformed");
+      expect(codes).not.toContain("assertion.action.ingredientMismatch");
+    });
+
     it("updateActions preserves action order when transform patches in place", () => {
       const builder = Builder.withJson(actionsManifest());
 
