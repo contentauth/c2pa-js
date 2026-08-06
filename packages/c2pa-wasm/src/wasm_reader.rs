@@ -49,19 +49,16 @@ impl WasmReader {
         stream: impl Read + Seek + Send,
         context_json: Option<String>,
     ) -> Result<WasmReader, JsString> {
-        let reader = if let Some(json) = context_json {
-            let context = Context::new()
+        let context = match context_json {
+            Some(json) => Context::new()
                 .with_settings(json.as_str())
-                .map_err(WasmError::from)?;
-            Reader::from_context(context)
-                .with_stream_async(format, stream)
-                .await
-                .map_err(WasmError::from)?
-        } else {
-            Reader::from_stream_async(format, stream)
-                .await
-                .map_err(WasmError::from)?
+                .map_err(WasmError::from)?,
+            None => Context::new(),
         };
+        let reader = Reader::from_context(context)
+            .with_stream_async(format, stream)
+            .await
+            .map_err(WasmError::from)?;
 
         Ok(WasmReader::from_reader(reader).await)
     }
@@ -87,19 +84,16 @@ impl WasmReader {
         fragment: impl Read + Seek + Send,
         context_json: Option<String>,
     ) -> Result<WasmReader, JsString> {
-        let reader = if let Some(json) = context_json {
-            let context = Context::new()
+        let context = match context_json {
+            Some(json) => Context::new()
                 .with_settings(json.as_str())
-                .map_err(WasmError::from)?;
-            Reader::from_context(context)
-                .with_fragment_async(format, init, fragment)
-                .await
-                .map_err(WasmError::from)?
-        } else {
-            Reader::from_fragment_async(format, init, fragment)
-                .await
-                .map_err(WasmError::from)?
+                .map_err(WasmError::from)?,
+            None => Context::new(),
         };
+        let reader = Reader::from_context(context)
+            .with_fragment_async(format, init, fragment)
+            .await
+            .map_err(WasmError::from)?;
 
         Ok(WasmReader::from_reader(reader).await)
     }

@@ -9,7 +9,7 @@ use std::io::Cursor;
 
 use c2pa::{
     Builder, BuilderIntent, Context, Ingredient,
-    assertions::{Action, C2paReason},
+    assertions::{Action, Actions, C2paReason},
 };
 use js_sys::{JsString, Uint8Array};
 use serde::{Deserialize, Serialize};
@@ -53,14 +53,13 @@ impl WasmBuilder {
     /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = new)]
     pub fn new(context_json: Option<String>) -> Result<WasmBuilder, JsString> {
-        let builder = if let Some(json) = context_json {
-            let context = Context::new()
+        let context = match context_json {
+            Some(json) => Context::new()
                 .with_settings(json.as_str())
-                .map_err(WasmError::from)?;
-            Builder::from_context(context)
-        } else {
-            Builder::new()
+                .map_err(WasmError::from)?,
+            None => Context::new(),
         };
+        let builder = Builder::from_context(context);
 
         Ok(WasmBuilder::from_builder(builder))
     }
@@ -79,20 +78,15 @@ impl WasmBuilder {
     /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = fromJson)]
     pub fn from_json(json: &str, context_json: Option<String>) -> Result<WasmBuilder, JsString> {
-        let builder = if let Some(ctx_json) = context_json {
-            let context = Context::new()
+        let context = match context_json {
+            Some(ctx_json) => Context::new()
                 .with_settings(ctx_json.as_str())
-                .map_err(WasmError::from)?;
-            let mut builder = Builder::from_context(context);
-            // Parse the manifest definition and set it directly
-            let definition = Builder::from_json(json)
-                .map_err(WasmError::from)?
-                .definition;
-            builder.definition = definition;
-            builder
-        } else {
-            Builder::from_json(json).map_err(WasmError::from)?
+                .map_err(WasmError::from)?,
+            None => Context::new(),
         };
+        let builder = Builder::from_context(context)
+            .with_definition(json)
+            .map_err(WasmError::from)?;
 
         Ok(WasmBuilder::from_builder(builder))
     }
@@ -231,6 +225,129 @@ impl WasmBuilder {
                 rescue
             })
             .map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
+    /// Retains actions and ingredients together in one step, per
+    /// `Builder::filter_actions_and_ingredients`. `action_indices`/`ingredient_indices` are
+    /// 0-based indices into [`Self::get_definition`]'s `c2pa.actions` assertion / `ingredients`
+    /// array, resolved on the JS side for the same reason as [`Self::filter_actions_at`].
+    ///
+    /// `rescue_ingredient` (driven by `ingredient_indices`) is evaluated for every ingredient
+    /// first; any action referencing an ingredient it would rescue is force-kept regardless of
+    /// `keep_action`.
+    #[wasm_bindgen(js_name = filterActionsAndIngredientsAt)]
+    pub fn filter_actions_and_ingredients_at(
+        &mut self,
+        action_indices: Vec<u32>,
+        ingredient_indices: Vec<u32>,
+    ) -> Result<(), JsString> {
+        let action_indices: std::collections::HashSet<u32> = action_indices.into_iter().collect();
+        let ingredient_indices: std::collections::HashSet<u32> =
+            ingredient_indices.into_iter().collect();
+        // See `filter_actions_at`: `usize` cannot overflow for an in-memory action/ingredient
+        // count.
+        let mut action_i: usize = 0;
+        let mut ingredient_i: usize = 0;
+        self.builder
+            .filter_actions_and_ingredients(
+                |_action| {
+                    let keep = u32::try_from(action_i).is_ok_and(|idx| action_indices.contains(&idx));
+                    action_i += 1;
+                    keep
+                },
+                |_ingredient| {
+                    let rescue = u32::try_from(ingredient_i)
+                        .is_ok_and(|idx| ingredient_indices.contains(&idx));
+                    ingredient_i += 1;
+                    rescue
+                },
+            )
+            .map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
+    /// Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions with
+    /// `action_groups`, computed on the JS side (see [`Self::filter_actions_at`]).
+    /// `softwareAgents`/`allActionsIncluded`/`templates`/`metadata` are preserved as-is.
+    ///
+    /// A manifest can carry more than one actions assertion (the created-list and gathered-list
+    /// entries are distinct assertions), so `action_groups` is a list-of-lists: one entry per
+    /// actions assertion, in the same positional order this binding enumerates them.
+    ///
+    /// Each assertion is rewritten in place, which keeps its label, `created` flag, `kind`, and
+    /// position in the assertion list — mirroring `Builder::filter_actions` in c2pa-rs. A group
+    /// that is empty drops its assertion rather than writing an invalid empty actions array.
+    /// No-op if there is no actions assertion. Use `add_action` for those.
+    ///
+    /// All fallible work runs before any mutation, so a failure never leaves a partially-rewritten
+    /// builder. An existing but malformed actions assertion is surfaced as an error rather than
+    /// silently replaced.
+    ///
+    /// The groups are written back verbatim: they are not validated or reordered, and unlike
+    /// [`Self::filter_actions_at`] the inception action is not force-kept. A caller that drops
+    /// `c2pa.created`/`c2pa.opened` or moves it out of first position can produce an actions
+    /// array that fails validation at signing time.
+    #[wasm_bindgen(js_name = updateActionsAt)]
+    pub fn update_actions_at(&mut self, action_groups: JsValue) -> Result<(), JsString> {
+        let action_groups: Vec<Vec<Action>> =
+            serde_wasm_bindgen::from_value(action_groups).map_err(WasmError::from)?;
+
+        // Every actions assertion, in positional order.
+        let positions: Vec<usize> = self
+            .builder
+            .definition
+            .assertions
+            .iter()
+            .enumerate()
+            .filter(|(_, a)| a.label.starts_with(Actions::LABEL))
+            .map(|(i, _)| i)
+            .collect();
+
+        if action_groups.len() != positions.len() {
+            return Err(JsString::from(format!(
+                "updateActionsAt: expected {} action group(s) to match the actions assertions in \
+                 this manifest, got {}",
+                positions.len(),
+                action_groups.len()
+            )));
+        }
+
+        // Decode and re-encode everything before mutating...
+        let mut rewritten: Vec<(usize, Option<serde_json::Value>)> =
+            Vec::with_capacity(positions.len());
+        for (pos, group) in positions.into_iter().zip(action_groups) {
+            let value =
+                serde_json::to_value(&self.builder.definition.assertions[pos].data)
+                    .map_err(WasmError::other)?;
+            let mut actions: Actions = serde_json::from_value(value).map_err(WasmError::other)?;
+
+            if group.is_empty() {
+                rewritten.push((pos, None));
+                continue;
+            }
+            actions.actions = group;
+            let encoded = serde_json::to_value(&actions).map_err(WasmError::other)?;
+            rewritten.push((pos, Some(encoded)));
+        }
+
+        // Mutate in place.
+        let mut emptied: Vec<usize> = Vec::new();
+        for (pos, value) in rewritten {
+            match value {
+                Some(value) => {
+                    let data = serde_json::from_value(value).map_err(WasmError::other)?;
+                    self.builder.definition.assertions[pos].data = data;
+                }
+                None => emptied.push(pos),
+            }
+        }
+        // Remove emptied assertions from the back so earlier indices stay valid.
+        for pos in emptied.into_iter().rev() {
+            self.builder.definition.assertions.remove(pos);
+        }
 
         Ok(())
     }

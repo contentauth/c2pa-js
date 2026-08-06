@@ -84,10 +84,8 @@ describe("IdentityAssertionBuilder", () => {
           actions: [
             {
               action: "c2pa.created",
-              parameters: {
-                digitalSourceType:
-                  "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
-              },
+              digitalSourceType:
+                "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
             },
           ],
         } as any,

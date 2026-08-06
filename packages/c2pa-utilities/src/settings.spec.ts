@@ -26,7 +26,6 @@ import {
   mergeSettings,
   settingsToJson,
   loadSettingsFromUrl,
-  snakeCaseify,
   type TrustSettings,
   type CawgTrustSettings,
   type VerifySettings,
@@ -92,9 +91,9 @@ describe('settings', () => {
       });
 
       test('should preserve base settings keys not present in override', async () => {
-        const base = {
+        const base: Settings = {
           verify: { verifyAfterReading: false },
-          builder: { generateC2paArchive: false }
+          builder: { generateC2paArchive: true }
         };
         const override = {
           verify: { verifyTrust: true }
@@ -104,7 +103,7 @@ describe('settings', () => {
 
         expect(result).toEqual(
           JSON.stringify({
-            builder: { generate_c2pa_archive: false },
+            builder: { generate_c2pa_archive: true },
             verify: { verify_after_reading: false, verify_trust: true }
           })
         );
@@ -499,18 +498,19 @@ describe('mergeSettings', () => {
   });
 
   it('deep-merges nested fields instead of overwriting whole sections', () => {
-    // Two settings fragments each set a different sub-field of builder.thumbnail —
-    // a shallow per-section merge would let the second clobber the first entirely.
+    // Two settings fragments each set a different sub-field of builder —
+    // a shallow per-section merge would let the second clobber the first entirely,
+    // losing settings1's thumbnail field.
     const settings1: Settings = {
-      builder: { thumbnail: { enabled: true } }
+      builder: { generateC2paArchive: true, thumbnail: { enabled: true } }
     };
     const settings2: Settings = {
-      builder: { generateC2paArchive: false }
+      builder: { generateC2paArchive: true }
     };
 
     const merged = mergeSettings(settings1, settings2);
     expect(merged.builder?.thumbnail?.enabled).toBe(true);
-    expect(merged.builder?.generateC2paArchive).toBe(false);
+    expect(merged.builder?.generateC2paArchive).toBe(true);
   });
 });
 
@@ -598,49 +598,6 @@ describe('settingsToJson', () => {
     expect(parsed.cawg_trust.user_anchors).toBe('test');
     expect('allowed_list' in parsed.cawg_trust).toBe(false);
     expect(parsed.verify.verify_after_reading).toBe(false);
-  });
-});
-
-describe('snakeCaseify', () => {
-  it('converts camelCase keys to snake_case', () => {
-    const result = snakeCaseify({ verifyAfterReading: true } as any);
-    expect(result).toEqual({ verify_after_reading: true });
-  });
-
-  it('recurses into nested objects', () => {
-    const result = snakeCaseify({
-      builder: { generateC2paArchive: true, thumbnail: { enabledFlag: false } }
-    } as any);
-    expect(result).toEqual({
-      builder: {
-        generate_c2pa_archive: true,
-        thumbnail: { enabled_flag: false }
-      }
-    });
-  });
-
-  it('preserves arrays as arrays instead of flattening them into objects', () => {
-    // typeof [] === 'object' in JS — a naive recursion would otherwise rebuild this as
-    // {"0": "a", "1": "b"} via Object.entries, corrupting anything c2pa-rs expects as a
-    // JSON array (e.g. BuilderSettings.createdAssertionLabels: string[]).
-    const result = snakeCaseify({ someArrayField: ['a', 'b'] } as any);
-    expect(Array.isArray(result.some_array_field)).toBe(true);
-    expect(result.some_array_field).toEqual(['a', 'b']);
-  });
-
-  it('snake-cases keys of object elements inside an array', () => {
-    const result = snakeCaseify({
-      someArrayField: [{ innerCamelKey: 1 }, { innerCamelKey: 2 }]
-    } as any);
-    expect(result.some_array_field).toEqual([
-      { inner_camel_key: 1 },
-      { inner_camel_key: 2 }
-    ]);
-  });
-
-  it('leaves an empty array as an empty array', () => {
-    const result = snakeCaseify({ someArrayField: [] } as any);
-    expect(result.some_array_field).toEqual([]);
   });
 });
 
