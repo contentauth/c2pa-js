@@ -27,9 +27,9 @@ export type SettingsObjectType = {
 
 /**
  * Recursively converts an object's camelCase keys to snake_case, matching the format
- * `c2pa-rs` expects for settings JSON/TOML. Arrays are preserved as arrays — only their
- * object elements (if any) get their keys snake-cased — since `typeof [] === 'object'` in
- * JS and a naive `Object.entries`-based recursion would otherwise flatten an array into a
+ * the core native library expects for settings JSON. Arrays are preserved as arrays;
+ * only their object elements (if any) get their keys snake-cased, since `typeof [] === 'object'`
+ * in JS and a naive `Object.entries`-based recursion would otherwise flatten an array into a
  * `{"0": ..., "1": ...}` object instead of a JSON array.
  */
 export function snakeCaseify(object: SettingsObjectType): SettingsObjectType {
