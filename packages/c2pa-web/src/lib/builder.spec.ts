@@ -884,6 +884,158 @@ describe('builder', () => {
         expect(second.map((a) => a.action)).toEqual(['c2pa.edited']);
       });
 
+      test('adds a new parameter alongside the existing ones', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.fromDefinition({
+          claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
+          format: 'image/jpeg',
+          instance_id: 'update-actions-added',
+          ingredients: [],
+          assertions: [
+            {
+              label: 'c2pa.actions',
+              data: {
+                actions: [
+                  {
+                    action: 'c2pa.created',
+                    digitalSourceType:
+                      'http://c2pa.org/digitalsourcetype/empty'
+                  }
+                ]
+              }
+            },
+            {
+              label: 'c2pa.actions.v2',
+              data: {
+                actions: [
+                  {
+                    action: 'c2pa.edited',
+                    parameters: { existingValue: 'kept' }
+                  }
+                ]
+              }
+            }
+          ]
+        } as unknown as ManifestDefinition);
+
+        await builder.updateActions((actions) =>
+          actions.map((action) =>
+            action.action === 'c2pa.edited'
+              ? {
+                  ...action,
+                  parameters: {
+                    ...action.parameters,
+                    addedValue: 'added-value'
+                  }
+                }
+              : action
+          )
+        );
+
+        const definition = await builder.getDefinition();
+        const actionsAssertions = (definition.assertions ?? []).filter((a) =>
+          a.label.startsWith('c2pa.actions')
+        );
+        expect(actionsAssertions.map((a) => a.label)).toEqual([
+          'c2pa.actions',
+          'c2pa.actions.v2'
+        ]);
+
+        // The added key lands in the second assertion, next to the seeded one.
+        const edited = (actionsAssertions[1].data as { actions: Action[] })
+          .actions[0];
+        const parameters = edited.parameters as {
+          existingValue?: string;
+          addedValue?: string;
+        };
+        expect(parameters.addedValue).toBe('added-value');
+        expect(parameters.existingValue).toBe('kept');
+
+        // The first assertion is untouched.
+        const created = (actionsAssertions[0].data as { actions: Action[] })
+          .actions[0];
+        expect(created.action).toBe('c2pa.created');
+        expect(
+          (created.parameters as { addedValue?: string } | undefined)
+            ?.addedValue
+        ).toBeUndefined();
+      });
+
+      test('is no-op when there is no actions assertion', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.fromDefinition({
+          claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
+          format: 'image/jpeg',
+          instance_id: 'update-actions-none',
+          ingredients: [],
+          assertions: []
+        } as unknown as ManifestDefinition);
+
+        let calls = 0;
+        await builder.updateActions((actions) => {
+          calls += 1;
+          return [...actions, { action: 'c2pa.created' } as Action];
+        });
+
+        expect(calls).toBe(0);
+        const definition = await builder.getDefinition();
+        expect(
+          (definition.assertions ?? []).filter((a) =>
+            a.label.startsWith('c2pa.actions')
+          )
+        ).toHaveLength(0);
+      });
+
+      test('drops an assertion whose transform returns an empty list', async ({
+        c2pa
+      }) => {
+        // (this means there could be no actions, so in non-test code, something after such a call
+        // should make sure the manifest is still valid and inception actions are here as needed!)
+        const builder = await c2pa.builder.fromDefinition({
+          claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
+          format: 'image/jpeg',
+          instance_id: 'update-actions-empty',
+          ingredients: [],
+          assertions: [
+            {
+              label: 'c2pa.actions',
+              data: {
+                actions: [
+                  {
+                    action: 'c2pa.created',
+                    digitalSourceType:
+                      'http://c2pa.org/digitalsourcetype/empty'
+                  }
+                ]
+              }
+            },
+            {
+              label: 'c2pa.actions.v2',
+              data: { actions: [{ action: 'c2pa.edited' }] }
+            }
+          ]
+        } as unknown as ManifestDefinition);
+
+        // Empty out the gathered assertion only.
+        await builder.updateActions((actions) =>
+          actions.some((a) => a.action === 'c2pa.edited') ? [] : actions
+        );
+
+        const definition = await builder.getDefinition();
+        const actionsAssertions = (definition.assertions ?? []).filter((a) =>
+          a.label.startsWith('c2pa.actions')
+        );
+        expect(actionsAssertions).toHaveLength(1);
+        expect(actionsAssertions[0].label).toBe('c2pa.actions');
+        expect(
+          (actionsAssertions[0].data as { actions: Action[] }).actions.map(
+            (a) => a.action
+          )
+        ).toEqual(['c2pa.created']);
+      });
+
       test('preserves per-assertion metadata across a round trip', async ({
         c2pa
       }) => {

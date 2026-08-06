@@ -1305,6 +1305,8 @@ describe("Builder", () => {
     });
 
     it("updateActions drops an assertion whose transform returns an empty list", () => {
+      // (this means there could be no actions, so in non-test code, something after such a call
+      // should make sure the manifest is still valid and inception actions are here as needed!)
       const builder = Builder.withJson({
         claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
         title: "Test_TwoAssertions",
