@@ -162,12 +162,22 @@ export interface Builder {
   ) => Promise<void>;
 
   /**
-   * Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertion.
+   * Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions.
    *
-   * `transform` receives the current actions (same enumeration as {@link Builder.filterActions})
-   * and returns the replacement list. Other properties are preserved as-is.
+   * A manifest can carry more than one actions assertion (the created-list and
+   * gathered-list entries are distinct assertions). `transform` is therefore
+   * invoked once per actions assertion, in positional order, with that
+   * assertion's own actions.
    *
-   * @param transform Receives the current actions and returns the full replacement list.
+   * A transform that returns an empty list for an assertion drops that assertion rather than
+   * writing an invalid empty actions array. Other properties are preserved as-is.
+   *
+   * The returned list is written back as is.
+   * `transform` can therefore produce an actions array that fails
+   * validation at signing time, for example by removing the inception action
+   * (`c2pa.created`/`c2pa.opened`) or moving it out of first position.
+   *
+   * @param transform Receives one assertion's actions and returns its full replacement list.
    */
   updateActions: (transform: (actions: Action[]) => Action[]) => Promise<void>;
 
@@ -257,9 +267,25 @@ export interface Builder {
  * spec pins this against real filtering.
  */
 function getActionsFromDefinition(definition: ManifestDefinition): Action[] {
+  return getActionGroupsFromDefinition(definition).flat();
+}
+
+/**
+ * The same enumeration as {@link getActionsFromDefinition}, but kept grouped per actions
+ * assertion instead of flattened.
+ *
+ * `updateActions` needs the grouping: a manifest can carry more than one actions assertion
+ * (the created-list and gathered-list entries are distinct assertions), and each must be
+ * rewritten in place under its own label so its `created` flag, `kind`, and position survive.
+ * Flattening would make it impossible to split the result back across assertions once the
+ * caller adds or removes actions.
+ */
+function getActionGroupsFromDefinition(
+  definition: ManifestDefinition
+): Action[][] {
   return (definition.assertions ?? [])
     .filter((a: AssertionDefinition) => a.label.startsWith('c2pa.actions'))
-    .flatMap((a: AssertionDefinition) => {
+    .map((a: AssertionDefinition) => {
       const data = a.data as { actions?: Action[] } | undefined;
       return data?.actions ?? [];
     });
@@ -419,8 +445,10 @@ function createBuilder(
 
     async updateActions(transform: (actions: Action[]) => Action[]) {
       const definition: ManifestDefinition = await tx.builder_getDefinition(id);
-      const actions = getActionsFromDefinition(definition);
-      const updated = transform(actions);
+      // One group per actions assertion: `transform` runs once per assertion so each is
+      // rewritten in place under its own label, matching the node binding.
+      const groups = getActionGroupsFromDefinition(definition);
+      const updated = groups.map((actions) => transform(actions));
       await tx.builder_updateActionsAt(id, updated);
     },
 

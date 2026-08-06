@@ -1218,7 +1218,7 @@ describe("Builder", () => {
           action.action === "c2pa.created"
             ? {
                 ...action,
-                parameters: { ...action.parameters, genAiId: "fixed-id" },
+                parameters: { ...action.parameters, patchMe: "patch-test" },
               }
             : action,
         ),
@@ -1229,14 +1229,15 @@ describe("Builder", () => {
         a.label.startsWith("c2pa.actions"),
       );
       expect(actionsAssertions).toHaveLength(1);
-      expect(actionsAssertions[0]!.label).toBe("c2pa.actions.v2");
+      // Keep original actions label (no upgrade)
+      expect(actionsAssertions[0]!.label).toBe("c2pa.actions");
       const patched = (actionsAssertions[0]!.data as any).actions;
       expect(patched.map((a: any) => a.action)).toEqual([
         "c2pa.created",
         "c2pa.edited",
         "c2pa.color_adjustments",
       ]);
-      expect(patched[0].parameters.genAiId).toBe("fixed-id");
+      expect(patched[0].parameters.patchMe).toBe("patch-test");
     });
 
     it("updateActions preserves action order when transform patches in place", () => {

@@ -400,12 +400,23 @@ export interface BuilderInterface {
   ): void;
 
   /**
-   * Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertion.
+   * Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions.
    *
-   * `transform` receives the current actions and returns the replacement list.
-   * other properties are preserved as-is.
+   * A manifest can carry more than one actions assertion (the created-list and
+   * gathered-list entries are distinct assertions). `transform` is therefore
+   * invoked once per actions assertion, in positional order, with that
+   * assertion's own actions.
    *
-   * @param transform Receives the current actions and returns the full replacement list.
+   * A transform that returns an empty list for an assertion drops that
+   * assertion rather than writing an invalid empty actions array. Other
+   * properties are preserved as-is.
+   *
+   * The returned list is written back as is.
+   * `transform` can therefore produce an actions array that fails
+   * validation at signing time, for example by removing the inception action
+   * (`c2pa.created`/`c2pa.opened`) or moving it out of first position.
+   *
+   * @param transform Receives one assertion's actions and returns its full replacement list.
    */
   updateActions(transform: (actions: Action[]) => Action[]): void;
 

@@ -815,7 +815,7 @@ describe('builder', () => {
     });
 
     describe('updateActions', () => {
-      test('patches a parameter on an existing action and consolidates into one assertion', async ({
+      test('patches a parameter on an existing action, preserving every actions assertion', async ({
         c2pa
       }) => {
         const builder = await c2pa.builder.fromDefinition({
@@ -845,36 +845,91 @@ describe('builder', () => {
           ]
         } as unknown as ManifestDefinition);
 
-        await builder.updateActions((actions) =>
-          actions.map((action) =>
+        const seen: string[][] = [];
+        await builder.updateActions((actions) => {
+          // The transform runs once per actions assertion.
+          seen.push(actions.map((a) => a.action as string));
+          return actions.map((action) =>
             action.action === 'c2pa.created'
               ? {
                   ...action,
-                  parameters: { ...action.parameters, genAiId: 'fixed-id' }
+                  parameters: { ...action.parameters, patchMe: 'patch-test' }
                 }
               : action
-          )
-        );
+          );
+        });
+        expect(seen).toEqual([['c2pa.created'], ['c2pa.edited']]);
 
         const definition = await builder.getDefinition();
         const actionsAssertions = (definition.assertions ?? []).filter((a) =>
           a.label.startsWith('c2pa.actions')
         );
-        // The two source assertions collapse into a single consolidated one.
+        // Both source assertions survive, each rewritten in place, under their original labels.
+        expect(actionsAssertions).toHaveLength(2);
+        expect(actionsAssertions.map((a) => a.label)).toEqual([
+          'c2pa.actions',
+          'c2pa.actions.v2'
+        ]);
+
+        const first = (actionsAssertions[0].data as { actions: Action[] })
+          .actions;
+        expect(first.map((a) => a.action)).toEqual(['c2pa.created']);
+        expect(
+          (first[0].parameters as { patchMe?: string } | undefined)?.patchMe
+        ).toBe('patch-test');
+
+        // The second assertion is untouched.
+        const second = (actionsAssertions[1].data as { actions: Action[] })
+          .actions;
+        expect(second.map((a) => a.action)).toEqual(['c2pa.edited']);
+      });
+
+      test('preserves per-assertion metadata across a round trip', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.fromDefinition({
+          claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
+          format: 'image/jpeg',
+          instance_id: 'update-actions-metadata',
+          ingredients: [],
+          assertions: [
+            {
+              label: 'c2pa.actions.v2',
+              data: {
+                actions: [
+                  {
+                    action: 'c2pa.created',
+                    digitalSourceType:
+                      'http://c2pa.org/digitalsourcetype/empty'
+                  }
+                ],
+                allActionsIncluded: false,
+                softwareAgents: [{ name: 'test-agent', version: '9.9.9' }]
+              }
+            }
+          ]
+        } as unknown as ManifestDefinition);
+
+        // Identity transform: nothing about the assertion should change.
+        await builder.updateActions((actions) => actions);
+
+        const definition = await builder.getDefinition();
+        const actionsAssertions = (definition.assertions ?? []).filter((a) =>
+          a.label.startsWith('c2pa.actions')
+        );
         expect(actionsAssertions).toHaveLength(1);
         expect(actionsAssertions[0].label).toBe('c2pa.actions.v2');
 
-        const patched = (
-          actionsAssertions[0].data as { actions: Action[] }
-        ).actions;
-        expect(patched.map((a) => a.action)).toEqual([
-          'c2pa.created',
-          'c2pa.edited'
+        const data = actionsAssertions[0].data as {
+          actions: Action[];
+          allActionsIncluded?: boolean;
+          softwareAgents?: { name: string; version: string }[];
+        };
+        expect(data.actions.map((a) => a.action)).toEqual(['c2pa.created']);
+        expect(data.allActionsIncluded).toBe(false);
+        expect(data.softwareAgents).toEqual([
+          { name: 'test-agent', version: '9.9.9' }
         ]);
-        expect(
-          (patched[0].parameters as { genAiId?: string } | undefined)
-            ?.genAiId
-        ).toBe('fixed-id');
       });
 
       test('preserves action order when transform patches in place', async ({

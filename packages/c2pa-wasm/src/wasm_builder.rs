@@ -8,8 +8,8 @@
 use std::io::Cursor;
 
 use c2pa::{
-    Builder, BuilderIntent, Context, Ingredient,
     assertions::{Action, Actions, C2paReason},
+    Builder, BuilderIntent, Context, Ingredient,
 };
 use js_sys::{JsString, Uint8Array};
 use serde::{Deserialize, Serialize};
@@ -107,7 +107,9 @@ impl WasmBuilder {
                 .with_archive(stream)
                 .map_err(WasmError::from)?
         } else {
-            Builder::default().with_archive(stream).map_err(WasmError::from)?
+            Builder::default()
+                .with_archive(stream)
+                .map_err(WasmError::from)?
         };
 
         // The ARCHIVE_METADATA assertion is merely working-store bookkeeping used to
@@ -253,7 +255,8 @@ impl WasmBuilder {
         self.builder
             .filter_actions_and_ingredients(
                 |_action| {
-                    let keep = u32::try_from(action_i).is_ok_and(|idx| action_indices.contains(&idx));
+                    let keep =
+                        u32::try_from(action_i).is_ok_and(|idx| action_indices.contains(&idx));
                     action_i += 1;
                     keep
                 },
@@ -269,36 +272,94 @@ impl WasmBuilder {
         Ok(())
     }
 
-    /// Replaces the actions in `c2pa.actions`/`c2pa.actions.v2` with `actions`, computed on the
-    /// JS side (see [`Self::filter_actions_at`]). `softwareAgents`/`allActionsIncluded`/
-    /// `templates`/`metadata` are preserved as-is.
+    /// Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions with
+    /// `action_groups`, computed on the JS side (see [`Self::filter_actions_at`]).
+    /// `softwareAgents`/`allActionsIncluded`/`templates`/`metadata` are preserved as-is.
+    ///
+    /// A manifest can carry more than one actions assertion (the created-list and gathered-list
+    /// entries are distinct assertions), so `action_groups` is a list-of-lists: one entry per
+    /// actions assertion, in the same positional order this binding enumerates them.
+    ///
+    /// Each assertion is rewritten in place, which keeps its label, `created` flag, `kind`, and
+    /// position in the assertion list — mirroring `Builder::filter_actions` in c2pa-rs. A group
+    /// that is empty drops its assertion rather than writing an invalid empty actions array.
+    ///
+    /// All fallible work runs before any mutation, so a failure never leaves a partially-rewritten
+    /// builder. An existing but malformed actions assertion is surfaced as an error rather than
+    /// silently replaced.
+    ///
+    /// The groups are written back verbatim: they are not validated or reordered, and unlike
+    /// [`Self::filter_actions_at`] the inception action is not force-kept. A caller that drops
+    /// `c2pa.created`/`c2pa.opened` or moves it out of first position can produce an actions
+    /// array that fails validation at signing time.
     #[wasm_bindgen(js_name = updateActionsAt)]
-    pub fn update_actions_at(&mut self, actions: JsValue) -> Result<(), JsString> {
-        let actions: Vec<Action> =
-            serde_wasm_bindgen::from_value(actions).map_err(WasmError::from)?;
+    pub fn update_actions_at(&mut self, action_groups: JsValue) -> Result<(), JsString> {
+        let action_groups: Vec<Vec<Action>> =
+            serde_wasm_bindgen::from_value(action_groups).map_err(WasmError::from)?;
 
-        // `AssertionData`/`AssertionDefinition` aren't public in the c2pa crate, so we can't name
-        // them, but field access and generic (de)serialization still work.
-        let existing = self
+        // Every actions assertion, in positional order.
+        let positions: Vec<usize> = self
             .builder
             .definition
             .assertions
             .iter()
-            .find(|a| a.label.starts_with(Actions::LABEL))
-            .and_then(|a| serde_json::to_value(&a.data).ok())
-            .and_then(|v| serde_json::from_value::<Actions>(v).ok());
+            .enumerate()
+            .filter(|(_, a)| a.label.starts_with(Actions::LABEL))
+            .map(|(i, _)| i)
+            .collect();
 
-        self.builder
-            .definition
-            .assertions
-            .retain(|a| !a.label.starts_with(Actions::LABEL));
+        // No actions assertion at all: create one under the versioned label from the sole group.
+        if positions.is_empty() {
+            let mut updated = Actions::new();
+            updated.actions = action_groups.into_iter().flatten().collect();
+            self.builder
+                .add_assertion(Actions::LABEL_VERSIONED, &updated)
+                .map_err(WasmError::from)?;
+            return Ok(());
+        }
 
-        let mut updated = existing.unwrap_or_else(Actions::new);
-        updated.actions = actions;
+        if action_groups.len() != positions.len() {
+            return Err(JsString::from(format!(
+                "updateActionsAt: expected {} action group(s) to match the actions assertions in \
+                 this manifest, got {}",
+                positions.len(),
+                action_groups.len()
+            )));
+        }
 
-        self.builder
-            .add_assertion(Actions::LABEL_VERSIONED, &updated)
-            .map_err(WasmError::from)?;
+        // Decode and re-encode everything before mutating...
+        let mut rewritten: Vec<(usize, Option<serde_json::Value>)> =
+            Vec::with_capacity(positions.len());
+        for (pos, group) in positions.into_iter().zip(action_groups) {
+            let value =
+                serde_json::to_value(&self.builder.definition.assertions[pos].data)
+                    .map_err(WasmError::other)?;
+            let mut actions: Actions = serde_json::from_value(value).map_err(WasmError::other)?;
+
+            if group.is_empty() {
+                rewritten.push((pos, None));
+                continue;
+            }
+            actions.actions = group;
+            let encoded = serde_json::to_value(&actions).map_err(WasmError::other)?;
+            rewritten.push((pos, Some(encoded)));
+        }
+
+        // Mutate in place.
+        let mut emptied: Vec<usize> = Vec::new();
+        for (pos, value) in rewritten {
+            match value {
+                Some(value) => {
+                    let data = serde_json::from_value(value).map_err(WasmError::other)?;
+                    self.builder.definition.assertions[pos].data = data;
+                }
+                None => emptied.push(pos),
+            }
+        }
+        // Remove emptied assertions from the back so earlier indices stay valid.
+        for pos in emptied.into_iter().rev() {
+            self.builder.definition.assertions.remove(pos);
+        }
 
         Ok(())
     }
