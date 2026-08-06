@@ -1218,7 +1218,7 @@ describe("Builder", () => {
           action.action === "c2pa.created"
             ? {
                 ...action,
-                parameters: { ...action.parameters, genAiId: "fixed-id" },
+                parameters: { ...action.parameters, patchMe: "patch-test" },
               }
             : action,
         ),
@@ -1229,14 +1229,262 @@ describe("Builder", () => {
         a.label.startsWith("c2pa.actions"),
       );
       expect(actionsAssertions).toHaveLength(1);
-      expect(actionsAssertions[0]!.label).toBe("c2pa.actions.v2");
+      // Keep original actions label (no upgrade)
+      expect(actionsAssertions[0]!.label).toBe("c2pa.actions");
       const patched = (actionsAssertions[0]!.data as any).actions;
       expect(patched.map((a: any) => a.action)).toEqual([
         "c2pa.created",
         "c2pa.edited",
         "c2pa.color_adjustments",
       ]);
-      expect(patched[0].parameters.genAiId).toBe("fixed-id");
+      expect(patched[0].parameters.patchMe).toBe("patch-test");
+    });
+
+    it("updateActions adds a new parameter alongside the existing ones", () => {
+      const manifest = actionsManifest();
+      (manifest.assertions[0]!.data as any).actions[1].parameters = {
+        existingValue: "kept",
+      };
+      const builder = Builder.withJson(manifest);
+
+      builder.updateActions((actions) =>
+        actions.map((action) =>
+          action.action === "c2pa.edited"
+            ? {
+                ...action,
+                parameters: {
+                  ...action.parameters,
+                  addedValue: "added-value",
+                },
+              }
+            : action,
+        ),
+      );
+
+      const definition = builder.getManifestDefinition();
+      const actionsAssertions = definition.assertions!.filter((a) =>
+        a.label.startsWith("c2pa.actions"),
+      );
+      expect(actionsAssertions).toHaveLength(1);
+      const updated = (actionsAssertions[0]!.data as any).actions;
+      expect(updated.map((a: any) => a.action)).toEqual([
+        "c2pa.created",
+        "c2pa.edited",
+        "c2pa.color_adjustments",
+      ]);
+      expect(updated[1].parameters.addedValue).toBe("added-value");
+      expect(updated[1].parameters.existingValue).toBe("kept");
+      // The untargeted actions gain nothing.
+      expect(updated[0].parameters?.addedValue).toBeUndefined();
+      expect(updated[2].parameters?.addedValue).toBeUndefined();
+    });
+
+    it("updateActions is no-op when there is no actions assertion", () => {
+      const builder = Builder.withJson({
+        claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
+        title: "Test_NoActions",
+        format: "image/jpeg",
+        ingredients: [],
+        assertions: [],
+        resources: { resources: {} },
+      });
+
+      let calls = 0;
+      builder.updateActions((actions) => {
+        calls += 1;
+        return [...actions, { action: "c2pa.created" }];
+      });
+
+      expect(calls).toBe(0);
+      const definition = builder.getManifestDefinition();
+      expect(
+        (definition.assertions ?? []).filter((a) =>
+          a.label.startsWith("c2pa.actions"),
+        ),
+      ).toHaveLength(0);
+    });
+
+    it("updateActions drops an assertion whose transform returns an empty list", () => {
+      // (this means there could be no actions, so in non-test code, something after such a call
+      // should make sure the manifest is still valid and inception actions are here as needed!)
+      const builder = Builder.withJson({
+        claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
+        title: "Test_TwoAssertions",
+        format: "image/jpeg",
+        ingredients: [],
+        assertions: [
+          {
+            label: "c2pa.actions",
+            data: {
+              actions: [
+                {
+                  action: "c2pa.created",
+                  digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
+                },
+              ],
+            },
+          },
+          {
+            label: "c2pa.actions.v2",
+            data: { actions: [{ action: "c2pa.edited" }] },
+          },
+        ],
+        resources: { resources: {} },
+      });
+
+      // Empty out the gathered assertion only.
+      builder.updateActions((actions) =>
+        actions.some((a) => a.action === "c2pa.edited") ? [] : actions,
+      );
+
+      const definition = builder.getManifestDefinition();
+      const actionsAssertions = definition.assertions!.filter((a) =>
+        a.label.startsWith("c2pa.actions"),
+      );
+      expect(actionsAssertions).toHaveLength(1);
+      expect(actionsAssertions[0]!.label).toBe("c2pa.actions");
+      expect(
+        (actionsAssertions[0]!.data as any).actions.map((a: any) => a.action),
+      ).toEqual(["c2pa.created"]);
+    });
+
+    it("updateActions rewrites every actions assertion under its own label", () => {
+      const builder = Builder.withJson({
+        claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
+        title: "Test_MultiAssertion",
+        format: "image/jpeg",
+        ingredients: [],
+        assertions: [
+          {
+            label: "c2pa.actions",
+            data: {
+              actions: [
+                {
+                  action: "c2pa.created",
+                  digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
+                },
+              ],
+            },
+          },
+          {
+            label: "c2pa.actions.v2",
+            data: { actions: [{ action: "c2pa.edited" }] },
+          },
+        ],
+        resources: { resources: {} },
+      });
+
+      const seen: string[][] = [];
+      builder.updateActions((actions) => {
+        seen.push(actions.map((a) => a.action));
+        return actions.map((action) => ({
+          ...action,
+          parameters: { ...action.parameters, addedValue: "added-value" },
+        }));
+      });
+
+      // The transform runs once per actions assertion, in positional order.
+      expect(seen).toEqual([["c2pa.created"], ["c2pa.edited"]]);
+
+      const definition = builder.getManifestDefinition();
+      const actionsAssertions = definition.assertions!.filter((a) =>
+        a.label.startsWith("c2pa.actions"),
+      );
+      expect(actionsAssertions.map((a) => a.label)).toEqual([
+        "c2pa.actions",
+        "c2pa.actions.v2",
+      ]);
+      for (const assertion of actionsAssertions) {
+        const actions = (assertion.data as any).actions;
+        expect(actions).toHaveLength(1);
+        expect(actions[0].parameters.addedValue).toBe("added-value");
+      }
+    });
+
+    it("updateActions preserves the created flag", () => {
+      const builder = Builder.withJson({
+        claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
+        title: "Test_CreatedFlag",
+        format: "image/jpeg",
+        ingredients: [],
+        assertions: [
+          {
+            label: "c2pa.actions.v2",
+            created: true,
+            data: {
+              actions: [
+                {
+                  action: "c2pa.created",
+                  digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
+                },
+              ],
+            },
+          },
+          {
+            label: "c2pa.actions.v2",
+            data: { actions: [{ action: "c2pa.color_adjustments" }] },
+          },
+        ],
+        resources: { resources: {} },
+      });
+
+      builder.updateActions((actions) => actions);
+
+      const definition = builder.getManifestDefinition();
+      const actionsAssertions = definition.assertions!.filter((a) =>
+        a.label.startsWith("c2pa.actions"),
+      );
+      // The created-list assertion keeps its flag and its leading position; a
+      // rebuild via add_assertion would reset the flag and move it to the end.
+      expect(actionsAssertions).toHaveLength(2);
+      expect(actionsAssertions[0]!.created).toBe(true);
+      expect(actionsAssertions[1]!.created).toBeFalsy();
+      expect(
+        (actionsAssertions[0]!.data as any).actions.map((a: any) => a.action),
+      ).toEqual(["c2pa.created"]);
+    });
+
+    it("updateActions produces a signable manifest", async () => {
+      const builder = Builder.withJson({
+        claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
+        title: "Test_UpdateActionsSign",
+        format: "image/jpeg",
+        instance_id: "update-actions-sign",
+        ingredients: [],
+        assertions: [
+          {
+            label: "c2pa.actions.v2",
+            created: true,
+            data: {
+              actions: [
+                {
+                  action: "c2pa.created",
+                  digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
+                },
+              ],
+            },
+          },
+          {
+            label: "c2pa.actions.v2",
+            data: { actions: [{ action: "c2pa.color_adjustments" }] },
+          },
+        ],
+        resources: { resources: {} },
+      });
+
+      builder.updateActions((actions) => actions);
+
+      const dest = { path: path.join(tempDir, "update-actions-signed.jpg") };
+      const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
+      const bytes = builder.sign(signer, source, dest);
+      expect(bytes.length).toBeGreaterThan(0);
+
+      const reader = await Reader.fromAsset(dest);
+      expect(reader).not.toBeNull();
+      const manifestStore = reader!.json();
+      const codes = (manifestStore.validation_status ?? []).map((s) => s.code);
+      expect(codes).not.toContain("assertion.action.malformed");
+      expect(codes).not.toContain("assertion.action.ingredientMismatch");
     });
 
     it("updateActions preserves action order when transform patches in place", () => {

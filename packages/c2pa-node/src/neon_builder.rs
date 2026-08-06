@@ -676,12 +676,27 @@ impl NeonBuilder {
         Ok(cx.undefined())
     }
 
-    /// Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertion. `transform` is
-    /// called once with the current actions and its return value replaces them.
+    /// Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions.
     /// `softwareAgents`/`allActionsIncluded`/`templates`/`metadata` are preserved as-is.
     ///
+    /// A manifest can carry more than one actions assertion (the created-list and gathered-list
+    /// entries are distinct assertions). `transform` is invoked once per actions assertion,
+    /// in positional order, with that assertion's own actions. It return value
+    /// replaces only that assertion's actions.
+    /// No-op if there is no actions assertion. Use `add_action` for those.
+    ///
     /// If `transform` throws or its return value doesn't deserialize into an action list, the
-    /// exception is surfaced to the caller and the builder is left unchanged.
+    /// exception is surfaced to the caller and the builder is left unchanged. The same applies
+    /// when an existing actions assertion is present but malformed. All fallible work runs
+    /// before any mutation, so a failure never leaves a partially-rewritten builder.
+    ///
+    /// An assertion whose `transform` returns an empty list is dropped rather than written as an
+    /// invalid empty actions array, matching `filter_actions`.
+    ///
+    /// The returned list is written back verbatim: it is not validated or reordered, and unlike
+    /// [`Self::filter_actions`] the inception action is not force-kept. A `transform` that drops
+    /// `c2pa.created`/`c2pa.opened` or moves it out of first position can produce an actions
+    /// array that fails validation at signing time.
     ///
     /// # Deadlock
     /// The builder's lock is held for the whole call, so `transform` must not call back into the
@@ -691,37 +706,66 @@ impl NeonBuilder {
         let rt = runtime();
         let this = cx.this::<JsBox<Self>>()?;
         let transform = cx.argument::<JsFunction>(0)?;
-        let undefined = cx.undefined();
         let mut builder = rt.block_on(async { this.builder.lock().await });
 
-        let existing = builder
+        // Every actions assertion, in positional order.
+        let positions: Vec<usize> = builder
             .definition
             .assertions
             .iter()
-            .find(|a| a.label.starts_with(Actions::LABEL))
-            .and_then(|a| serde_json::to_value(&a.data).ok())
-            .and_then(|v| serde_json::from_value::<Actions>(v).ok());
-        let actions = existing
-            .as_ref()
-            .map(|a| a.actions.clone())
-            .unwrap_or_default();
+            .enumerate()
+            .filter(|(_, a)| a.label.starts_with(Actions::LABEL))
+            .map(|(i, _)| i)
+            .collect();
 
-        let js_actions = neon_serde4::to_value(&mut cx, &actions)
-            .or_else(|err| cx.throw_error(err.to_string()))?;
-        let result = transform.call(&mut cx, undefined, [js_actions])?;
-        let updated_actions: Vec<Action> = neon_serde4::from_value(&mut cx, result)
-            .or_else(|err| cx.throw_error(err.to_string()))?;
+        // Decode every assertion up front.
+        // The roundtrip is so we can access what we need to without the direct type access.
+        let mut decoded: Vec<(usize, Actions)> = Vec::with_capacity(positions.len());
+        for pos in positions {
+            let value = serde_json::to_value(&builder.definition.assertions[pos].data)
+                .or_else(|err| cx.throw_error(err.to_string()))?;
+            let actions: Actions =
+                serde_json::from_value(value).or_else(|err| cx.throw_error(err.to_string()))?;
+            decoded.push((pos, actions));
+        }
 
-        builder
-            .definition
-            .assertions
-            .retain(|a| !a.label.starts_with(Actions::LABEL));
+        // Run the transform for every assertion before mutating anything...
+        let mut rewritten: Vec<(usize, Option<serde_json::Value>)> =
+            Vec::with_capacity(decoded.len());
+        for (pos, mut actions) in decoded {
+            let js_actions = neon_serde4::to_value(&mut cx, &actions.actions)
+                .or_else(|err| cx.throw_error(err.to_string()))?;
+            let undefined = cx.undefined();
+            let result = transform.call(&mut cx, undefined, [js_actions])?;
+            let updated_actions: Vec<Action> = neon_serde4::from_value(&mut cx, result)
+                .or_else(|err| cx.throw_error(err.to_string()))?;
 
-        let mut updated = existing.unwrap_or_else(Actions::new);
-        updated.actions = updated_actions;
-        builder
-            .add_assertion(Actions::LABEL_VERSIONED, &updated)
-            .or_else(|err| cx.throw_error(err.to_string()))?;
+            if updated_actions.is_empty() {
+                rewritten.push((pos, None));
+                continue;
+            }
+            actions.actions = updated_actions;
+            let value =
+                serde_json::to_value(&actions).or_else(|err| cx.throw_error(err.to_string()))?;
+            rewritten.push((pos, Some(value)));
+        }
+
+        // Mutate in place.
+        let mut emptied: Vec<usize> = Vec::new();
+        for (pos, value) in rewritten {
+            match value {
+                Some(value) => {
+                    let data = serde_json::from_value(value)
+                        .or_else(|err| cx.throw_error(err.to_string()))?;
+                    builder.definition.assertions[pos].data = data;
+                }
+                None => emptied.push(pos),
+            }
+        }
+        // Remove emptied assertions from the back so earlier indices stay valid.
+        for pos in emptied.into_iter().rev() {
+            builder.definition.assertions.remove(pos);
+        }
 
         Ok(cx.undefined())
     }
