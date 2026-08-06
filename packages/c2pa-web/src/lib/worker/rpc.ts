@@ -57,7 +57,6 @@ const { createTx, rx } = channel<{
   ) => void;
   builder_addRedaction: (builderId: number, uri: string, reason: C2paReason) => void;
   builder_filterActionsAt: (builderId: number, indices: number[]) => void;
-  // One group per actions assertion, in `definition.assertions` order.
   builder_updateActionsAt: (builderId: number, actionGroups: Action[][]) => void;
   builder_filterIngredientsAt: (builderId: number, indices: number[]) => void;
   builder_filterActionsAndIngredientsAt: (

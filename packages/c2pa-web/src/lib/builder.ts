@@ -169,9 +169,6 @@ export interface Builder {
    * invoked once per actions assertion, in positional order, with that
    * assertion's own actions.
    *
-   * A transform that returns an empty list for an assertion drops that assertion rather than
-   * writing an invalid empty actions array. Other properties are preserved as-is.
-   *
    * The returned list is written back as is.
    * `transform` can therefore produce an actions array that fails
    * validation at signing time, for example by removing the inception action
@@ -271,14 +268,8 @@ function getActionsFromDefinition(definition: ManifestDefinition): Action[] {
 }
 
 /**
- * The same enumeration as {@link getActionsFromDefinition}, but kept grouped per actions
- * assertion instead of flattened.
- *
- * `updateActions` needs the grouping: a manifest can carry more than one actions assertion
- * (the created-list and gathered-list entries are distinct assertions), and each must be
- * rewritten in place under its own label so its `created` flag, `kind`, and position survive.
- * Flattening would make it impossible to split the result back across assertions once the
- * caller adds or removes actions.
+ * The same enumeration as {@link getActionsFromDefinition}, but kept grouped per
+ * action assertion instead of flattened.
  */
 function getActionGroupsFromDefinition(
   definition: ManifestDefinition
@@ -445,8 +436,8 @@ function createBuilder(
 
     async updateActions(transform: (actions: Action[]) => Action[]) {
       const definition: ManifestDefinition = await tx.builder_getDefinition(id);
-      // One group per actions assertion: `transform` runs once per assertion so each is
-      // rewritten in place under its own label, matching the node binding.
+      // One group per actions assertion: `transform` runs once per assertion
+      // Each is rewritten in place under its own label.
       const groups = getActionGroupsFromDefinition(definition);
       const updated = groups.map((actions) => transform(actions));
       await tx.builder_updateActionsAt(id, updated);

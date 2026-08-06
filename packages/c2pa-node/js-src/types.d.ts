@@ -407,10 +407,6 @@ export interface BuilderInterface {
    * invoked once per actions assertion, in positional order, with that
    * assertion's own actions.
    *
-   * A transform that returns an empty list for an assertion drops that
-   * assertion rather than writing an invalid empty actions array. Other
-   * properties are preserved as-is.
-   *
    * The returned list is written back as is.
    * `transform` can therefore produce an actions array that fails
    * validation at signing time, for example by removing the inception action
