@@ -8,7 +8,7 @@
  */
 
 import { test, describe, expect } from 'test/methods.js';
-import { ManifestDefinition, Ingredient } from '@contentauth/c2pa-types';
+import { ManifestDefinition, Ingredient, Action } from '@contentauth/c2pa-types';
 import { getBlobForAsset, createTestSigner } from 'test/utils.js';
 import { Settings } from './settings.js';
 import { createC2pa } from './c2pa.js';
@@ -811,6 +811,371 @@ describe('builder', () => {
             throw new Error('boom from predicate');
           })
         ).rejects.toThrow('boom from predicate');
+      });
+    });
+
+    describe('updateActions', () => {
+      test('patches a parameter on an existing action, preserving every actions assertion', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.fromDefinition({
+          claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
+          format: 'image/jpeg',
+          instance_id: 'update-actions-1',
+          ingredients: [],
+          assertions: [
+            {
+              label: 'c2pa.actions',
+              data: {
+                actions: [
+                  {
+                    action: 'c2pa.created',
+                    digitalSourceType:
+                      'http://c2pa.org/digitalsourcetype/empty'
+                  }
+                ]
+              }
+            },
+            {
+              label: 'c2pa.actions.v2',
+              data: {
+                actions: [{ action: 'c2pa.edited' }]
+              }
+            }
+          ]
+        } as unknown as ManifestDefinition);
+
+        const seen: string[][] = [];
+        await builder.updateActions((actions) => {
+          // The transform runs once per actions assertion.
+          seen.push(actions.map((a) => a.action as string));
+          return actions.map((action) =>
+            action.action === 'c2pa.created'
+              ? {
+                  ...action,
+                  parameters: { ...action.parameters, patchMe: 'patch-test' }
+                }
+              : action
+          );
+        });
+        expect(seen).toEqual([['c2pa.created'], ['c2pa.edited']]);
+
+        const definition = await builder.getDefinition();
+        const actionsAssertions = (definition.assertions ?? []).filter((a) =>
+          a.label.startsWith('c2pa.actions')
+        );
+        // Both source assertions survive, each rewritten in place, under their original labels.
+        expect(actionsAssertions).toHaveLength(2);
+        expect(actionsAssertions.map((a) => a.label)).toEqual([
+          'c2pa.actions',
+          'c2pa.actions.v2'
+        ]);
+
+        const first = (actionsAssertions[0].data as { actions: Action[] })
+          .actions;
+        expect(first.map((a) => a.action)).toEqual(['c2pa.created']);
+        expect(
+          (first[0].parameters as { patchMe?: string } | undefined)?.patchMe
+        ).toBe('patch-test');
+
+        // The second assertion is untouched.
+        const second = (actionsAssertions[1].data as { actions: Action[] })
+          .actions;
+        expect(second.map((a) => a.action)).toEqual(['c2pa.edited']);
+      });
+
+      test('adds a new parameter alongside the existing ones', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.fromDefinition({
+          claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
+          format: 'image/jpeg',
+          instance_id: 'update-actions-added',
+          ingredients: [],
+          assertions: [
+            {
+              label: 'c2pa.actions',
+              data: {
+                actions: [
+                  {
+                    action: 'c2pa.created',
+                    digitalSourceType:
+                      'http://c2pa.org/digitalsourcetype/empty'
+                  }
+                ]
+              }
+            },
+            {
+              label: 'c2pa.actions.v2',
+              data: {
+                actions: [
+                  {
+                    action: 'c2pa.edited',
+                    parameters: { existingValue: 'kept' }
+                  }
+                ]
+              }
+            }
+          ]
+        } as unknown as ManifestDefinition);
+
+        await builder.updateActions((actions) =>
+          actions.map((action) =>
+            action.action === 'c2pa.edited'
+              ? {
+                  ...action,
+                  parameters: {
+                    ...action.parameters,
+                    addedValue: 'added-value'
+                  }
+                }
+              : action
+          )
+        );
+
+        const definition = await builder.getDefinition();
+        const actionsAssertions = (definition.assertions ?? []).filter((a) =>
+          a.label.startsWith('c2pa.actions')
+        );
+        expect(actionsAssertions.map((a) => a.label)).toEqual([
+          'c2pa.actions',
+          'c2pa.actions.v2'
+        ]);
+
+        // The added key lands in the second assertion, next to the seeded one.
+        const edited = (actionsAssertions[1].data as { actions: Action[] })
+          .actions[0];
+        const parameters = edited.parameters as {
+          existingValue?: string;
+          addedValue?: string;
+        };
+        expect(parameters.addedValue).toBe('added-value');
+        expect(parameters.existingValue).toBe('kept');
+
+        // The first assertion is untouched.
+        const created = (actionsAssertions[0].data as { actions: Action[] })
+          .actions[0];
+        expect(created.action).toBe('c2pa.created');
+        expect(
+          (created.parameters as { addedValue?: string } | undefined)
+            ?.addedValue
+        ).toBeUndefined();
+      });
+
+      test('is no-op when there is no actions assertion', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.fromDefinition({
+          claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
+          format: 'image/jpeg',
+          instance_id: 'update-actions-none',
+          ingredients: [],
+          assertions: []
+        } as unknown as ManifestDefinition);
+
+        let calls = 0;
+        await builder.updateActions((actions) => {
+          calls += 1;
+          return [...actions, { action: 'c2pa.created' } as Action];
+        });
+
+        expect(calls).toBe(0);
+        const definition = await builder.getDefinition();
+        expect(
+          (definition.assertions ?? []).filter((a) =>
+            a.label.startsWith('c2pa.actions')
+          )
+        ).toHaveLength(0);
+      });
+
+      test('drops an assertion whose transform returns an empty list', async ({
+        c2pa
+      }) => {
+        // (this means there could be no actions, so in non-test code, something after such a call
+        // should make sure the manifest is still valid and inception actions are here as needed!)
+        const builder = await c2pa.builder.fromDefinition({
+          claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
+          format: 'image/jpeg',
+          instance_id: 'update-actions-empty',
+          ingredients: [],
+          assertions: [
+            {
+              label: 'c2pa.actions',
+              data: {
+                actions: [
+                  {
+                    action: 'c2pa.created',
+                    digitalSourceType:
+                      'http://c2pa.org/digitalsourcetype/empty'
+                  }
+                ]
+              }
+            },
+            {
+              label: 'c2pa.actions.v2',
+              data: { actions: [{ action: 'c2pa.edited' }] }
+            }
+          ]
+        } as unknown as ManifestDefinition);
+
+        // Empty out the gathered assertion only.
+        await builder.updateActions((actions) =>
+          actions.some((a) => a.action === 'c2pa.edited') ? [] : actions
+        );
+
+        const definition = await builder.getDefinition();
+        const actionsAssertions = (definition.assertions ?? []).filter((a) =>
+          a.label.startsWith('c2pa.actions')
+        );
+        expect(actionsAssertions).toHaveLength(1);
+        expect(actionsAssertions[0].label).toBe('c2pa.actions');
+        expect(
+          (actionsAssertions[0].data as { actions: Action[] }).actions.map(
+            (a) => a.action
+          )
+        ).toEqual(['c2pa.created']);
+      });
+
+      test('preserves per-assertion metadata across a round trip', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.fromDefinition({
+          claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
+          format: 'image/jpeg',
+          instance_id: 'update-actions-metadata',
+          ingredients: [],
+          assertions: [
+            {
+              label: 'c2pa.actions.v2',
+              data: {
+                actions: [
+                  {
+                    action: 'c2pa.created',
+                    digitalSourceType:
+                      'http://c2pa.org/digitalsourcetype/empty'
+                  }
+                ],
+                allActionsIncluded: false,
+                softwareAgents: [{ name: 'test-agent', version: '9.9.9' }]
+              }
+            }
+          ]
+        } as unknown as ManifestDefinition);
+
+        // Identity transform: nothing about the assertion should change.
+        await builder.updateActions((actions) => actions);
+
+        const definition = await builder.getDefinition();
+        const actionsAssertions = (definition.assertions ?? []).filter((a) =>
+          a.label.startsWith('c2pa.actions')
+        );
+        expect(actionsAssertions).toHaveLength(1);
+        expect(actionsAssertions[0].label).toBe('c2pa.actions.v2');
+
+        const data = actionsAssertions[0].data as {
+          actions: Action[];
+          allActionsIncluded?: boolean;
+          softwareAgents?: { name: string; version: string }[];
+        };
+        expect(data.actions.map((a) => a.action)).toEqual(['c2pa.created']);
+        expect(data.allActionsIncluded).toBe(false);
+        expect(data.softwareAgents).toEqual([
+          { name: 'test-agent', version: '9.9.9' }
+        ]);
+      });
+
+      test('preserves action order when transform patches in place', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.new();
+        await builder.addAction({ action: 'c2pa.created' });
+        await builder.addAction({ action: 'c2pa.color_adjustments' });
+        await builder.addAction({ action: 'c2pa.edited' });
+        await builder.addAction({ action: 'c2pa.resized' });
+
+        // Patch one entry in the middle; the transform never reorders.
+        await builder.updateActions((actions) =>
+          actions.map((action) =>
+            action.action === 'c2pa.edited'
+              ? { ...action, parameters: { note: 'patched' } }
+              : action
+          )
+        );
+
+        const definition = await builder.getDefinition();
+        const actionsAssertion = definition.assertions?.find((a) =>
+          a.label.startsWith('c2pa.actions')
+        );
+        const names = (
+          actionsAssertion?.data as { actions: { action: string }[] }
+        ).actions.map((a) => a.action);
+        expect(names).toEqual([
+          'c2pa.created',
+          'c2pa.color_adjustments',
+          'c2pa.edited',
+          'c2pa.resized'
+        ]);
+      });
+
+      test('surfaces an error thrown by transform', async ({ c2pa }) => {
+        const builder = await c2pa.builder.new();
+        await builder.addAction({ action: 'c2pa.created' });
+
+        await expect(
+          builder.updateActions(() => {
+            throw new Error('boom from transform');
+          })
+        ).rejects.toThrow('boom from transform');
+      });
+
+      test('preserves allActionsIncluded/softwareAgents/templates/metadata not seen by transform', async ({
+        c2pa
+      }) => {
+        const builder = await c2pa.builder.fromDefinition({
+          claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
+          format: 'image/jpeg',
+          instance_id: 'update-actions-2',
+          ingredients: [],
+          assertions: [
+            {
+              label: 'c2pa.actions',
+              data: {
+                actions: [
+                  {
+                    action: 'c2pa.created',
+                    digitalSourceType:
+                      'http://c2pa.org/digitalsourcetype/empty'
+                  }
+                ],
+                allActionsIncluded: true,
+                softwareAgents: [
+                  { name: 'c2pa-web-test', version: '1.0.0' }
+                ],
+                templates: [{ action: 'c2pa.edited' }],
+                metadata: { dataSource: { type: 'humanEdits' } }
+              }
+            }
+          ]
+        } as unknown as ManifestDefinition);
+
+        // transform only ever sees/returns the flattened actions list, never the sibling fields.
+        await builder.updateActions((actions) => actions);
+
+        const definition = await builder.getDefinition();
+        const actionsAssertions = (definition.assertions ?? []).filter((a) =>
+          a.label.startsWith('c2pa.actions')
+        );
+        expect(actionsAssertions).toHaveLength(1);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = actionsAssertions[0].data as any;
+        expect(data.allActionsIncluded).toBe(true);
+        expect(data.softwareAgents).toEqual([
+          { name: 'c2pa-web-test', version: '1.0.0' }
+        ]);
+        expect(data.templates).toEqual([{ action: 'c2pa.edited' }]);
+        expect(data.metadata).toEqual({
+          dataSource: { type: 'humanEdits' }
+        });
       });
     });
 

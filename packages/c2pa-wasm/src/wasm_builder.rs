@@ -9,7 +9,7 @@ use std::io::Cursor;
 
 use c2pa::{
     Builder, BuilderIntent, Context, Ingredient,
-    assertions::{Action, C2paReason},
+    assertions::{Action, Actions, C2paReason},
 };
 use js_sys::{JsString, Uint8Array};
 use serde::{Deserialize, Serialize};
@@ -265,6 +265,89 @@ impl WasmBuilder {
                 },
             )
             .map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
+    /// Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions with
+    /// `action_groups`, computed on the JS side (see [`Self::filter_actions_at`]).
+    /// `softwareAgents`/`allActionsIncluded`/`templates`/`metadata` are preserved as-is.
+    ///
+    /// A manifest can carry more than one actions assertion (the created-list and gathered-list
+    /// entries are distinct assertions), so `action_groups` is a list-of-lists: one entry per
+    /// actions assertion, in the same positional order this binding enumerates them.
+    ///
+    /// Each assertion is rewritten in place, which keeps its label, `created` flag, `kind`, and
+    /// position in the assertion list — mirroring `Builder::filter_actions` in c2pa-rs. A group
+    /// that is empty drops its assertion rather than writing an invalid empty actions array.
+    /// No-op if there is no actions assertion. Use `add_action` for those.
+    ///
+    /// All fallible work runs before any mutation, so a failure never leaves a partially-rewritten
+    /// builder. An existing but malformed actions assertion is surfaced as an error rather than
+    /// silently replaced.
+    ///
+    /// The groups are written back verbatim: they are not validated or reordered, and unlike
+    /// [`Self::filter_actions_at`] the inception action is not force-kept. A caller that drops
+    /// `c2pa.created`/`c2pa.opened` or moves it out of first position can produce an actions
+    /// array that fails validation at signing time.
+    #[wasm_bindgen(js_name = updateActionsAt)]
+    pub fn update_actions_at(&mut self, action_groups: JsValue) -> Result<(), JsString> {
+        let action_groups: Vec<Vec<Action>> =
+            serde_wasm_bindgen::from_value(action_groups).map_err(WasmError::from)?;
+
+        // Every actions assertion, in positional order.
+        let positions: Vec<usize> = self
+            .builder
+            .definition
+            .assertions
+            .iter()
+            .enumerate()
+            .filter(|(_, a)| a.label.starts_with(Actions::LABEL))
+            .map(|(i, _)| i)
+            .collect();
+
+        if action_groups.len() != positions.len() {
+            return Err(JsString::from(format!(
+                "updateActionsAt: expected {} action group(s) to match the actions assertions in \
+                 this manifest, got {}",
+                positions.len(),
+                action_groups.len()
+            )));
+        }
+
+        // Decode and re-encode everything before mutating...
+        let mut rewritten: Vec<(usize, Option<serde_json::Value>)> =
+            Vec::with_capacity(positions.len());
+        for (pos, group) in positions.into_iter().zip(action_groups) {
+            let value =
+                serde_json::to_value(&self.builder.definition.assertions[pos].data)
+                    .map_err(WasmError::other)?;
+            let mut actions: Actions = serde_json::from_value(value).map_err(WasmError::other)?;
+
+            if group.is_empty() {
+                rewritten.push((pos, None));
+                continue;
+            }
+            actions.actions = group;
+            let encoded = serde_json::to_value(&actions).map_err(WasmError::other)?;
+            rewritten.push((pos, Some(encoded)));
+        }
+
+        // Mutate in place.
+        let mut emptied: Vec<usize> = Vec::new();
+        for (pos, value) in rewritten {
+            match value {
+                Some(value) => {
+                    let data = serde_json::from_value(value).map_err(WasmError::other)?;
+                    self.builder.definition.assertions[pos].data = data;
+                }
+                None => emptied.push(pos),
+            }
+        }
+        // Remove emptied assertions from the back so earlier indices stay valid.
+        for pos in emptied.into_iter().rev() {
+            self.builder.definition.assertions.remove(pos);
+        }
 
         Ok(())
     }

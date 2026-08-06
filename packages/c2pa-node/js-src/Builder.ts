@@ -293,6 +293,10 @@ export class Builder implements BuilderInterface {
     );
   }
 
+  updateActions(transform: (actions: Action[]) => Action[]): void {
+    getNeonBinary().builderUpdateActions.call(this.builder, transform);
+  }
+
   getHandle(): NeonBuilderHandle {
     return this.builder;
   }
