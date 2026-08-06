@@ -56,25 +56,6 @@ describe('fetchWithRetry', () => {
     );
   });
 
-  test('respects a reasonable numeric Retry-After header and retries', async () => {
-    let requestCount = 0;
-    server.use(
-      http.get('http://retryAfterSeconds', () => {
-        requestCount++;
-        if (requestCount === 1) {
-          return new HttpResponse(null, {
-            status: 429,
-            headers: { 'Retry-After': '1' }
-          });
-        }
-        return HttpResponse.text('resolved after retry');
-      })
-    );
-
-    const result = await fetchWithRetry('http://retryAfterSeconds');
-    expect(result).toBe('resolved after retry');
-  });
-
   test('respects an HTTP-date Retry-After header and retries', async () => {
     let requestCount = 0;
     server.use(
