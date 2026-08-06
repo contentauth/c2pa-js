@@ -283,6 +283,7 @@ impl WasmBuilder {
     /// Each assertion is rewritten in place, which keeps its label, `created` flag, `kind`, and
     /// position in the assertion list — mirroring `Builder::filter_actions` in c2pa-rs. A group
     /// that is empty drops its assertion rather than writing an invalid empty actions array.
+    /// No-op if there is no actions assertion. Use `add_action` for those.
     ///
     /// All fallible work runs before any mutation, so a failure never leaves a partially-rewritten
     /// builder. An existing but malformed actions assertion is surfaced as an error rather than
@@ -307,16 +308,6 @@ impl WasmBuilder {
             .filter(|(_, a)| a.label.starts_with(Actions::LABEL))
             .map(|(i, _)| i)
             .collect();
-
-        // No actions assertion at all: create one under the versioned label from the sole group.
-        if positions.is_empty() {
-            let mut updated = Actions::new();
-            updated.actions = action_groups.into_iter().flatten().collect();
-            self.builder
-                .add_assertion(Actions::LABEL_VERSIONED, &updated)
-                .map_err(WasmError::from)?;
-            return Ok(());
-        }
 
         if action_groups.len() != positions.len() {
             return Err(JsString::from(format!(

@@ -683,6 +683,7 @@ impl NeonBuilder {
     /// entries are distinct assertions). `transform` is invoked once per actions assertion,
     /// in positional order, with that assertion's own actions. It return value
     /// replaces only that assertion's actions.
+    /// No-op if there is no actions assertion. Use `add_action` for those.
     ///
     /// If `transform` throws or its return value doesn't deserialize into an action list, the
     /// exception is surfaced to the caller and the builder is left unchanged. The same applies
@@ -705,7 +706,6 @@ impl NeonBuilder {
         let rt = runtime();
         let this = cx.this::<JsBox<Self>>()?;
         let transform = cx.argument::<JsFunction>(0)?;
-        let undefined = cx.undefined();
         let mut builder = rt.block_on(async { this.builder.lock().await });
 
         // Every actions assertion, in positional order.
@@ -719,6 +719,7 @@ impl NeonBuilder {
             .collect();
 
         // Decode every assertion up front.
+        // The roundtrip is so we can access what we need to without the direct type access.
         let mut decoded: Vec<(usize, Actions)> = Vec::with_capacity(positions.len());
         for pos in positions {
             let value = serde_json::to_value(&builder.definition.assertions[pos].data)
@@ -726,22 +727,6 @@ impl NeonBuilder {
             let actions: Actions =
                 serde_json::from_value(value).or_else(|err| cx.throw_error(err.to_string()))?;
             decoded.push((pos, actions));
-        }
-
-        // No actions assertion at all: create one under the versioned label, return empty.
-        if decoded.is_empty() {
-            let js_actions = neon_serde4::to_value(&mut cx, &Vec::<Action>::new())
-                .or_else(|err| cx.throw_error(err.to_string()))?;
-            let result = transform.call(&mut cx, undefined, [js_actions])?;
-            let updated_actions: Vec<Action> = neon_serde4::from_value(&mut cx, result)
-                .or_else(|err| cx.throw_error(err.to_string()))?;
-
-            let mut updated = Actions::new();
-            updated.actions = updated_actions;
-            builder
-                .add_assertion(Actions::LABEL_VERSIONED, &updated)
-                .or_else(|err| cx.throw_error(err.to_string()))?;
-            return Ok(cx.undefined());
         }
 
         // Run the transform for every assertion before mutating anything...

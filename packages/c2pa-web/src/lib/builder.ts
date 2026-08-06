@@ -169,6 +169,8 @@ export interface Builder {
    * invoked once per actions assertion, in positional order, with that
    * assertion's own actions.
    *
+   * A no-op if there is no actions assertion. Use `addAction` for those.
+   *
    * The returned list is written back as is.
    * `transform` can therefore produce an actions array that fails
    * validation at signing time, for example by removing the inception action
