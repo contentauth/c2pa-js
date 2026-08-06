@@ -1,5 +1,18 @@
 # @contentauth/c2pa-wasm
 
+## 0.11.2
+
+### Patch Changes
+
+- bd63c58: Add updateActions builder methods
+
+## 0.11.1
+
+### Patch Changes
+
+- b558be8: feat: incorporate c2pa builder filter_actions_and_ingredients
+- a5a904b: Update c2pa to 0.90.4
+
 ## 0.11.0
 
 ### Minor Changes

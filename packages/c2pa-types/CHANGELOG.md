@@ -1,5 +1,11 @@
 # @contentauth/c2pa-types
 
+## 0.7.3
+
+### Patch Changes
+
+- a5a904b: Update c2pa to 0.90.4
+
 ## 0.7.2
 
 ### Patch Changes

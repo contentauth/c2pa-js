@@ -383,6 +383,44 @@ export interface BuilderInterface {
   ): void;
 
   /**
+   * Experimental.
+   * Retains actions and ingredients together.
+   *
+   * `rescueIngredient` is evaluated for every ingredient first; any action referencing an
+   * ingredient it would rescue is force-kept regardless of `keepAction`.
+   *
+   * @param keepAction The action is retained when the predicate returns true.
+   * @param rescueIngredient Can rescue an otherwise-orphaned ingredient and the action
+   * referencing it by returning true.
+   */
+  filterActionsAndIngredients(
+    keepAction: (action: Action) => boolean,
+    rescueIngredient: (
+      ingredient: Ingredient,
+      provenance: ManifestStore | null,
+    ) => boolean,
+  ): void;
+
+  /**
+   * Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions.
+   *
+   * A manifest can carry more than one actions assertion (the created-list and
+   * gathered-list entries are distinct assertions). `transform` is therefore
+   * invoked once per actions assertion, in positional order, with that
+   * assertion's own actions.
+   *
+   * A no-op if there is no actions assertion. Use `addAction` for those.
+   *
+   * The returned list is written back as is.
+   * `transform` can therefore produce an actions array that fails
+   * validation at signing time, for example by removing the inception action
+   * (`c2pa.created`/`c2pa.opened`) or moving it out of first position.
+   *
+   * @param transform Receives one assertion's actions and returns its full replacement list.
+   */
+  updateActions(transform: (actions: Action[]) => Action[]): void;
+
+  /**
    * Get the internal handle for use with Neon bindings
    */
   getHandle(): NeonBuilderHandle;

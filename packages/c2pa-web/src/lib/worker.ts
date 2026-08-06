@@ -113,9 +113,24 @@ rx(
       const builder = builderMap.get(builderId);
       builder.filterActionsAt(Uint32Array.from(indices));
     },
+    builder_updateActionsAt(builderId, actionGroups) {
+      const builder = builderMap.get(builderId);
+      builder.updateActionsAt(actionGroups);
+    },
     builder_filterIngredientsAt(builderId, indices) {
       const builder = builderMap.get(builderId);
       builder.filterIngredientsAt(Uint32Array.from(indices));
+    },
+    builder_filterActionsAndIngredientsAt(
+      builderId,
+      actionIndices,
+      ingredientIndices
+    ) {
+      const builder = builderMap.get(builderId);
+      builder.filterActionsAndIngredientsAt(
+        Uint32Array.from(actionIndices),
+        Uint32Array.from(ingredientIndices)
+      );
     },
     builder_setRemoteUrl(builderId, url) {
       const builder = builderMap.get(builderId);

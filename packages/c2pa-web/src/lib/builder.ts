@@ -146,6 +146,41 @@ export interface Builder {
   ) => Promise<void>;
 
   /**
+   * Experimental.
+   * Retains actions and ingredients together in one step.
+   *
+   * `rescueIngredient` is evaluated for every ingredient first; any action referencing an
+   * ingredient it would rescue is force-kept regardless of `keepAction`.
+   *
+   * @param keepAction The action is retained when the predicate returns true.
+   * @param rescueIngredient Can rescue an otherwise-orphaned ingredient (and the action
+   * referencing it) by returning true.
+   */
+  filterActionsAndIngredients: (
+    keepAction: (action: Action) => boolean,
+    rescueIngredient: (ingredient: Ingredient) => boolean
+  ) => Promise<void>;
+
+  /**
+   * Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions.
+   *
+   * A manifest can carry more than one actions assertion (the created-list and
+   * gathered-list entries are distinct assertions). `transform` is therefore
+   * invoked once per actions assertion, in positional order, with that
+   * assertion's own actions.
+   *
+   * A no-op if there is no actions assertion. Use `addAction` for those.
+   *
+   * The returned list is written back as is.
+   * `transform` can therefore produce an actions array that fails
+   * validation at signing time, for example by removing the inception action
+   * (`c2pa.created`/`c2pa.opened`) or moving it out of first position.
+   *
+   * @param transform Receives one assertion's actions and returns its full replacement list.
+   */
+  updateActions: (transform: (actions: Action[]) => Action[]) => Promise<void>;
+
+  /**
    * Add an ingredient to the builder from a definition only.
    *
    * @param ingredientDefinition {@link Ingredient} definition.
@@ -231,9 +266,19 @@ export interface Builder {
  * spec pins this against real filtering.
  */
 function getActionsFromDefinition(definition: ManifestDefinition): Action[] {
+  return getActionGroupsFromDefinition(definition).flat();
+}
+
+/**
+ * The same enumeration as {@link getActionsFromDefinition}, but kept grouped per
+ * action assertion instead of flattened.
+ */
+function getActionGroupsFromDefinition(
+  definition: ManifestDefinition
+): Action[][] {
   return (definition.assertions ?? [])
     .filter((a: AssertionDefinition) => a.label.startsWith('c2pa.actions'))
-    .flatMap((a: AssertionDefinition) => {
+    .map((a: AssertionDefinition) => {
       const data = a.data as { actions?: Action[] } | undefined;
       return data?.actions ?? [];
     });
@@ -360,6 +405,44 @@ function createBuilder(
         return rescued;
       }, []);
       await tx.builder_filterIngredientsAt(id, indices);
+    },
+
+    async filterActionsAndIngredients(
+      keepAction: (action: Action) => boolean,
+      rescueIngredient: (ingredient: Ingredient) => boolean
+    ) {
+      const definition: ManifestDefinition = await tx.builder_getDefinition(id);
+      const actions = getActionsFromDefinition(definition);
+      const actionIndices = actions.reduce<number[]>((kept, action, i) => {
+        if (keepAction(action)) {
+          kept.push(i);
+        }
+        return kept;
+      }, []);
+      const ingredients: Ingredient[] = definition.ingredients ?? [];
+      const ingredientIndices = ingredients.reduce<number[]>(
+        (rescued, ingredient, i) => {
+          if (rescueIngredient(ingredient)) {
+            rescued.push(i);
+          }
+          return rescued;
+        },
+        []
+      );
+      await tx.builder_filterActionsAndIngredientsAt(
+        id,
+        actionIndices,
+        ingredientIndices
+      );
+    },
+
+    async updateActions(transform: (actions: Action[]) => Action[]) {
+      const definition: ManifestDefinition = await tx.builder_getDefinition(id);
+      // One group per actions assertion: `transform` runs once per assertion
+      // Each is rewritten in place under its own label.
+      const groups = getActionGroupsFromDefinition(definition);
+      const updated = groups.map((actions) => transform(actions));
+      await tx.builder_updateActionsAt(id, updated);
     },
 
     async addIngredient(ingredientDefinition: Ingredient) {

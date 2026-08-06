@@ -1,5 +1,30 @@
 # @contentauth/c2pa-web
 
+## 0.13.4
+
+### Patch Changes
+
+- bd63c58: Add updateActions builder methods
+- Updated dependencies [bd63c58]
+  - @contentauth/c2pa-wasm@0.11.2
+
+## 0.13.3
+
+### Patch Changes
+
+- dc1f034: Bump c2pa-rs version to v0.90.5
+
+## 0.13.2
+
+### Patch Changes
+
+- b558be8: feat: incorporate c2pa builder filter_actions_and_ingredients
+- a5a904b: Update c2pa to 0.90.4
+- Updated dependencies [b558be8]
+- Updated dependencies [a5a904b]
+  - @contentauth/c2pa-wasm@0.11.1
+  - @contentauth/c2pa-types@0.7.3
+
 ## 0.13.1
 
 ### Patch Changes

@@ -147,6 +147,7 @@ describe("CallbackSigner", () => {
     };
 
     const builder = Builder.withJson(manifestDefinition);
+    builder.setIntent({ create: "http://c2pa.org/digitalsourcetype/empty" });
     const source = {
       buffer: await fs.readFile("./tests/fixtures/CA.jpg"),
       mimeType: "image/jpeg",

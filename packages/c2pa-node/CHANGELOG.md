@@ -1,5 +1,24 @@
 # @contentauth/c2pa-node
 
+## 0.8.3
+
+### Patch Changes
+
+- bd63c58: Add updateActions builder methods
+
+## 0.8.2
+
+### Patch Changes
+
+- dc1f034: Bump c2pa-rs version to v0.90.5
+
+## 0.8.1
+
+### Patch Changes
+
+- b558be8: feat: incorporate c2pa builder filter_actions_and_ingredients
+- a5a904b: Update c2pa to 0.90.4
+
 ## 0.8.0
 
 ### Minor Changes
