@@ -1,5 +1,13 @@
 # @contentauth/c2pa-web
 
+## 0.13.4
+
+### Patch Changes
+
+- bd63c58: Add updateActions builder methods
+- Updated dependencies [bd63c58]
+  - @contentauth/c2pa-wasm@0.11.2
+
 ## 0.13.3
 
 ### Patch Changes
