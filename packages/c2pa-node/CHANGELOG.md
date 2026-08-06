@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+## 0.8.3
+
+### Patch Changes
+
+- bd63c58: Add updateActions builder methods
+
 ## 0.8.2
 
 ### Patch Changes
