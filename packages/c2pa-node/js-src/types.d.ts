@@ -525,7 +525,7 @@ import type {
 } from "@contentauth/c2pa-utilities";
 
 /**
- * @deprecated Use `CawgTrustSettings` instead. 
+ * @deprecated Use `CawgTrustSettings` instead, which encapsulates both normal trust and CAWG trust settings.
  * Kept as an alias for backwards compatibility.
  */
 export type TrustConfig = _CawgTrustSettings;
