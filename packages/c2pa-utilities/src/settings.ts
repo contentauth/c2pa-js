@@ -8,7 +8,11 @@
  */
 
 import { merge } from 'ts-deepmerge';
-import { fetchWithRetry, type FetchWithRetryOptions } from './fetchWithRetry.js';
+import {
+  fetchWithRetry,
+  fetchWithRetryRaw,
+  type FetchWithRetryOptions
+} from './fetchWithRetry.js';
 import { snakeCaseify, type SettingsObjectType } from './caseConversion.js';
 
 // =================================
@@ -263,18 +267,20 @@ export function settingsToJson(settings: Settings): string {
 // =================================
 
 /**
- * Load settings from a URL.
+ * Load settings from a URL, retrying on network errors and retryable HTTP responses (see
+ * {@link fetchWithRetryRaw}). Unlike {@link resolveTrustSettings}'s trust-anchor fetch, this
+ * does not enforce a response-size cap or validate the content — it's meant for loading an
+ * app's own trusted configuration file, not untrusted resources embedded in a manifest.
  *
  * @param url The URL to fetch the settings from
+ * @param options Options for configuring the retry policy.
  * @returns Settings as a string
  */
-export async function loadSettingsFromUrl(url: string): Promise<string> {
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(
-      `Failed to fetch settings from URL: ${res.status} ${res.statusText}`
-    );
-  }
+export async function loadSettingsFromUrl(
+  url: string,
+  options?: FetchWithRetryOptions
+): Promise<string> {
+  const res = await fetchWithRetryRaw(url, undefined, options);
   return await res.text();
 }
 

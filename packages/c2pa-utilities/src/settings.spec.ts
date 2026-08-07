@@ -621,7 +621,7 @@ describe('loadSettingsFromUrl', () => {
 
     await expect(
       loadSettingsFromUrl('http://settingsDocMissing')
-    ).rejects.toThrow('Failed to fetch settings from URL: 404 Not Found');
+    ).rejects.toThrow('Failed to fetch http://settingsDocMissing: 404 Not Found');
   });
 
   it('throws error for network failure', async () => {
@@ -632,5 +632,41 @@ describe('loadSettingsFromUrl', () => {
     await expect(
       loadSettingsFromUrl('http://settingsDocNetworkError')
     ).rejects.toThrow();
+  });
+
+  it('retries a transient 500 and returns the settings once it recovers', async () => {
+    const mockSettings = JSON.stringify({
+      verify: { verify_after_reading: true }
+    });
+    server.use(
+      http.get(
+        'http://settingsDocTransient500',
+        () => new HttpResponse(null, { status: 500 }),
+        { once: true }
+      ),
+      http.get('http://settingsDocTransient500', () =>
+        HttpResponse.text(mockSettings)
+      )
+    );
+
+    const loaded = await loadSettingsFromUrl('http://settingsDocTransient500');
+    expect(loaded).toBe(mockSettings);
+  });
+
+  it('honors a custom retry policy via options', async () => {
+    let requestCount = 0;
+    server.use(
+      http.get('http://settingsDocCustomRetries', () => {
+        requestCount++;
+        return new HttpResponse(null, { status: 500 });
+      })
+    );
+
+    await expect(
+      loadSettingsFromUrl('http://settingsDocCustomRetries', {
+        maxRetries: 0
+      })
+    ).rejects.toThrow('Failed to fetch http://settingsDocCustomRetries: 500');
+    expect(requestCount).toBe(1);
   });
 });
