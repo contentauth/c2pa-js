@@ -34,6 +34,20 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
+describe('URL validation', () => {
+  test('fetchWithRetry rejects a malformed URL without attempting a request', async () => {
+    await expect(fetchWithRetry('not a valid url')).rejects.toThrow(
+      'Invalid URL: not a valid url'
+    );
+  });
+
+  test('fetchWithRetryRaw rejects a malformed URL without attempting a request', async () => {
+    await expect(fetchWithRetryRaw('not a valid url')).rejects.toThrow(
+      'Invalid URL: not a valid url'
+    );
+  });
+});
+
 describe('fetchWithRetry', () => {
   test('fetches and returns response text', async () => {
     server.use(http.get('http://plainText', () => HttpResponse.text('hello')));

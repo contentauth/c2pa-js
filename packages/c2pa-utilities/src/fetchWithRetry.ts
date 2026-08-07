@@ -129,6 +129,18 @@ function parseRetryAfterMs(value: string | null): number | null {
 }
 
 /**
+ * @param input A URL string to validate.
+ * @throws if `input` is not a well-formed, absolute URL.
+ */
+function assertValidUrl(input: string): void {
+  try {
+    new URL(input);
+  } catch {
+    throw new Error(`Invalid URL: ${input}`);
+  }
+}
+
+/**
  * Fetches `input`, retrying on network errors and on responses whose status is deemed
  * retryable (see {@link FetchWithRetryOptions.isRetryableStatus}), with exponential backoff
  * (respecting a `Retry-After` header when present). Returns the raw, successful `Response` —
@@ -136,7 +148,8 @@ function parseRetryAfterMs(value: string | null): number | null {
  * `.text()`, streaming, or their own size cap), which makes this suitable for arbitrary
  * requests (custom methods, headers, bodies) rather than just simple GETs.
  *
- * @param input The URL to fetch.
+ * @param input The URL to fetch. Validated up front — a malformed URL throws immediately
+ * rather than being retried, since it can never succeed.
  * @param init Standard `fetch` request options (method, headers, body, signal, etc.).
  * @param options Options for configuring the retry policy.
  * @returns The successful response.
@@ -146,6 +159,8 @@ export async function fetchWithRetryRaw(
   init?: RequestInit,
   options?: FetchWithRetryOptions
 ): Promise<Response> {
+  assertValidUrl(input);
+
   const maxRetries = options?.maxRetries ?? DEFAULT_MAX_RETRIES;
   const initialRetryDelayMs =
     options?.initialRetryDelayMs ?? DEFAULT_INITIAL_RETRY_DELAY_MS;
