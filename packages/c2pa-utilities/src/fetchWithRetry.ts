@@ -234,6 +234,11 @@ export async function fetchWithRetryRaw(
  * common GET-and-read-as-text case; use {@link fetchWithRetryRaw} directly for other methods,
  * request bodies, or response handling.
  *
+ * The size cap is checked against the `Content-Length` header first, before reading the body,
+ * to reject an oversized response without buffering it into memory. `Content-Length` is
+ * optional, though (e.g. chunked transfer-encoding omits it), so the body's actual length is
+ * still checked afterward as a fallback for responses that didn't send an (accurate) header.
+ *
  * @param url The URL to fetch.
  * @param options Options for configuring the fetch.
  * @returns The response body.
@@ -245,6 +250,14 @@ export async function fetchWithRetry(
   const maxResponseBytes = options?.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
 
   const res = await fetchWithRetryRaw(url, undefined, options);
+
+  const contentLengthHeader = res.headers.get('content-length');
+  if (contentLengthHeader !== null && Number(contentLengthHeader) > maxResponseBytes) {
+    throw new Error(
+      `Response from ${url} is too large. Max size is ${maxResponseBytes} bytes.`
+    );
+  }
+
   const text = await res.text();
 
   if (text.length > maxResponseBytes) {

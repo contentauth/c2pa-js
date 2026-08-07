@@ -213,6 +213,44 @@ describe('fetchWithRetry', () => {
     ).rejects.toThrow('Response from http://overCap is too large. Max size is 10 bytes.');
   });
 
+  test('rejects based on Content-Length before reading an oversized body', async () => {
+    server.use(
+      http.get(
+        'http://oversizedContentLength',
+        () =>
+          new HttpResponse('small body', {
+            headers: { 'Content-Length': '999999999' }
+          })
+      )
+    );
+
+    await expect(
+      fetchWithRetry('http://oversizedContentLength', { maxResponseBytes: 10 })
+    ).rejects.toThrow(
+      'Response from http://oversizedContentLength is too large. Max size is 10 bytes.'
+    );
+  });
+
+  test('falls back to checking the body when Content-Length is absent', async () => {
+    server.use(
+      http.get('http://streamedOverCap', () => {
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('x'.repeat(20)));
+            controller.close();
+          }
+        });
+        return new HttpResponse(stream);
+      })
+    );
+
+    await expect(
+      fetchWithRetry('http://streamedOverCap', { maxResponseBytes: 10 })
+    ).rejects.toThrow(
+      'Response from http://streamedOverCap is too large. Max size is 10 bytes.'
+    );
+  });
+
   test('accepts a response at or under the given maxResponseBytes', async () => {
     server.use(
       http.get('http://underCap', () => HttpResponse.text('x'.repeat(10)))
