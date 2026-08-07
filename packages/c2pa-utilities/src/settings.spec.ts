@@ -27,7 +27,6 @@ import {
   settingsToJson,
   loadSettingsFromUrl,
   type TrustSettings,
-  type CawgTrustSettings,
   type VerifySettings,
   type Settings
 } from './settings.js';
@@ -308,7 +307,7 @@ describe('settings', () => {
         expect(result).toContain('trust_anchors');
       });
 
-      test('should not crash when a CawgTrustSettings boolean field is present', async () => {
+      test('should not crash when a cawgTrust boolean field is present', async () => {
         const resultPromise = resolveSettings(undefined, {
           cawgTrust: {
             verifyTrustList: true
@@ -405,7 +404,7 @@ describe('createTrustSettings / createCawgTrustSettings / createVerifySettings',
   });
 
   it('creates CAWG trust settings', () => {
-    const trustConfig: CawgTrustSettings = {
+    const trustConfig: TrustSettings = {
       verifyTrustList: false,
       trustAnchors: 'anchors'
     };
@@ -537,9 +536,7 @@ describe('settingsToJson', () => {
   });
 
   it('does not include undefined values in CAWG trust settings JSON', () => {
-    // verifyTrustList only exists on CawgTrustSettings (see note above), so this uses
-    // createCawgTrustSettings rather than createTrustSettings.
-    const trustConfig: CawgTrustSettings = {
+    const trustConfig: TrustSettings = {
       verifyTrustList: true
     };
 

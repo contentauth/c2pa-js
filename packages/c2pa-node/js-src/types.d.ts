@@ -520,15 +520,15 @@ export interface TrustmarkConfig {
 
 import type {
   Settings as _Settings,
-  CawgTrustSettings as _CawgTrustSettings,
+  TrustSettings as _TrustSettings,
   VerifySettings as _VerifySettings
 } from "@contentauth/c2pa-utilities";
 
 /**
- * @deprecated Use `CawgTrustSettings` instead, which encapsulates both normal trust and CAWG trust settings.
+ * @deprecated Use `TrustSettings` instead, which encapsulates both normal trust and CAWG trust settings.
  * Kept as an alias for backwards compatibility.
  */
-export type TrustConfig = _CawgTrustSettings;
+export type TrustConfig = _TrustSettings;
 
 /**
  * @deprecated Use `VerifySettings` instead.
