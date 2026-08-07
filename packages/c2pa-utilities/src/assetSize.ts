@@ -9,11 +9,12 @@
 
 /**
  * This file implements the shared Reader asset size check.
- * 
- * The size threshold is always supplied by the caller, since each platform
- * (`c2pa-web` or `c2pa-node`) decides its own limit explicitly rather than
- * inheriting a hardcoded default from here.
  */
+
+/**
+ * Default maximum asset size, in bytes.
+ */
+export const DEFAULT_MAX_SIZE_IN_BYTES = 10 ** 9; // 1 GB
 
 export class AssetTooLargeError extends Error {
   constructor(sizeInBytes: number, maxSizeInBytes: number) {
@@ -26,19 +27,36 @@ export class AssetTooLargeError extends Error {
 
 /**
  * Validates that `sizeInBytes` doesn't exceed `maxSizeInBytes`.
- * 
- * The limit is always supplied by the caller, since what's an acceptable
- * asset size is a platform-specific decision.
+ *
+ * The limit `maxSizeInBytes` is always supplied by the caller, since what's an
+ * acceptable maximum asset size is a platform-specific decision.
+ * Pass `0` for `maxSizeInBytes` to fall back to the default {@link DEFAULT_MAX_SIZE_IN_BYTES}.
  *
  * @param sizeInBytes Size of the asset, in bytes.
- * @param maxSizeInBytes Maximum allowed size, in bytes.
- * @throws {AssetTooLargeError} If `sizeInBytes` exceeds `maxSizeInBytes`.
+ * @param maxSizeInBytes Maximum allowed size, in bytes, or `0` to use the default.
+ * @throws {RangeError} If `sizeInBytes` or `maxSizeInBytes` isn't a finite, non-negative number.
+ * @throws {AssetTooLargeError} If `sizeInBytes` exceeds the resolved limit.
  */
 export function validateAssetSize(
   sizeInBytes: number,
   maxSizeInBytes: number
 ): void {
-  if (sizeInBytes > maxSizeInBytes) {
-    throw new AssetTooLargeError(sizeInBytes, maxSizeInBytes);
+  if (!Number.isFinite(sizeInBytes) || sizeInBytes < 0) {
+    throw new RangeError(
+      `sizeInBytes must be a finite, non-negative number. Received: ${sizeInBytes}.`
+    );
+  }
+
+  if (!Number.isFinite(maxSizeInBytes) || maxSizeInBytes < 0) {
+    throw new RangeError(
+      `maxSizeInBytes must be a finite, non-negative number. Received: ${maxSizeInBytes}.`
+    );
+  }
+
+  const resolvedMaxSizeInBytes =
+    maxSizeInBytes === 0 ? DEFAULT_MAX_SIZE_IN_BYTES : maxSizeInBytes;
+
+  if (sizeInBytes > resolvedMaxSizeInBytes) {
+    throw new AssetTooLargeError(sizeInBytes, resolvedMaxSizeInBytes);
   }
 }
