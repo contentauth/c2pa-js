@@ -15,8 +15,8 @@ import * as fs from "fs-extra";
 import { validateAssetSize } from "@contentauth/c2pa-utilities";
 import type { SourceAsset } from "./types.d.ts";
 
-// c2pa-node runs server-side, so it can reasonably support larger assets than
-// c2pa-web, which runs in a browser tab with real memory and UX constraints.
+// c2pa-node runs server-side, so it can reasonably support larger assets than c2pa-web,
+// and may be less resource-constrained in comparison.
 export const MAX_SIZE_IN_BYTES = 10 * 10 ** 9; // 10 GB
 
 /**
