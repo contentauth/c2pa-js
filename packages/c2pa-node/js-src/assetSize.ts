@@ -21,6 +21,11 @@ export const MAX_SIZE_IN_BYTES = 10 * 10 ** 9; // 10 GB
 
 /**
  * Validates a {@link SourceAsset}'s size before it's handed to the native reader.
+ *
+ * For a `FileAsset`, this rejects an oversized file before it's read into memory.
+ * For a `SourceBufferAsset`, the buffer is already fully allocated by the time this runs,
+ * so the memory cost isn't prevented, only reader construction is. Prefer `path`
+ * for large or untrusted assets.
  */
 export async function validateSourceAssetSize(
   asset: SourceAsset,
