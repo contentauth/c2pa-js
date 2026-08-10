@@ -16,10 +16,35 @@
  */
 export const DEFAULT_MAX_SIZE_IN_BYTES = 10 ** 9; // 1 GB
 
+/**
+ * Resolves `maxSizeInBytes` to {@link DEFAULT_MAX_SIZE_IN_BYTES} when it's `0` or
+ * otherwise not a usable limit (non-finite or negative). Invalid input is treated
+ * the same as "no limit given". Otherwise, the limit is returned as-is.
+ */
+function resolveMaxSizeInBytes(maxSizeInBytes: number): number {
+  return Number.isFinite(maxSizeInBytes) && maxSizeInBytes > 0
+    ? maxSizeInBytes
+    : DEFAULT_MAX_SIZE_IN_BYTES;
+}
+
+/**
+ * Error type for handling asset validation issues.
+ * 
+ * DO NOT construct an `AssetTooLargeError` directly; instead, use the {@link validateAssetSize}
+ * function to validate a given asset's size against a maximum limit.
+ */
+
 export class AssetTooLargeError extends Error {
+  /**
+   * @param sizeInBytes Size of the asset, in bytes.
+   * @param maxSizeInBytes Maximum allowed size, in bytes. `0` (or any other
+   * non-finite/negative value) resolves to {@link DEFAULT_MAX_SIZE_IN_BYTES}.
+   */
   constructor(sizeInBytes: number, maxSizeInBytes: number) {
+    const resolvedMaxSizeInBytes = resolveMaxSizeInBytes(maxSizeInBytes);
+
     super(
-      `The provided asset was too large. Size: ${sizeInBytes} bytes. Maximum: ${maxSizeInBytes}.`
+      `The provided asset was too large. Size: ${sizeInBytes} bytes. Maximum: ${resolvedMaxSizeInBytes}.`
     );
     this.name = 'AssetTooLargeError';
   }
@@ -53,8 +78,7 @@ export function validateAssetSize(
     );
   }
 
-  const resolvedMaxSizeInBytes =
-    maxSizeInBytes === 0 ? DEFAULT_MAX_SIZE_IN_BYTES : maxSizeInBytes;
+  const resolvedMaxSizeInBytes = resolveMaxSizeInBytes(maxSizeInBytes);
 
   if (sizeInBytes > resolvedMaxSizeInBytes) {
     throw new AssetTooLargeError(sizeInBytes, resolvedMaxSizeInBytes);

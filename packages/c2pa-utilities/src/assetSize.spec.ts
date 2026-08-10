@@ -56,3 +56,21 @@ describe('validateAssetSize', () => {
     }
   );
 });
+
+describe('AssetTooLargeError', () => {
+  test('includes the size and the max in the message', () => {
+    expect(new AssetTooLargeError(1001, 1000).message).toBe(
+      'The provided asset was too large. Size: 1001 bytes. Maximum: 1000.'
+    );
+  });
+
+  test.each([0, NaN, Infinity, -Infinity, -1])(
+    'never throws, and resolves a maxSizeInBytes of %s to the default',
+    (maxSizeInBytes) => {
+      expect(() => new AssetTooLargeError(1001, maxSizeInBytes)).not.toThrow();
+      expect(new AssetTooLargeError(1001, maxSizeInBytes).message).toBe(
+        `The provided asset was too large. Size: 1001 bytes. Maximum: ${DEFAULT_MAX_SIZE_IN_BYTES}.`
+      );
+    }
+  );
+});
