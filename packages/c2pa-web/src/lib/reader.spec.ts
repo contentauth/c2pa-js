@@ -265,6 +265,20 @@ describe('reader', () => {
         ).rejects.toThrow(AssetTooLargeError);
       });
 
+      test('should throw AssetTooLargeError when the fragment blob exceeds the max size', async ({
+        c2pa
+      }) => {
+        const initBlob = await getBlobForAsset(dashinit);
+        const fragmentBlob = await getBlobForAsset(dash1);
+        Object.defineProperty(fragmentBlob, 'size', {
+          value: MAX_SIZE_IN_BYTES + 1
+        });
+
+        await expect(
+          c2pa.reader.fromBlobFragment(initBlob.type, initBlob, fragmentBlob)
+        ).rejects.toThrow(AssetTooLargeError);
+      });
+
       test('should inherit global settings when per-call settings are provided', async () => {
         // Enable trust verification globally.
         const globalSettings: Settings = {

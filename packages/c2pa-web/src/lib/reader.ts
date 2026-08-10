@@ -167,6 +167,7 @@ export function createReaderFactory(worker: WorkerManager, settings?: Settings):
       }
 
       validateAssetSize(init.size, MAX_SIZE_IN_BYTES);
+      validateAssetSize(fragment.size, MAX_SIZE_IN_BYTES);
 
       try {
         const settingsJson = await resolveSettings(baseSettings, settings);
