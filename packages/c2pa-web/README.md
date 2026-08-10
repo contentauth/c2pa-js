@@ -81,6 +81,8 @@ console.log(manifestStore);
 await reader.free();
 ```
 
+`Reader.fromBlob` and `Reader.fromBlobFragment` reject assets larger than 1 GB, throwing `AssetTooLargeError`.
+
 ### Building C2PA manifests with ingredients
 
 Use the `Builder` API to create C2PA manifests and add ingredients (source assets) to document the provenance chain.
