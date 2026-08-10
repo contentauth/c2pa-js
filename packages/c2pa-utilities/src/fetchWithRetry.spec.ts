@@ -34,6 +34,20 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
+describe('URL validation', () => {
+  test('fetchWithRetry rejects a malformed URL without attempting a request', async () => {
+    await expect(fetchWithRetry('not a valid url')).rejects.toThrow(
+      'Invalid URL: not a valid url'
+    );
+  });
+
+  test('fetchWithRetryRaw rejects a malformed URL without attempting a request', async () => {
+    await expect(fetchWithRetryRaw('not a valid url')).rejects.toThrow(
+      'Invalid URL: not a valid url'
+    );
+  });
+});
+
 describe('fetchWithRetry', () => {
   test('fetches and returns response text', async () => {
     server.use(http.get('http://plainText', () => HttpResponse.text('hello')));
@@ -197,6 +211,44 @@ describe('fetchWithRetry', () => {
     await expect(
       fetchWithRetry('http://overCap', { maxResponseBytes: 10 })
     ).rejects.toThrow('Response from http://overCap is too large. Max size is 10 bytes.');
+  });
+
+  test('rejects based on Content-Length before reading an oversized body', async () => {
+    server.use(
+      http.get(
+        'http://oversizedContentLength',
+        () =>
+          new HttpResponse('small body', {
+            headers: { 'Content-Length': '999999999' }
+          })
+      )
+    );
+
+    await expect(
+      fetchWithRetry('http://oversizedContentLength', { maxResponseBytes: 10 })
+    ).rejects.toThrow(
+      'Response from http://oversizedContentLength is too large. Max size is 10 bytes.'
+    );
+  });
+
+  test('falls back to checking the body when Content-Length is absent', async () => {
+    server.use(
+      http.get('http://streamedOverCap', () => {
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('x'.repeat(20)));
+            controller.close();
+          }
+        });
+        return new HttpResponse(stream);
+      })
+    );
+
+    await expect(
+      fetchWithRetry('http://streamedOverCap', { maxResponseBytes: 10 })
+    ).rejects.toThrow(
+      'Response from http://streamedOverCap is too large. Max size is 10 bytes.'
+    );
   });
 
   test('accepts a response at or under the given maxResponseBytes', async () => {

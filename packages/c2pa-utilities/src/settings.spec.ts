@@ -27,7 +27,6 @@ import {
   settingsToJson,
   loadSettingsFromUrl,
   type TrustSettings,
-  type CawgTrustSettings,
   type VerifySettings,
   type Settings
 } from './settings.js';
@@ -308,7 +307,7 @@ describe('settings', () => {
         expect(result).toContain('trust_anchors');
       });
 
-      test('should not crash when a CawgTrustSettings boolean field is present', async () => {
+      test('should not crash when a cawgTrust boolean field is present', async () => {
         const resultPromise = resolveSettings(undefined, {
           cawgTrust: {
             verifyTrustList: true
@@ -405,7 +404,7 @@ describe('createTrustSettings / createCawgTrustSettings / createVerifySettings',
   });
 
   it('creates CAWG trust settings', () => {
-    const trustConfig: CawgTrustSettings = {
+    const trustConfig: TrustSettings = {
       verifyTrustList: false,
       trustAnchors: 'anchors'
     };
@@ -537,9 +536,7 @@ describe('settingsToJson', () => {
   });
 
   it('does not include undefined values in CAWG trust settings JSON', () => {
-    // verifyTrustList only exists on CawgTrustSettings (see note above), so this uses
-    // createCawgTrustSettings rather than createTrustSettings.
-    const trustConfig: CawgTrustSettings = {
+    const trustConfig: TrustSettings = {
       verifyTrustList: true
     };
 
@@ -624,7 +621,7 @@ describe('loadSettingsFromUrl', () => {
 
     await expect(
       loadSettingsFromUrl('http://settingsDocMissing')
-    ).rejects.toThrow('Failed to fetch settings from URL: 404 Not Found');
+    ).rejects.toThrow('Failed to fetch http://settingsDocMissing: 404 Not Found');
   });
 
   it('throws error for network failure', async () => {
@@ -635,5 +632,41 @@ describe('loadSettingsFromUrl', () => {
     await expect(
       loadSettingsFromUrl('http://settingsDocNetworkError')
     ).rejects.toThrow();
+  });
+
+  it('retries a transient 500 and returns the settings once it recovers', async () => {
+    const mockSettings = JSON.stringify({
+      verify: { verify_after_reading: true }
+    });
+    server.use(
+      http.get(
+        'http://settingsDocTransient500',
+        () => new HttpResponse(null, { status: 500 }),
+        { once: true }
+      ),
+      http.get('http://settingsDocTransient500', () =>
+        HttpResponse.text(mockSettings)
+      )
+    );
+
+    const loaded = await loadSettingsFromUrl('http://settingsDocTransient500');
+    expect(loaded).toBe(mockSettings);
+  });
+
+  it('honors a custom retry policy via options', async () => {
+    let requestCount = 0;
+    server.use(
+      http.get('http://settingsDocCustomRetries', () => {
+        requestCount++;
+        return new HttpResponse(null, { status: 500 });
+      })
+    );
+
+    await expect(
+      loadSettingsFromUrl('http://settingsDocCustomRetries', {
+        maxRetries: 0
+      })
+    ).rejects.toThrow('Failed to fetch http://settingsDocCustomRetries: 500');
+    expect(requestCount).toBe(1);
   });
 });

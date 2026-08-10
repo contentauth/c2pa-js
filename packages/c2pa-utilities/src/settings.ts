@@ -8,7 +8,11 @@
  */
 
 import { merge } from 'ts-deepmerge';
-import { fetchWithRetry, type FetchWithRetryOptions } from './fetchWithRetry.js';
+import {
+  fetchWithRetry,
+  fetchWithRetryRaw,
+  type FetchWithRetryOptions
+} from './fetchWithRetry.js';
 import { snakeCaseify, type SettingsObjectType } from './caseConversion.js';
 
 // =================================
@@ -41,7 +45,7 @@ export interface Settings {
   /**
    * Trust configuration for CAWG identity validation.
    */
-  cawgTrust?: CawgTrustSettings;
+  cawgTrust?: TrustSettings;
   /**
    * Verification settings.
    */
@@ -79,11 +83,11 @@ export interface TrustSettings {
    * Possible values are: the text content of a end-entity cert file, a URL to fetch a end-entity cert file from, or an array of URLs that will be fetched and concatenated.
    */
   allowedList?: string | string[];
-}
-
-export interface CawgTrustSettings extends TrustSettings {
   /**
    * Enable CAWG trust validation. The default value is "true."
+   *
+   * Only has an effect when set on `cawgTrust` — mirrors `c2pa-rs`'s `Trust` struct, which is
+   * shared by both the `trust` and `cawg_trust` settings sections and carries this field on both.
    */
   verifyTrustList?: boolean;
 }
@@ -218,7 +222,7 @@ export function createTrustSettings(trustConfig: TrustSettings): Settings {
  * @returns Settings object that can be passed to Reader/Builder.
  */
 export function createCawgTrustSettings(
-  trustConfig: CawgTrustSettings
+  trustConfig: TrustSettings
 ): Settings {
   return { cawgTrust: { ...trustConfig } };
 }
@@ -263,18 +267,20 @@ export function settingsToJson(settings: Settings): string {
 // =================================
 
 /**
- * Load settings from a URL.
+ * Load settings from a URL, retrying on network errors and retryable HTTP responses (see
+ * {@link fetchWithRetryRaw}). Unlike {@link resolveTrustSettings}'s trust-anchor fetch, this
+ * does not enforce a response-size cap or validate the content — it's meant for loading an
+ * app's own trusted configuration file, not untrusted resources embedded in a manifest.
  *
  * @param url The URL to fetch the settings from
+ * @param options Options for configuring the retry policy.
  * @returns Settings as a string
  */
-export async function loadSettingsFromUrl(url: string): Promise<string> {
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(
-      `Failed to fetch settings from URL: ${res.status} ${res.statusText}`
-    );
-  }
+export async function loadSettingsFromUrl(
+  url: string,
+  options?: FetchWithRetryOptions
+): Promise<string> {
+  const res = await fetchWithRetryRaw(url, undefined, options);
   return await res.text();
 }
 
@@ -282,15 +288,22 @@ export async function loadSettingsFromUrl(url: string): Promise<string> {
 // Trust-anchor resolution
 // =================================
 
-const TRUST_SETTINGS_KEY_MAP: Record<keyof TrustSettings, true> = {
-  userAnchors: true,
-  trustAnchors: true,
-  trustConfig: true,
-  allowedList: true
-};
-const TRUST_SETTINGS_KEYS = Object.keys(
-  TRUST_SETTINGS_KEY_MAP
-) as (keyof TrustSettings)[];
+/**
+ * The URL-resolvable trust-anchor fields on `TrustSettings`. Deliberately excludes
+ * `verifyTrustList`, which is a plain boolean, not a fetchable resource.
+ */
+type TrustAnchorKey =
+  | 'userAnchors'
+  | 'trustAnchors'
+  | 'trustConfig'
+  | 'allowedList';
+
+const TRUST_SETTINGS_KEYS: readonly TrustAnchorKey[] = [
+  'userAnchors',
+  'trustAnchors',
+  'trustConfig',
+  'allowedList'
+];
 
 /**
  * Walks a TrustSettings object and fetches trust resources if necessary, replacing URLs with
@@ -314,7 +327,7 @@ export async function resolveTrustSettings(
   try {
     const promises = Object.entries(settings)
       .filter(([key]) =>
-        TRUST_SETTINGS_KEYS.includes(key as keyof TrustSettings)
+        TRUST_SETTINGS_KEYS.includes(key as TrustAnchorKey)
       )
       .map(async ([key, val]) => {
         if (val && typeof val === 'object' && Array.isArray(val)) {
@@ -334,7 +347,7 @@ export async function resolveTrustSettings(
 
           const result = await Promise.all(promises);
           const combined = result.join('');
-          settings[key as keyof TrustSettings] = combined;
+          settings[key as TrustAnchorKey] = combined;
         } else if (val && typeof val === 'string' && isUrl(val)) {
           const text = await fetchWithRetry(val, options);
 
@@ -342,7 +355,7 @@ export async function resolveTrustSettings(
             throw new Error(`Error parsing PEM file at: ${val}`);
           }
 
-          settings[key as keyof TrustSettings] = text;
+          settings[key as TrustAnchorKey] = text;
         } else {
           return val;
         }
