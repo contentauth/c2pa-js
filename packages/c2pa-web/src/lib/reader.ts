@@ -11,7 +11,7 @@ import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
 import { AssetTooLargeError, UnsupportedFormatError } from './error.js';
 import { isSupportedReaderFormat } from './supportedFormats.js';
 import type { WorkerManager } from './worker/workerManager.js';
-import { Settings, resolveSettings } from './settings.js';
+import { Settings, resolveSettings } from '@contentauth/c2pa-utilities';
 
 // 1 GB
 export const MAX_SIZE_IN_BYTES = 10 ** 9;

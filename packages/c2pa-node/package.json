@@ -75,6 +75,7 @@
   },
   "homepage": "https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-node#readme",
   "dependencies": {
+    "@contentauth/c2pa-utilities": "workspace:*",
     "cargo-cp-artifact": "^0.1.9",
     "cli-progress": "^3.12.0",
     "debug": "^4.4.3",

@@ -17,7 +17,7 @@ import type {
   Ingredient,
   ManifestDefinition
 } from '@contentauth/c2pa-types';
-import { Settings, resolveSettings } from './settings.js';
+import { Settings, resolveSettings } from '@contentauth/c2pa-utilities';
 
 /**
  * Functions that permit the creation of Builder objects.

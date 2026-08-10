@@ -9,7 +9,7 @@
 
 import { test, describe, expect } from 'test/methods.js';
 import { createC2pa } from './c2pa.js';
-import { Settings } from './settings.js';
+import { Settings } from '@contentauth/c2pa-utilities';
 import { getBlobForAsset } from 'test/utils.js';
 
 import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
