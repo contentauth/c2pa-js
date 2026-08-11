@@ -85,6 +85,22 @@ export interface FetchWithRetryOptions {
    * always retried regardless of this predicate.
    */
   isRetryableStatus?: (status: number) => boolean;
+
+  /**
+   * Predicate deciding whether a given network error (thrown by the underlying `fetch` call)
+   * should be retried. Defaults to always retrying when omitted. Regardless of this predicate,
+   * an `AbortError` is never retried, since retrying a deliberate cancellation is never correct.
+   */
+  isRetryableError?: (error: unknown) => boolean;
+}
+
+/**
+ * @param error An error thrown by `fetch`.
+ * @returns Whether `error` represents a deliberate abort (e.g. via `AbortSignal`), which should
+ * never be retried regardless of {@link FetchWithRetryOptions.isRetryableError}.
+ */
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
 }
 
 /**
@@ -167,6 +183,7 @@ export async function fetchWithRetryRaw(
   const maxRetryDelayMs = options?.maxRetryDelayMs ?? DEFAULT_MAX_RETRY_DELAY_MS;
   const maxRetryAfterMs = options?.maxRetryAfterMs ?? DEFAULT_MAX_RETRY_AFTER_MS;
   const isRetryableStatus = options?.isRetryableStatus ?? defaultIsRetryableStatus;
+  const isRetryableError = options?.isRetryableError ?? (() => true);
 
   const backoff = (attempt: number) =>
     calculateBackoffMs(attempt, initialRetryDelayMs, maxRetryDelayMs);
@@ -176,7 +193,7 @@ export async function fetchWithRetryRaw(
     try {
       res = await fetch(input, init);
     } catch (e) {
-      if (attempt < maxRetries) {
+      if (!isAbortError(e) && attempt < maxRetries && isRetryableError(e)) {
         await new Promise((resolve) => setTimeout(resolve, backoff(attempt)));
         continue;
       }

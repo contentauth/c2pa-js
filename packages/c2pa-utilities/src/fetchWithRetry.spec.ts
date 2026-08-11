@@ -368,6 +368,33 @@ describe('fetchWithRetry', () => {
     const result = await fetchWithRetry('http://retryAfterOn503');
     expect(result).toBe('resolved after 503 retry-after');
   });
+
+  test('honors a custom isRetryableError, refusing to retry a network error retried by default', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error('boom'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      fetchWithRetry('http://customIsRetryableError', {
+        isRetryableError: () => false
+      })
+    ).rejects.toThrow('Network error fetching http://customIsRetryableError: boom');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  test('never retries an AbortError, even with a permissive isRetryableError', async () => {
+    const abortError = new DOMException('The operation was aborted', 'AbortError');
+    const fetchMock = vi.fn().mockRejectedValue(abortError);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      fetchWithRetry('http://abortedRequest', {
+        isRetryableError: () => true
+      })
+    ).rejects.toThrow(
+      'Network error fetching http://abortedRequest: The operation was aborted'
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('fetchWithRetryRaw', () => {
