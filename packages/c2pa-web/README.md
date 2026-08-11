@@ -81,7 +81,7 @@ console.log(manifestStore);
 await reader.free();
 ```
 
-`Reader.fromBlob` and `Reader.fromBlobFragment` reject assets larger than 1 GB, throwing `AssetTooLargeError`.
+`Reader.fromBlob` rejects assets larger than 1 GB, throwing `AssetTooLargeError`. `Reader.fromBlobFragment` reject assets where any fragment is larger than 1 GB, also throwing `AssetTooLargeError`.
 
 ### Building C2PA manifests with ingredients
 
