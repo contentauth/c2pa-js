@@ -26,6 +26,9 @@ export const MAX_SIZE_IN_BYTES = 10 * 10 ** 9; // 10 GB
  * For a `SourceBufferAsset`, the buffer is already fully allocated by the time this runs,
  * so the memory cost isn't prevented, only reader construction is. Prefer `path`
  * for large or untrusted assets.
+ * 
+ * @throws Error if reading the `FileAsset` fails.
+ * @throws {AssetTooLargeError} If `sizeInBytes` exceeds the resolved limit.
  */
 export async function validateSourceAssetSize(
   asset: SourceAsset,
