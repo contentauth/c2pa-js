@@ -4,4 +4,4 @@
 '@contentauth/c2pa-utilities': minor
 ---
 
-Consolidate the `SigningAlg` type into `@contentauth/c2pa-utilities` (derived from `@contentauth/c2pa-types`'s schema-generated type) instead of hand-duplicating the algorithm list independently in `c2pa-web` and `c2pa-node`, and re-export `c2pa-node`'s `ManifestAssertionKind` from `@contentauth/c2pa-types` instead of a duplicate hand-written copy. Also fix `c2pa-node`'s `package.json` to list `@contentauth/c2pa-types` as a `dependency` rather than a `devDependency`, matching `c2pa-web`. No behavior change.
+Consolidate the `SigningAlg` type into `@contentauth/c2pa-utilities` (derived from `@contentauth/c2pa-types`'s schema-generated type). Re-use `ManifestAssertionKind` from `@contentauth/c2pa-types` instead of a duplicate hand-written copy. Fix `c2pa-node`'s `package.json` to list `@contentauth/c2pa-types` as a `dependency` rather than a `devDependency`, matching `c2pa-web`.
