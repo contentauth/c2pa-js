@@ -90,6 +90,8 @@ const isEmbedded = reader.isEmbedded();
 const remoteUrl = reader.remoteUrl();
 ```
 
+`Reader.fromAsset` and `Reader.fromManifestDataAndAsset` reject assets larger than 10 GB, throwing `AssetTooLargeError` (exported from `@contentauth/c2pa-node`). Note that for a `SourceBufferAsset`, this only rejects after the buffer is already fully allocated in memory. Pass a `FileAsset` instead for large or untrusted assets so oversized files are rejected before being read into memory.
+
 ### Builder
 
 The `Builder` class is the main component for creating and signing C2PA manifests. It provides methods to add assertions, resources, and ingredients to manifests, and handles the signing process. Use the `Signer` class to sign the manifests. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.

@@ -10,3 +10,4 @@
 export * from './settings.js';
 export * from './fetchWithRetry.js';
 export * from './caseConversion.js';
+export * from './assetSize.js';

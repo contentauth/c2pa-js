@@ -16,8 +16,10 @@
 import type { ManifestStore } from "@contentauth/c2pa-types";
 import path from "path";
 import * as fs from "fs-extra";
+import { AssetTooLargeError } from "@contentauth/c2pa-utilities";
 
 import { Reader } from "./Reader.js";
+import { MAX_SIZE_IN_BYTES } from "./assetSize.js";
 
 const tempDir = path.join(__dirname, "tmp");
 
@@ -145,6 +147,16 @@ describe("Reader", () => {
       path: "./tests/fixtures/A.jpg",
     });
     expect(reader).toBeNull();
+  });
+
+  it("should throw AssetTooLargeError for a file asset exceeding the max size", async () => {
+    const oversizedPath = path.join(tempDir, "oversized.jpg");
+    await fs.ensureFile(oversizedPath);
+    await fs.truncate(oversizedPath, MAX_SIZE_IN_BYTES + 1);
+
+    await expect(
+      Reader.fromAsset({ path: oversizedPath }),
+    ).rejects.toThrow(AssetTooLargeError);
   });
 
   it("should read from manifest data and buffer", async () => {
