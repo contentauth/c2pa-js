@@ -9,8 +9,8 @@ The c2pa-js repository is a monorepo containing JavaScript libraries and tools f
 
 Additionally, the repo contains these intermediate and internal libraries:
 
-- [**c2pa-wasm**](./packages/c2pa-wasm/README.md): WebAssembly bindings for [c2pa-rs](https://github.com/contentauth/c2pa-rs) that power c2pa-web, built with [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen). Most applications should use c2pa-web instead of calling the bindings directly.
-- [**c2pa-types**](./packages/c2pa-types/README.md): TypeScript types generated from c2pa-rs structs for use by c2pa-web and c2pa-node.
+- [**c2pa-wasm**](packages/c2pa-wasm/README.md): WebAssembly bindings for [c2pa-rs](https://github.com/contentauth/c2pa-rs) that power c2pa-web, built with [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen). Most applications should use c2pa-web instead of calling the bindings directly.
+- [**c2pa-types**](packages/c2pa-types/README.md): TypeScript types generated from c2pa-rs structs for use by c2pa-web and c2pa-node.
 - **c2pa-utilities**: A small internal helper library shared across the c2pa-js monorepo.
 
 > [!NOTE]
