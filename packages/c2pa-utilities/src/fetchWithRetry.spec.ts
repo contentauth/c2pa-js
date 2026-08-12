@@ -454,4 +454,36 @@ describe('fetchWithRetryRaw', () => {
     const res = await fetchWithRetryRaw('http://rawRetry');
     await expect(res.text()).resolves.toBe('recovered');
   });
+
+  test('honors a custom fetch implementation, retrying through it instead of the global fetch', async () => {
+    let calls = 0;
+    const customFetch = vi.fn(async () => {
+      calls++;
+      if (calls === 1) {
+        return new Response(null, { status: 500 });
+      }
+      return new Response('via custom fetch');
+    });
+
+    const res = await fetchWithRetryRaw('http://ignoredByCustomFetch', undefined, {
+      fetch: customFetch
+    });
+
+    expect(customFetch).toHaveBeenCalledTimes(2);
+    await expect(res.text()).resolves.toBe('via custom fetch');
+  });
+
+  test('does not call the global fetch when a custom fetch implementation is provided', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const customFetch = vi.fn(async () => new Response('custom only'));
+
+    const res = await fetchWithRetryRaw('http://customFetchOnly', undefined, {
+      fetch: customFetch
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(res.text()).resolves.toBe('custom only');
+  });
 });

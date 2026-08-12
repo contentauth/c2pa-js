@@ -92,6 +92,14 @@ export interface FetchWithRetryOptions {
    * an `AbortError` is never retried, since retrying a deliberate cancellation is never correct.
    */
   isRetryableError?: (error: unknown) => boolean;
+
+  /**
+   * The underlying fetch implementation to use. Defaults to the global `fetch` when omitted.
+   * Useful for dependency injection — e.g. wrapping another HTTP client's own request pipeline
+   * (such as a `wretch` middleware's `next`, or a test double) with this shared retry mechanism
+   * instead of calling the global `fetch` directly.
+   */
+  fetch?: (input: string, init?: RequestInit) => Promise<Response>;
 }
 
 /**
@@ -184,6 +192,7 @@ export async function fetchWithRetryRaw(
   const maxRetryAfterMs = options?.maxRetryAfterMs ?? DEFAULT_MAX_RETRY_AFTER_MS;
   const isRetryableStatus = options?.isRetryableStatus ?? defaultIsRetryableStatus;
   const isRetryableError = options?.isRetryableError ?? (() => true);
+  const doFetch = options?.fetch ?? fetch;
 
   const backoff = (attempt: number) =>
     calculateBackoffMs(attempt, initialRetryDelayMs, maxRetryDelayMs);
@@ -191,7 +200,7 @@ export async function fetchWithRetryRaw(
   for (let attempt = 0; ; attempt++) {
     let res: Response;
     try {
-      res = await fetch(input, init);
+      res = await doFetch(input, init);
     } catch (e) {
       if (!isAbortError(e) && attempt < maxRetries && isRetryableError(e)) {
         await new Promise((resolve) => setTimeout(resolve, backoff(attempt)));
