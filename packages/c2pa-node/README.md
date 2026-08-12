@@ -1,4 +1,4 @@
-# C2PA Node.js library
+# CAI Node.js library
 
 `@contentauth/c2pa-node` is a Node.js library in the [c2pa-js](https://github.com/contentauth/c2pa-js) monorepo that can:
 
@@ -151,7 +151,7 @@ The `create` intent accepts a `DigitalSourceType` that describes the origin of t
 - `'http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture'` - Digital camera capture
 - `'http://cv.iptc.org/newscodes/digitalsourcetype/composite'` - Composite of multiple sources
 
-For a complete list of digital source types, see the [C2PA specification](https://c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html#_digital_source_type) and [IPTC digital source type vocabulary](https://cv.iptc.org/newscodes/digitalsourcetype).
+For a complete list of digital source types, see the [C2PA specification](https://c2pa.org/specifications/specifications/2.4/specs/C2PA_Specification.html#_digital_source_type) and [IPTC digital source type vocabulary](https://cv.iptc.org/newscodes/digitalsourcetype).
 
 For more details on builder intents, see the [c2pa-rs Builder documentation](https://docs.rs/c2pa/latest/c2pa/struct.Builder.html).
 
