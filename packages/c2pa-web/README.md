@@ -89,8 +89,8 @@ Use the `Builder` API to create C2PA manifests and add ingredients (source asset
 
 The builder intent describes the type of operation being performed on the asset. This influences how the manifest is structured and what assertions are automatically added. Use one of these intents:
 
-- `create`: Indicates the asset is a new digital creation, a DigitalSourceType is required. The Manifest must not have have a parent ingredient. A `c2pa.created` action will be added if not provided.
-- `edit`: Indicates the asset is an edit of a pre-existing parent asset. The Manifest must have a parent ingredient. A parent ingredient will be generated from the source stream if not otherwise provided. A `c2pa.opened action will be tied to the parent ingredient.
+- `create`: Indicates the asset is a new digital creation, a `DigitalSourceType` is required. The manifest must not have a parent ingredient. A `c2pa.created` action will be added if not provided.
+- `edit`: Indicates the asset is an edit of a pre-existing parent asset. The manifest must have a parent ingredient. A parent ingredient will be generated from the source stream if not otherwise provided. A `c2pa.opened` action will be tied to the parent ingredient.
 - `update`: A restricted version of `edit` for non-editorial changes. There must be only one ingredient, as a parent. No changes can be made to the hashed content of the parent. There are additional restrictions on the types of changes that can be made.
 
 ```typescript
@@ -291,7 +291,7 @@ For the full list, see the [API reference](https://contentauth.github.io/c2pa-js
 Ensure the repo-wide prerequisites are installed:
 
 - [Node.js](https://nodejs.org/) v22.22+
-- [NX](https://nx.dev/getting-started/intro)
+- [Nx](https://nx.dev/getting-started/intro)
 - [pnpm](https://pnpm.io/)
 
 See the [c2pa-js README](../../README.md#prerequisites) for details.
@@ -316,6 +316,6 @@ pnpm exec playwright install
 
 To run the tests:
 
-```
+```sh
 nx test c2pa-web
 ```
