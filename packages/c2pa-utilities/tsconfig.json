@@ -4,6 +4,9 @@
   "include": [],
   "references": [
     {
+      "path": "../c2pa-types"
+    },
+    {
       "path": "./tsconfig.lib.json"
     },
     {

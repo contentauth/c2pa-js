@@ -7,14 +7,9 @@
  * it.
  */
 
-export type SigningAlg =
-  | 'es256'
-  | 'es384'
-  | 'es512'
-  | 'ps256'
-  | 'ps384'
-  | 'ps512'
-  | 'ed25519';
+import type { SigningAlg } from '@contentauth/c2pa-utilities';
+
+export type { SigningAlg };
 
 export interface Signer {
   sign: (
