@@ -255,9 +255,6 @@ importers:
       highgain:
         specifier: ^0.1.0
         version: 0.1.0
-      ts-deepmerge:
-        specifier: ^8.0.0
-        version: 8.0.0
     devDependencies:
       '@playwright/test':
         specifier: ^1.60.0
