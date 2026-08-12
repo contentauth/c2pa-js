@@ -8,10 +8,14 @@
  */
 
 import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
-import { AssetTooLargeError, UnsupportedFormatError } from './error.js';
+import { UnsupportedFormatError } from './error.js';
 import { isSupportedReaderFormat } from './supportedFormats.js';
 import type { WorkerManager } from './worker/workerManager.js';
-import { Settings, resolveSettings } from '@contentauth/c2pa-utilities';
+import {
+  Settings,
+  resolveSettings,
+  validateAssetSize
+} from '@contentauth/c2pa-utilities';
 
 // 1 GB
 export const MAX_SIZE_IN_BYTES = 10 ** 9;
@@ -134,9 +138,7 @@ export function createReaderFactory(worker: WorkerManager, settings?: Settings):
         throw new UnsupportedFormatError(format);
       }
 
-      if (blob.size > MAX_SIZE_IN_BYTES) {
-        throw new AssetTooLargeError(blob.size);
-      }
+      validateAssetSize(blob.size, MAX_SIZE_IN_BYTES);
 
       try {
         const settingsJson = await resolveSettings(baseSettings, settings);
@@ -164,9 +166,8 @@ export function createReaderFactory(worker: WorkerManager, settings?: Settings):
         throw new UnsupportedFormatError(format);
       }
 
-      if (init.size > MAX_SIZE_IN_BYTES) {
-        throw new AssetTooLargeError(init.size);
-      }
+      validateAssetSize(init.size, MAX_SIZE_IN_BYTES);
+      validateAssetSize(fragment.size, MAX_SIZE_IN_BYTES);
 
       try {
         const settingsJson = await resolveSettings(baseSettings, settings);

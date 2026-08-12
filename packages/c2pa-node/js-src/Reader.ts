@@ -14,6 +14,7 @@
 import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
 
 import { getNeonBinary } from "./binary.js";
+import { validateSourceAssetSize } from "./assetSize.js";
 import type {
   C2paSettings,
   DestinationAsset,
@@ -43,6 +44,7 @@ export class Reader implements ReaderInterface {
   }
 
   static async fromAsset(asset: SourceAsset, settings?: C2paSettings): Promise<Reader | null> {
+    await validateSourceAssetSize(asset);
     const settingsStr = settings ? (typeof settings === 'string' ? settings : JSON.stringify(settings)) : undefined;
     const reader: NeonReaderHandle | null =
       await getNeonBinary().readerFromAsset(asset, settingsStr);
@@ -54,6 +56,7 @@ export class Reader implements ReaderInterface {
     asset: SourceAsset,
     settings?: C2paSettings,
   ): Promise<Reader> {
+    await validateSourceAssetSize(asset);
     const settingsStr = settings ? (typeof settings === 'string' ? settings : JSON.stringify(settings)) : undefined;
     const reader: NeonReaderHandle =
       await getNeonBinary().readerFromManifestDataAndAsset(manifestData, asset, settingsStr);
