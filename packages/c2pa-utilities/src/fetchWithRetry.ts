@@ -95,17 +95,15 @@ export interface FetchWithRetryOptions {
 
   /**
    * The underlying fetch implementation to use. Defaults to the global `fetch` when omitted.
-   * Useful for dependency injection — e.g. wrapping another HTTP client's own request pipeline
-   * (such as a `wretch` middleware's `next`, or a test double) with this shared retry mechanism
-   * instead of calling the global `fetch` directly.
+   * Useful for dependency injection, such as wrapping another HTTP client's own request pipeline
+   * (like `wretch` middleware's `next`, or a test mock).
    */
   fetch?: (input: string, init?: RequestInit) => Promise<Response>;
 }
 
 /**
- * @param error An error thrown by `fetch`.
- * @returns Whether `error` represents a deliberate abort (e.g. via `AbortSignal`), which should
- * never be retried regardless of {@link FetchWithRetryOptions.isRetryableError}.
+ * @param error The error to check, usually from a `fetch` call.
+ * @returns Whether `error` represents a deliberate `AbortError`.
  */
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
