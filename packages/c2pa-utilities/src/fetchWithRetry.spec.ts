@@ -369,15 +369,15 @@ describe('fetchWithRetry', () => {
     expect(result).toBe('resolved after 503 retry-after');
   });
 
-  test('honors a custom isRetryableError, refusing to retry a network error retried by default', async () => {
-    const fetchMock = vi.fn().mockRejectedValue(new Error('boom'));
+  test('honors a custom isRetryableError', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error('error'));
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(
       fetchWithRetry('http://customIsRetryableError', {
-        isRetryableError: () => false
+        isRetryableError: () => false // Nothing is retryable.
       })
-    ).rejects.toThrow('Network error fetching http://customIsRetryableError: boom');
+    ).rejects.toThrow('Network error fetching http://customIsRetryableError: error');
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -455,7 +455,10 @@ describe('fetchWithRetryRaw', () => {
     await expect(res.text()).resolves.toBe('recovered');
   });
 
-  test('honors a custom fetch implementation, retrying through it instead of the global fetch', async () => {
+  test('honors a custom fetch implementation, using it instead of the global fetch', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    
     let calls = 0;
     const customFetch = vi.fn(async () => {
       calls++;
@@ -469,21 +472,8 @@ describe('fetchWithRetryRaw', () => {
       fetch: customFetch
     });
 
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(customFetch).toHaveBeenCalledTimes(2);
     await expect(res.text()).resolves.toBe('via custom fetch');
-  });
-
-  test('does not call the global fetch when a custom fetch implementation is provided', async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
-
-    const customFetch = vi.fn(async () => new Response('custom only'));
-
-    const res = await fetchWithRetryRaw('http://customFetchOnly', undefined, {
-      fetch: customFetch
-    });
-
-    expect(fetchMock).not.toHaveBeenCalled();
-    await expect(res.text()).resolves.toBe('custom only');
   });
 });
