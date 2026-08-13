@@ -190,7 +190,7 @@ export async function fetchWithRetryRaw(
   const maxRetryAfterMs = options?.maxRetryAfterMs ?? DEFAULT_MAX_RETRY_AFTER_MS;
   const isRetryableStatus = options?.isRetryableStatus ?? defaultIsRetryableStatus;
   const isRetryableError = options?.isRetryableError ?? (() => true);
-  const doFetch = options?.fetch ?? fetch;
+  const fetchFn = options?.fetch ?? fetch;
 
   const backoff = (attempt: number) =>
     calculateBackoffMs(attempt, initialRetryDelayMs, maxRetryDelayMs);
@@ -198,7 +198,7 @@ export async function fetchWithRetryRaw(
   for (let attempt = 0; ; attempt++) {
     let res: Response;
     try {
-      res = await doFetch(input, init);
+      res = await fetchFn(input, init);
     } catch (e) {
       if (!isAbortError(e) && attempt < maxRetries && isRetryableError(e)) {
         await new Promise((resolve) => setTimeout(resolve, backoff(attempt)));
