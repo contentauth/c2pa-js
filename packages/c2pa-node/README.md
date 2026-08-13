@@ -1,14 +1,15 @@
-# C2PA Node.js library
+# CAI Node.js library
 
 `@contentauth/c2pa-node` is a Node.js library in the [c2pa-js](https://github.com/contentauth/c2pa-js) monorepo that can:
+
 - Read and validate C2PA data from media files in supported formats.
 - Add signed manifests to media files in supported formats.
 
 ## Prerequisites
 
-To use the C2PA Node library you need Node.js **>=22**. If you need to manage multiple versions of Node on your machine, use a tool such as [nvm](https://github.com/nvm-sh/nvm).
+To use the c2pa-node library, you need Node.js 22 or later. If you need to manage multiple versions of Node on your machine, use a tool such as [nvm](https://github.com/nvm-sh/nvm).
 
-To **build from source** you also need [Rust](https://www.rust-lang.org/tools/install). This is not required when installing the package normally — precompiled binaries are downloaded automatically during installation.
+To build from source, you also need [Rust](https://www.rust-lang.org/tools/install). This is not required when installing the package normally: precompiled binaries are downloaded automatically during installation.
 
 ## Installation
 
@@ -17,19 +18,19 @@ To **build from source** you also need [Rust](https://www.rust-lang.org/tools/in
 Using npm:
 
 ```sh
-$ npm install @contentauth/c2pa-node
+npm install @contentauth/c2pa-node
 ```
 
 Using Yarn:
 
 ```sh
-$ yarn add @contentauth/c2pa-node
+yarn add @contentauth/c2pa-node
 ```
 
 Using pnpm:
 
 ```sh
-$ pnpm add @contentauth/c2pa-node
+pnpm add @contentauth/c2pa-node
 ```
 
 This command will download precompiled binaries for the following systems:
@@ -126,15 +127,13 @@ await builder.addResource('resource://example', resourceAsset);
 const manifest = builder.sign(signer, inputAsset, outputAsset);
 ```
 
-#### Setting Builder Intent
+#### Setting builder intent
 
-The builder intent describes the type of operation being performed on the asset. This influences how the manifest is structured and what assertions are automatically added.
+The builder intent describes the type of operation being performed on the asset. This influences how the manifest is structured and what assertions are automatically added. Use one of these intents:
 
-`create`: This is a new digital creation, a DigitalSourceType is required. The Manifest must not have a parent ingredient. A `c2pa.created` action will be added if not provided.
-
-`edit`: This is an edit of a pre-existing parent asset. The Manifest must have a parent ingredient. A parent ingredient will be generated from the source stream if not otherwise provided. A `c2pa.opened` action will be tied to the parent ingredient.
-
-`update`: A restricted version of Edit for non-editorial changes. There must be only one ingredient, as a parent. No changes can be made to the hashed content of the parent. There are additional restrictions on the types of changes that can be made.
+- `create`: Indicates the asset is a new digital creation, a `DigitalSourceType` is required. The manifest must not have a parent ingredient. A `c2pa.created` action will be added if not provided.
+- `edit`: Indicates the asset is an edit of a pre-existing parent asset. The manifest must have a parent ingredient. A parent ingredient will be generated from the source stream if not otherwise provided. A `c2pa.opened` action will be tied to the parent ingredient.
+- `update`: A restricted version of `edit` for non-editorial changes. There must be only one ingredient, as a parent. No changes can be made to the hashed content of the parent. There are additional restrictions on the types of changes that can be made.
 
 ```javascript
 const builder = Builder.new();
@@ -154,11 +153,11 @@ The `create` intent accepts a `DigitalSourceType` that describes the origin of t
 - `'http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture'` - Digital camera capture
 - `'http://cv.iptc.org/newscodes/digitalsourcetype/composite'` - Composite of multiple sources
 
-For a complete list of digital source types, see the [C2PA specification](https://c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html#_digital_source_type) and [IPTC digital source type vocabulary](https://cv.iptc.org/newscodes/digitalsourcetype).
+For a complete list of digital source types, see the [C2PA specification](https://c2pa.org/specifications/specifications/2.4/specs/C2PA_Specification.html#_digital_source_type) and [IPTC digital source type vocabulary](https://cv.iptc.org/newscodes/digitalsourcetype).
 
 For more details on builder intents, see the [c2pa-rs Builder documentation](https://docs.rs/c2pa/latest/c2pa/struct.Builder.html).
 
-#### Adding Ingredients from Assets
+#### Adding ingredients from assets
 
 When you have access to the ingredient asset, use `addIngredient` with an asset to include both the metadata and the asset data:
 
@@ -189,7 +188,7 @@ const definition = builder.getManifestDefinition();
 console.log(definition.ingredients); // Contains the ingredient with embedded data
 ```
 
-#### Adding Multiple Ingredients
+#### Adding multiple ingredients
 
 You can add multiple ingredients to document complex provenance chains:
 
@@ -232,7 +231,7 @@ const definition = builder.getManifestDefinition();
 console.log(definition.ingredients.length); // 2
 ```
 
-#### Adding Ingredients from Readers
+#### Adding ingredients from readers
 
 You can also add ingredients directly from a `Reader` object, which automatically includes the C2PA data:
 
@@ -251,7 +250,7 @@ const ingredient = builder.addIngredientFromReader(sourceReader);
 console.log(ingredient.title); // Contains ingredient metadata
 ```
 
-#### Adding Ingredients from Archives (.c2pa files)
+#### Adding ingredients from archive files
 
 You can add ingredients from `.c2pa` archive files. Archives are binary files that contain a manifest store with ingredients and their associated resources (thumbnails, manifest data, etc.). To work with them, read the archive with `Reader` using the `application/c2pa` MIME type, then extract the ingredients and transfer their binary resources to a new `Builder`.
 
@@ -370,7 +369,7 @@ await builder.addIngredient(
 await builder.toArchive({ path: 'ingredient-catalog.c2pa' });
 ```
 
-#### Creating and Reusing Builder Archives
+#### Creating and reusing builder archives
 
 Builder archives allow you to save a builder's state (including ingredients) and reuse it later:
 
@@ -449,7 +448,7 @@ const signer = CallbackSigner.newSigner(
 );
 ```
 
-### Identity Assertion Components
+### Identity assertion components
 
 For working with identity assertions and CAWG (Content Authenticity Working Group) identities:
 
@@ -520,11 +519,11 @@ const encodedImage = await trustmark.encode(
 const decodedData = await trustmark.decode(imageBuffer);
 ```
 
-### Settings and Configuration
+### Settings and configuration
 
 The library provides comprehensive settings management that can be configured per Reader/Builder instance or using helper functions. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
 
-#### Per-Instance Settings
+#### Per-instance settings
 
 Settings can be passed directly to `Reader` and `Builder` constructors:
 
@@ -556,7 +555,7 @@ const settingsJson = JSON.stringify(settings);
 const builder2 = Builder.new(settingsJson);
 ```
 
-#### Settings Helper Functions
+#### Settings helper functions
 
 The library provides helper functions to create and manage settings objects:
 
@@ -612,16 +611,16 @@ const urlSettings = await loadSettingsFromUrl('https://example.com/c2pa-settings
 const builder = Builder.new(urlSettings);
 ```
 
-#### Available Settings
+#### Available settings
 
-**Trust Settings:**
+**Trust settings:**
 - `verifyTrustList` - Whether to verify against the trust list
 - `userAnchors` - User-provided trust anchors (PEM format or path)
 - `trustAnchors` - Trust anchors for validation (PEM format or path)
 - `trustConfig` - Path to trust configuration file
 - `allowedList` - Allowed list of certificates (PEM format or path)
 
-**Verify Settings:**
+**Verify settings:**
 - `verifyAfterReading` - Whether to verify after reading a manifest
 - `verifyAfterSign` - Whether to verify after signing a manifest
 - `verifyTrust` - Whether to verify trust during validation
@@ -631,18 +630,22 @@ const builder = Builder.new(urlSettings);
 - `skipIngredientConflictResolution` - Whether to skip ingredient conflict resolution
 - `strictV1Validation` - Whether to use strict v1 validation
 
-**Builder Settings:**
+**Builder settings:**
 - `generate_c2pa_archive` - Whether to generate C2PA archive format
 
-**Note:** Settings are passed as per-instance configuration. There are no global settings that affect all Readers and Builders.
-
+> [!NOTE]
+> Settings are passed as per-instance configuration. There are no global settings that affect all Readers and Builders.
 
 ### Build and use custom binary
+
 **Build Rust binary:**
+
 ```bash
 pnpm run build:rust
 ```
+
 **Use custom Rust binary:**
+
 ```bash
 export C2PA_LIBRARY_PATH=<path-to-binary-folder>/index.node
 ```
