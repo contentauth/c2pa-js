@@ -165,8 +165,10 @@ function assertValidUrl(input: string): void {
 /**
  * Fetches `input`, retrying on network errors and on responses whose status is deemed
  * retryable (see {@link FetchWithRetryOptions.isRetryableStatus}), with exponential backoff
- * (respecting a `Retry-After` header when present). Returns the raw, successful `Response` —
- * callers are responsible for reading and validating the body themselves (e.g. `.json()`,
+ * (respecting a `Retry-After` header when present). Gives up on receiving `AbortError` and
+ * does not retry.
+ * 
+ * Callers are responsible for reading and validating the body themselves (e.g. `.json()`,
  * `.text()`, streaming, or their own size cap), which makes this suitable for arbitrary
  * requests (custom methods, headers, bodies) rather than just simple GETs.
  *
