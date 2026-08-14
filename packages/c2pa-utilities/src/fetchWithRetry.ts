@@ -80,16 +80,17 @@ export interface FetchWithRetryOptions {
   maxRetryAfterMs?: number;
 
   /**
-   * Predicate deciding whether a given HTTP response status should be retried. Defaults to
-   * {@link defaultIsRetryableStatus} (`429` or any `5xx`) when omitted. Network errors are
-   * always retried regardless of this predicate.
+   * Predicate contributing to decision on whether a given HTTP response status should be retried. 
+   * Defaults to {@link defaultIsRetryableStatus} (`429` or any `5xx`) when omitted.
    */
   isRetryableStatus?: (status: number) => boolean;
 
   /**
-   * Predicate deciding whether a given network error (thrown by the underlying `fetch` call)
-   * should be retried. Defaults to always retrying when omitted. Regardless of this predicate,
-   * an `AbortError` is never retried, since retrying a deliberate cancellation is never correct.
+   * Predicate contributing to decision on whether a given network error (thrown by the underlying 
+   * `fetch` call) should be retried.
+   * 
+   * Defaults to always retrying when omitted. Regardless of this predicate, an `AbortError` is
+   * never retried, since retrying a deliberate cancellation is never correct.
    */
   isRetryableError?: (error: unknown) => boolean;
 
@@ -202,7 +203,7 @@ export async function fetchWithRetryRaw(
     try {
       res = await fetchFn(input, init);
     } catch (e) {
-      if (!isAbortError(e) && attempt < maxRetries && isRetryableError(e)) {
+      if (!isAbortError(e) && isRetryableError(e) && attempt < maxRetries) {
         await new Promise((resolve) => setTimeout(resolve, backoff(attempt)));
         continue;
       }
