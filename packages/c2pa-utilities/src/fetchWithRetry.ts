@@ -80,11 +80,34 @@ export interface FetchWithRetryOptions {
   maxRetryAfterMs?: number;
 
   /**
-   * Predicate deciding whether a given HTTP response status should be retried. Defaults to
-   * {@link defaultIsRetryableStatus} (`429` or any `5xx`) when omitted. Network errors are
-   * always retried regardless of this predicate.
+   * Predicate contributing to decision on whether a given HTTP response status should be retried. 
+   * Defaults to {@link defaultIsRetryableStatus} (`429` or any `5xx`) when omitted.
    */
   isRetryableStatus?: (status: number) => boolean;
+
+  /**
+   * Predicate contributing to decision on whether a given network error (thrown by the underlying 
+   * `fetch` call) should be retried.
+   * 
+   * Defaults to always retrying when omitted. Regardless of this predicate, an `AbortError` is
+   * never retried, since retrying a deliberate cancellation is never correct.
+   */
+  isRetryableError?: (error: unknown) => boolean;
+
+  /**
+   * The underlying fetch implementation to use. Defaults to the global `fetch` when omitted.
+   * Useful for dependency injection, such as wrapping another HTTP client's own request pipeline
+   * (like `wretch` middleware's `next`, or a test mock).
+   */
+  fetch?: (input: string, init?: RequestInit) => Promise<Response>;
+}
+
+/**
+ * @param error The error to check, usually from a `fetch` call.
+ * @returns Whether `error` represents a deliberate `AbortError`.
+ */
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
 }
 
 /**
@@ -143,8 +166,10 @@ function assertValidUrl(input: string): void {
 /**
  * Fetches `input`, retrying on network errors and on responses whose status is deemed
  * retryable (see {@link FetchWithRetryOptions.isRetryableStatus}), with exponential backoff
- * (respecting a `Retry-After` header when present). Returns the raw, successful `Response` —
- * callers are responsible for reading and validating the body themselves (e.g. `.json()`,
+ * (respecting a `Retry-After` header when present). Gives up on receiving `AbortError` and
+ * does not retry.
+ * 
+ * Callers are responsible for reading and validating the body themselves (e.g. `.json()`,
  * `.text()`, streaming, or their own size cap), which makes this suitable for arbitrary
  * requests (custom methods, headers, bodies) rather than just simple GETs.
  *
@@ -167,6 +192,8 @@ export async function fetchWithRetryRaw(
   const maxRetryDelayMs = options?.maxRetryDelayMs ?? DEFAULT_MAX_RETRY_DELAY_MS;
   const maxRetryAfterMs = options?.maxRetryAfterMs ?? DEFAULT_MAX_RETRY_AFTER_MS;
   const isRetryableStatus = options?.isRetryableStatus ?? defaultIsRetryableStatus;
+  const isRetryableError = options?.isRetryableError ?? (() => true);
+  const fetchFn = options?.fetch ?? fetch;
 
   const backoff = (attempt: number) =>
     calculateBackoffMs(attempt, initialRetryDelayMs, maxRetryDelayMs);
@@ -174,9 +201,9 @@ export async function fetchWithRetryRaw(
   for (let attempt = 0; ; attempt++) {
     let res: Response;
     try {
-      res = await fetch(input, init);
+      res = await fetchFn(input, init);
     } catch (e) {
-      if (attempt < maxRetries) {
+      if (!isAbortError(e) && isRetryableError(e) && attempt < maxRetries) {
         await new Promise((resolve) => setTimeout(resolve, backoff(attempt)));
         continue;
       }

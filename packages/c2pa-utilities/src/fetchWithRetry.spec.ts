@@ -368,6 +368,33 @@ describe('fetchWithRetry', () => {
     const result = await fetchWithRetry('http://retryAfterOn503');
     expect(result).toBe('resolved after 503 retry-after');
   });
+
+  test('honors a custom isRetryableError', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error('error'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      fetchWithRetry('http://customIsRetryableError', {
+        isRetryableError: () => false // Nothing is retryable.
+      })
+    ).rejects.toThrow('Network error fetching http://customIsRetryableError: error');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  test('never retries an AbortError, even with a permissive isRetryableError', async () => {
+    const abortError = new DOMException('The operation was aborted', 'AbortError');
+    const fetchMock = vi.fn().mockRejectedValue(abortError);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      fetchWithRetry('http://abortedRequest', {
+        isRetryableError: () => true
+      })
+    ).rejects.toThrow(
+      'Network error fetching http://abortedRequest: The operation was aborted'
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('fetchWithRetryRaw', () => {
@@ -426,5 +453,72 @@ describe('fetchWithRetryRaw', () => {
 
     const res = await fetchWithRetryRaw('http://rawRetry');
     await expect(res.text()).resolves.toBe('recovered');
+  });
+
+  test('preserves the given RequestInit across retries', async () => {
+    const receivedRequests: {
+      method: string;
+      header: string | null;
+      body: unknown;
+    }[] = [];
+
+    const recordRequest = async ({ request }: { request: Request }) => {
+      receivedRequests.push({
+        method: request.method,
+        header: request.headers.get('x-test-header'),
+        body: await request.json()
+      });
+    };
+
+    server.use(
+      http.post(
+        'http://rawRetryWithInit',
+        async (info) => {
+          await recordRequest(info);
+          return new HttpResponse(null, { status: 500 });
+        },
+        { once: true }
+      ),
+      http.post('http://rawRetryWithInit', async (info) => {
+        await recordRequest(info);
+        return HttpResponse.json({ ok: true });
+      })
+    );
+
+    const res = await fetchWithRetryRaw('http://rawRetryWithInit', {
+      method: 'POST',
+      headers: { 'x-test-header': 'value' },
+      body: JSON.stringify({ hello: 'world' })
+    });
+
+    expect(res.ok).toBe(true);
+    expect(receivedRequests).toHaveLength(2);
+    for (const received of receivedRequests) {
+      expect(received.method).toBe('POST');
+      expect(received.header).toBe('value');
+      expect(received.body).toEqual({ hello: 'world' });
+    }
+  });
+
+  test('honors a custom fetch implementation, using it instead of the global fetch', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    
+    let calls = 0;
+    const customFetch = vi.fn(async () => {
+      calls++;
+      if (calls === 1) {
+        return new Response(null, { status: 500 });
+      }
+      return new Response('via custom fetch');
+    });
+
+    const res = await fetchWithRetryRaw('http://ignoredByCustomFetch', undefined, {
+      fetch: customFetch
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(customFetch).toHaveBeenCalledTimes(2);
+    await expect(res.text()).resolves.toBe('via custom fetch');
   });
 });
