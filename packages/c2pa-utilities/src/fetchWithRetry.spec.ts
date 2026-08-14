@@ -455,6 +455,51 @@ describe('fetchWithRetryRaw', () => {
     await expect(res.text()).resolves.toBe('recovered');
   });
 
+  test('preserves the given RequestInit across retries', async () => {
+    const receivedRequests: {
+      method: string;
+      header: string | null;
+      body: unknown;
+    }[] = [];
+
+    const recordRequest = async ({ request }: { request: Request }) => {
+      receivedRequests.push({
+        method: request.method,
+        header: request.headers.get('x-test-header'),
+        body: await request.json()
+      });
+    };
+
+    server.use(
+      http.post(
+        'http://rawRetryWithInit',
+        async (info) => {
+          await recordRequest(info);
+          return new HttpResponse(null, { status: 500 });
+        },
+        { once: true }
+      ),
+      http.post('http://rawRetryWithInit', async (info) => {
+        await recordRequest(info);
+        return HttpResponse.json({ ok: true });
+      })
+    );
+
+    const res = await fetchWithRetryRaw('http://rawRetryWithInit', {
+      method: 'POST',
+      headers: { 'x-test-header': 'value' },
+      body: JSON.stringify({ hello: 'world' })
+    });
+
+    expect(res.ok).toBe(true);
+    expect(receivedRequests).toHaveLength(2);
+    for (const received of receivedRequests) {
+      expect(received.method).toBe('POST');
+      expect(received.header).toBe('value');
+      expect(received.body).toEqual({ hello: 'world' });
+    }
+  });
+
   test('honors a custom fetch implementation, using it instead of the global fetch', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
