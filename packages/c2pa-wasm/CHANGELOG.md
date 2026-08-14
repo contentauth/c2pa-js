@@ -1,5 +1,15 @@
 # @contentauth/c2pa-wasm
 
+## 0.11.3
+
+### Patch Changes
+
+- 2de9ba5: c2pa-rs bump
+- facb1f0: Bump c2pa-rs version to 0.90.14
+- 1102535: Bump c2pa-rs version to v0.90.10
+- 4c8ad00: c2pa-rs version bump to v0.90.12
+- b82e854: Bump c2pa-rs to v0.90.15
+
 ## 0.11.2
 
 ### Patch Changes
