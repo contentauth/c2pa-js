@@ -76,6 +76,15 @@ jobs:
             echo "::error::Could not find @contentauth/c2pa-node in publishedPackages" >&2
             exit 1
           fi
+
+          # publishedPackages reflects what changesets/action *attempted*, not
+          # what actually landed on the registry, so verify directly against npm
+          # before releasing artifacts.
+          if ! npm view "@contentauth/c2pa-node@${version}" version >/dev/null 2>&1; then
+            echo "::error::@contentauth/c2pa-node@${version} is not on the npm registry; refusing to build/upload binaries for it" >&2
+            exit 1
+          fi
+
           echo "PUBLISHED_VERSION=$version" >> "$GITHUB_ENV"
 
       - uses: actions/checkout@v4
@@ -159,28 +168,66 @@ jobs:
           # "@contentauth/c2pa-node@0.6.2" -- not "v<version>".
           tag="@contentauth/c2pa-node@${PUBLISHED_VERSION}"
           encoded_tag=$(jq -rn --arg t "$tag" '$t|@uri')
-          id=$(curl -sSL --fail \
-            -H 'Accept: application/vnd.github+json' \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${encoded_tag}" \
-            | jq -e '.id')
-          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+          # The GitHub release is created by changesets/action right before
+          # this job runs, so retry briefly in case of eventual consistency
+          # rather than failing hard on the first miss.
+          for attempt in 1 2 3 4 5; do
+            http_code=$(curl -sSL -o response.json -w '%{http_code}' \
+              -H 'Accept: application/vnd.github+json' \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${{ github.repository }}/releases/tags/${encoded_tag}")
+
+            if [ "$http_code" = "200" ]; then
+              id=$(jq -e '.id' response.json)
+              echo "id=$id" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            echo "GitHub release for tag ${tag} not found yet (attempt ${attempt}/5, HTTP ${http_code}); retrying in 10s..."
+            sleep 10
+          done
+
+          echo "::error::Could not find a GitHub release tagged ${tag} after retrying" >&2
+          exit 1
 
       - name: Upload release asset
         if: needs.release.outputs.published == 'true'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ steps.get-release-id.outputs.id }}
+          ASSET_NAME: ${{ steps.package-artifact.outputs.archive }}
         run: |
+          # Re-running this job (e.g. after a transient failure on another
+          # matrix leg) would otherwise 422 on a duplicate asset name, so
+          # replace any existing asset first to keep this step idempotent.
+          existing_asset_id=$(curl -sSL --fail \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/${RELEASE_ID}/assets" \
+            | jq -r --arg name "$ASSET_NAME" '.[] | select(.name == $name) | .id')
+
+          if [ -n "$existing_asset_id" ]; then
+            echo "Asset ${ASSET_NAME} already exists on release ${RELEASE_ID}; replacing it."
+            curl -sSL --fail \
+              -X DELETE \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/assets/${existing_asset_id}"
+          fi
+
           curl -sSL --fail \
             -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             -H "Content-Type: application/zip" \
-            "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ steps.get-release-id.outputs.id }}/assets?name=${{ steps.package-artifact.outputs.archive }}" \
-            --data-binary "@packages/c2pa-node/generated/${{ steps.package-artifact.outputs.archive }}"
+            "https://uploads.github.com/repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${ASSET_NAME}" \
+            --data-binary "@packages/c2pa-node/generated/${ASSET_NAME}"
 
   publish-docs:
     needs: [release]
