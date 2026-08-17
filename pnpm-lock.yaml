@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@changesets/cli@2.31.0':
+    hash: 3a8bdb9beaa04fc87b82cb2d08e95cc959c23a3a5a384098b71a2d25751dc6be
+    path: patches/@changesets__cli@2.31.0.patch
+
 importers:
 
   .:
@@ -143,7 +148,7 @@ importers:
     devDependencies:
       '@changesets/cli':
         specifier: ^2.31.0
-        version: 2.31.0(@types/node@22.19.20)
+        version: 2.31.0(patch_hash=3a8bdb9beaa04fc87b82cb2d08e95cc959c23a3a5a384098b71a2d25751dc6be)(@types/node@22.19.20)
       '@eslint/js':
         specifier: ^9.39.4
         version: 9.39.4
@@ -8516,7 +8521,7 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
 
-  '@changesets/cli@2.31.0(@types/node@22.19.20)':
+  '@changesets/cli@2.31.0(patch_hash=3a8bdb9beaa04fc87b82cb2d08e95cc959c23a3a5a384098b71a2d25751dc6be)(@types/node@22.19.20)':
     dependencies:
       '@changesets/apply-release-plan': 7.1.1
       '@changesets/assemble-release-plan': 6.0.10
