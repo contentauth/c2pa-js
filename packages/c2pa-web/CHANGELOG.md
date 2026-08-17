@@ -1,5 +1,13 @@
 # @contentauth/c2pa-web
 
+## 0.14.1
+
+### Patch Changes
+
+- 9c87188: Republish to fix `@contentauth/c2pa-types`, `@contentauth/c2pa-utilities`, and `@contentauth/c2pa-wasm` dependencies, which were published as the literal string `workspace:*` instead of resolved versions. This happened because this package's publish ran concurrently with `c2pa-node`'s in the same release, hitting a race in pnpm's workspace-protocol rewrite during `pnpm publish` (now patched to publish serially). No source changes are included; this release exists solely to get a correctly published package out.
+- Updated dependencies [a62320c]
+  - @contentauth/c2pa-utilities@0.2.1
+
 ## 0.14.0
 
 ### Minor Changes

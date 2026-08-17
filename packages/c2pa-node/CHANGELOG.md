@@ -1,5 +1,13 @@
 # @contentauth/c2pa-node
 
+## 0.9.1
+
+### Patch Changes
+
+- 9c87188: Republish to fix `@contentauth/c2pa-utilities` dependency, which resolved to `0.2.0` — the broken version published with an unresolved `workspace:*` dependency of its own (see the `c2pa-utilities` patch in this same release). This release has no source changes; it exists to pick up the corrected `c2pa-utilities` version once published.
+- Updated dependencies [a62320c]
+  - @contentauth/c2pa-utilities@0.2.1
+
 ## 0.9.0
 
 ### Minor Changes
