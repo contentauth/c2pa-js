@@ -6,7 +6,7 @@
     "ci:check": "pnpm exec nx run-many -t lint test build --projects=tag:lib",
     "ci:release": "pnpm ci:prepublish && pnpm ci:publish",
     "ci:prepublish": "pnpm exec nx run-many -t build --projects=tag:lib",
-    "ci:publish": "changeset tag && pnpm publish -r --access=public",
+    "ci:publish": "changeset publish",
     "ci:docs": "typedoc"
   },
   "private": true,
