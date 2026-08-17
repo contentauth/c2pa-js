@@ -11,7 +11,7 @@
   },
   "private": true,
   "devDependencies": {
-    "@changesets/cli": "^2.29.6",
+    "@changesets/cli": "^2.31.0",
     "@eslint/js": "^9.8.0",
     "@monodon/rust": "^2.3.0",
     "@nx/devkit": "21.3.5",
