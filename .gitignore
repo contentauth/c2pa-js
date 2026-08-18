@@ -9,8 +9,6 @@ target
 # dependencies
 node_modules
 package-lock.json
-yarn.lock
-bun.lockb
 
 # IDEs and editors
 /.idea
