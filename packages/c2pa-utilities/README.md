@@ -8,7 +8,7 @@
 npm install @contentauth/c2pa-utilities
 ```
 
-## API Reference Documentation
+## API reference documentation
 
 Complete API documentation is generated from TypeScript source using [TypeDoc](https://typedoc.org/) and published to [GitHub Pages](https://contentauth.github.io/c2pa-js/modules/_contentauth_c2pa-utilities.html).
 
