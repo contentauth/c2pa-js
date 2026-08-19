@@ -1,6 +1,6 @@
 # c2pa-utilities
 
-`c2pa-utilities` is a home for shared utilities and libraries used by both `c2pa-web` and `c2pa-node`. Most apps get these transitively as a dependency of one of those two packages, but `@contentauth/c2pa-utilities` is also published standalone for cases where you want to reuse a piece of it directly.
+`c2pa-utilities` is a home for shared utilities and libraries used by both `c2pa-web` and `c2pa-node`. Most clients will get these transitively as a dependency of one of those two packages, but `@contentauth/c2pa-utilities` is also published standalone for cases where you want to reuse a piece of it directly.
 
 ## Installation
 
@@ -8,11 +8,15 @@
 npm install @contentauth/c2pa-utilities
 ```
 
+## API Reference Documentation
+
+Complete API documentation is generated from TypeScript source using [TypeDoc](https://typedoc.org/) and published to [GitHub Pages](https://contentauth.github.io/c2pa-js/modules/_contentauth_c2pa-utilities.html).
+
 ## Utilities
 
 ### Settings
 
-Helpers for building, merging, and serializing the `Settings` object consumed by `c2pa-web`'s and `c2pa-node`'s `Reader`/`Builder` constructors. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the full list of settings and their effects.
+Helpers for building, merging, and serializing the `Settings` object consumed by `c2pa-web`'s and `c2pa-node`'s `Reader`/`Builder` constructors.
 
 ```typescript
 import {
@@ -43,14 +47,14 @@ const settingsJson = await resolveSettings(settings, undefined);
 Other exports:
 
 - `createTrustSettings` / `createCawgTrustSettings` / `createVerifySettings` — construct a `Settings` fragment for one section.
-- `mergeSettings` — deep-merge any number of `Settings` fragments, with later arguments overriding earlier ones. Nested fields (e.g. `builder.thumbnail`) are merged rather than overwritten wholesale.
+- `mergeSettings` — deep-merge any number of `Settings` fragments, with later arguments overriding earlier ones. Nested fields are merged rather than overwritten.
 - `settingsToJson` — serialize a `Settings` object to its snake_case JSON form without resolving trust-anchor URLs.
 - `loadSettingsFromUrl` — fetch a settings JSON document from a URL, with retry.
 - `resolveTrustSettings` — resolve just a `TrustSettings` object's URL fields in place; used internally by `resolveSettings`.
 
 ### Fetch with retry
 
-`fetchWithRetry` and `fetchWithRetryRaw` wrap `fetch` with exponential backoff, `Retry-After` handling, and (for `fetchWithRetry`) a response size cap. The retry mechanism is fixed; the policy — retry count, backoff timing, which statuses/errors are retryable, and the maximum honored `Retry-After` delay — is configurable per call via `FetchWithRetryOptions`.
+`fetchWithRetry` and `fetchWithRetryRaw` wrap `fetch` with exponential backoff, `Retry-After` handling, and (for `fetchWithRetry`) a response size cap. The retry mechanism is fixed; however, policy details such as retry count, backoff timing, which statuses/errors are retryable, and the maximum honored `Retry-After` delay are configurable per call via `FetchWithRetryOptions`.
 
 ```typescript
 import { fetchWithRetry, fetchWithRetryRaw } from '@contentauth/c2pa-utilities';
@@ -58,15 +62,14 @@ import { fetchWithRetry, fetchWithRetryRaw } from '@contentauth/c2pa-utilities';
 // GET as text, retrying on network errors, 429, and 5xx, capped at 1 MB by default.
 const text = await fetchWithRetry('https://example.com/anchors.pem');
 
-// For other methods, headers, or bodies, or to handle the response yourself
-// (streaming, custom size cap, etc.), use fetchWithRetryRaw.
+// For other methods, headers, or bodies, or to handle the response yourself, use fetchWithRetryRaw.
 const response = await fetchWithRetryRaw('https://example.com/upload', {
   method: 'POST',
   body: payload
 });
 ```
 
-Both functions accept an options object to override the defaults:
+Both functions accept an `FetchWithRetryOptions` object to override the defaults:
 
 ```typescript
 await fetchWithRetry(url, {
@@ -101,7 +104,7 @@ try {
 
 ### Signing algorithm
 
-`SigningAlg` is the lowercase signing algorithm type accepted/produced by the core native library at the signer construction boundary (e.g. `Signer.newSigner(cert, key, alg)`). It's derived from, but distinct from, the PascalCase `SigningAlg` exported by `@contentauth/c2pa-types`, which describes the casing used when a manifest's `SignatureInfo.alg` is serialized.
+`SigningAlg` is the lowercase signing algorithm type accepted/produced by the core native library at the signer construction boundary (e.g. `Signer.newSigner(cert, key, alg)`). It's derived from the PascalCase `SigningAlg` exported by `@contentauth/c2pa-types`, which describes the casing used when a manifest's `SignatureInfo.alg` is serialized.
 
 ## Library development
 
