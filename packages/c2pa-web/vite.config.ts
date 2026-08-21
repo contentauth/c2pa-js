@@ -23,9 +23,13 @@ export default defineConfig(() => ({
       entryRoot: 'src',
       tsconfigPath: join(__dirname, 'tsconfig.lib.json'),
       afterDiagnostic(diagnostics) {
-        const errors = diagnostics.filter(d => d.category === ts.DiagnosticCategory.Error);
+        const errors = diagnostics.filter(
+          (d) => d.category === ts.DiagnosticCategory.Error
+        );
         if (errors.length > 0) {
-          throw new Error(`vite-plugin-dts: Found ${errors.length} type error(s).`);
+          throw new Error(
+            `vite-plugin-dts: Found ${errors.length} type error(s).`
+          );
         }
       }
     }),
