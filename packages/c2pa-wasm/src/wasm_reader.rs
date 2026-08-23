@@ -116,9 +116,18 @@ impl WasmReader {
     /// `mode` selects the transport:
     /// - `"verify"` (default): synchronous XHR with full data-hash verification.
     ///   Must run in a Web Worker (synchronous XHR is forbidden on the main thread).
-    /// - `"discover"`: asynchronous `fetch`, driven by the SDK on any thread
-    ///   (no Web Worker required). Validates the manifest and signature but not the
-    ///   data-hash binding.
+    /// - `"verify-async"`: asynchronous `fetch` with full data-hash verification,
+    ///   driven by the SDK on any thread (no Web Worker required). The asset is
+    ///   streamed back through the same source to check the binding, holding at most
+    ///   `hash_chunk_bytes` at a time, so a runtime with no blocking read and a hard
+    ///   memory ceiling can still verify.
+    /// - `"discover"`: asynchronous `fetch`, no Web Worker required. Validates the
+    ///   manifest and signature but not the data-hash binding, so it reads far fewer
+    ///   bytes than either verifying mode.
+    ///
+    /// `hash_chunk_bytes` bounds the bytes held at once while hashing in
+    /// `"verify-async"`; it is ignored by the other modes. Leave it unset for the
+    /// SDK default.
     #[wasm_bindgen(js_name = fromUrl)]
     pub async fn from_url(
         format: &str,
@@ -126,10 +135,20 @@ impl WasmReader {
         context_json: Option<String>,
         on_fetch: Option<Function>,
         mode: Option<String>,
+        hash_chunk_bytes: Option<u32>,
     ) -> Result<WasmReader, JsString> {
         let context = build_context(context_json)?;
+        let hash_chunk = hash_chunk_bytes.map(u64::from);
         let context = match mode.as_deref() {
-            Some("discover") => context.with_async_asset_source(async_http_range_source(on_fetch)),
+            // Discovery stays a read: the async path is now able to check the
+            // binding, so verification has to be turned off explicitly.
+            Some("discover") => context
+                .with_settings(r#"{"verify": {"verify_after_reading": false}}"#)
+                .map_err(WasmError::from)?
+                .with_async_asset_source(async_http_range_source(on_fetch, hash_chunk)),
+            Some("verify-async") => {
+                context.with_async_asset_source(async_http_range_source(on_fetch, hash_chunk))
+            }
             _ => context.with_sync_asset_source(http_range_source(on_fetch)),
         };
         let reader = Reader::from_context(context)

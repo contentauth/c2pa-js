@@ -41,11 +41,29 @@ export interface FromUrlOptions {
   /**
    * Read strategy:
    * - `'verify'` (default): full validation including the data-hash binding. Runs
-   *   in the Web Worker (synchronous XHR).
+   *   in the Web Worker (synchronous XHR). Preferred wherever a worker is
+   *   available, since it overlaps reading with hashing on a worker thread.
+   * - `'verify-async'`: full validation including the data-hash binding, driven
+   *   over asynchronous `fetch` with no Web Worker. For runtimes that have no
+   *   synchronous XHR at all — browser extension service workers, Cloudflare
+   *   Workers. Verification reads the whole asset, streamed in `hashChunkBytes`
+   *   pieces so memory stays bounded.
    * - `'discover'`: manifest + signature validation only, driven over asynchronous
-   *   `fetch`; no data-hash binding is checked.
+   *   `fetch`; no data-hash binding is checked, so the returned validation state
+   *   says nothing about whether the asset bytes match the manifest. Reads far
+   *   fewer bytes than either verifying mode.
+   *
+   * Box hashes and merkle-hashed non-fragmented BMFF cannot be checked over
+   * asynchronous ranges; `'verify-async'` reports an explicit error on such assets
+   * rather than passing them unchecked. Use `'verify'` for those.
    */
-  mode?: 'verify' | 'discover';
+  mode?: 'verify' | 'verify-async' | 'discover';
+  /**
+   * Bytes held at once while hashing in `'verify-async'`; ignored by other modes.
+   * Defaults to the SDK's own value. Lower it where memory is capped (a workerd
+   * isolate is limited to 128 MB).
+   */
+  hashChunkBytes?: number;
 }
 
 /**
@@ -271,9 +289,11 @@ export function createReaderFactory(
       try {
         const settingsJson = await resolveSettings(baseSettings, options?.settings);
 
-        // `discover` reads over async `fetch`, so it can run on the main thread
-        // without a Web Worker; validates manifest + signature, not the data-hash.
-        if (options?.mode === 'discover' && wasm) {
+        // Both async modes read over `fetch`, so they run on the main thread with
+        // no Web Worker. They differ in whether the data-hash binding is checked.
+        const isAsyncMode =
+          options?.mode === 'discover' || options?.mode === 'verify-async';
+        if (isAsyncMode && wasm) {
           ensureMainThreadWasm(wasm);
           const onFetch = options?.onFetch;
           const wasmReader = await WasmReader.fromUrl(
@@ -284,7 +304,8 @@ export function createReaderFactory(
               ? (offset: number, length: number, total: number) =>
                   onFetch({ offset, length, total })
               : undefined,
-            'discover'
+            options.mode,
+            options?.hashChunkBytes
           );
           return createMainThreadReader(wasmReader);
         }
@@ -293,7 +314,8 @@ export function createReaderFactory(
           format,
           url,
           settingsJson,
-          options?.mode
+          options?.mode,
+          options?.hashChunkBytes
         );
 
         const reader = createReader(worker, readerId, () => {

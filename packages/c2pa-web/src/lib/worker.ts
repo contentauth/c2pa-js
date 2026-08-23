@@ -48,7 +48,7 @@ rx(
       const readerId = readerMap.add(reader);
       return readerId;
     },
-    async reader_fromUrl(format, url, contextJson, mode) {
+    async reader_fromUrl(format, url, contextJson, mode, hashChunkBytes) {
       const onFetch = (offset: number, length: number, total: number) => {
         tx.fetchEvent({ offset, length, total });
       };
@@ -57,7 +57,8 @@ rx(
         url,
         contextJson,
         onFetch,
-        mode
+        mode,
+        hashChunkBytes
       );
       const readerId = readerMap.add(reader);
       return readerId;

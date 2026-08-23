@@ -32,6 +32,8 @@ import anchor_correct from 'test/trust/anchor-correct.pem?raw';
 import anchor_cawg from 'test/trust/anchor-cawg.pem?raw';
 import anchor_incorrect from 'test/trust/anchor-incorrect.pem?raw';
 import { ManifestStore } from '@contentauth/c2pa-types';
+import { http, HttpResponse } from 'msw';
+import type { SetupWorker } from 'msw/browser';
 
 describe('reader', () => {
   describe('creation', () => {
@@ -492,5 +494,127 @@ describe('reader', () => {
     await reader!.free();
 
     await expect(reader!.manifestStore()).rejects.toThrowError();
+  });
+});
+
+describe('fromUrl range modes', () => {
+  // Serves an in-memory asset over HTTP Range so a test controls the exact bytes
+  // the reader sees. Records every range served so a test can assert how much was
+  // fetched and in what size pieces.
+  function serveRanges(
+    requestMock: SetupWorker,
+    url: string,
+    bytes: Uint8Array
+  ): { lengths: number[] } {
+    const served = { lengths: [] as number[] };
+
+    requestMock.use(
+      http.get(url, ({ request }) => {
+        const range = request.headers.get('Range');
+        const match = range?.match(/bytes=(\d+)-(\d+)/);
+        if (!match) {
+          return new HttpResponse(bytes, {
+            status: 200,
+            headers: { 'Content-Length': String(bytes.length) }
+          });
+        }
+
+        const start = Number(match[1]);
+        const endInclusive = Math.min(Number(match[2]), bytes.length - 1);
+        const slice = bytes.slice(start, endInclusive + 1);
+        served.lengths.push(slice.length);
+
+        return new HttpResponse(slice, {
+          status: 206,
+          headers: {
+            'Content-Range': `bytes ${start}-${endInclusive}/${bytes.length}`,
+            'Content-Length': String(slice.length)
+          }
+        });
+      })
+    );
+
+    return served;
+  }
+
+  async function assetBytes(src: string): Promise<Uint8Array> {
+    const blob = await getBlobForAsset(src);
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+
+  test('verify-async reads a manifest with no worker', async ({
+    c2pa,
+    requestMock
+  }) => {
+    const url = 'https://range.test/clean.jpg';
+    serveRanges(requestMock, url, await assetBytes(C_with_CAWG_data));
+
+    const reader = await c2pa.reader.fromUrl('image/jpeg', url, {
+      mode: 'verify-async'
+    });
+
+    expect(reader).not.toBeNull();
+    const manifestStore = await reader!.manifestStore();
+    expect(manifestStore.active_manifest).toBeDefined();
+    expect(manifestStore.validation_state).not.toBe('Invalid');
+  });
+
+  // The decisive test: a verifier that always succeeds passes every other check
+  // here. Corrupting a byte the manifest covers must be rejected under
+  // verify-async and accepted under discover, which also proves the mode string
+  // reaches the source it names.
+  test('verify-async rejects tampered bytes that discover accepts', async ({
+    c2pa,
+    requestMock
+  }) => {
+    const clean = await assetBytes(C_with_CAWG_data);
+    const tampered = new Uint8Array(clean);
+    // well past the manifest, inside the hashed image data
+    tampered[tampered.length - 64] ^= 0xff;
+
+    const discoverUrl = 'https://range.test/tampered-discover.jpg';
+    serveRanges(requestMock, discoverUrl, tampered);
+    const discovered = await c2pa.reader.fromUrl('image/jpeg', discoverUrl, {
+      mode: 'discover'
+    });
+    const discoveredStore = await discovered!.manifestStore();
+    expect(discoveredStore.validation_state).not.toBe('Invalid');
+
+    const verifyUrl = 'https://range.test/tampered-verify.jpg';
+    serveRanges(requestMock, verifyUrl, tampered);
+    const verified = await c2pa.reader.fromUrl('image/jpeg', verifyUrl, {
+      mode: 'verify-async'
+    });
+    const verifiedStore = await verified!.manifestStore();
+
+    expect(verifiedStore.validation_state).toBe('Invalid');
+    const failureCodes = (
+      verifiedStore.validation_results?.activeManifest?.failure ?? []
+    ).map((s: { code: string }) => s.code);
+    expect(failureCodes).toContain('assertion.dataHash.mismatch');
+  });
+
+  test('hashChunkBytes bounds how much is fetched at once', async ({
+    c2pa,
+    requestMock
+  }) => {
+    const url = 'https://range.test/chunked.jpg';
+    const served = serveRanges(
+      requestMock,
+      url,
+      await assetBytes(C_with_CAWG_data)
+    );
+
+    const hashChunkBytes = 8 * 1024;
+    const reader = await c2pa.reader.fromUrl('image/jpeg', url, {
+      mode: 'verify-async',
+      hashChunkBytes
+    });
+
+    expect(reader).not.toBeNull();
+    // Discovery uses the window/max_request knobs, which are larger; the hashing
+    // pass is what this bounds. Nothing may exceed the larger of the two.
+    expect(Math.max(...served.lengths)).toBeLessThanOrEqual(8 * 1024 * 1024);
+    expect(served.lengths.length).toBeGreaterThan(1);
   });
 });

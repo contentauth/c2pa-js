@@ -16,7 +16,7 @@ use std::io::{Error as IoError, Result as IoResult};
 use async_trait::async_trait;
 use c2pa::{
     AssetRef, AssetRequest, AssetSourceError, AsyncAssetSource, AsyncRangeReader, RangeAssetSource,
-    RangeInfo, ResolvedAsset, SyncRangeReader,
+    RangeConfig, RangeInfo, ResolvedAsset, SyncRangeReader,
 };
 use js_sys::{Function, Uint8Array};
 use wasm_bindgen::{JsCast, JsValue};
@@ -146,10 +146,19 @@ impl AsyncRangeReader for WasmAsyncRangeReader {
 /// requests, for main-thread manifest discovery.
 pub(crate) struct WasmAsyncRangeSource {
     on_fetch: Option<Function>,
+    hash_chunk: Option<u64>,
 }
 
-pub(crate) fn async_http_range_source(on_fetch: Option<Function>) -> WasmAsyncRangeSource {
-    WasmAsyncRangeSource { on_fetch }
+/// Builds an asynchronous range source, optionally overriding the bytes held at
+/// once while hashing for verification.
+pub(crate) fn async_http_range_source(
+    on_fetch: Option<Function>,
+    hash_chunk: Option<u64>,
+) -> WasmAsyncRangeSource {
+    WasmAsyncRangeSource {
+        on_fetch,
+        hash_chunk,
+    }
 }
 
 #[async_trait(?Send)]
@@ -159,9 +168,17 @@ impl AsyncAssetSource for WasmAsyncRangeSource {
         request: &AssetRequest<'_>,
     ) -> Result<ResolvedAsset, AssetSourceError> {
         let url = request_url(request)?;
-        Ok(ResolvedAsset::from_ranges_async(Box::new(
-            WasmAsyncRangeReader::new(url, self.on_fetch.clone()),
-        )))
+        let resolved = ResolvedAsset::from_ranges_async(Box::new(WasmAsyncRangeReader::new(
+            url,
+            self.on_fetch.clone(),
+        )));
+        Ok(match self.hash_chunk {
+            // override only the hash budget so the window and cache keep their tuned defaults
+            Some(hash_chunk) => {
+                resolved.with_range_config(RangeConfig::default().with_hash_chunk(hash_chunk))
+            }
+            None => resolved,
+        })
     }
 }
 
@@ -180,11 +197,20 @@ async fn fetch_range_async(
         .set("Range", &format!("bytes={start}-{end_inclusive}"))
         .map_err(js_to_ase)?;
 
-    let global = web_sys::window()
-        .ok_or_else(|| AssetSourceError::Other("no global `fetch` available".into()))?;
-    let resp_value = JsFuture::from(global.fetch_with_request(&request))
-        .await
-        .map_err(js_to_ase)?;
+    // Resolve `fetch` off the global object rather than off `window`: a service
+    // worker and a workerd isolate have no `window`, and those are exactly the
+    // runtimes that need this path.
+    let global = js_sys::global();
+    let fetch_fn = js_sys::Reflect::get(&global, &JsValue::from_str("fetch"))
+        .map_err(js_to_ase)?
+        .dyn_into::<Function>()
+        .map_err(|_| AssetSourceError::Other("no global `fetch` available".into()))?;
+    let promise = fetch_fn
+        .call1(&global, &request)
+        .map_err(js_to_ase)?
+        .dyn_into::<js_sys::Promise>()
+        .map_err(|_| AssetSourceError::Other("`fetch` did not return a Promise".into()))?;
+    let resp_value = JsFuture::from(promise).await.map_err(js_to_ase)?;
     let resp: Response = resp_value
         .dyn_into()
         .map_err(|_| AssetSourceError::Other("fetch did not return a Response".into()))?;
