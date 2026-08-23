@@ -8,8 +8,10 @@
  */
 
 import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
+import { WasmReader, initSync } from '@contentauth/c2pa-wasm';
 import { UnsupportedFormatError } from './error.js';
 import { isSupportedReaderFormat } from './supportedFormats.js';
+import { sanitizeManifestStore } from './worker/sanitizeManifestStore.js';
 import type { WorkerManager } from './worker/workerManager.js';
 import type { RangeFetchEvent } from './worker/rpc.js';
 import {
@@ -21,12 +23,29 @@ import {
 // 1 GB
 export const MAX_SIZE_IN_BYTES = 10 ** 9;
 
+/** Lazily initializes the WASM module on the main thread (for worker-free reads). */
+let mainThreadWasmReady = false;
+function ensureMainThreadWasm(wasm: WebAssembly.Module): void {
+  if (!mainThreadWasmReady) {
+    initSync({ module: wasm });
+    mainThreadWasmReady = true;
+  }
+}
+
 /** Options for URL-based readers that fetch bytes over HTTP Range requests. */
 export interface FromUrlOptions {
   /** Context settings for the reader. Overrides values from createC2pa. */
   settings?: Settings;
   /** Invoked for each Range fetch performed while reading the asset. */
   onFetch?: (event: RangeFetchEvent) => void;
+  /**
+   * Read strategy:
+   * - `'verify'` (default): full validation including the data-hash binding. Runs
+   *   in the Web Worker (synchronous XHR).
+   * - `'discover'`: manifest + signature validation only, driven over asynchronous
+   *   `fetch`; no data-hash binding is checked.
+   */
+  mode?: 'verify' | 'discover';
 }
 
 /**
@@ -162,7 +181,11 @@ export interface Reader {
  * @param settings - Optional settings to be used for all readers.
  * @returns A {@link ReaderFactory} object containing reader creation methods.
  */
-export function createReaderFactory(worker: WorkerManager, settings?: Settings): ReaderFactory {
+export function createReaderFactory(
+  worker: WorkerManager,
+  settings?: Settings,
+  wasm?: WebAssembly.Module
+): ReaderFactory {
   const { tx } = worker;
   const baseSettings = settings;
 
@@ -248,7 +271,30 @@ export function createReaderFactory(worker: WorkerManager, settings?: Settings):
       try {
         const settingsJson = await resolveSettings(baseSettings, options?.settings);
 
-        const readerId = await tx.reader_fromUrl(format, url, settingsJson);
+        // `discover` reads over async `fetch`, so it can run on the main thread
+        // without a Web Worker; validates manifest + signature, not the data-hash.
+        if (options?.mode === 'discover' && wasm) {
+          ensureMainThreadWasm(wasm);
+          const onFetch = options?.onFetch;
+          const wasmReader = await WasmReader.fromUrl(
+            format,
+            url,
+            settingsJson,
+            onFetch
+              ? (offset: number, length: number, total: number) =>
+                  onFetch({ offset, length, total })
+              : undefined,
+            'discover'
+          );
+          return createMainThreadReader(wasmReader);
+        }
+
+        const readerId = await tx.reader_fromUrl(
+          format,
+          url,
+          settingsJson,
+          options?.mode
+        );
 
         const reader = createReader(worker, readerId, () => {
           registry.unregister(reader);
@@ -352,6 +398,33 @@ function createReader(
     async free(): Promise<void> {
       onFree();
       await tx.reader_free(id);
+    }
+  };
+}
+
+/** A [`Reader`] backed by a main-thread [`WasmReader`] (no worker RPC). */
+function createMainThreadReader(wasmReader: WasmReader): Reader {
+  return {
+    async activeLabel(): Promise<string | null> {
+      return wasmReader.activeLabel() ?? null;
+    },
+    async manifestStore(): Promise<ManifestStore> {
+      return sanitizeManifestStore(wasmReader.manifestStore()) as ManifestStore;
+    },
+    async activeManifest(): Promise<Manifest> {
+      return wasmReader.activeManifest() as Manifest;
+    },
+    async json(): Promise<any> {
+      return JSON.parse(wasmReader.json());
+    },
+    async crJson(): Promise<any> {
+      return JSON.parse(wasmReader.crJson());
+    },
+    async resourceToBytes(uri: string): Promise<Uint8Array<ArrayBuffer>> {
+      return wasmReader.resourceToBytes(uri) as Uint8Array<ArrayBuffer>;
+    },
+    async free(): Promise<void> {
+      wasmReader.free();
     }
   };
 }

@@ -14,11 +14,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use async_trait::async_trait;
-use c2pa::{asset_io::CAIRead, AsyncAssetResolver, Error, Result};
+use c2pa::{AssetRef, AssetRequest, AssetSourceError, RangeAssetSource};
 use neon::prelude::*;
 
-use super::stream::JsRangeStream;
+use super::stream::NodeRangeReader;
 
 /// A resolvable range source: its total size plus the JS `readRange` callback.
 pub(crate) struct SourceEntry {
@@ -26,42 +25,27 @@ pub(crate) struct SourceEntry {
     pub read_range: Arc<Root<JsFunction>>,
 }
 
-/// A [`c2pa::AsyncAssetResolver`] that opens references as JS-backed range streams.
-///
-/// Transport lives entirely in JavaScript: each source supplies a `readRange`
-/// callback, keyed by reference (URL). No HTTP client is compiled into Rust.
-pub(crate) struct HttpRangeResolver {
+/// Builds a [`RangeAssetSource`] that maps a URL reference to its registered JS
+/// `readRange` callback. Transport lives entirely in JavaScript; no HTTP client is
+/// compiled into Rust.
+pub(crate) fn range_source(
     channel: Channel,
     sources: Arc<HashMap<String, SourceEntry>>,
     on_fetch: Option<Arc<Root<JsFunction>>>,
-}
-
-impl HttpRangeResolver {
-    pub(crate) fn new(
-        channel: Channel,
-        sources: Arc<HashMap<String, SourceEntry>>,
-        on_fetch: Option<Arc<Root<JsFunction>>>,
-    ) -> Self {
-        Self {
-            channel,
-            sources,
-            on_fetch,
-        }
-    }
-}
-
-#[async_trait]
-impl AsyncAssetResolver for HttpRangeResolver {
-    async fn open_async(&self, reference: &str, _format: &str) -> Result<Box<dyn CAIRead>> {
-        let entry = self.sources.get(reference).ok_or_else(|| {
-            Error::OtherError(format!("no range source registered for {reference}").into())
+) -> RangeAssetSource<impl Fn(&AssetRequest<'_>) -> Result<NodeRangeReader, AssetSourceError>> {
+    RangeAssetSource::new(move |request: &AssetRequest<'_>| {
+        let url = match request.reference {
+            AssetRef::Uri(u) | AssetRef::Opaque(u) => u,
+            _ => return Err(AssetSourceError::UnsupportedReference),
+        };
+        let entry = sources.get(url).ok_or_else(|| AssetSourceError::NotFound {
+            reference: url.to_owned(),
         })?;
-        let stream = JsRangeStream::new(
-            self.channel.clone(),
+        Ok(NodeRangeReader::new(
+            channel.clone(),
             entry.read_range.clone(),
-            self.on_fetch.clone(),
+            on_fetch.clone(),
             entry.size,
-        );
-        Ok(Box::new(stream))
-    }
+        ))
+    })
 }

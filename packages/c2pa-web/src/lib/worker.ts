@@ -48,11 +48,17 @@ rx(
       const readerId = readerMap.add(reader);
       return readerId;
     },
-    async reader_fromUrl(format, url, contextJson) {
+    async reader_fromUrl(format, url, contextJson, mode) {
       const onFetch = (offset: number, length: number, total: number) => {
         tx.fetchEvent({ offset, length, total });
       };
-      const reader = await WasmReader.fromUrl(format, url, contextJson, onFetch);
+      const reader = await WasmReader.fromUrl(
+        format,
+        url,
+        contextJson,
+        onFetch,
+        mode
+      );
       const readerId = readerMap.add(reader);
       return readerId;
     },

@@ -42,7 +42,8 @@ const { createTx, rx } = channel<{
   reader_fromUrl: (
     format: string,
     url: string,
-    contextJson?: string
+    contextJson?: string,
+    mode?: string
   ) => Promise<number>;
   reader_fromUrlFragment: (
     format: string,

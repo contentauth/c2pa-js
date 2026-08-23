@@ -13,7 +13,7 @@
 
 use crate::asset::parse_asset;
 use crate::error::{as_js_error, Error, Result};
-use crate::range::{HttpRangeResolver, SourceEntry};
+use crate::range::{range_source, SourceEntry};
 use crate::runtime::runtime;
 use crate::utils::parse_settings;
 use c2pa::{Context, Reader};
@@ -93,8 +93,8 @@ impl NeonReader {
 
         rt.spawn(async move {
             let result: Result<Reader> = async {
-                let context = context_opt.unwrap_or_else(Context::new).with_async_asset_resolver(
-                    HttpRangeResolver::new(channel.clone(), sources.clone(), on_fetch.clone()),
+                let context = context_opt.unwrap_or_else(Context::new).with_sync_asset_source(
+                    range_source(channel.clone(), sources.clone(), on_fetch.clone()),
                 );
                 let reader = if mode == "fragment" {
                     let fragments = urls[1..].to_vec();

@@ -43,6 +43,10 @@ features = [
 	'FileReaderSync',
 	'XmlHttpRequest',
 	'XmlHttpRequestResponseType',
+	'Request',
+	'Response',
+	'Headers',
+	'Window',
 ]
 
 [dependencies.wasm-bindgen]

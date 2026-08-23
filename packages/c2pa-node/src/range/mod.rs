@@ -14,4 +14,4 @@
 mod resolver;
 mod stream;
 
-pub(crate) use resolver::{HttpRangeResolver, SourceEntry};
+pub(crate) use resolver::{range_source, SourceEntry};

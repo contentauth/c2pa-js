@@ -14,7 +14,12 @@ use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 use web_sys::Blob;
 
-use crate::{error::WasmError, range::HttpRangeResolver, stream::BlobStream, utils::cursor_to_u8array};
+use crate::{
+    error::WasmError,
+    range::{async_http_range_source, http_range_source},
+    stream::BlobStream,
+    utils::cursor_to_u8array,
+};
 
 /// Wraps a `c2pa::Reader`.
 #[wasm_bindgen]
@@ -108,17 +113,25 @@ impl WasmReader {
     /// only the bytes needed via HTTP Range requests. Optionally accepts a context
     /// JSON string and an `onFetch(offset, length, total)` callback invoked per fetch.
     ///
-    /// Must run in a Web Worker: it relies on synchronous XHR, which is forbidden on
-    /// the main thread.
+    /// `mode` selects the transport:
+    /// - `"verify"` (default): synchronous XHR with full data-hash verification.
+    ///   Must run in a Web Worker (synchronous XHR is forbidden on the main thread).
+    /// - `"discover"`: asynchronous `fetch`, driven by the SDK on any thread
+    ///   (no Web Worker required). Validates the manifest and signature but not the
+    ///   data-hash binding.
     #[wasm_bindgen(js_name = fromUrl)]
     pub async fn from_url(
         format: &str,
         url: &str,
         context_json: Option<String>,
         on_fetch: Option<Function>,
+        mode: Option<String>,
     ) -> Result<WasmReader, JsString> {
-        let context =
-            build_context(context_json)?.with_async_asset_resolver(HttpRangeResolver::new(on_fetch));
+        let context = build_context(context_json)?;
+        let context = match mode.as_deref() {
+            Some("discover") => context.with_async_asset_source(async_http_range_source(on_fetch)),
+            _ => context.with_sync_asset_source(http_range_source(on_fetch)),
+        };
         let reader = Reader::from_context(context)
             .with_reference_async(format, url)
             .await
@@ -141,7 +154,7 @@ impl WasmReader {
         on_fetch: Option<Function>,
     ) -> Result<WasmReader, JsString> {
         let context =
-            build_context(context_json)?.with_async_asset_resolver(HttpRangeResolver::new(on_fetch));
+            build_context(context_json)?.with_sync_asset_source(http_range_source(on_fetch));
         let reader = Reader::from_context(context)
             .with_fragment_references_async(format, init_url, &fragment_urls)
             .await

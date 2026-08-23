@@ -12,7 +12,6 @@ import { BuildExecutorSchema } from './schema.js';
 import { fromStream } from 'ssri';
 import { $, path, fs } from 'zx';
 import { pipeline } from 'node:stream/promises';
-import got from 'got';
 import { extract } from 'tar';
 
 const WASM_OPT_VERSION = '124';
@@ -56,7 +55,7 @@ const runExecutor: PromiseExecutor<BuildExecutorSchema> = async (
     // Run wasm-opt on wasm-bindgen output, optimizing for size
     const wasmOptInput = path.join(outDir, `${outputWasmName}_bg.wasm`);
 
-    const wasmOpt = getWasmOptPath(context.root);
+    const wasmOpt = await getWasmOptPath(context.root);
     await $$`node ${wasmOpt} ${wasmOptInput} -o ${wasmOptInput} -Oz`;
 
     // Compute SRI integrity and append it to wasm-bindgen's JS output and .d.ts as an exported const
@@ -109,6 +108,7 @@ async function getWasmOptPath(rootDir: string) {
 
   await fs.ensureDir(downloadDir);
 
+  const { default: got } = await import('got');
   await pipeline(
     got.stream(downloadUrl),
     fs.createWriteStream(downloadFilePath)
