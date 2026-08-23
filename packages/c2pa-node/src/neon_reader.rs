@@ -13,12 +13,14 @@
 
 use crate::asset::parse_asset;
 use crate::error::{as_js_error, Error, Result};
+use crate::range::{HttpRangeResolver, SourceEntry};
 use crate::runtime::runtime;
 use crate::utils::parse_settings;
-use c2pa::Reader;
+use c2pa::{Context, Reader};
 use neon::context::Context as NeonContext;
 use neon::prelude::*;
 use neon::types::buffer::TypedArray;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -39,6 +41,90 @@ impl NeonReader {
     #[allow(clippy::borrowed_box)]
     pub(crate) fn reader(&self) -> Arc<Mutex<Reader>> {
         Arc::clone(&self.reader)
+    }
+
+    /// Create a reader from one or more URL range sources, reading only the bytes
+    /// c2pa-rs asks for through JS `readRange` callbacks.
+    ///
+    /// Args: (format, mode, urls[], sizes[], readRanges[], onFetch|null, settings|null).
+    /// `mode` is "single" or "fragment" (first url is the initialization segment).
+    pub fn from_range_sources(mut cx: FunctionContext) -> JsResult<JsPromise> {
+        let format = cx.argument::<JsString>(0)?.value(&mut cx);
+        let mode = cx.argument::<JsString>(1)?.value(&mut cx);
+        let urls_arr = cx.argument::<JsArray>(2)?;
+        let sizes_arr = cx.argument::<JsArray>(3)?;
+        let ranges_arr = cx.argument::<JsArray>(4)?;
+
+        let count = urls_arr.len(&mut cx);
+        if count == 0 {
+            return cx.throw_error("from_range_sources requires at least one source");
+        }
+
+        let mut urls: Vec<String> = Vec::with_capacity(count as usize);
+        let mut sources: HashMap<String, SourceEntry> = HashMap::new();
+        for i in 0..count {
+            let url = urls_arr.get::<JsString, _, _>(&mut cx, i)?.value(&mut cx);
+            let size = sizes_arr.get::<JsNumber, _, _>(&mut cx, i)?.value(&mut cx) as u64;
+            let read_range = ranges_arr.get::<JsFunction, _, _>(&mut cx, i)?.root(&mut cx);
+            urls.push(url.clone());
+            sources.insert(
+                url,
+                SourceEntry {
+                    size,
+                    read_range: Arc::new(read_range),
+                },
+            );
+        }
+
+        let on_fetch = match cx.argument_opt(5) {
+            Some(value) if value.is_a::<JsFunction, _>(&mut cx) => Some(Arc::new(
+                value.downcast_or_throw::<JsFunction, _>(&mut cx)?.root(&mut cx),
+            )),
+            _ => None,
+        };
+
+        let context_opt =
+            parse_settings(&mut cx, 6, "Reader").or_else(|err| cx.throw_error(err.to_string()))?;
+
+        let channel = cx.channel();
+        let sources = Arc::new(sources);
+        let (deferred, promise) = cx.promise();
+        let rt = runtime();
+
+        rt.spawn(async move {
+            let result: Result<Reader> = async {
+                let context = context_opt.unwrap_or_else(Context::new).with_async_asset_resolver(
+                    HttpRangeResolver::new(channel.clone(), sources.clone(), on_fetch.clone()),
+                );
+                let reader = if mode == "fragment" {
+                    let fragments = urls[1..].to_vec();
+                    Reader::from_context(context)
+                        .with_fragment_references_async(&format, &urls[0], &fragments)
+                        .await?
+                } else {
+                    Reader::from_context(context)
+                        .with_reference_async(&format, &urls[0])
+                        .await?
+                };
+                Ok(reader)
+            }
+            .await;
+
+            deferred.settle_with(&channel, move |mut cx| match result {
+                Ok(reader) => {
+                    let boxed_reader = cx.boxed(Self {
+                        reader: Arc::new(Mutex::new(reader)),
+                    });
+                    Ok(boxed_reader.upcast::<JsValue>())
+                }
+                Err(err) => match &err {
+                    Error::C2pa(c2pa::Error::JumbfNotFound) => Ok(cx.null().upcast::<JsValue>()),
+                    _ => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
+                },
+            });
+        });
+
+        Ok(promise)
     }
 
     pub fn from_stream(mut cx: FunctionContext) -> JsResult<JsPromise> {

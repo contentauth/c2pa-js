@@ -16,6 +16,9 @@ mod error;
 /// Contains functions to create types usable by c2pa-rs from JS types.
 pub mod stream;
 
+/// HTTP Range-request asset resolver: reads only the bytes c2pa-rs asks for.
+pub(crate) mod range;
+
 /// Exposes a reader API to JS via wasm-bindgen.
 pub mod wasm_reader;
 

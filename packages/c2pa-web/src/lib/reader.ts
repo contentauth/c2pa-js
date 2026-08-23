@@ -11,6 +11,7 @@ import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
 import { UnsupportedFormatError } from './error.js';
 import { isSupportedReaderFormat } from './supportedFormats.js';
 import type { WorkerManager } from './worker/workerManager.js';
+import type { RangeFetchEvent } from './worker/rpc.js';
 import {
   Settings,
   resolveSettings,
@@ -19,6 +20,14 @@ import {
 
 // 1 GB
 export const MAX_SIZE_IN_BYTES = 10 ** 9;
+
+/** Options for URL-based readers that fetch bytes over HTTP Range requests. */
+export interface FromUrlOptions {
+  /** Context settings for the reader. Overrides values from createC2pa. */
+  settings?: Settings;
+  /** Invoked for each Range fetch performed while reading the asset. */
+  onFetch?: (event: RangeFetchEvent) => void;
+}
 
 /**
  * A collection of functions that permit the creation of Reader objects from various sources.
@@ -51,6 +60,39 @@ export interface ReaderFactory {
     init: Blob,
     fragment: Blob,
     settings?: Settings
+  ) => Promise<Reader | null>;
+
+  /**
+   * Create a {@link Reader} from an asset's format and URL, reading only the bytes
+   * needed via HTTP Range requests instead of downloading the whole asset.
+   *
+   * @param format Asset format.
+   * @param url URL of the asset. The host must support HTTP Range requests.
+   * @param options Optional settings and an `onFetch` callback fired per Range request.
+   * @returns A {@link Reader} object or null if no C2PA metadata was found.
+   */
+  fromUrl: (
+    format: string,
+    url: string,
+    options?: FromUrlOptions
+  ) => Promise<Reader | null>;
+
+  /**
+   * Create a {@link Reader} from a fragmented asset addressed by an initialization
+   * segment URL and an ordered list of fragment URLs, reading only the bytes needed
+   * via HTTP Range requests.
+   *
+   * @param format Asset format.
+   * @param initUrl URL of the initialization segment.
+   * @param fragmentUrls Ordered URLs of the fragment segments.
+   * @param options Optional settings and an `onFetch` callback fired per Range request.
+   * @returns A {@link Reader} object or null if no C2PA metadata was found.
+   */
+  fromUrlFragment: (
+    format: string,
+    initUrl: string,
+    fragmentUrls: string[],
+    options?: FromUrlOptions
   ) => Promise<Reader | null>;
 }
 
@@ -187,6 +229,74 @@ export function createReaderFactory(worker: WorkerManager, settings?: Settings):
         return reader;
       } catch (e: unknown) {
         return handleReaderCreationError(e);
+      }
+    },
+
+    async fromUrl(
+      format: string,
+      url: string,
+      options?: FromUrlOptions
+    ): Promise<Reader | null> {
+      if (!isSupportedReaderFormat(format)) {
+        throw new UnsupportedFormatError(format);
+      }
+
+      const unsubscribe = options?.onFetch
+        ? worker.onFetch(options.onFetch)
+        : undefined;
+
+      try {
+        const settingsJson = await resolveSettings(baseSettings, options?.settings);
+
+        const readerId = await tx.reader_fromUrl(format, url, settingsJson);
+
+        const reader = createReader(worker, readerId, () => {
+          registry.unregister(reader);
+        });
+        registry.register(reader, readerId, reader);
+
+        return reader;
+      } catch (e: unknown) {
+        return handleReaderCreationError(e);
+      } finally {
+        unsubscribe?.();
+      }
+    },
+
+    async fromUrlFragment(
+      format: string,
+      initUrl: string,
+      fragmentUrls: string[],
+      options?: FromUrlOptions
+    ): Promise<Reader | null> {
+      if (!isSupportedReaderFormat(format)) {
+        throw new UnsupportedFormatError(format);
+      }
+
+      const unsubscribe = options?.onFetch
+        ? worker.onFetch(options.onFetch)
+        : undefined;
+
+      try {
+        const settingsJson = await resolveSettings(baseSettings, options?.settings);
+
+        const readerId = await tx.reader_fromUrlFragment(
+          format,
+          initUrl,
+          fragmentUrls,
+          settingsJson
+        );
+
+        const reader = createReader(worker, readerId, () => {
+          registry.unregister(reader);
+        });
+        registry.register(reader, readerId, reader);
+
+        return reader;
+      } catch (e: unknown) {
+        return handleReaderCreationError(e);
+      } finally {
+        unsubscribe?.();
       }
     }
   };

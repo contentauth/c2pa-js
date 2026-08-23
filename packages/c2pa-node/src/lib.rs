@@ -15,6 +15,7 @@ use neon::prelude::*;
 
 mod asset;
 mod error;
+mod range;
 mod runtime;
 mod utils;
 
@@ -105,6 +106,10 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     // Reader
     cx.export_function("readerNew", neon_reader::NeonReader::new)?;
     cx.export_function("readerFromAsset", neon_reader::NeonReader::from_stream)?;
+    cx.export_function(
+        "readerFromRangeSources",
+        neon_reader::NeonReader::from_range_sources,
+    )?;
     cx.export_function(
         "readerFromManifestDataAndAsset",
         neon_reader::NeonReader::from_manifest_data_and_asset,

@@ -48,6 +48,28 @@ rx(
       const readerId = readerMap.add(reader);
       return readerId;
     },
+    async reader_fromUrl(format, url, contextJson) {
+      const onFetch = (offset: number, length: number, total: number) => {
+        tx.fetchEvent({ offset, length, total });
+      };
+      const reader = await WasmReader.fromUrl(format, url, contextJson, onFetch);
+      const readerId = readerMap.add(reader);
+      return readerId;
+    },
+    async reader_fromUrlFragment(format, initUrl, fragmentUrls, contextJson) {
+      const onFetch = (offset: number, length: number, total: number) => {
+        tx.fetchEvent({ offset, length, total });
+      };
+      const reader = await WasmReader.fromUrlFragment(
+        format,
+        initUrl,
+        fragmentUrls,
+        contextJson,
+        onFetch
+      );
+      const readerId = readerMap.add(reader);
+      return readerId;
+    },
     reader_activeLabel(readerId) {
       const reader = readerMap.get(readerId);
       return reader.activeLabel() ?? null;

@@ -41,6 +41,8 @@ features = [
 	'console',
 	'Blob',
 	'FileReaderSync',
+	'XmlHttpRequest',
+	'XmlHttpRequestResponseType',
 ]
 
 [dependencies.wasm-bindgen]

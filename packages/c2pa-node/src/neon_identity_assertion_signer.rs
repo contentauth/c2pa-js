@@ -16,10 +16,6 @@ use crate::{
 };
 use async_trait::async_trait;
 use c2pa::{
-    crypto::{
-        raw_signature::{AsyncRawSigner, RawSignerError},
-        time_stamp::AsyncTimeStampProvider,
-    },
     dynamic_assertion::AsyncDynamicAssertion,
     AsyncSigner, SigningAlg,
 };
@@ -92,41 +88,6 @@ unsafe impl Send for NeonIdentityAssertionSigner {}
 unsafe impl Sync for NeonIdentityAssertionSigner {}
 
 #[async_trait]
-impl AsyncRawSigner for NeonIdentityAssertionSigner {
-    async fn sign(&self, data: Vec<u8>) -> Result<Vec<u8>, RawSignerError> {
-        let signer = self.signer.read().unwrap().clone();
-        AsyncRawSigner::sign(&signer, data).await
-    }
-
-    fn alg(&self) -> SigningAlg {
-        AsyncRawSigner::alg(&*self.signer.read().unwrap())
-    }
-
-    fn cert_chain(&self) -> Result<Vec<Vec<u8>>, RawSignerError> {
-        self.signer.read().unwrap().cert_chain()
-    }
-
-    fn reserve_size(&self) -> usize {
-        AsyncRawSigner::reserve_size(&*self.signer.read().unwrap())
-    }
-
-    async fn ocsp_response(&self) -> Option<Vec<u8>> {
-        let signer = self.signer.read().unwrap().clone();
-        AsyncRawSigner::ocsp_response(&signer).await
-    }
-}
-
-impl AsyncTimeStampProvider for NeonIdentityAssertionSigner {
-    fn time_stamp_service_url(&self) -> Option<String> {
-        self.signer.read().unwrap().time_stamp_service_url()
-    }
-
-    fn time_stamp_request_headers(&self) -> Option<Vec<(String, String)>> {
-        self.signer.read().unwrap().time_stamp_request_headers()
-    }
-}
-
-#[async_trait]
 impl AsyncSigner for NeonIdentityAssertionSigner {
     async fn sign(&self, data: Vec<u8>) -> Result<Vec<u8>, c2pa::Error> {
         let signer = self.signer.read().unwrap().clone();
@@ -138,11 +99,7 @@ impl AsyncSigner for NeonIdentityAssertionSigner {
     }
 
     fn certs(&self) -> Result<Vec<Vec<u8>>, c2pa::Error> {
-        self.signer
-            .read()
-            .unwrap()
-            .cert_chain()
-            .map_err(|e| e.into())
+        c2pa::AsyncSigner::certs(&*self.signer.read().unwrap())
     }
 
     fn reserve_size(&self) -> usize {
@@ -169,10 +126,6 @@ impl AsyncSigner for NeonIdentityAssertionSigner {
     async fn send_timestamp_request(&self, message: &[u8]) -> Option<Result<Vec<u8>, c2pa::Error>> {
         let signer = self.signer.read().unwrap().clone();
         c2pa::AsyncSigner::send_timestamp_request(&signer, message).await
-    }
-
-    fn async_raw_signer(&self) -> Option<Box<&dyn AsyncRawSigner>> {
-        Some(Box::new(self))
     }
 
     fn dynamic_assertions(&self) -> Vec<Box<dyn AsyncDynamicAssertion>> {

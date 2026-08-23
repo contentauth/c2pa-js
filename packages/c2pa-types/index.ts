@@ -40,7 +40,7 @@ export type {
   Role,
   Shape,
   SignatureInfo,
-  SigningAlg,
+  SigningAlgSchema as SigningAlg,
   StatusCodes,
   Text,
   TextSelector,

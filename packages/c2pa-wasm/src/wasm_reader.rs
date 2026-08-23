@@ -8,13 +8,13 @@
 use std::io::{Cursor, Read, Seek};
 
 use c2pa::{Context, Reader};
-use js_sys::{JsString, Uint8Array};
+use js_sys::{Function, JsString, Uint8Array};
 use serde::Serialize;
 use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 use web_sys::Blob;
 
-use crate::{error::WasmError, stream::BlobStream, utils::cursor_to_u8array};
+use crate::{error::WasmError, range::HttpRangeResolver, stream::BlobStream, utils::cursor_to_u8array};
 
 /// Wraps a `c2pa::Reader`.
 #[wasm_bindgen]
@@ -104,6 +104,52 @@ impl WasmReader {
         WasmReader { reader, serializer }
     }
 
+    /// Attempts to create a new `WasmReader` from an asset format and a URL, reading
+    /// only the bytes needed via HTTP Range requests. Optionally accepts a context
+    /// JSON string and an `onFetch(offset, length, total)` callback invoked per fetch.
+    ///
+    /// Must run in a Web Worker: it relies on synchronous XHR, which is forbidden on
+    /// the main thread.
+    #[wasm_bindgen(js_name = fromUrl)]
+    pub async fn from_url(
+        format: &str,
+        url: &str,
+        context_json: Option<String>,
+        on_fetch: Option<Function>,
+    ) -> Result<WasmReader, JsString> {
+        let context =
+            build_context(context_json)?.with_async_asset_resolver(HttpRangeResolver::new(on_fetch));
+        let reader = Reader::from_context(context)
+            .with_reference_async(format, url)
+            .await
+            .map_err(WasmError::from)?;
+
+        Ok(WasmReader::from_reader(reader).await)
+    }
+
+    /// Attempts to create a new `WasmReader` from a fragmented asset addressed by an
+    /// initialization-segment URL and an ordered list of fragment URLs, reading only
+    /// the bytes needed via HTTP Range requests.
+    ///
+    /// Must run in a Web Worker (synchronous XHR).
+    #[wasm_bindgen(js_name = fromUrlFragment)]
+    pub async fn from_url_fragment(
+        format: &str,
+        init_url: &str,
+        fragment_urls: Vec<String>,
+        context_json: Option<String>,
+        on_fetch: Option<Function>,
+    ) -> Result<WasmReader, JsString> {
+        let context =
+            build_context(context_json)?.with_async_asset_resolver(HttpRangeResolver::new(on_fetch));
+        let reader = Reader::from_context(context)
+            .with_fragment_references_async(format, init_url, &fragment_urls)
+            .await
+            .map_err(WasmError::from)?;
+
+        Ok(WasmReader::from_reader(reader).await)
+    }
+
     /// Returns the label of the asset's active manifest.
     #[wasm_bindgen(js_name = activeLabel)]
     pub fn active_label(&self) -> Option<String> {
@@ -156,5 +202,15 @@ impl WasmReader {
             .map_err(WasmError::from)?;
 
         Ok(cursor_to_u8array(stream)?)
+    }
+}
+
+/// Build a [`Context`] from an optional settings-JSON string.
+fn build_context(context_json: Option<String>) -> Result<Context, JsString> {
+    match context_json {
+        Some(json) => Ok(Context::new()
+            .with_settings(json.as_str())
+            .map_err(WasmError::from)?),
+        None => Ok(Context::new()),
     }
 }

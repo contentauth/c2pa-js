@@ -11,7 +11,8 @@ members = [
 rust-version = "1.88.0"
 
 [workspace.dependencies]
-c2pa = { version = "=0.90.15", features = ["unstable_builder_filter", "pdf", "rust_native_crypto", "fetch_remote_manifests", "json_schema", "http_reqwest"], default-features = false }
+# Local c2pa-rs checkout (branch mathern/context_asset_io) for the AssetResolver range-read seam.
+c2pa = { path = "/Users/mathern/Desktop/git/@CAI/c2pa-rs/sdk", features = ["unstable_builder_filter", "pdf", "rust_native_crypto", "fetch_remote_manifests", "json_schema", "http_reqwest"], default-features = false }
 
 [profile.release]
 opt-level = "s"

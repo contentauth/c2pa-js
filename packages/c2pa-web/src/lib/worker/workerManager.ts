@@ -8,13 +8,14 @@
  */
 
 import { Signer } from '../signer.js';
-import { createTx, workerRx } from './rpc.js';
+import { createTx, workerRx, type RangeFetchEvent } from './rpc.js';
 import InlineWorker from '../worker?worker&inline';
 import { transfer } from 'highgain';
 
 export interface WorkerManager {
   tx: ReturnType<typeof createTx>;
   registerSignReceiver: (signFn: Signer['sign']) => number;
+  onFetch: (listener: (event: RangeFetchEvent) => void) => () => void;
   terminate: () => void;
 }
 
@@ -64,6 +65,7 @@ export async function createWorkerManager(
   const tx = createTx(worker);
 
   const signingRequestMap = new Map<number, Signer['sign']>();
+  const fetchListeners = new Set<(event: RangeFetchEvent) => void>();
 
   workerRx(
     {
@@ -75,6 +77,11 @@ export async function createWorkerManager(
         }
         const result = await signFn(bytes, reserveSize);
         return transfer(result, result.buffer);
+      },
+      fetchEvent: (event) => {
+        for (const listener of fetchListeners) {
+          listener(event);
+        }
       }
     },
     worker
@@ -86,11 +93,19 @@ export async function createWorkerManager(
     return id;
   }
 
+  function onFetch(listener: (event: RangeFetchEvent) => void) {
+    fetchListeners.add(listener);
+    return () => {
+      fetchListeners.delete(listener);
+    };
+  }
+
   await tx.initWorker(wasm, settingsString);
 
   return {
     tx,
     registerSignReceiver,
+    onFetch,
     terminate: () => worker.terminate()
   };
 }

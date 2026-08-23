@@ -13,6 +13,16 @@ import type { SerializableSigningPayload } from '../signer.js';
 
 import { channel } from 'highgain';
 
+/** A single HTTP Range fetch reported by the worker while reading an asset. */
+export interface RangeFetchEvent {
+  /** Byte offset of the fetched range. */
+  offset: number;
+  /** Number of bytes fetched. */
+  length: number;
+  /** Total asset length in bytes. */
+  total: number;
+}
+
 // Define browser-to-worker RPC interface
 const { createTx, rx } = channel<{
   initWorker: (module: WebAssembly.Module, settings?: string) => void;
@@ -27,6 +37,17 @@ const { createTx, rx } = channel<{
     format: string,
     init: Blob,
     fragment: Blob,
+    contextJson?: string
+  ) => Promise<number>;
+  reader_fromUrl: (
+    format: string,
+    url: string,
+    contextJson?: string
+  ) => Promise<number>;
+  reader_fromUrlFragment: (
+    format: string,
+    initUrl: string,
+    fragmentUrls: string[],
     contextJson?: string
   ) => Promise<number>;
 
@@ -109,6 +130,7 @@ const { createTx: createWorkerTx, rx: workerRx } = channel<{
     bytes: Uint8Array<ArrayBuffer>,
     reserveSize: number
   ) => Promise<Uint8Array<ArrayBuffer>>;
+  fetchEvent: (event: RangeFetchEvent) => void;
 }>('worker');
 
 export { createTx, rx, createWorkerTx, workerRx };
