@@ -232,12 +232,17 @@ async fn fetch_range_async(
         .headers()
         .set("Range", &format!("bytes={start}-{end_inclusive}"))
         .map_err(js_to_ase)?;
-    // Let the origin reject a changed object outright. The caller still compares
-    // what comes back, so an origin that ignores this is caught a round trip later.
+    // RFC 9110 13.1.1 states If-Range is suited to range requests: an origin whose
+    // object changed answers it with 200 and the whole new representation rather
+    // than 412.
+    //
+    // RFC 9110 13.1.1 also permits any cache or intermediary to ignore conditional
+    // headers meant for an origin, so behind a CDN this may not be evaluated. The
+    // caller's version comparison enforces consistency.
     if let Some(version) = expect_version {
         request
             .headers()
-            .set("If-Match", version)
+            .set("If-Range", version)
             .map_err(js_to_ase)?;
     }
 
@@ -259,7 +264,27 @@ async fn fetch_range_async(
         .dyn_into()
         .map_err(|_| AssetSourceError::Other("fetch did not return a Response".into()))?;
 
-    // 412 answers the If-Match: the object is no longer the one the read began with.
+    let headers = resp.headers();
+    let served_version = object_version(
+        headers.get("ETag").ok().flatten(),
+        headers.get("Last-Modified").ok().flatten(),
+    );
+
+    // A 200 to a range request has two causes, distinguished by the validator.
+    // If-Range not matching means the origin serves a representation other than the
+    // one this read began with, returning the current validator, which differs from
+    // ours. An origin that does not implement Range also answers 200, but with our
+    // validator or none at all, and falls through to the non-206 error below.
+    if let (200, Some(expected), Some(served)) =
+        (resp.status(), expect_version, served_version.as_deref())
+        && expected != served
+    {
+        return Err(AssetSourceError::VersionChanged {
+            expected: expected.to_owned(),
+            got: served.to_owned(),
+        });
+    }
+    // Some origins answer a failed precondition with 412 instead.
     if resp.status() == 412 {
         return Err(AssetSourceError::VersionChanged {
             expected: expect_version.unwrap_or("unknown").to_owned(),
@@ -286,16 +311,10 @@ async fn fetch_range_async(
     let buf = JsFuture::from(resp.array_buffer().map_err(js_to_ase)?)
         .await
         .map_err(js_to_ase)?;
-    let headers = resp.headers();
-    let version = object_version(
-        headers.get("ETag").ok().flatten(),
-        headers.get("Last-Modified").ok().flatten(),
-    );
-
     let u8 = Uint8Array::new(&buf);
     let mut bytes = vec![0u8; u8.byte_length() as usize];
     u8.copy_to(&mut bytes);
-    Ok((bytes, total, version))
+    Ok((bytes, total, served_version))
 }
 
 fn js_to_ase(e: JsValue) -> AssetSourceError {
@@ -317,17 +336,31 @@ fn fetch_range(
     xhr.open_with_async("GET", url, false).map_err(js_to_ase)?;
     xhr.set_request_header("Range", &format!("bytes={start}-{end_inclusive}"))
         .map_err(js_to_ase)?;
-    // Let the origin reject a changed object outright; the caller compares the
-    // returned version as well, for origins that ignore the precondition.
+    // If-Range rather than If-Match, for the reasons given on `fetch_range_async`.
     if let Some(version) = expect_version {
-        xhr.set_request_header("If-Match", version)
+        xhr.set_request_header("If-Range", version)
             .map_err(js_to_ase)?;
     }
     xhr.set_response_type(XmlHttpRequestResponseType::Arraybuffer);
     xhr.send().map_err(js_to_ase)?;
 
     let status = xhr.status().map_err(js_to_ase)?;
-    // 412 answers the If-Match: the object is no longer the one the read began with.
+    let served_version = object_version(
+        xhr.get_response_header("ETag").ok().flatten(),
+        xhr.get_response_header("Last-Modified").ok().flatten(),
+    );
+
+    // Only a 200 carrying a different validator means the object changed.
+    // A 200 with no validator, or ours, is an origin that does not implement Range.
+    if let (200, Some(expected), Some(served)) =
+        (status, expect_version, served_version.as_deref())
+        && expected != served
+    {
+        return Err(AssetSourceError::VersionChanged {
+            expected: expected.to_owned(),
+            got: served.to_owned(),
+        });
+    }
     if status == 412 {
         return Err(AssetSourceError::VersionChanged {
             expected: expect_version.unwrap_or("unknown").to_owned(),
@@ -345,16 +378,11 @@ fn fetch_range(
         .ok()
         .flatten()
         .and_then(|h| parse_content_range_total(&h));
-    let version = object_version(
-        xhr.get_response_header("ETag").ok().flatten(),
-        xhr.get_response_header("Last-Modified").ok().flatten(),
-    );
-
     let resp = xhr.response().map_err(js_to_ase)?;
     let u8 = Uint8Array::new(&resp);
     let mut bytes = vec![0u8; u8.byte_length() as usize];
     u8.copy_to(&mut bytes);
-    Ok((bytes, total, version))
+    Ok((bytes, total, served_version))
 }
 
 /// Extracts a usable object version from response headers.
