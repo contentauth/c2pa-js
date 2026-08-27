@@ -24,10 +24,11 @@ export class Context {
   }
 
   /**
-   * The settings currently attached to this `Context`, if any. To derive a new `Context` with
-   * different settings, construct one with `new Context(settings)` — to combine this `Context`'s
-   * settings with more, merge them with {@link mergeSettings} first and pass the single result to
-   * the constructor.
+   * The settings currently attached to this `Context`, if any.
+   * 
+   * To derive a new `Context` with different settings, construct one with `new Context(settings)`.
+   * To combine this `Context`'s settings with other settings, merge them with {@link mergeSettings}
+   * first and then pass the single, merged result to the constructor to create a new `Context`.
    */
   get settings(): Settings | undefined {
     return this._settings;
