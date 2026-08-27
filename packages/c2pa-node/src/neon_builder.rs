@@ -11,6 +11,20 @@
 // specific language governing permissions and limitations under
 // each license.
 
+use std::io::Cursor;
+use std::ops::Deref;
+use std::sync::Arc;
+
+use c2pa::{
+    assertions::{Action, Actions},
+    Builder, BuilderIntent, Ingredient, Reader,
+};
+use neon::context::Context as NeonContext;
+use neon::prelude::*;
+use neon_serde4;
+use serde_json;
+use tokio::sync::Mutex;
+
 use crate::asset::parse_asset;
 use crate::error::{as_js_error, Error};
 use crate::neon_identity_assertion_signer::NeonIdentityAssertionSigner;
@@ -18,15 +32,6 @@ use crate::neon_reader::NeonReader;
 use crate::neon_signer::{CallbackSignerConfig, NeonCallbackSigner, NeonLocalSigner};
 use crate::runtime::runtime;
 use crate::utils::parse_settings;
-use c2pa::{assertions::{Action, Actions}, Builder, BuilderIntent, Ingredient, Reader};
-use neon::context::Context as NeonContext;
-use neon::prelude::*;
-use neon_serde4;
-use serde_json;
-use std::io::Cursor;
-use std::ops::Deref;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 pub struct NeonBuilder {
     builder: Arc<Mutex<Builder>>,
@@ -324,17 +329,11 @@ impl NeonBuilder {
         let promise = cx
             .task(move || {
                 let source_stream = source.into_read_stream()?;
-                let mut builder = if let Some(context) = context_opt {
+                let builder = if let Some(context) = context_opt {
                     Builder::from_context(context).with_archive(source_stream)?
                 } else {
                     Builder::default().with_archive(source_stream)?
                 };
-                // The ARCHIVE_METADATA assertion is merely working-store bookkeeping
-                // used to reconstruct a builder from an archive.
-                builder
-                    .definition
-                    .assertions
-                    .retain(|a| a.label != c2pa::assertions::labels::ARCHIVE_METADATA);
                 Ok(builder)
             })
             .promise(
