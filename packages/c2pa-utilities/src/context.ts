@@ -11,10 +11,9 @@ import type { FetchWithRetryOptions } from './fetchWithRetry.js';
 import { resolveSettings, type Settings } from './settings.js';
 
 /**
- * A `Context` configures the behavior of every `Reader`/`Builder` created with
- * any given instance of the SDK (see {@link C2paSdk}).
+ * A `Context` configures the behavior of a `Reader` or `Builder`.
  * 
- * It is attached once at SDK/factory-initialization time.
+ * It is attached once at SDK initialization or `Reader`/`Builder` construction time.
  */
 export class Context {
   private readonly _settings?: Settings;
