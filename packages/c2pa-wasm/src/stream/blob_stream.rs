@@ -62,9 +62,7 @@ fn read_entire_blob(blob: &Blob) -> IoResult<Vec<u8>> {
     }
 
     let reader_sync = FileReaderSync::new().map_err(|err| {
-        IoError::other(format!(
-            "Failed to create FileReaderSync. Details: {err:?}"
-        ))
+        IoError::other(format!("Failed to create FileReaderSync. Details: {err:?}"))
     })?;
 
     let array_buffer = reader_sync
@@ -131,12 +129,12 @@ impl Seek for BlobStream {
                     SeekFrom::Start(o) => i64::try_from(o).map_err(|_| {
                         IoError::new(std::io::ErrorKind::InvalidInput, "seek overflow")
                     })?,
-                    SeekFrom::End(o) => (blob.size() as i64)
-                        .checked_add(o)
-                        .ok_or_else(|| IoError::new(std::io::ErrorKind::InvalidInput, "seek overflow"))?,
-                    SeekFrom::Current(o) => (*offset as i64)
-                        .checked_add(o)
-                        .ok_or_else(|| IoError::new(std::io::ErrorKind::InvalidInput, "seek overflow"))?,
+                    SeekFrom::End(o) => (blob.size() as i64).checked_add(o).ok_or_else(|| {
+                        IoError::new(std::io::ErrorKind::InvalidInput, "seek overflow")
+                    })?,
+                    SeekFrom::Current(o) => (*offset as i64).checked_add(o).ok_or_else(|| {
+                        IoError::new(std::io::ErrorKind::InvalidInput, "seek overflow")
+                    })?,
                 };
                 if new_offset < 0 {
                     return Err(IoError::new(
