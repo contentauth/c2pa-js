@@ -16,7 +16,7 @@
 import type { ManifestStore } from "@contentauth/c2pa-types";
 import path from "path";
 import * as fs from "fs-extra";
-import { AssetTooLargeError } from "@contentauth/c2pa-utilities";
+import { AssetTooLargeError, Context } from "@contentauth/c2pa-utilities";
 
 import { Reader } from "./Reader.js";
 import { MAX_SIZE_IN_BYTES } from "./assetSize.js";
@@ -214,6 +214,39 @@ describe("Reader", () => {
 
     // Settings should affect validation behavior
     // With verify_after_reading: false, validation_status should be undefined
+    expect(json.validation_status).toBeUndefined();
+
+    expect(json.manifests).toBeDefined();
+    expect(json.active_manifest).toEqual(manifestStore.active_manifest);
+  });
+
+  it("should read from manifest data and file with a Context", async () => {
+    const manifestData = await fs.readFile(
+      "./tests/fixtures/CA/manifest_data.c2pa",
+    );
+    const buffer = await fs.readFile("./tests/fixtures/CA.jpg");
+
+    const context = new Context({
+      verify: {
+        verifyAfterReading: false,
+        verifyTrust: false,
+      },
+    });
+
+    const reader = await Reader.fromManifestDataAndAsset(
+      manifestData,
+      {
+        buffer,
+        mimeType: "jpeg",
+      },
+      context,
+    );
+
+    expect(reader).not.toBeNull();
+    const json = reader!.json();
+
+    // Same effect as the raw-settings equivalent above: verifyAfterReading: false means
+    // validation_status should be undefined.
     expect(json.validation_status).toBeUndefined();
 
     expect(json.manifests).toBeDefined();

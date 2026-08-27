@@ -521,11 +521,43 @@ const decodedData = await trustmark.decode(imageBuffer);
 
 ### Settings and configuration
 
-The library provides comprehensive settings management that can be configured per Reader/Builder instance or using helper functions. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
+The library provides comprehensive settings management that can be configured per Reader/Builder instance, via a `Context`, or using helper functions. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
 
-#### Per-instance settings
+#### Using a Context
 
-Settings can be passed directly to `Reader` and `Builder` constructors:
+A `Context` (from [`c2pa-utilities`](../c2pa-utilities/README.md#context-and-settings), re-exported directly from `@contentauth/c2pa-node` so you don't need to add that package yourself) wraps `Settings` and is the recommended way to configure a `Reader` or `Builder`:
+
+```javascript
+import { Reader, Builder, Context } from '@contentauth/c2pa-node';
+
+const context = new Context({
+  verify: {
+    verifyAfterReading: false,
+    verifyAfterSign: false,
+    verifyTrust: true,
+    ocspFetch: true
+  },
+  trust: {
+    verifyTrustList: true,
+    trustAnchors: "path/to/anchors.pem"
+  }
+});
+
+// Pass a Context to Reader
+const reader = await Reader.fromAsset(inputAsset, context);
+
+// Builder has async, Context-aware counterparts to its synchronous factories below
+const builder = await Builder.newAsync(context);
+const builder2 = await Builder.withJsonAsync(manifestDefinition, context);
+const builder3 = await Builder.fromArchive(archiveAsset, context);
+```
+
+> [!NOTE]
+> Unlike `c2pa-web`, `c2pa-node` doesn't fetch trust-anchor URLs embedded in a `Context`'s settings yet — a trust anchor value must be inline PEM content or a local file path, not a URL, until that support lands here too.
+
+#### Per-instance settings (deprecated)
+
+Passing settings directly as a JSON/TOML string, or as a raw object matching the native settings shape (snake_case keys, no defaults applied), is deprecated and will be removed in a future major version — use a `Context` instead (above). `Builder.new`/`Builder.withJson` stay synchronous for this deprecated path; prefer their `newAsync`/`withJsonAsync` counterparts with a `Context` instead.
 
 ```javascript
 import { Reader, Builder } from '@contentauth/c2pa-node';
@@ -599,14 +631,17 @@ const verifySettings = createVerifySettings({
 // Merge multiple settings
 const combinedSettings = mergeSettings(trustSettings, verifySettings);
 
-// Convert settings to JSON string
+// combinedSettings is a plain Settings object — use it with a Context (recommended)...
+const reader = await Reader.fromAsset(inputAsset, new Context(combinedSettings));
+
+// ...or convert it to a JSON string for the deprecated per-instance settings path
 const jsonString = settingsToJson(combinedSettings);
 
-// Load settings from file (JSON or TOML)
+// loadSettingsFromFile/loadSettingsFromUrl return a raw JSON/TOML string, not a Settings
+// object, so they pair with the deprecated per-instance settings path, not Context, for now.
 const fileSettings = await loadSettingsFromFile('./c2pa-settings.toml');
-const reader = await Reader.fromAsset(inputAsset, fileSettings);
+const reader2 = await Reader.fromAsset(inputAsset, fileSettings);
 
-// Load settings from URL
 const urlSettings = await loadSettingsFromUrl('https://example.com/c2pa-settings.json');
 const builder = Builder.new(urlSettings);
 ```
