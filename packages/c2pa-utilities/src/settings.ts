@@ -34,7 +34,7 @@ import { snakeCaseify, type SettingsObjectType } from './caseConversion.js';
  *   }
  * };
  *
- * const settingsJson = await resolveSettings(settings, undefined);
+ * const settingsJson = await resolveSettings(settings);
  * ```
  */
 export interface Settings {
@@ -150,40 +150,49 @@ export interface BuilderSettings {
 // Defaults
 // =================================
 
-const DEFAULT_SETTINGS: Settings = {
+/**
+ * This package's default settings, applied by {@link withDefaultSettings} and
+ * {@link resolveSettings} so a `Reader`/`Builder` gets sane behavior even with no settings
+ * provided at all.
+ */
+export const DEFAULT_SETTINGS: Settings = {
   builder: {
     generateC2paArchive: true
   }
 };
+
+/**
+ * Merges `settings` on top of this package's default settings.
+ * Useful for bindings that need this package's defaults applied without going through
+ * {@link resolveSettings}'s async trust-anchor URL resolution.
+ *
+ * @param settings Settings to apply the defaults to.
+ * @returns `settings` merged on top of this package's defaults.
+ */
+export function withDefaultSettings(settings: Settings | undefined): Settings {
+  return merge(DEFAULT_SETTINGS, settings ?? {});
+}
 
 // =================================
 // Top-level pipeline
 // =================================
 
 /**
- * Resolves settings by merging override settings on top of base settings, resolving any embedded
- * trust list URLs on top of those, and then finally serializing the result for consumption by the core native SDK.
+ * Resolves settings by resolving any embedded trust-anchor URLs, then serializing the result for
+ * consumption by the core native SDK. `settings` is merged on top of this package's default
+ * settings (see {@link withDefaultSettings}). To combine more than one `Settings` source, merge them with
+ * {@link mergeSettings} first and pass the single result in here.
  *
- * @param baseSettings Settings established at SDK initialization time.
- * @param overrideSettings Optional override settings. Keys present in overrideSettings win over keys in baseSettings.
+ * @param settings Settings to resolve.
  * @param options Optional configurations for fetch-with-retry.
- * @returns A JSON-serialized string containing all resolved settings values, ready to be consumed by the core native SDK.
- * Returns undefined when neither argument is provided.
+ * @returns A JSON-serialized string containing all resolved settings values, ready to be consumed
+ * by the core native SDK.
  */
 export async function resolveSettings(
-  baseSettings: Settings | undefined,
-  overrideSettings: Settings | undefined,
+  settings: Settings | undefined,
   options?: FetchWithRetryOptions
-): Promise<string | undefined> {
-  const effectiveSettings = overrideSettings
-    ? merge(baseSettings ?? {}, overrideSettings)
-    : baseSettings;
-
-  if (!effectiveSettings) {
-    return undefined;
-  }
-
-  const finalSettings: Settings = merge(DEFAULT_SETTINGS, effectiveSettings);
+): Promise<string> {
+  const finalSettings: Settings = withDefaultSettings(settings);
 
   const resolvePromises: Promise<void>[] = [];
 
