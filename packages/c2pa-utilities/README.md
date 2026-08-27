@@ -35,7 +35,7 @@ const context = new Context({
 
 #### Combining `Settings`
 
-`Context` doesn't merge settings for you — each `Context` just holds whatever single `Settings` object was passed to its constructor. To combine more than one `Settings` source, merge them first with `mergeSettings()`, then construct a `Context` from the single, merged result:
+Each `Context` holds whatever single `Settings` object was passed to its constructor and does not handle any merging of settings. To combine more than one `Settings` source, merge them first with `mergeSettings()`, then construct a `Context` from the single, merged result:
 
 ```typescript
 import { Context, mergeSettings } from '@contentauth/c2pa-utilities';
@@ -49,7 +49,7 @@ const context = new Context(mergeSettings(base, override));
 
 #### Resolving a `Context` to JSON
 
-Bindings pass settings across their JS-to-wasm/native boundary as a JSON string. `toJson()` resolves any trust-anchor URLs embedded in the settings (fetching and validating them) and serializes the result:
+Bindings pass settings across their wasm/native boundary as a JSON string. `toJson()` resolves any trust-anchor URLs embedded in the settings (fetching and validating them) and serializes the result:
 
 ```typescript
 const contextJson = await context.toJson();
@@ -86,7 +86,7 @@ const settings = mergeSettings(trustSettings, verifySettings);
 const settingsJson = await resolveSettings(settings);
 ```
 
-`resolveSettings` is the entry point most direct callers want: it resolves any `trust`/`cawgTrust` fields that are URLs (fetching and inlining the PEM content, retrying transient failures), and returns the result as a snake_case JSON string. `settings` is merged on top of this package's defaults, so `resolveSettings` always returns a value, even when called with `undefined`. To combine more than one `Settings` object first, merge them with `mergeSettings()` before calling `resolveSettings`, as above.
+`resolveSettings` is the entry point most direct callers want. It resolves any `trust`/`cawgTrust` URL fields (fetching and inlining the PEM content, retrying transient failures), and returns the result as a snake_case JSON string. `settings` is merged on top of this package's defaults, so `resolveSettings` always returns a value, even when called with `undefined`. To combine more than one `Settings` object first, merge them with `mergeSettings()` before calling `resolveSettings`, as above.
 
 Other exports:
 
