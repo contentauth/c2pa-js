@@ -29,8 +29,9 @@ export interface Config {
   workerSrc?: URL;
 
   /**
-   * Context for the SDK. Will be inherited by created builders and readers.
+   * Context for the SDK, configuring behavior for builders and readers.
    * If `settings` is also provided, `context` takes precedence.
+   * 
    * Using a Context is the recommended way to configure the SDK.
    */
   context?: Context;

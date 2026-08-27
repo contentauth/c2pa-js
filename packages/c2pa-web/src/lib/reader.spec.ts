@@ -218,10 +218,7 @@ describe('reader', () => {
           }
         };
 
-        const c2pa = await createC2pa({
-          wasmSrc,
-          context: new Context(settings)
-        });
+        const c2pa = await createC2pa({wasmSrc, context: new Context(settings)});
 
         const blob = await getBlobForAsset(C_with_CAWG_data);
 

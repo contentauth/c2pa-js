@@ -59,7 +59,7 @@ const c2pa = await createC2pa();
 
 ## Configuring the SDK with `Context`
 
-`createC2pa` accepts an optional `context` — a `Context` (see [`c2pa-utilities`'s README](../c2pa-utilities/README.md#context-and-settings) for the full API) wrapping `Settings`. `Context`, along with the rest of `@contentauth/c2pa-utilities`'s exports, is re-exported directly from `@contentauth/c2pa-web`, so you don't need to add `@contentauth/c2pa-utilities` as a dependency yourself just to use it. A `Context` is attached once, when the SDK is created, and configures every `Reader` and `Builder` it subsequently creates; it is not passed to individual reader/builder calls.
+`createC2pa` accepts an optional `Context` (see [`c2pa-utilities`'s README](../c2pa-utilities/README.md#context-and-settings) for the full API) wrapping `Settings`. A `Context` is attached once, when the SDK is created, and configures every `Reader` and `Builder` it subsequently creates. It is not passed to individual reader/builder calls.
 
 ```typescript
 import { Context, createC2pa } from '@contentauth/c2pa-web';
@@ -82,11 +82,11 @@ const reader = await c2pa.reader.fromBlob(blob.type, blob);
 const builder = await c2pa.builder.new();
 ```
 
-A `Context` just holds the single `Settings` object passed to its constructor — it doesn't merge. To combine more than one `Settings` object, merge them first with `mergeSettings()`, then construct the `Context` from the single result — see [`c2pa-utilities`'s README](../c2pa-utilities/README.md#combining-settings) for details.
+Each `Context` holds whatever single `Settings` object was passed to its constructor and does not handle any merging of settings. To combine more than one `Settings` source, merge them first with `mergeSettings()`, then construct a `Context` from the single, merged result. See [`c2pa-utilities`'s README](../c2pa-utilities/README.md#combining-settings) for details.
 
 ### Deprecated: per-call settings
 
-Earlier versions of this SDK accepted a `settings` object directly on `createC2pa`, and allowed overriding it per call to `reader.fromBlob`/`builder.new`/etc. Both are deprecated and will be removed in a future major version — configure a `Context` once via `createC2pa`'s `context` option instead:
+Earlier versions of this SDK accepted a `settings` object directly on `createC2pa`, and allowed overriding it per call on some `Reader` and `Builder` APIs. Both are deprecated and will be removed in a future version; configure a `Context` once via `createC2pa`'s `context` option instead:
 
 ```typescript
 // Deprecated
