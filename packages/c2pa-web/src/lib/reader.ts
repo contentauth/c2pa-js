@@ -12,8 +12,9 @@ import { UnsupportedFormatError } from './error.js';
 import { isSupportedReaderFormat } from './supportedFormats.js';
 import type { WorkerManager } from './worker/workerManager.js';
 import {
+  Context,
+  mergeSettings,
   Settings,
-  resolveSettings,
   validateAssetSize
 } from '@contentauth/c2pa-utilities';
 
@@ -29,7 +30,8 @@ export interface ReaderFactory {
    *
    * @param format Asset format.
    * @param blob Blob of asset bytes.
-   * @param settings Optional context settings for the reader. Will override any values inherited by the top-level settings passed to createC2pa.
+   * @param settings @deprecated Per-call settings overrides are deprecated and will be removed in
+   * a future major version. Configure a {@link Context} once, at `createC2pa` time, instead.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
    */
   fromBlob: (
@@ -43,7 +45,8 @@ export interface ReaderFactory {
    * @param format Asset format.
    * @param init Blob of initial fragment bytes.
    * @param fragment Blob of fragment bytes.
-   * @param settings Optional context settings for the reader. Will override any values inherited by the top-level settings passed to createC2pa.
+   * @param settings @deprecated Per-call settings overrides are deprecated and will be removed in
+   * a future major version. Configure a {@link Context} once, at `createC2pa` time, instead.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
    */
   fromBlobFragment: (
@@ -117,12 +120,30 @@ export interface Reader {
 
 /**
  * @param worker - Worker (via WorkerManager) to be associated with this reader factory.
- * @param settings - Optional settings to be used for all readers.
+ * @param context - Context to be used for all readers created by this factory. Resolved once,
+ * since a Context is only ever attached at factory-creation time.
  * @returns A {@link ReaderFactory} object containing reader creation methods.
  */
-export function createReaderFactory(worker: WorkerManager, settings?: Settings): ReaderFactory {
+export function createReaderFactory(
+  worker: WorkerManager,
+  context: Context = new Context()
+): ReaderFactory {
   const { tx } = worker;
-  const baseSettings = settings;
+  const settingsJsonPromise = context.toJson();
+
+  /**
+   * Resolves the settings JSON for one reader-creation call. When `override` is omitted (the
+   * common case), this is just the already-resolved `settingsJsonPromise`. The `override` branch
+   * exists only to support the deprecated per-call `settings` parameter on
+   * {@link ReaderFactory}'s methods; once that's removed, this helper goes with it and every
+   * call site can use `settingsJsonPromise` directly.
+   */
+  const getSettingsJson = (
+    override: Settings | undefined
+  ): Promise<string> =>
+    override
+      ? new Context(mergeSettings(context.settings ?? {}, override)).toJson()
+      : settingsJsonPromise;
 
   const registry = new FinalizationRegistry<number>(async (id) => {
     await tx.reader_free(id);
@@ -141,7 +162,7 @@ export function createReaderFactory(worker: WorkerManager, settings?: Settings):
       validateAssetSize(blob.size, MAX_SIZE_IN_BYTES);
 
       try {
-        const settingsJson = await resolveSettings(baseSettings, settings);
+        const settingsJson = await getSettingsJson(settings);
 
         const readerId = await tx.reader_fromBlob(format, blob, settingsJson);
 
@@ -170,7 +191,7 @@ export function createReaderFactory(worker: WorkerManager, settings?: Settings):
       validateAssetSize(fragment.size, MAX_SIZE_IN_BYTES);
 
       try {
-        const settingsJson = await resolveSettings(baseSettings, settings);
+        const settingsJson = await getSettingsJson(settings);
 
         const readerId = await tx.reader_fromBlobFragment(
           format,

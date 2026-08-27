@@ -9,7 +9,7 @@
 import { createWorkerManager } from './worker/workerManager.js';
 import { createReaderFactory, ReaderFactory } from './reader.js';
 import { WASM_SRI } from '@contentauth/c2pa-wasm';
-import { Settings, resolveSettings } from '@contentauth/c2pa-utilities';
+import { Context, Settings } from '@contentauth/c2pa-utilities';
 import { BuilderFactory, createBuilderFactory } from './builder.js';
 
 export interface Config {
@@ -29,7 +29,17 @@ export interface Config {
   workerSrc?: URL;
 
   /**
+   * Context for the SDK. Will be inherited by created builders and readers.
+   * If `settings` is also provided, `context` takes precedence.
+   * Using a Context is the recommended way to configure the SDK.
+   */
+  context?: Context;
+
+  /**
    * Settings for the SDK. Will be inherited by created builders and readers.
+   *
+   * @deprecated Use `context` instead, e.g. `context: new Context(settings)`. Will be removed in
+   * a future version.
    */
   settings?: Settings;
 }
@@ -65,17 +75,17 @@ export interface C2paSdk {
  * ```
  */
 export async function createC2pa(config: Config): Promise<C2paSdk> {
-  const { wasmSrc, workerSrc, settings } = config;
+  const { wasmSrc, workerSrc, context, settings } = config;
 
   const wasm =
     typeof wasmSrc === 'string' ? await fetchAndCompileWasm(wasmSrc) : wasmSrc;
 
-  const settingsString = await resolveSettings(settings, undefined);
-  const worker = await createWorkerManager({ wasm, workerSrc, settingsString });
+  const worker = await createWorkerManager({ wasm, workerSrc });
+  const baseContext = context ?? new Context(settings);
 
   return {
-    reader: createReaderFactory(worker, settings),
-    builder: createBuilderFactory(worker, settings),
+    reader: createReaderFactory(worker, baseContext),
+    builder: createBuilderFactory(worker, baseContext),
     dispose: worker.terminate
   };
 }

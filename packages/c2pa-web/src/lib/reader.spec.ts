@@ -8,8 +8,13 @@
  */
 
 import { test, describe, expect } from 'test/methods.js';
+import { vi } from 'vitest';
 import { createC2pa } from './c2pa.js';
-import { AssetTooLargeError, Settings } from '@contentauth/c2pa-utilities';
+import {
+  AssetTooLargeError,
+  Context,
+  Settings
+} from '@contentauth/c2pa-utilities';
 import { UnsupportedFormatError } from './error.js';
 import { getBlobForAsset } from 'test/utils.js';
 import { MAX_SIZE_IN_BYTES } from './reader.js';
@@ -196,6 +201,55 @@ describe('reader', () => {
 
         // Per-call anchor wins over the global one, so the result is untrusted.
         expect(manifestStore).toEqual(C_with_CAWG_data_untrusted_ManifestStore);
+
+        c2pa.dispose();
+      });
+
+      test('should use a Context provided at createC2pa time', async () => {
+        const settings: Settings = {
+          trust: {
+            trustAnchors: anchor_correct
+          },
+          cawgTrust: {
+            trustAnchors: anchor_cawg
+          },
+          verify: {
+            verifyTrust: true
+          }
+        };
+
+        const c2pa = await createC2pa({
+          wasmSrc,
+          context: new Context(settings)
+        });
+
+        const blob = await getBlobForAsset(C_with_CAWG_data);
+
+        const reader = await c2pa.reader.fromBlob(blob.type, blob);
+
+        expect(reader).not.toBeNull();
+
+        const manifestStore = await reader!.manifestStore();
+
+        expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
+
+        c2pa.dispose();
+      });
+
+      test('does not re-resolve the Context on every fromBlob call', async () => {
+        const context = new Context({ verify: { verifyTrust: false } });
+
+        const c2pa = await createC2pa({ wasmSrc, context });
+
+        // Resolved once already, at createC2pa time, above.
+        const toJsonSpy = vi.spyOn(context, 'toJson');
+
+        const blob = await getBlobForAsset(C_with_CAWG_data);
+
+        await c2pa.reader.fromBlob(blob.type, blob);
+        await c2pa.reader.fromBlob(blob.type, blob);
+
+        expect(toJsonSpy).not.toHaveBeenCalled();
 
         c2pa.dispose();
       });

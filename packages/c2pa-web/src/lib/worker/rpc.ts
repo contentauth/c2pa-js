@@ -15,7 +15,7 @@ import { channel } from 'highgain';
 
 // Define browser-to-worker RPC interface
 const { createTx, rx } = channel<{
-  initWorker: (module: WebAssembly.Module, settings?: string) => void;
+  initWorker: (module: WebAssembly.Module) => void;
 
   // Reader construction methods
   reader_fromBlob: (

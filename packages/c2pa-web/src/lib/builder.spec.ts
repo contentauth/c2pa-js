@@ -10,7 +10,7 @@
 import { test, describe, expect } from 'test/methods.js';
 import { ManifestDefinition, Ingredient, Action } from '@contentauth/c2pa-types';
 import { getBlobForAsset, createTestSigner } from 'test/utils.js';
-import { Settings } from '@contentauth/c2pa-utilities';
+import { Context, Settings } from '@contentauth/c2pa-utilities';
 import { createC2pa } from './c2pa.js';
 import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 
@@ -135,6 +135,36 @@ describe('builder', () => {
 
         // Per-call settings should overwrite, so no trust failure should be reported.
         expect(ingredientFailureCodes).not.toContain('signingCredential.untrusted');
+
+        c2pa.dispose();
+      });
+
+      test('should use a Context provided at createC2pa time', async () => {
+        const settings: Settings = {
+          verify: {
+            verifyTrust: true
+          }
+        };
+
+        const c2pa = await createC2pa({
+          wasmSrc,
+          context: new Context(settings)
+        });
+
+        const builder = await c2pa.builder.new();
+
+        const blob = await getBlobForAsset(C_JPG);
+
+        await builder.addIngredientFromBlob({}, blob.type, blob);
+
+        const definition = await builder.getDefinition();
+
+        const ingredientFailureCodes =
+          definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
+            (entry) => entry.code
+          );
+
+        expect(ingredientFailureCodes).toContain('signingCredential.untrusted');
 
         c2pa.dispose();
       });

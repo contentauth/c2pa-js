@@ -17,7 +17,7 @@ import type {
   Ingredient,
   ManifestDefinition
 } from '@contentauth/c2pa-types';
-import { Settings, resolveSettings } from '@contentauth/c2pa-utilities';
+import { Context, mergeSettings, Settings } from '@contentauth/c2pa-utilities';
 
 /**
  * Functions that permit the creation of Builder objects.
@@ -25,7 +25,8 @@ import { Settings, resolveSettings } from '@contentauth/c2pa-utilities';
 export interface BuilderFactory {
   /**
    * Create a {@link Builder} with a minimal manifest definition as its initial state.
-   * @param settings Optional context settings for the builder. Will override any values inherited by the top-level settings passed to createC2pa.
+   * @param settings @deprecated Per-call settings overrides are deprecated and will be removed in
+   * a future version. Configure a {@link Context} once, at `createC2pa` time, instead.
    * @returns A {@link Builder} object.
    */
   new: (settings?: Settings) => Promise<Builder>;
@@ -34,7 +35,8 @@ export interface BuilderFactory {
    * Create a {@link Builder} from a {@link ManifestDefinition}.
    *
    * @param definition The {@link ManifestDefinition} to be used as the builder's initial state.
-   * @param settings Optional context settings for the builder. Will override any values inherited by the top-level settings passed to createC2pa.
+   * @param settings @deprecated Per-call settings overrides are deprecated and will be removed in
+   * a future version. Configure a {@link Context} once, at `createC2pa` time, instead.
    * @returns A {@link Builder} object.
    */
   fromDefinition: (
@@ -46,7 +48,8 @@ export interface BuilderFactory {
    * Create a {@link Builder} from a builder archive (created from {@link Builder.toArchive}).
    *
    * @param archive Builder archive as a blob.
-   * @param settings Optional context settings for the builder. Will override any values inherited by the top-level settings passed to createC2pa.
+   * @param settings @deprecated Per-call settings overrides are deprecated and will be removed in
+   * a future version. Configure a {@link Context} once, at `createC2pa` time, instead.
    * @returns A {@link Builder} object.
    */
   fromArchive: (archive: Blob, settings?: Settings) => Promise<Builder>;
@@ -291,12 +294,29 @@ export interface ManifestAndAssetBytes {
 
 /**
  * @param worker - Worker (via WorkerManager) to be associated with this reader factory.
- * @param settings - Optional settings to be used for all builders.
+ * @param context - Context to be used for all builders created by this factory.
  * @returns A {@link BuilderFactory} object containing builder creation methods.
  */
-export function createBuilderFactory(worker: WorkerManager, settings?: Settings): BuilderFactory {
-  const baseSettings = settings;
+export function createBuilderFactory(
+  worker: WorkerManager,
+  context: Context = new Context()
+): BuilderFactory {
   const { tx } = worker;
+  const settingsJsonPromise = context.toJson();
+
+  /**
+   * Resolves the settings JSON for one builder-creation call. When `override` is omitted (the
+   * common case), this is just the already-resolved `settingsJsonPromise`. The `override` branch
+   * exists only to support the deprecated per-call `settings` parameter on
+   * {@link BuilderFactory}'s methods; once that's removed, this helper goes with it and every
+   * call site can use `settingsJsonPromise` directly.
+   */
+  const getSettingsJson = (
+    override: Settings | undefined
+  ): Promise<string> =>
+    override
+      ? new Context(mergeSettings(context.settings ?? {}, override)).toJson()
+      : settingsJsonPromise;
 
   const registry = new FinalizationRegistry<number>((id) => {
     tx.builder_free(id);
@@ -304,7 +324,7 @@ export function createBuilderFactory(worker: WorkerManager, settings?: Settings)
 
   return {
     async new(settings?: Settings) {
-      const settingsJson = await resolveSettings(baseSettings, settings);
+      const settingsJson = await getSettingsJson(settings);
       const builderId = await tx.builder_new(settingsJson);
 
       const builder = createBuilder(worker, builderId, () => {
@@ -317,7 +337,7 @@ export function createBuilderFactory(worker: WorkerManager, settings?: Settings)
 
     async fromDefinition(definition: ManifestDefinition, settings?: Settings) {
       const json = JSON.stringify(definition);
-      const settingsJson = await resolveSettings(baseSettings, settings);
+      const settingsJson = await getSettingsJson(settings);
       const builderId = await tx.builder_fromJson(json, settingsJson);
 
       const builder = createBuilder(worker, builderId, () => {
@@ -329,7 +349,7 @@ export function createBuilderFactory(worker: WorkerManager, settings?: Settings)
     },
 
     async fromArchive(archive: Blob, settings?: Settings) {
-      const settingsJson = await resolveSettings(baseSettings, settings);
+      const settingsJson = await getSettingsJson(settings);
       const builderId = await tx.builder_fromArchive(archive, settingsJson);
 
       const builder = createBuilder(worker, builderId, () => {
