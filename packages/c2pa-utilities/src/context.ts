@@ -11,10 +11,10 @@ import type { FetchWithRetryOptions } from './fetchWithRetry.js';
 import { resolveSettings, type Settings } from './settings.js';
 
 /**
- * A `Context` configures the behavior of a single `Reader`/`Builder`. Bindings attach it at
- * creation time (e.g. `Reader.fromBlob(c2pa, format, blob, context)`), independent of whatever
- * runtime/worker handle that creation call also needs — so one running SDK instance can freely
- * create many `Reader`/`Builder`s, each with its own `Context`.
+ * A `Context` configures the behavior of a single `Reader`/`Builder`. 
+ * 
+ * It is provided at creation time (e.g. `Reader.fromBlob(c2pa, format, blob, context)`),
+ * configuring that instance's behavior independently of other instances.
  */
 export class Context {
   private readonly _settings?: Settings;
@@ -25,10 +25,11 @@ export class Context {
   }
 
   /**
-   * The settings currently attached to this `Context`, if any. To derive a new `Context` with
-   * different settings, construct one with `new Context(settings)` — to combine this `Context`'s
-   * settings with more, merge them with {@link mergeSettings} first and pass the single result to
-   * the constructor.
+   * The settings currently attached to this `Context`, if any.
+   * 
+   * To derive a new `Context` with different settings, construct one with `new Context(settings)`.
+   * To combine this `Context`'s settings with more settings, merge them with {@link mergeSettings}
+   * first and pass the single, merged result to the constructor.
    */
   get settings(): Settings | undefined {
     return this._settings;
@@ -36,13 +37,10 @@ export class Context {
 
   /**
    * Resolves this `Context`'s settings (fetching any embedded trust-anchor URLs) and serializes
-   * the result for consumption by the native/wasm boundary.
-   *
-   * Memoized: since a `Context`'s settings never change after construction, the result (and any
-   * trust-anchor fetch it took to produce it) is only ever computed once, on the first call, and
-   * reused for every call after — including calls with different `options` than the first one
-   * used. Callers that need the same `Context` resolved under two different `options` should
-   * construct two separate `Context`s instead.
+   * the result for consumption by the WASM/native boundary. The result is memoized, so resolution
+   * of this Context's settings should only ever happen once. If different fetch-with-retry options
+   * need to be provided, callers should create a separate `Context` and then call `toJson()`
+   * with the desired options.
    *
    * @param options Optional configurations for fetch-with-retry, used when resolving trust-anchor
    * URLs. Only consulted on the first call.

@@ -16,7 +16,7 @@ Complete API documentation is generated from TypeScript source using [TypeDoc](h
 
 ### `Context` and `Settings`
 
-`Settings` is a plain, JSON-serializable object describing SDK behavior — trust anchors, verification options, and builder options. `Context` is a small, immutable wrapper around `Settings`, and is the recommended way to configure a `Reader`/`Builder`. A binding passes a `Context` directly to the call that creates a `Reader`/`Builder` (alongside whatever runtime handle that binding needs), so one running SDK instance can freely create many `Reader`/`Builder`s, each with its own `Context`. See [`c2pa-web`'s README](../c2pa-web/README.md#configuring-behavior-with-context) for an example.
+`Settings` is a plain, JSON-serializable object configuring SDK behavior around trust anchors, verification options, and `Reader`/`Builder` options. `Context` is a small, immutable wrapper around `Settings`, and is the recommended way to configure a `Reader`/`Builder`. `Context` objects are passed directly to the call that creates a `Reader`/`Builder` instance, so one running SDK instance can freely create many different `Reader`/`Builder`s, each with its own `Context`. See [`c2pa-web`'s README](../c2pa-web/README.md#configuring-behavior-with-context) for an example.
 
 #### Creating a `Context`
 
@@ -49,7 +49,7 @@ const context = new Context(mergeSettings(base, override));
 
 #### Resolving a `Context` to JSON
 
-Bindings pass settings across their wasm/native boundary as a JSON string. `toJson()` resolves any trust-anchor URLs embedded in the settings (fetching and validating them) and serializes the result:
+Settings are passed across the WASM (`c2pa-web`)/native(`c2pa-node`) boundary as a JSON string. `toJson()` resolves any trust-anchor URLs embedded in the settings (fetching and validating them) and serializes the result:
 
 ```typescript
 const contextJson = await context.toJson();
@@ -81,8 +81,7 @@ const verifySettings = createVerifySettings({
 
 const settings = mergeSettings(trustSettings, verifySettings);
 
-// Resolves trust-anchor URLs and serializes to the snake_case JSON string the
-// native SDK expects. `Context.toJson()` calls this internally.
+// Resolves trust-anchor URLs and serializes to the snake_case JSON string the native SDK expects.
 const settingsJson = await resolveSettings(settings);
 ```
 
