@@ -1,5 +1,11 @@
 # @contentauth/c2pa-node
 
+## 0.9.3
+
+### Patch Changes
+
+- 4abe0a1: Switch fs-extra import from namespace import to default import.
+
 ## 0.9.2
 
 ### Patch Changes
