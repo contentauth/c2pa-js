@@ -10,11 +10,8 @@
 import { test, describe, expect } from 'test/methods.js';
 import { vi } from 'vitest';
 import { createC2pa } from './c2pa.js';
-import {
-  AssetTooLargeError,
-  Context,
-  Settings
-} from '@contentauth/c2pa-utilities';
+import { Reader } from './reader.js';
+import { AssetTooLargeError, Context, Settings } from '@contentauth/c2pa-utilities';
 import { UnsupportedFormatError } from './error.js';
 import { getBlobForAsset } from 'test/utils.js';
 import { MAX_SIZE_IN_BYTES } from './reader.js';
@@ -46,7 +43,7 @@ describe('reader', () => {
       }) => {
         const blob = await getBlobForAsset(C_with_CAWG_data);
 
-        const reader = await c2pa.reader.fromBlob(blob.type, blob);
+        const reader = await Reader.fromBlob(c2pa, blob.type, blob);
 
         expect(reader).not.toBeNull();
 
@@ -60,7 +57,7 @@ describe('reader', () => {
       }) => {
         const blob = await getBlobForAsset(C_with_CAWG_data_thumbnail);
 
-        const reader = await c2pa.reader.fromBlob(blob.type, blob);
+        const reader = await Reader.fromBlob(c2pa, blob.type, blob);
 
         expect(reader).toBeNull();
       });
@@ -71,7 +68,7 @@ describe('reader', () => {
         const blob = await getBlobForAsset(C_with_CAWG_data);
 
         await expect(
-          c2pa.reader.fromBlob('application/x-not-real', blob)
+          Reader.fromBlob(c2pa, 'application/x-not-real', blob)
         ).rejects.toThrow(UnsupportedFormatError);
       });
 
@@ -83,22 +80,13 @@ describe('reader', () => {
           value: MAX_SIZE_IN_BYTES + 1
         });
 
-        await expect(c2pa.reader.fromBlob(blob.type, blob)).rejects.toThrow(
+        await expect(Reader.fromBlob(c2pa, blob.type, blob)).rejects.toThrow(
           AssetTooLargeError
         );
       });
 
-      test('should use local "context" settings when provided', async () => {
+      test('should apply the given Context', async () => {
         const settings: Settings = {
-          verify: {
-            verifyTrust: false
-          },
-          cawgTrust: {
-            verifyTrustList: false
-          }
-        };
-
-        const overrideSettings: Settings = {
           trust: {
             trustAnchors: anchor_correct
           },
@@ -110,143 +98,82 @@ describe('reader', () => {
           }
         };
 
-        const c2pa = await createC2pa({ wasmSrc, settings });
+        const c2pa = await createC2pa({ wasmSrc });
 
         const blob = await getBlobForAsset(C_with_CAWG_data);
 
-        const reader = await c2pa.reader.fromBlob(
+        const reader = await Reader.fromBlob(
+          c2pa,
           blob.type,
           blob,
-          overrideSettings
+          new Context(settings)
         );
 
         expect(reader).not.toBeNull();
 
         const manifestStore = await reader!.manifestStore();
 
-        // Using the overrideSettings, the asset is trusted.
         expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
 
         c2pa.dispose();
       });
 
-      test('should inherit global settings when per-call settings are provided', async () => {
-        // Global settings contain trust anchors and enable trust verification.
-        const globalSettings: Settings = {
-          trust: {
-            trustAnchors: anchor_correct
-          },
-          cawgTrust: {
-            trustAnchors: anchor_cawg
-          },
-          verify: {
-            verifyTrust: true
-          }
-        };
+      test('supports different Contexts for Readers created from the same c2pa instance', async () => {
+        // One worker/wasm instance (one createC2pa() call), two Readers with opposite trust
+        // configurations — the whole point of Context no longer being tied to the runtime handle.
+        const c2pa = await createC2pa({ wasmSrc });
 
-        // Per-call settings touch an unrelated key and do NOT specify trust anchors.
-        const perCallSettings: Settings = {
-          verify: {
-            verifyAfterReading: true
-          }
-        };
+        const trustedContext = new Context({
+          trust: { trustAnchors: anchor_correct },
+          cawgTrust: { trustAnchors: anchor_cawg },
+          verify: { verifyTrust: true }
+        });
+        const untrustedContext = new Context({
+          trust: { trustAnchors: anchor_incorrect },
+          verify: { verifyTrust: true }
+        });
 
-        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
+        const blobA = await getBlobForAsset(C_with_CAWG_data);
+        const blobB = await getBlobForAsset(C_with_CAWG_data);
 
-        const blob = await getBlobForAsset(C_with_CAWG_data);
+        const trustedReader = await Reader.fromBlob(
+          c2pa,
+          blobA.type,
+          blobA,
+          trustedContext
+        );
+        const untrustedReader = await Reader.fromBlob(
+          c2pa,
+          blobB.type,
+          blobB,
+          untrustedContext
+        );
 
-        const reader = await c2pa.reader.fromBlob(blob.type, blob, perCallSettings);
-
-        expect(reader).not.toBeNull();
-
-        const manifestStore = await reader!.manifestStore();
-
-        // Trust anchors from globalSettings should still be in effect, so the asset is trusted.
-        expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
-
-        c2pa.dispose();
-      });
-
-      test('should allow per-call settings to override conflicting global settings', async () => {
-        // Global settings contain trust anchors and enable trust verification.
-        const globalSettings: Settings = {
-          trust: {
-            trustAnchors: anchor_correct
-          },
-          cawgTrust: {
-            trustAnchors: anchor_cawg
-          },
-          verify: {
-            verifyTrust: true
-          }
-        };
-
-        // Per-call settings replace trustAnchors with an incorrect anchor, so the
-        // asset should come back untrusted despite the correct anchor in globalSettings.
-        const perCallSettings: Settings = {
-          trust: {
-            trustAnchors: anchor_incorrect
-          }
-        };
-
-        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
-
-        const blob = await getBlobForAsset(C_with_CAWG_data);
-
-        const reader = await c2pa.reader.fromBlob(blob.type, blob, perCallSettings);
-
-        expect(reader).not.toBeNull();
-
-        const manifestStore = await reader!.manifestStore();
-
-        // Per-call anchor wins over the global one, so the result is untrusted.
-        expect(manifestStore).toEqual(C_with_CAWG_data_untrusted_ManifestStore);
+        expect(await trustedReader!.manifestStore()).toEqual(
+          C_with_CAWG_data_trusted_ManifestStore
+        );
+        expect(await untrustedReader!.manifestStore()).toEqual(
+          C_with_CAWG_data_untrusted_ManifestStore
+        );
 
         c2pa.dispose();
       });
 
-      test('should use a Context provided at createC2pa time', async () => {
-        const settings: Settings = {
-          trust: {
-            trustAnchors: anchor_correct
-          },
-          cawgTrust: {
-            trustAnchors: anchor_cawg
-          },
-          verify: {
-            verifyTrust: true
-          }
-        };
-
-        const c2pa = await createC2pa({wasmSrc, context: new Context(settings)});
-
-        const blob = await getBlobForAsset(C_with_CAWG_data);
-
-        const reader = await c2pa.reader.fromBlob(blob.type, blob);
-
-        expect(reader).not.toBeNull();
-
-        const manifestStore = await reader!.manifestStore();
-
-        expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
-
-        c2pa.dispose();
-      });
-
-      test('does not re-resolve the Context on every fromBlob call', async () => {
+      test('does not re-resolve the same Context on repeated fromBlob calls', async () => {
         const context = new Context({ verify: { verifyTrust: false } });
-
-        const c2pa = await createC2pa({ wasmSrc, context });
-
-        // Resolved once already, at createC2pa time, above.
         const toJsonSpy = vi.spyOn(context, 'toJson');
 
+        const c2pa = await createC2pa({ wasmSrc });
         const blob = await getBlobForAsset(C_with_CAWG_data);
 
-        await c2pa.reader.fromBlob(blob.type, blob);
-        await c2pa.reader.fromBlob(blob.type, blob);
+        await Reader.fromBlob(c2pa, blob.type, blob, context);
+        await Reader.fromBlob(c2pa, blob.type, blob, context);
 
-        expect(toJsonSpy).not.toHaveBeenCalled();
+        // Both calls invoke Context.toJson(), but it memoizes internally: the exact same
+        // Promise is returned both times, so settings are only ever resolved once.
+        expect(toJsonSpy).toHaveBeenCalledTimes(2);
+        const [firstCall, secondCall] = toJsonSpy.mock.results;
+        expect(secondCall.value).toBe(firstCall.value);
 
         c2pa.dispose();
       });
@@ -259,7 +186,8 @@ describe('reader', () => {
         const initBlob = await getBlobForAsset(dashinit);
         const fragmentBlob = await getBlobForAsset(dash1);
 
-        const reader = await c2pa.reader.fromBlobFragment(
+        const reader = await Reader.fromBlobFragment(
+          c2pa,
           initBlob.type,
           initBlob,
           fragmentBlob
@@ -278,7 +206,8 @@ describe('reader', () => {
         const initBlob = await getBlobForAsset(C_with_CAWG_data_thumbnail);
         const fragmentBlob = await getBlobForAsset(dash1);
 
-        const reader = await c2pa.reader.fromBlobFragment(
+        const reader = await Reader.fromBlobFragment(
+          c2pa,
           initBlob.type,
           initBlob,
           fragmentBlob
@@ -294,7 +223,8 @@ describe('reader', () => {
         const fragmentBlob = await getBlobForAsset(dash1);
 
         await expect(
-          c2pa.reader.fromBlobFragment(
+          Reader.fromBlobFragment(
+            c2pa,
             'application/x-not-real',
             initBlob,
             fragmentBlob
@@ -312,7 +242,7 @@ describe('reader', () => {
         });
 
         await expect(
-          c2pa.reader.fromBlobFragment(initBlob.type, initBlob, fragmentBlob)
+          Reader.fromBlobFragment(c2pa, initBlob.type, initBlob, fragmentBlob)
         ).rejects.toThrow(AssetTooLargeError);
       });
 
@@ -326,46 +256,8 @@ describe('reader', () => {
         });
 
         await expect(
-          c2pa.reader.fromBlobFragment(initBlob.type, initBlob, fragmentBlob)
+          Reader.fromBlobFragment(c2pa, initBlob.type, initBlob, fragmentBlob)
         ).rejects.toThrow(AssetTooLargeError);
-      });
-
-      test('should inherit global settings when per-call settings are provided', async () => {
-        // Enable trust verification globally.
-        const globalSettings: Settings = {
-          verify: {
-            verifyTrust: true
-          }
-        };
-
-        // Per-call settings touch an unrelated key only.
-        const perCallSettings: Settings = {
-          verify: {
-            verifyAfterReading: true
-          }
-        };
-
-        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
-
-        const initBlob = await getBlobForAsset(dashinit);
-        const fragmentBlob = await getBlobForAsset(dash1);
-
-        const reader = await c2pa.reader.fromBlobFragment(
-          initBlob.type,
-          initBlob,
-          fragmentBlob,
-          perCallSettings
-        );
-
-        expect(reader).not.toBeNull();
-
-        const manifestStore = await reader!.manifestStore();
-
-        // Trust verification from globalSettings should still be in effect, so the
-        // result should match the manifest store produced with trust verification on.
-        expect(manifestStore).toEqual(dashinit_ManifestStore);
-
-        c2pa.dispose();
       });
     });
   });
@@ -375,7 +267,7 @@ describe('reader', () => {
       test('should return an embedded thumbnail', async ({ c2pa }) => {
         const blob = await getBlobForAsset(C_with_CAWG_data);
 
-        const reader = await c2pa.reader.fromBlob(blob.type, blob);
+        const reader = await Reader.fromBlob(c2pa, blob.type, blob);
 
         expect(reader).not.toBeNull();
 
@@ -402,7 +294,7 @@ describe('reader', () => {
       test("should return the asset's active manifest", async ({ c2pa }) => {
         const blob = await getBlobForAsset(C_with_CAWG_data);
 
-        const reader = await c2pa.reader.fromBlob(blob.type, blob);
+        const reader = await Reader.fromBlob(c2pa, blob.type, blob);
 
         expect(reader).not.toBeNull();
 
@@ -424,7 +316,7 @@ describe('reader', () => {
     test('should report c2pa-rs errors correctly', async ({ c2pa }) => {
       const blob = await getBlobForAsset(no_alg);
 
-      const readerPromise = c2pa.reader.fromBlob(blob.type, blob);
+      const readerPromise = Reader.fromBlob(c2pa, blob.type, blob);
 
       await expect(readerPromise).rejects.toThrowError(
         'C2pa(UnknownAlgorithm)'
@@ -432,8 +324,10 @@ describe('reader', () => {
     });
   });
 
-  test('should report a trusted asset when when configured to verify trust', async () => {
-    const settings: Settings = {
+  test('should report a trusted asset when when configured to verify trust', async ({
+    c2pa
+  }) => {
+    const context = new Context({
       trust: {
         trustAnchors: anchor_correct
       },
@@ -443,77 +337,69 @@ describe('reader', () => {
       verify: {
         verifyTrust: true
       }
-    };
-
-    const c2pa = await createC2pa({ wasmSrc, settings });
+    });
 
     const blob = await getBlobForAsset(C_with_CAWG_data);
 
-    const reader = await c2pa.reader.fromBlob(blob.type, blob);
+    const reader = await Reader.fromBlob(c2pa, blob.type, blob, context);
 
     expect(reader).not.toBeNull();
 
     const manifestStore = await reader!.manifestStore();
 
     expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
-
-    c2pa.dispose();
   });
 
-  test('should report an untrusted asset when configured to verify trust', async () => {
-    const settings: Settings = {
+  test('should report an untrusted asset when configured to verify trust', async ({
+    c2pa
+  }) => {
+    const context = new Context({
       trust: {
         trustAnchors: anchor_incorrect
       },
       verify: {
         verifyTrust: true
       }
-    };
-
-    const c2pa = await createC2pa({ wasmSrc, settings });
+    });
 
     const blob = await getBlobForAsset(C_with_CAWG_data);
 
-    const reader = await c2pa.reader.fromBlob(blob.type, blob);
+    const reader = await Reader.fromBlob(c2pa, blob.type, blob, context);
 
     expect(reader).not.toBeNull();
 
     const manifestStore = await reader!.manifestStore();
 
     expect(manifestStore).toEqual(C_with_CAWG_data_untrusted_ManifestStore);
-
-    c2pa.dispose();
   });
 
-  test('should report a "valid" (not "trusted") asset when trust settings are disabled', async () => {
-    const settings: Settings = {
+  test('should report a "valid" (not "trusted") asset when trust settings are disabled', async ({
+    c2pa
+  }) => {
+    const context = new Context({
       verify: {
         verifyTrust: false
       },
       cawgTrust: {
         verifyTrustList: false
       }
-    };
-
-    const c2pa = await createC2pa({ wasmSrc, settings });
+    });
 
     const blob = await getBlobForAsset(C_with_CAWG_data);
 
-    const reader = await c2pa.reader.fromBlob(blob.type, blob);
+    const reader = await Reader.fromBlob(c2pa, blob.type, blob, context);
 
     expect(reader).not.toBeNull();
 
     const manifestStore = await reader!.manifestStore();
 
     expect(manifestStore).toEqual(C_with_CAWG_data_ManifestStore);
-
-    c2pa.dispose();
   });
 
   test('should fetch the remote manifest', async ({ c2pa }) => {
     const blob = await getBlobForAsset(PirateShip_cloud);
 
-    const reader = await c2pa.reader.fromBlob(blob.type, blob);
+    const reader = await Reader.fromBlob(c2pa, blob.type, blob);
 
     expect(reader).not.toBeNull();
 
@@ -536,7 +422,7 @@ describe('reader', () => {
   test('should be freeable', async ({ c2pa }) => {
     const blob = await getBlobForAsset(C_with_CAWG_data);
 
-    const reader = await c2pa.reader.fromBlob(blob.type, blob);
+    const reader = await Reader.fromBlob(c2pa, blob.type, blob);
 
     expect(reader).not.toBeNull();
 

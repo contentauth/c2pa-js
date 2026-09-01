@@ -6,11 +6,8 @@
  * accordance with the terms of the Adobe license agreement accompanying
  * it.
  */
-import { createWorkerManager } from './worker/workerManager.js';
-import { createReaderFactory, ReaderFactory } from './reader.js';
+import { createWorkerManager, WorkerManager } from './worker/workerManager.js';
 import { WASM_SRI } from '@contentauth/c2pa-wasm';
-import { Context, Settings } from '@contentauth/c2pa-utilities';
-import { BuilderFactory, createBuilderFactory } from './builder.js';
 
 export interface Config {
   /**
@@ -27,37 +24,17 @@ export interface Config {
    * application and pass its URL here.
    */
   workerSrc?: URL;
-
-  /**
-   * Context for the SDK, configuring behavior for builders and readers.
-   * If `settings` is also provided, `context` takes precedence.
-   * 
-   * Using a Context is the recommended way to configure the SDK.
-   */
-  context?: Context;
-
-  /**
-   * Settings for the SDK. Will be inherited by created builders and readers.
-   *
-   * @deprecated Use `context` instead, e.g. `context: new Context(settings)`. Will be removed in
-   * a future version.
-   */
-  settings?: Settings;
 }
 
-export interface C2paSdk {
+export interface C2pa {
   /**
-   * Contains methods for creating Reader objects.
+   * @internal Not part of the public API. Reader/Builder's static methods take this whole `C2pa`
+   * object and read the worker off of it themselves — there's no need to touch this directly.
    */
-  reader: ReaderFactory;
+  worker: WorkerManager;
 
   /**
-   * Contains methods for creating Builder objects.
-   */
-  builder: BuilderFactory;
-
-  /**
-   * Terminates the SDK's underlying web worker.
+   * Terminates this instance's underlying web worker.
    */
   dispose: () => void;
 }
@@ -65,28 +42,30 @@ export interface C2paSdk {
 /**
  * Creates a new instance of c2pa-web by setting up a web worker and preparing a WASM binary.
  *
+ * The returned handle carries no `Settings`/`Context` of its own — it's purely the worker/wasm
+ * runtime. Create as many `Reader`s/`Builder`s from it as you like, each with its own `Context`;
+ * they all share this one worker rather than needing a new `createC2pa()` call per `Context`.
+ *
  * @param config - SDK configuration object.
- * @returns An object providing access to factory methods for creating new reader objects.
+ * @returns A handle to the running worker, to be passed to `Reader`/`Builder`'s static methods.
  *
  * @example Creating a new SDK instance and reader:
  * ```
  * const c2pa = await createC2pa({ wasmSrc: 'url/hosting/wasm/binary' });
  *
- * const reader = await c2pa.reader.fromBlob(imageBlob.type, imageBlob);
+ * const reader = await Reader.fromBlob(c2pa, imageBlob.type, imageBlob);
  * ```
  */
-export async function createC2pa(config: Config): Promise<C2paSdk> {
-  const { wasmSrc, workerSrc, context, settings } = config;
+export async function createC2pa(config: Config): Promise<C2pa> {
+  const { wasmSrc, workerSrc } = config;
 
   const wasm =
     typeof wasmSrc === 'string' ? await fetchAndCompileWasm(wasmSrc) : wasmSrc;
 
   const worker = await createWorkerManager({ wasm, workerSrc });
-  const baseContext = context ?? new Context(settings);
 
   return {
-    reader: createReaderFactory(worker, baseContext),
-    builder: createBuilderFactory(worker, baseContext),
+    worker,
     dispose: worker.terminate
   };
 }

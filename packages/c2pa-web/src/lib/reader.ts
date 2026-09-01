@@ -10,90 +10,160 @@
 import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
 import { UnsupportedFormatError } from './error.js';
 import { isSupportedReaderFormat } from './supportedFormats.js';
+import type { C2pa } from './c2pa.js';
 import type { WorkerManager } from './worker/workerManager.js';
-import {
-  Context,
-  mergeSettings,
-  Settings,
-  validateAssetSize
-} from '@contentauth/c2pa-utilities';
+import { Context, validateAssetSize } from '@contentauth/c2pa-utilities';
 
 // 1 GB
 export const MAX_SIZE_IN_BYTES = 10 ** 9;
 
-/**
- * A collection of functions that permit the creation of Reader objects from various sources.
- */
-export interface ReaderFactory {
-  /**
-   * Create a {@link Reader} from an asset's format and a blob of its bytes.
-   *
-   * @param format Asset format.
-   * @param blob Blob of asset bytes.
-   * @param settings @deprecated Per-call settings overrides are deprecated and will be removed in
-   * a future major version. Configure a {@link Context} once, at `createC2pa` time, instead.
-   * @returns A {@link Reader} object or null if no C2PA metadata was found.
-   */
-  fromBlob: (
-    format: string,
-    blob: Blob,
-    settings?: Settings
-  ) => Promise<Reader | null>;
-
-  /**
-   *
-   * @param format Asset format.
-   * @param init Blob of initial fragment bytes.
-   * @param fragment Blob of fragment bytes.
-   * @param settings @deprecated Per-call settings overrides are deprecated and will be removed in
-   * a future major version. Configure a {@link Context} once, at `createC2pa` time, instead.
-   * @returns A {@link Reader} object or null if no C2PA metadata was found.
-   */
-  fromBlobFragment: (
-    format: string,
-    init: Blob,
-    fragment: Blob,
-    settings?: Settings
-  ) => Promise<Reader | null>;
-}
+const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>(
+  async ({ worker, id }) => {
+    await worker.tx.reader_free(id);
+  }
+);
 
 /**
  * Exposes methods for reading C2PA data out of an asset.
  *
  * @example Getting an asset's active manifest:
  * ```
- * const reader = await c2pa.reader.fromBlob(blob.type, blob);
+ * const reader = await Reader.fromBlob(c2pa, blob.type, blob);
  *
- * const activeManifest = await reader.activeManfiest();
+ * const activeManifest = await reader.activeManifest();
  * ```
  */
-export interface Reader {
+export class Reader {
+  private constructor(
+    private worker: WorkerManager,
+    private id: number
+  ) {}
+
+  /**
+   * Create a {@link Reader} from an asset's format and a blob of its bytes.
+   *
+   * @param c2pa The `C2pa` instance (from {@link createC2pa}) to create this reader on.
+   * @param format Asset format.
+   * @param blob Blob of asset bytes.
+   * @param context Optional `Context` configuring this reader's behavior.
+   * @returns A {@link Reader} object or null if no C2PA metadata was found.
+   */
+  static async fromBlob(
+    c2pa: C2pa,
+    format: string,
+    blob: Blob,
+    context: Context = new Context()
+  ): Promise<Reader | null> {
+    if (!isSupportedReaderFormat(format)) {
+      throw new UnsupportedFormatError(format);
+    }
+
+    validateAssetSize(blob.size, MAX_SIZE_IN_BYTES);
+
+    try {
+      const settingsJson = await context.toJson();
+      const { worker } = c2pa;
+
+      const readerId = await worker.tx.reader_fromBlob(format, blob, settingsJson);
+
+      const reader = new Reader(worker, readerId);
+      registry.register(reader, { worker, id: readerId }, reader);
+
+      return reader;
+    } catch (e: unknown) {
+      return handleReaderCreationError(e);
+    }
+  }
+
+  /**
+   * Create a {@link Reader} from an initial fragment and a subsequent fragment.
+   *
+   * @param c2pa The `C2pa` instance (from {@link createC2pa}) to create this reader on.
+   * @param format Asset format.
+   * @param init Blob of initial fragment bytes.
+   * @param fragment Blob of fragment bytes.
+   * @param context Optional `Context` configuring this reader's behavior.
+   * @returns A {@link Reader} object or null if no C2PA metadata was found.
+   */
+  static async fromBlobFragment(
+    c2pa: C2pa,
+    format: string,
+    init: Blob,
+    fragment: Blob,
+    context: Context = new Context()
+  ): Promise<Reader | null> {
+    if (!isSupportedReaderFormat(format)) {
+      throw new UnsupportedFormatError(format);
+    }
+
+    validateAssetSize(init.size, MAX_SIZE_IN_BYTES);
+    validateAssetSize(fragment.size, MAX_SIZE_IN_BYTES);
+
+    try {
+      const settingsJson = await context.toJson();
+      const { worker } = c2pa;
+
+      const readerId = await worker.tx.reader_fromBlobFragment(
+        format,
+        init,
+        fragment,
+        settingsJson
+      );
+
+      const reader = new Reader(worker, readerId);
+      registry.register(reader, { worker, id: readerId }, reader);
+
+      return reader;
+    } catch (e: unknown) {
+      return handleReaderCreationError(e);
+    }
+  }
+
   /**
    * @returns The label of the active manifest.
    */
-  activeLabel: () => Promise<string | null>;
+  async activeLabel(): Promise<string | null> {
+    const label = await this.worker.tx.reader_activeLabel(this.id);
+    return label;
+  }
 
   /**
    * @returns The asset's full {@link ManifestStore} containing all its manifests, validation statuses, and the URI of the active manifest.
    */
-  manifestStore: () => Promise<ManifestStore>;
+  async manifestStore(): Promise<ManifestStore> {
+    const manifestStore = await this.worker.tx.reader_manifestStore(this.id);
+    return manifestStore;
+  }
 
   /**
    * @returns The asset's active {@link Manifest}.
    */
-  activeManifest: () => Promise<Manifest>;
+  async activeManifest(): Promise<Manifest> {
+    const activeManifest = await this.worker.tx.reader_activeManifest(this.id);
+
+    return activeManifest;
+  }
 
   /**
    * @returns The asset's full {@link ManifestStore}.
    *
    * @deprecated Use {@link manifestStore} instead.
    */
-  json: () => Promise<any>;
+  async json(): Promise<any> {
+    const json = await this.worker.tx.reader_json(this.id);
+
+    const manifestStore = JSON.parse(json);
+
+    return manifestStore;
+  }
 
   /**
    * @returns The asset's manifest store as crJSON.
    */
-  crJson: () => Promise<any>;
+  async crJson(): Promise<any> {
+    const crJson = await this.worker.tx.reader_crJson(this.id);
+    return JSON.parse(crJson);
+  }
 
   /**
    * Resolves a URI reference to a binary object (e.g. a thumbnail) in the resource store.
@@ -103,114 +173,25 @@ export interface Reader {
    *
    * @example Retrieving a thumbnail from the resource store:
    * ```
-   * const reader = await c2pa.reader.fromBlob(blob.type, blob);
+   * const reader = await Reader.fromBlob(c2pa, blob.type, blob);
    *
    * const activeManifest = await reader.activeManifest();
    *
    * const thumbnailBuffer = await reader.resourceToBytes(activeManifest.thumbnail!.identifier);
    * ```
    */
-  resourceToBytes: (uri: string) => Promise<Uint8Array<ArrayBuffer>>;
+  async resourceToBytes(uri: string): Promise<Uint8Array<ArrayBuffer>> {
+    const buffer = await this.worker.tx.reader_resourceToBytes(this.id, uri);
+    return buffer;
+  }
 
   /**
    * Dispose of this Reader, freeing the memory it occupied and preventing further use. Call this whenever the Reader is no longer needed.
    */
-  free: () => Promise<void>;
-}
-
-/**
- * @param worker - Worker (via WorkerManager) to be associated with this reader factory.
- * @param context - Context to be used for all readers created by this factory. Resolved once,
- * since a Context is only ever attached at factory-creation time.
- * @returns A {@link ReaderFactory} object containing reader creation methods.
- */
-export function createReaderFactory(
-  worker: WorkerManager,
-  context: Context = new Context()
-): ReaderFactory {
-  const { tx } = worker;
-  const settingsJsonPromise = context.toJson();
-
-  /**
-   * Resolves the settings JSON for one reader-creation call. When `override` is omitted (the
-   * common case), this is just the already-resolved `settingsJsonPromise`. The `override` branch
-   * exists only to support the deprecated per-call `settings` parameter on
-   * {@link ReaderFactory}'s methods; once that's removed, this helper goes with it and every
-   * call site can use `settingsJsonPromise` directly.
-   */
-  const getSettingsJson = (
-    override: Settings | undefined
-  ): Promise<string> =>
-    override
-      ? new Context(mergeSettings(context.settings ?? {}, override)).toJson()
-      : settingsJsonPromise;
-
-  const registry = new FinalizationRegistry<number>(async (id) => {
-    await tx.reader_free(id);
-  });
-
-  return {
-    async fromBlob(
-      format: string,
-      blob: Blob,
-      settings?: Settings
-    ): Promise<Reader | null> {
-      if (!isSupportedReaderFormat(format)) {
-        throw new UnsupportedFormatError(format);
-      }
-
-      validateAssetSize(blob.size, MAX_SIZE_IN_BYTES);
-
-      try {
-        const settingsJson = await getSettingsJson(settings);
-
-        const readerId = await tx.reader_fromBlob(format, blob, settingsJson);
-
-        const reader = createReader(worker, readerId, () => {
-          registry.unregister(reader);
-        });
-        registry.register(reader, readerId, reader);
-
-        return reader;
-      } catch (e: unknown) {
-        return handleReaderCreationError(e);
-      }
-    },
-
-    async fromBlobFragment(
-      format: string,
-      init: Blob,
-      fragment: Blob,
-      settings?: Settings
-    ) {
-      if (!isSupportedReaderFormat(format)) {
-        throw new UnsupportedFormatError(format);
-      }
-
-      validateAssetSize(init.size, MAX_SIZE_IN_BYTES);
-      validateAssetSize(fragment.size, MAX_SIZE_IN_BYTES);
-
-      try {
-        const settingsJson = await getSettingsJson(settings);
-
-        const readerId = await tx.reader_fromBlobFragment(
-          format,
-          init,
-          fragment,
-          settingsJson
-        );
-
-        const reader = createReader(worker, readerId, () => {
-          registry.unregister(reader);
-        });
-        registry.register(reader, readerId, reader);
-
-        return reader;
-      } catch (e: unknown) {
-        return handleReaderCreationError(e);
-      }
-    }
-  };
+  async free(): Promise<void> {
+    registry.unregister(this);
+    await this.worker.tx.reader_free(this.id);
+  }
 }
 
 function handleReaderCreationError(maybeError: unknown): null {
@@ -222,47 +203,4 @@ function handleReaderCreationError(maybeError: unknown): null {
   }
 
   throw maybeError;
-}
-
-function createReader(
-  worker: WorkerManager,
-  id: number,
-  onFree: () => void
-): Reader {
-  const { tx } = worker;
-
-  return {
-    async activeLabel(): Promise<string | null> {
-      const label = await tx.reader_activeLabel(id);
-      return label;
-    },
-    async manifestStore(): Promise<ManifestStore> {
-      const manifestStore = await tx.reader_manifestStore(id);
-      return manifestStore;
-    },
-    async activeManifest(): Promise<Manifest> {
-      const activeManifest = await tx.reader_activeManifest(id);
-
-      return activeManifest;
-    },
-    async json(): Promise<any> {
-      const json = await tx.reader_json(id);
-
-      const manifestStore = JSON.parse(json);
-
-      return manifestStore;
-    },
-    async crJson(): Promise<any> {
-      const crJson = await tx.reader_crJson(id);
-      return JSON.parse(crJson);
-    },
-    async resourceToBytes(uri: string): Promise<Uint8Array<ArrayBuffer>> {
-      const buffer = await tx.reader_resourceToBytes(id, uri);
-      return buffer;
-    },
-    async free(): Promise<void> {
-      onFree();
-      await tx.reader_free(id);
-    }
-  };
 }

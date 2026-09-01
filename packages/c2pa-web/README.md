@@ -57,14 +57,16 @@ import { createC2pa } from '@contentauth/c2pa-web/inline';
 const c2pa = await createC2pa();
 ```
 
-## Configuring the SDK with `Context`
+## Configuring behavior with `Context`
 
-`createC2pa` accepts an optional `Context` (see [`c2pa-utilities`'s README](../c2pa-utilities/README.md#context-and-settings) for the full API) wrapping `Settings`. A `Context` is attached once, when the SDK is created, and configures every `Reader` and `Builder` it subsequently creates. It is not passed to individual reader/builder calls.
+`createC2pa` sets up the worker and Wasm binary only — the handle it returns carries no `Settings`/`Context` of its own. `Reader` and `Builder`'s creation methods each accept an optional `Context` (see [`c2pa-utilities`'s README](../c2pa-utilities/README.md#context-and-settings) for the full API) directly, so the same running worker can create as many `Reader`s/`Builder`s as you like, each configured independently:
 
 ```typescript
-import { Context, createC2pa } from '@contentauth/c2pa-web';
+import { createC2pa, Reader, Builder, Context } from '@contentauth/c2pa-web';
 
 import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
+
+const c2pa = await createC2pa({ wasmSrc });
 
 const context = new Context({
   verify: {
@@ -75,38 +77,22 @@ const context = new Context({
   }
 });
 
-const c2pa = await createC2pa({ wasmSrc, context });
+const reader = await Reader.fromBlob(c2pa, blob.type, blob, context);
+const builder = await Builder.new(c2pa, context);
 
-// Every Reader and Builder created from this SDK instance inherits `context`'s settings.
-const reader = await c2pa.reader.fromBlob(blob.type, blob);
-const builder = await c2pa.builder.new();
+// A second Reader can use a completely different Context on the same c2pa instance — no need
+// to call createC2pa() again just to change settings.
+const lenientReader = await Reader.fromBlob(
+  c2pa,
+  blob2.type,
+  blob2,
+  new Context({ verify: { verifyTrust: false } })
+);
 ```
 
 Each `Context` holds whatever single `Settings` object was passed to its constructor and does not handle any merging of settings. To combine more than one `Settings` source, merge them first with `mergeSettings()`, then construct a `Context` from the single, merged result. See [`c2pa-utilities`'s README](../c2pa-utilities/README.md#combining-settings) for details.
 
-### Deprecated: per-call settings
-
-Earlier versions of this SDK accepted a `settings` object directly on `createC2pa`, and allowed overriding it per call on some `Reader` and `Builder` APIs. Both are deprecated and will be removed in a future version; configure a `Context` once via `createC2pa`'s `context` option instead:
-
-```typescript
-// Deprecated
-const c2pa = await createC2pa({
-  wasmSrc,
-  settings: { verify: { verifyTrust: true } }
-});
-const reader = await c2pa.reader.fromBlob(blob.type, blob, {
-  verify: { verifyAfterReading: true }
-});
-
-// Preferred
-const c2pa = await createC2pa({
-  wasmSrc,
-  context: new Context({
-    verify: { verifyTrust: true, verifyAfterReading: true }
-  })
-});
-const reader = await c2pa.reader.fromBlob(blob.type, blob);
-```
+A `Context`'s settings are resolved once and memoized — passing the same `Context` instance to multiple `Reader`/`Builder` calls doesn't re-fetch trust-anchor URLs on every call.
 
 ## Using the library
 
@@ -117,12 +103,14 @@ See also the [API reference documentation](https://contentauth.github.io/c2pa-js
 Fetch an image and provide it to the `Reader`:
 
 ```typescript
+import { Reader } from '@contentauth/c2pa-web';
+
 const response = await fetch(
   'https://spec.c2pa.org/public-testfiles/image/jpeg/adobe-20220124-C.jpg'
 );
 const blob = await response.blob();
 
-const reader = await c2pa.reader.fromBlob(blob.type, blob);
+const reader = await Reader.fromBlob(c2pa, blob.type, blob);
 
 const manifestStore = await reader.manifestStore();
 
@@ -147,7 +135,9 @@ The builder intent describes the type of operation being performed on the asset.
 - `update`: A restricted version of `edit` for non-editorial changes. There must be only one ingredient, as a parent. No changes can be made to the hashed content of the parent. There are additional restrictions on the types of changes that can be made.
 
 ```typescript
-const builder = await c2pa.builder.new();
+import { Builder } from '@contentauth/c2pa-web';
+
+const builder = await Builder.new(c2pa);
 
 await builder.setIntent({
   create:
@@ -179,7 +169,7 @@ const ingredientResponse = await fetch('path/to/source-image.jpg');
 const ingredientBlob = await ingredientResponse.blob();
 
 // Create a builder
-const builder = await c2pa.builder.new();
+const builder = await Builder.new(c2pa);
 
 // Add the ingredient with its blob
 await builder.addIngredientFromBlob(
@@ -204,7 +194,7 @@ await builder.free();
 You can add multiple ingredients to document complex provenance chains:
 
 ```typescript
-const builder = await c2pa.builder.new();
+const builder = await Builder.new(c2pa);
 
 // Fetch ingredient assets
 const background = await fetch('background.jpg').then((r) => r.blob());
@@ -246,7 +236,7 @@ Use a builder archive to save a builder's state (including ingredients) and reus
 
 ```typescript
 // Create a builder with ingredients
-const builder = await c2pa.builder.new();
+const builder = await Builder.new(c2pa);
 
 const ingredientBlob = await fetch('source.jpg').then((r) => r.blob());
 await builder.addIngredientFromBlob(
@@ -264,7 +254,7 @@ const archive = await builder.toArchive();
 await builder.free();
 
 // Later, recreate the builder from the archive
-const restoredBuilder = await c2pa.builder.fromArchive(new Blob([archive]));
+const restoredBuilder = await Builder.fromArchive(c2pa, new Blob([archive]));
 
 // The ingredients are preserved
 const definition = await restoredBuilder.getDefinition();
@@ -279,12 +269,12 @@ A `.c2pa` archive (created via `toArchive`) can be added as an ingredient to ano
 
 ```typescript
 // Step 1: Create a builder and archive it
-const originalBuilder = await c2pa.builder.new();
+const originalBuilder = await Builder.new(c2pa);
 const archive = await originalBuilder.toArchive();
 await originalBuilder.free();
 
 // Step 2: Create a new builder and add the archive as an ingredient
-const newBuilder = await c2pa.builder.new();
+const newBuilder = await Builder.new(c2pa);
 await newBuilder.setIntent('edit');
 
 await newBuilder.addIngredientFromBlob(
@@ -310,7 +300,7 @@ You can also add a `.c2pa` file loaded from a URL or file input:
 const response = await fetch('path/to/ingredient.c2pa');
 const archiveBlob = await response.blob();
 
-const builder = await c2pa.builder.new();
+const builder = await Builder.new(c2pa);
 await builder.setIntent('edit');
 
 await builder.addIngredientFromBlob(

@@ -7,7 +7,7 @@
  * it.
  */
 
-import { WorkerManager } from './worker/workerManager.js';
+import type { WorkerManager } from './worker/workerManager.js';
 import { getSerializablePayload, type Signer } from './signer.js';
 import type {
   Action,
@@ -17,243 +17,8 @@ import type {
   Ingredient,
   ManifestDefinition
 } from '@contentauth/c2pa-types';
-import { Context, mergeSettings, Settings } from '@contentauth/c2pa-utilities';
-
-/**
- * Functions that permit the creation of Builder objects.
- */
-export interface BuilderFactory {
-  /**
-   * Create a {@link Builder} with a minimal manifest definition as its initial state.
-   * @param settings @deprecated Per-call settings overrides are deprecated and will be removed in
-   * a future version. Configure a {@link Context} once, at `createC2pa` time, instead.
-   * @returns A {@link Builder} object.
-   */
-  new: (settings?: Settings) => Promise<Builder>;
-
-  /**
-   * Create a {@link Builder} from a {@link ManifestDefinition}.
-   *
-   * @param definition The {@link ManifestDefinition} to be used as the builder's initial state.
-   * @param settings @deprecated Per-call settings overrides are deprecated and will be removed in
-   * a future version. Configure a {@link Context} once, at `createC2pa` time, instead.
-   * @returns A {@link Builder} object.
-   */
-  fromDefinition: (
-    definition: ManifestDefinition,
-    settings?: Settings
-  ) => Promise<Builder>;
-
-  /**
-   * Create a {@link Builder} from a builder archive (created from {@link Builder.toArchive}).
-   *
-   * @param archive Builder archive as a blob.
-   * @param settings @deprecated Per-call settings overrides are deprecated and will be removed in
-   * a future version. Configure a {@link Context} once, at `createC2pa` time, instead.
-   * @returns A {@link Builder} object.
-   */
-  fromArchive: (archive: Blob, settings?: Settings) => Promise<Builder>;
-}
-
-/**
- * Exposes methods for building C2PA manifests and signing assets.
- */
-export interface Builder {
-  /**
-   * Sets the builder "intent."
-   *
-   * @todo Additional documentation coming soon.
-   *
-   * @param intent
-   */
-  setIntent: (intent: BuilderIntent) => Promise<void>;
-
-  /**
-   * Add an action to the manifest's actions assertion.
-   *
-   * @param action Object representing the action to be added.
-   */
-  addAction: (action: Action) => Promise<void>;
-
-  /**
-   * Add an assertion to the manifest under the given label.
-   *
-   * @param label The assertion label (reverse-domain format).
-   * @param data The assertion data (any JSON-serializable value).
-   */
-  addAssertion: (label: string, data: unknown) => Promise<void>;
-
-  /**
-   * Sets the remote URL for a remote manifest. The manifest is expected to be available at this location.
-   *
-   * @param url URL pointing to the location the remote manifest will be stored.
-   */
-  setRemoteUrl: (url: string) => Promise<void>;
-
-  /**
-   * Sets the state of the no_embed flag. To skip embedding a manifest (e.g. for the remote-only case) set this to `true`.
-   *
-   * @param noEmbed Value to set the no_embed flag.
-   */
-  setNoEmbed: (noEmbed: boolean) => Promise<void>;
-
-  /**
-   * Set a thumbnail from a blob to be included in the manifest. The blob should represent the asset being signed.
-   *
-   * @param format Format of the thumbnail
-   * @param blob Blob of the thumbnail bytes
-   */
-  setThumbnailFromBlob: (format: string, blob: Blob) => Promise<void>;
-
-  /**
-   * Redact an assertion from an ingredient manifest.
-   *
-   * Adds the URI to the builder's redaction list and appends a `c2pa.redacted` action
-   * with the given reason, as required by the C2PA spec.
-   *
-   * @param uri JUMBF URI of the assertion to redact.
-   * @param reason The {@link C2paReason} for the redaction.
-   */
-  addRedaction: (uri: string, reason: C2paReason) => Promise<void>;
-
-  /**
-   * Experimental.
-   * Retains only the actions for which `keep` returns true.
-   *
-   * The inception action, `c2pa.created` or `c2pa.opened`, is always kept regardless of `keep`,
-   * and is moved to index 0 if needed, so the manifest stays valid per the C2PA spec. Sets
-   * `allActionsIncluded = false` when anything is removed. This does not touch ingredients.
-   * Call {@link Builder.filterIngredients}, using `filterIngredients(() => false)` to drop all
-   * orphans, afterwards if you also want to drop ingredients now orphaned by the removed
-   * actions.
-   *
-   * @param keep The action is retained when the predicate returns true.
-   */
-  filterActions: (keep: (action: Action) => boolean) => Promise<void>;
-
-  /**
-   * Experimental.
-   * Retains ingredients, then rewrites positional ingredient references so linked actions
-   * stay valid.
-   *
-   * An ingredient is kept if it is referenced by a current action, is a `parentOf` ingredient,
-   * or `rescue` returns true for it. `rescue` therefore only ever rescues an otherwise-orphaned
-   * ingredient. It can never drop a referenced or lineage ingredient. Call
-   * {@link Builder.filterActions} first if you are also removing actions: the keep-set is
-   * computed from whatever actions currently remain.
-   *
-   * @param rescue Can rescue an otherwise-orphaned ingredient by returning true.
-   */
-  filterIngredients: (
-    rescue: (ingredient: Ingredient) => boolean
-  ) => Promise<void>;
-
-  /**
-   * Experimental.
-   * Retains actions and ingredients together in one step.
-   *
-   * `rescueIngredient` is evaluated for every ingredient first; any action referencing an
-   * ingredient it would rescue is force-kept regardless of `keepAction`.
-   *
-   * @param keepAction The action is retained when the predicate returns true.
-   * @param rescueIngredient Can rescue an otherwise-orphaned ingredient (and the action
-   * referencing it) by returning true.
-   */
-  filterActionsAndIngredients: (
-    keepAction: (action: Action) => boolean,
-    rescueIngredient: (ingredient: Ingredient) => boolean
-  ) => Promise<void>;
-
-  /**
-   * Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions.
-   *
-   * A manifest can carry more than one actions assertion (the created-list and
-   * gathered-list entries are distinct assertions). `transform` is therefore
-   * invoked once per actions assertion, in positional order, with that
-   * assertion's own actions.
-   *
-   * A no-op if there is no actions assertion. Use `addAction` for those.
-   *
-   * The returned list is written back as is.
-   * `transform` can therefore produce an actions array that fails
-   * validation at signing time, for example by removing the inception action
-   * (`c2pa.created`/`c2pa.opened`) or moving it out of first position.
-   *
-   * @param transform Receives one assertion's actions and returns its full replacement list.
-   */
-  updateActions: (transform: (actions: Action[]) => Action[]) => Promise<void>;
-
-  /**
-   * Add an ingredient to the builder from a definition only.
-   *
-   * @param ingredientDefinition {@link Ingredient} definition.
-   */
-  addIngredient: (ingredientDefinition: Ingredient) => Promise<void>;
-
-  /**
-   * Add an ingredient to the builder from a definition, format, and blob.
-   * Values specified in the ingredient definition will be merged with the ingredient, and these values take precendence.
-   *
-   * @param ingredientDefinition {@link Ingredient} definition.
-   * @param format Format of the ingredient.
-   * @param blob Blob of the ingredient's bytes.
-   */
-  addIngredientFromBlob: (
-    ingredientDefinition: Ingredient,
-    format: string,
-    blob: Blob
-  ) => Promise<void>;
-
-  /**
-   * Add a resource to the builder's resource store with an ID and blob of the resource's bytes.
-   *
-   * @param resourceId ID associated with the resource being added.
-   * @param blob Blob of the resource's bytes.
-   */
-  addResourceFromBlob: (resourceId: string, blob: Blob) => Promise<void>;
-
-  /**
-   * Gets the current manifest definition held by the builder.
-   *
-   * @returns The {@link ManifestDefinition} held by the builder.
-   */
-  getDefinition: () => Promise<ManifestDefinition>;
-
-  /**
-   * Save the builder into .c2pa format.
-   * This "archive" can be added to as an ingredient with {@link addIngredientFromBlob}
-   *
-   * @returns A builder archive in application/c2pa format.
-   */
-  toArchive: () => Promise<Uint8Array<ArrayBuffer>>;
-
-  /**
-   * Sign an asset.
-   *
-   * @todo Docs coming soon
-   */
-  sign: (
-    signer: Signer,
-    format: string,
-    blob: Blob
-  ) => Promise<Uint8Array<ArrayBuffer>>;
-
-  /**
-   * Sign an asset and get both the signed asset bytes and the manifest bytes.
-   *
-   * @todo Docs coming soon
-   */
-  signAndGetManifestBytes: (
-    signer: Signer,
-    format: string,
-    blob: Blob
-  ) => Promise<ManifestAndAssetBytes>;
-
-  /**
-   * Dispose of this Builder, freeing the memory it occupied and preventing further use. Call this whenever the Builder is no longer needed.
-   */
-  free: () => Promise<void>;
-}
+import { Context } from '@contentauth/c2pa-utilities';
+import type { C2pa } from './c2pa.js';
 
 /**
  * Flattens the actions from every `c2pa.actions` assertion, since a manifest may carry both a
@@ -292,246 +57,407 @@ export interface ManifestAndAssetBytes {
   asset: Uint8Array<ArrayBuffer>;
 }
 
+const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>(
+  ({ worker, id }) => {
+    worker.tx.builder_free(id);
+  }
+);
+
 /**
- * @param worker - Worker (via WorkerManager) to be associated with this reader factory.
- * @param context - Context to be used for all builders created by this factory.
- * @returns A {@link BuilderFactory} object containing builder creation methods.
+ * Exposes methods for building C2PA manifests and signing assets.
  */
-export function createBuilderFactory(
-  worker: WorkerManager,
-  context: Context = new Context()
-): BuilderFactory {
-  const { tx } = worker;
-  const settingsJsonPromise = context.toJson();
+export class Builder {
+  private constructor(
+    private worker: WorkerManager,
+    private id: number
+  ) {}
 
   /**
-   * Resolves the settings JSON for one builder-creation call. When `override` is omitted (the
-   * common case), this is just the already-resolved `settingsJsonPromise`. The `override` branch
-   * exists only to support the deprecated per-call `settings` parameter on
-   * {@link BuilderFactory}'s methods; once that's removed, this helper goes with it and every
-   * call site can use `settingsJsonPromise` directly.
+   * Create a {@link Builder} with a minimal manifest definition as its initial state.
+   *
+   * @param c2pa The `C2pa` instance (from {@link createC2pa}) to create this builder on.
+   * @param context Optional `Context` configuring this builder's behavior.
+   * @returns A {@link Builder} object.
    */
-  const getSettingsJson = (
-    override: Settings | undefined
-  ): Promise<string> =>
-    override
-      ? new Context(mergeSettings(context.settings ?? {}, override)).toJson()
-      : settingsJsonPromise;
+  static async new(c2pa: C2pa, context: Context = new Context()): Promise<Builder> {
+    const settingsJson = await context.toJson();
+    const { worker } = c2pa;
 
-  const registry = new FinalizationRegistry<number>((id) => {
-    tx.builder_free(id);
-  });
+    const builderId = await worker.tx.builder_new(settingsJson);
 
-  return {
-    async new(settings?: Settings) {
-      const settingsJson = await getSettingsJson(settings);
-      const builderId = await tx.builder_new(settingsJson);
+    const builder = new Builder(worker, builderId);
+    registry.register(builder, { worker, id: builderId }, builder);
 
-      const builder = createBuilder(worker, builderId, () => {
-        registry.unregister(builder);
-      });
-      registry.register(builder, builderId, builder);
+    return builder;
+  }
 
-      return builder;
-    },
+  /**
+   * Create a {@link Builder} from a {@link ManifestDefinition}.
+   *
+   * @param c2pa The `C2pa` instance (from {@link createC2pa}) to create this builder on.
+   * @param definition The {@link ManifestDefinition} to be used as the builder's initial state.
+   * @param context Optional `Context` configuring this builder's behavior.
+   * @returns A {@link Builder} object.
+   */
+  static async fromDefinition(
+    c2pa: C2pa,
+    definition: ManifestDefinition,
+    context: Context = new Context()
+  ): Promise<Builder> {
+    const json = JSON.stringify(definition);
+    const settingsJson = await context.toJson();
+    const { worker } = c2pa;
 
-    async fromDefinition(definition: ManifestDefinition, settings?: Settings) {
-      const json = JSON.stringify(definition);
-      const settingsJson = await getSettingsJson(settings);
-      const builderId = await tx.builder_fromJson(json, settingsJson);
+    const builderId = await worker.tx.builder_fromJson(json, settingsJson);
 
-      const builder = createBuilder(worker, builderId, () => {
-        registry.unregister(builder);
-      });
-      registry.register(builder, builderId, builder);
+    const builder = new Builder(worker, builderId);
+    registry.register(builder, { worker, id: builderId }, builder);
 
-      return builder;
-    },
+    return builder;
+  }
 
-    async fromArchive(archive: Blob, settings?: Settings) {
-      const settingsJson = await getSettingsJson(settings);
-      const builderId = await tx.builder_fromArchive(archive, settingsJson);
+  /**
+   * Create a {@link Builder} from a builder archive (created from {@link Builder.toArchive}).
+   *
+   * @param c2pa The `C2pa` instance (from {@link createC2pa}) to create this builder on.
+   * @param archive Builder archive as a blob.
+   * @param context Optional `Context` configuring this builder's behavior.
+   * @returns A {@link Builder} object.
+   */
+  static async fromArchive(
+    c2pa: C2pa,
+    archive: Blob,
+    context: Context = new Context()
+  ): Promise<Builder> {
+    const settingsJson = await context.toJson();
+    const { worker } = c2pa;
 
-      const builder = createBuilder(worker, builderId, () => {
-        registry.unregister(builder);
-      });
-      registry.register(builder, builderId, builder);
+    const builderId = await worker.tx.builder_fromArchive(archive, settingsJson);
 
-      return builder;
-    }
-  };
-}
+    const builder = new Builder(worker, builderId);
+    registry.register(builder, { worker, id: builderId }, builder);
 
-function createBuilder(
-  worker: WorkerManager,
-  id: number,
-  onFree: () => void
-): Builder {
-  const { tx } = worker;
+    return builder;
+  }
 
-  return {
-    async setIntent(intent) {
-      await tx.builder_setIntent(id, intent);
-    },
+  /**
+   * Sets the builder "intent."
+   *
+   * @todo Additional documentation coming soon.
+   *
+   * @param intent
+   */
+  async setIntent(intent: BuilderIntent): Promise<void> {
+    await this.worker.tx.builder_setIntent(this.id, intent);
+  }
 
-    async addAction(action) {
-      await tx.builder_addAction(id, action);
-    },
+  /**
+   * Add an action to the manifest's actions assertion.
+   *
+   * @param action Object representing the action to be added.
+   */
+  async addAction(action: Action): Promise<void> {
+    await this.worker.tx.builder_addAction(this.id, action);
+  }
 
-    async addAssertion(label, data) {
-      await tx.builder_addAssertion(id, label, data);
-    },
+  /**
+   * Add an assertion to the manifest under the given label.
+   *
+   * @param label The assertion label (reverse-domain format).
+   * @param data The assertion data (any JSON-serializable value).
+   */
+  async addAssertion(label: string, data: unknown): Promise<void> {
+    await this.worker.tx.builder_addAssertion(this.id, label, data);
+  }
 
-    async addRedaction(uri, reason) {
-      await tx.builder_addRedaction(id, uri, reason);
-    },
+  /**
+   * Redact an assertion from an ingredient manifest.
+   *
+   * Adds the URI to the builder's redaction list and appends a `c2pa.redacted` action
+   * with the given reason, as required by the C2PA spec.
+   *
+   * @param uri JUMBF URI of the assertion to redact.
+   * @param reason The {@link C2paReason} for the redaction.
+   */
+  async addRedaction(uri: string, reason: C2paReason): Promise<void> {
+    await this.worker.tx.builder_addRedaction(this.id, uri, reason);
+  }
 
-    async setRemoteUrl(url) {
-      await tx.builder_setRemoteUrl(id, url);
-    },
+  /**
+   * Sets the remote URL for a remote manifest. The manifest is expected to be available at this location.
+   *
+   * @param url URL pointing to the location the remote manifest will be stored.
+   */
+  async setRemoteUrl(url: string): Promise<void> {
+    await this.worker.tx.builder_setRemoteUrl(this.id, url);
+  }
 
-    async setNoEmbed(noEmbed) {
-      await tx.builder_setNoEmbed(id, noEmbed);
-    },
+  /**
+   * Sets the state of the no_embed flag. To skip embedding a manifest (e.g. for the remote-only case) set this to `true`.
+   *
+   * @param noEmbed Value to set the no_embed flag.
+   */
+  async setNoEmbed(noEmbed: boolean): Promise<void> {
+    await this.worker.tx.builder_setNoEmbed(this.id, noEmbed);
+  }
 
-    async setThumbnailFromBlob(format, blob) {
-      await tx.builder_setThumbnailFromBlob(id, format, blob);
-    },
+  /**
+   * Set a thumbnail from a blob to be included in the manifest. The blob should represent the asset being signed.
+   *
+   * @param format Format of the thumbnail
+   * @param blob Blob of the thumbnail bytes
+   */
+  async setThumbnailFromBlob(format: string, blob: Blob): Promise<void> {
+    await this.worker.tx.builder_setThumbnailFromBlob(this.id, format, blob);
+  }
 
-    // Unlike the Node binding, Neon, which can invoke the JS predicate synchronously from Rust,
-    // the WASM builder lives in a Web Worker. A predicate closure can't be called across the
-    // worker boundary, so we evaluate it here on the main thread and send the resulting indices
-    // to the worker, where WASM applies the equivalent index-based filter. The action/ingredient
-    // ordering here must match what WASM iterates. See `filterActionsAt` and `filterIngredientsAt`.
-    async filterActions(keep: (action: Action) => boolean) {
-      const definition: ManifestDefinition = await tx.builder_getDefinition(id);
-      const actions = getActionsFromDefinition(definition);
-      const indices = actions.reduce<number[]>((kept, action, i) => {
-        if (keep(action)) {
-          kept.push(i);
-        }
-        return kept;
-      }, []);
-      await tx.builder_filterActionsAt(id, indices);
-    },
+  /**
+   * Experimental.
+   * Retains only the actions for which `keep` returns true.
+   *
+   * The inception action, `c2pa.created` or `c2pa.opened`, is always kept regardless of `keep`,
+   * and is moved to index 0 if needed, so the manifest stays valid per the C2PA spec. Sets
+   * `allActionsIncluded = false` when anything is removed. This does not touch ingredients.
+   * Call {@link Builder.filterIngredients}, using `filterIngredients(() => false)` to drop all
+   * orphans, afterwards if you also want to drop ingredients now orphaned by the removed
+   * actions.
+   *
+   * Unlike the Node binding, Neon, which can invoke the JS predicate synchronously from Rust,
+   * the WASM builder lives in a Web Worker. A predicate closure can't be called across the
+   * worker boundary, so we evaluate it here on the main thread and send the resulting indices
+   * to the worker, where WASM applies the equivalent index-based filter. The action/ingredient
+   * ordering here must match what WASM iterates. See `filterActionsAt` and `filterIngredientsAt`.
+   *
+   * @param keep The action is retained when the predicate returns true.
+   */
+  async filterActions(keep: (action: Action) => boolean): Promise<void> {
+    const definition: ManifestDefinition = await this.worker.tx.builder_getDefinition(
+      this.id
+    );
+    const actions = getActionsFromDefinition(definition);
+    const indices = actions.reduce<number[]>((kept, action, i) => {
+      if (keep(action)) {
+        kept.push(i);
+      }
+      return kept;
+    }, []);
+    await this.worker.tx.builder_filterActionsAt(this.id, indices);
+  }
 
-    async filterIngredients(rescue: (ingredient: Ingredient) => boolean) {
-      const definition: ManifestDefinition = await tx.builder_getDefinition(id);
-      const ingredients: Ingredient[] = definition.ingredients ?? [];
-      const indices = ingredients.reduce<number[]>((rescued, ingredient, i) => {
-        if (rescue(ingredient)) {
+  /**
+   * Experimental.
+   * Retains ingredients, then rewrites positional ingredient references so linked actions
+   * stay valid.
+   *
+   * An ingredient is kept if it is referenced by a current action, is a `parentOf` ingredient,
+   * or `rescue` returns true for it. `rescue` therefore only ever rescues an otherwise-orphaned
+   * ingredient. It can never drop a referenced or lineage ingredient. Call
+   * {@link Builder.filterActions} first if you are also removing actions: the keep-set is
+   * computed from whatever actions currently remain.
+   *
+   * @param rescue Can rescue an otherwise-orphaned ingredient by returning true.
+   */
+  async filterIngredients(
+    rescue: (ingredient: Ingredient) => boolean
+  ): Promise<void> {
+    const definition: ManifestDefinition = await this.worker.tx.builder_getDefinition(
+      this.id
+    );
+    const ingredients: Ingredient[] = definition.ingredients ?? [];
+    const indices = ingredients.reduce<number[]>((rescued, ingredient, i) => {
+      if (rescue(ingredient)) {
+        rescued.push(i);
+      }
+      return rescued;
+    }, []);
+    await this.worker.tx.builder_filterIngredientsAt(this.id, indices);
+  }
+
+  /**
+   * Experimental.
+   * Retains actions and ingredients together in one step.
+   *
+   * `rescueIngredient` is evaluated for every ingredient first; any action referencing an
+   * ingredient it would rescue is force-kept regardless of `keepAction`.
+   *
+   * @param keepAction The action is retained when the predicate returns true.
+   * @param rescueIngredient Can rescue an otherwise-orphaned ingredient (and the action
+   * referencing it) by returning true.
+   */
+  async filterActionsAndIngredients(
+    keepAction: (action: Action) => boolean,
+    rescueIngredient: (ingredient: Ingredient) => boolean
+  ): Promise<void> {
+    const definition: ManifestDefinition = await this.worker.tx.builder_getDefinition(
+      this.id
+    );
+    const actions = getActionsFromDefinition(definition);
+    const actionIndices = actions.reduce<number[]>((kept, action, i) => {
+      if (keepAction(action)) {
+        kept.push(i);
+      }
+      return kept;
+    }, []);
+    const ingredients: Ingredient[] = definition.ingredients ?? [];
+    const ingredientIndices = ingredients.reduce<number[]>(
+      (rescued, ingredient, i) => {
+        if (rescueIngredient(ingredient)) {
           rescued.push(i);
         }
         return rescued;
-      }, []);
-      await tx.builder_filterIngredientsAt(id, indices);
-    },
+      },
+      []
+    );
+    await this.worker.tx.builder_filterActionsAndIngredientsAt(
+      this.id,
+      actionIndices,
+      ingredientIndices
+    );
+  }
 
-    async filterActionsAndIngredients(
-      keepAction: (action: Action) => boolean,
-      rescueIngredient: (ingredient: Ingredient) => boolean
-    ) {
-      const definition: ManifestDefinition = await tx.builder_getDefinition(id);
-      const actions = getActionsFromDefinition(definition);
-      const actionIndices = actions.reduce<number[]>((kept, action, i) => {
-        if (keepAction(action)) {
-          kept.push(i);
-        }
-        return kept;
-      }, []);
-      const ingredients: Ingredient[] = definition.ingredients ?? [];
-      const ingredientIndices = ingredients.reduce<number[]>(
-        (rescued, ingredient, i) => {
-          if (rescueIngredient(ingredient)) {
-            rescued.push(i);
-          }
-          return rescued;
-        },
-        []
-      );
-      await tx.builder_filterActionsAndIngredientsAt(
-        id,
-        actionIndices,
-        ingredientIndices
-      );
-    },
+  /**
+   * Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions.
+   *
+   * A manifest can carry more than one actions assertion (the created-list and
+   * gathered-list entries are distinct assertions). `transform` is therefore
+   * invoked once per actions assertion, in positional order, with that
+   * assertion's own actions.
+   *
+   * A no-op if there is no actions assertion. Use `addAction` for those.
+   *
+   * The returned list is written back as is.
+   * `transform` can therefore produce an actions array that fails
+   * validation at signing time, for example by removing the inception action
+   * (`c2pa.created`/`c2pa.opened`) or moving it out of first position.
+   *
+   * @param transform Receives one assertion's actions and returns its full replacement list.
+   */
+  async updateActions(
+    transform: (actions: Action[]) => Action[]
+  ): Promise<void> {
+    const definition: ManifestDefinition = await this.worker.tx.builder_getDefinition(
+      this.id
+    );
+    // One group per actions assertion: `transform` runs once per assertion
+    // Each is rewritten in place under its own label.
+    const groups = getActionGroupsFromDefinition(definition);
+    const updated = groups.map((actions) => transform(actions));
+    await this.worker.tx.builder_updateActionsAt(this.id, updated);
+  }
 
-    async updateActions(transform: (actions: Action[]) => Action[]) {
-      const definition: ManifestDefinition = await tx.builder_getDefinition(id);
-      // One group per actions assertion: `transform` runs once per assertion
-      // Each is rewritten in place under its own label.
-      const groups = getActionGroupsFromDefinition(definition);
-      const updated = groups.map((actions) => transform(actions));
-      await tx.builder_updateActionsAt(id, updated);
-    },
+  /**
+   * Add an ingredient to the builder from a definition only.
+   *
+   * @param ingredientDefinition {@link Ingredient} definition.
+   */
+  async addIngredient(ingredientDefinition: Ingredient): Promise<void> {
+    const json = JSON.stringify(ingredientDefinition);
+    await this.worker.tx.builder_addIngredient(this.id, json);
+  }
 
-    async addIngredient(ingredientDefinition: Ingredient) {
-      const json = JSON.stringify(ingredientDefinition);
-      await tx.builder_addIngredient(id, json);
-    },
+  /**
+   * Add an ingredient to the builder from a definition, format, and blob.
+   * Values specified in the ingredient definition will be merged with the ingredient, and these values take precendence.
+   *
+   * @param ingredientDefinition {@link Ingredient} definition.
+   * @param format Format of the ingredient.
+   * @param blob Blob of the ingredient's bytes.
+   */
+  async addIngredientFromBlob(
+    ingredientDefinition: Ingredient,
+    format: string,
+    blob: Blob
+  ): Promise<void> {
+    const json = JSON.stringify(ingredientDefinition);
+    await this.worker.tx.builder_addIngredientFromBlob(this.id, json, format, blob);
+  }
 
-    async addIngredientFromBlob(
-      ingredientDefinition: Ingredient,
-      format: string,
-      blob: Blob
-    ) {
-      const json = JSON.stringify(ingredientDefinition);
-      await tx.builder_addIngredientFromBlob(id, json, format, blob);
-    },
+  /**
+   * Add a resource to the builder's resource store with an ID and blob of the resource's bytes.
+   *
+   * @param resourceId ID associated with the resource being added.
+   * @param blob Blob of the resource's bytes.
+   */
+  async addResourceFromBlob(resourceId: string, blob: Blob): Promise<void> {
+    await this.worker.tx.builder_addResourceFromBlob(this.id, resourceId, blob);
+  }
 
-    async addResourceFromBlob(resourceId: string, blob: Blob) {
-      await tx.builder_addResourceFromBlob(id, resourceId, blob);
-    },
+  /**
+   * Gets the current manifest definition held by the builder.
+   *
+   * @returns The {@link ManifestDefinition} held by the builder.
+   */
+  async getDefinition(): Promise<ManifestDefinition> {
+    const definition = await this.worker.tx.builder_getDefinition(this.id);
 
-    async getDefinition(): Promise<ManifestDefinition> {
-      const definition = await tx.builder_getDefinition(id);
+    return definition;
+  }
 
-      return definition;
-    },
+  /**
+   * Save the builder into .c2pa format.
+   * This "archive" can be added to as an ingredient with {@link addIngredientFromBlob}
+   *
+   * @returns A builder archive in application/c2pa format.
+   */
+  async toArchive(): Promise<Uint8Array<ArrayBuffer>> {
+    const archive = await this.worker.tx.builder_toArchive(this.id);
 
-    async toArchive(): Promise<Uint8Array<ArrayBuffer>> {
-      const archive = await tx.builder_toArchive(id);
+    return archive;
+  }
 
-      return archive;
-    },
+  /**
+   * Sign an asset.
+   *
+   * @todo Docs coming soon
+   */
+  async sign(
+    signer: Signer,
+    format: string,
+    blob: Blob
+  ): Promise<Uint8Array<ArrayBuffer>> {
+    const payload = await getSerializablePayload(signer);
+    const requestId = this.worker.registerSignReceiver(signer.sign);
 
-    async sign(
-      signer: Signer,
-      format: string,
-      blob: Blob
-    ): Promise<Uint8Array<ArrayBuffer>> {
-      const payload = await getSerializablePayload(signer);
-      const requestId = worker.registerSignReceiver(signer.sign);
+    const result = await this.worker.tx.builder_sign(
+      this.id,
+      requestId,
+      payload,
+      format,
+      blob
+    );
 
-      const result = await tx.builder_sign(
-        id,
-        requestId,
-        payload,
-        format,
-        blob
-      );
+    return result;
+  }
 
-      return result;
-    },
+  /**
+   * Sign an asset and get both the signed asset bytes and the manifest bytes.
+   *
+   * @todo Docs coming soon
+   */
+  async signAndGetManifestBytes(
+    signer: Signer,
+    format: string,
+    blob: Blob
+  ): Promise<ManifestAndAssetBytes> {
+    const payload = await getSerializablePayload(signer);
+    const requestId = this.worker.registerSignReceiver(signer.sign);
 
-    async signAndGetManifestBytes(signer: Signer, format: string, blob: Blob) {
-      const payload = await getSerializablePayload(signer);
-      const requestId = worker.registerSignReceiver(signer.sign);
+    const result = await this.worker.tx.builder_signAndGetManifestBytes(
+      this.id,
+      requestId,
+      payload,
+      format,
+      blob
+    );
 
-      const result = await tx.builder_signAndGetManifestBytes(
-        id,
-        requestId,
-        payload,
-        format,
-        blob
-      );
+    return result;
+  }
 
-      return result;
-    },
-
-    async free() {
-      onFree();
-      await tx.builder_free(id);
-    }
-  };
+  /**
+   * Dispose of this Builder, freeing the memory it occupied and preventing further use. Call this whenever the Builder is no longer needed.
+   */
+  async free(): Promise<void> {
+    registry.unregister(this);
+    await this.worker.tx.builder_free(this.id);
+  }
 }

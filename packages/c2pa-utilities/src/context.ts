@@ -11,13 +11,14 @@ import type { FetchWithRetryOptions } from './fetchWithRetry.js';
 import { resolveSettings, type Settings } from './settings.js';
 
 /**
- * A `Context` configures the behavior of every `Reader`/`Builder` created with
- * any given instance of the SDK (see {@link C2paSdk}).
- * 
- * It is attached once at SDK/factory-initialization time.
+ * A `Context` configures the behavior of a single `Reader`/`Builder`. Bindings attach it at
+ * creation time (e.g. `Reader.fromBlob(c2pa, format, blob, context)`), independent of whatever
+ * runtime/worker handle that creation call also needs — so one running SDK instance can freely
+ * create many `Reader`/`Builder`s, each with its own `Context`.
  */
 export class Context {
   private readonly _settings?: Settings;
+  private _jsonPromise?: Promise<string>;
 
   constructor(settings?: Settings) {
     this._settings = settings;
@@ -37,11 +38,18 @@ export class Context {
    * Resolves this `Context`'s settings (fetching any embedded trust-anchor URLs) and serializes
    * the result for consumption by the native/wasm boundary.
    *
+   * Memoized: since a `Context`'s settings never change after construction, the result (and any
+   * trust-anchor fetch it took to produce it) is only ever computed once, on the first call, and
+   * reused for every call after — including calls with different `options` than the first one
+   * used. Callers that need the same `Context` resolved under two different `options` should
+   * construct two separate `Context`s instead.
+   *
    * @param options Optional configurations for fetch-with-retry, used when resolving trust-anchor
-   * URLs.
+   * URLs. Only consulted on the first call.
    * @returns A JSON-serialized string of the resolved settings.
    */
-  async toJson(options?: FetchWithRetryOptions): Promise<string> {
-    return resolveSettings(this.settings, options);
+  toJson(options?: FetchWithRetryOptions): Promise<string> {
+    this._jsonPromise ??= resolveSettings(this.settings, options);
+    return this._jsonPromise;
   }
 }

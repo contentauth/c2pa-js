@@ -7,15 +7,9 @@
  * it.
  */
 
-export type * from './lib/c2pa.js';
+export type { Config, C2pa } from './lib/c2pa.js';
 
-export type { Reader, ReaderFactory } from './lib/reader.js';
-
-export type {
-  Builder,
-  BuilderFactory,
-  ManifestAndAssetBytes
-} from './lib/builder.js';
+export type { ManifestAndAssetBytes } from './lib/builder.js';
 
 export type { Signer, SigningAlg } from './lib/signer.js';
 

@@ -37,4 +37,19 @@ describe('Context', () => {
       })
     );
   });
+
+  test('toJson() memoizes: repeated calls return the exact same Promise', async () => {
+    const context = new Context({ verify: { verifyTrust: false } });
+
+    const first = context.toJson();
+    const second = context.toJson();
+
+    expect(second).toBe(first);
+    await expect(first).resolves.toEqual(
+      JSON.stringify({
+        builder: { generate_c2pa_archive: true },
+        verify: { verify_trust: false }
+      })
+    );
+  });
 });
