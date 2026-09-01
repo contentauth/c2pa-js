@@ -14,7 +14,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import type { Manifest, ResourceRef } from "@contentauth/c2pa-types";
-import * as fs from "fs-extra";
+import fs from "fs-extra";
 import path from "path";
 import * as crypto from "crypto";
 

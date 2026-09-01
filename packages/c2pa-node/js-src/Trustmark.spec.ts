@@ -12,7 +12,7 @@
 // each license.
 
 import path from "path";
-import * as fs from "fs-extra";
+import fs from "fs-extra";
 import sharp from "sharp";
 
 import { Trustmark } from "./Trustmark.js";
