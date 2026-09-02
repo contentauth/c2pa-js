@@ -565,7 +565,7 @@ const builder3 = await Builder.fromArchive(archiveAsset, context);
 
 #### Per-instance settings (deprecated)
 
-Passing settings directly as a JSON/TOML string, or as a raw object matching the native settings shape (snake_case keys, no defaults applied), is deprecated and will be removed in a future major version — use a `Context` instead (above). `Builder.new`/`Builder.withJson` stay synchronous for this deprecated path; prefer their `newAsync`/`withJsonAsync` counterparts with a `Context` instead.
+Passing settings directly as a JSON string, or as a raw object matching the native settings shape (snake_case keys, no defaults applied), is deprecated and will be removed in a future major version — use a `Context` instead (above). `Builder.new`/`Builder.withJson` stay synchronous for this deprecated path; prefer their `newAsync`/`withJsonAsync` counterparts with a `Context` instead.
 
 ```javascript
 import { Reader, Builder } from '@contentauth/c2pa-node';
@@ -645,9 +645,9 @@ const reader = await Reader.fromAsset(inputAsset, new Context(combinedSettings))
 // ...or convert it to a JSON string for the deprecated per-instance settings path
 const jsonString = settingsToJson(combinedSettings);
 
-// loadSettingsFromFile/loadSettingsFromUrl return a raw JSON/TOML string, not a Settings
+// loadSettingsFromFile/loadSettingsFromUrl return a raw JSON string, not a Settings
 // object, so they pair with the deprecated per-instance settings path, not Context, for now.
-const fileSettings = await loadSettingsFromFile('./c2pa-settings.toml');
+const fileSettings = await loadSettingsFromFile('./c2pa-settings.json');
 const reader2 = await Reader.fromAsset(inputAsset, fileSettings);
 
 const urlSettings = await loadSettingsFromUrl('https://example.com/c2pa-settings.json');
