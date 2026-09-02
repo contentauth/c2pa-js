@@ -17,7 +17,7 @@ import type { C2paSettings } from "./types.d.ts";
 
 /**
  * This file contains only Settings functions that are unique to the Node SDK.
- *
+ * 
  * Shared Settings-related functions and types can be found in `c2pa-utilities`,
  * and are re-exported by `c2pa-node` (see `index.ts`) for convenience.
  */
