@@ -1,5 +1,21 @@
 # @contentauth/c2pa-node
 
+## 0.9.3
+
+### Patch Changes
+
+- 4abe0a1: Switch fs-extra import from namespace import to default import.
+
+## 0.9.2
+
+### Patch Changes
+
+- afccc92: Update c2pa-rs from 0.90.15->0.90.16
+- f9553a7: Remove redundant archive-metadata assertion filtering
+- Updated dependencies [afccc92]
+  - @contentauth/c2pa-types@0.7.4
+  - @contentauth/c2pa-utilities@0.2.2
+
 ## 0.9.1
 
 ### Patch Changes
