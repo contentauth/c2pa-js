@@ -59,7 +59,7 @@ const c2pa = await createC2pa();
 
 ## Configuring behavior with `Context`
 
-`createC2pa` sets up the worker and Wasm binary only — the handle it returns carries no `Settings`/`Context` of its own. `Reader` and `Builder`'s creation methods each accept an optional `Context` (see [`c2pa-utilities`'s README](../c2pa-utilities/README.md#context-and-settings) for the full API) directly, so the same running worker can create as many `Reader`s/`Builder`s as you like, each configured independently:
+`createC2pa` sets up the worker and Wasm binary only. The handle it returns carries no `Settings`/`Context` of its own. Instead, `Reader` and `Builder`'s creation methods each accept an optional `Context` (see [`c2pa-utilities`'s README](../c2pa-utilities/README.md#context-and-settings) for the full API) directly, so the same running worker can create as many `Reader`s/`Builder`s as needed, each configured independently:
 
 ```typescript
 import { createC2pa, Reader, Builder, Context } from '@contentauth/c2pa-web';
@@ -80,9 +80,9 @@ const context = new Context({
 const reader = await Reader.fromBlob(c2pa, blob.type, blob, context);
 const builder = await Builder.new(c2pa, context);
 
-// A second Reader can use a completely different Context on the same c2pa instance — no need
-// to call createC2pa() again just to change settings.
-const lenientReader = await Reader.fromBlob(
+// A second Reader can use a completely different Context on the same c2pa instance.
+// No need to call createC2pa() again just to change settings.
+const reader2 = await Reader.fromBlob(
   c2pa,
   blob2.type,
   blob2,
@@ -92,7 +92,7 @@ const lenientReader = await Reader.fromBlob(
 
 Each `Context` holds whatever single `Settings` object was passed to its constructor and does not handle any merging of settings. To combine more than one `Settings` source, merge them first with `mergeSettings()`, then construct a `Context` from the single, merged result. See [`c2pa-utilities`'s README](../c2pa-utilities/README.md#combining-settings) for details.
 
-A `Context`'s settings are resolved once and memoized — passing the same `Context` instance to multiple `Reader`/`Builder` calls doesn't re-fetch trust-anchor URLs on every call.
+A `Context`'s settings are resolved once upon creation and then memoized for re-use. Passing the same `Context` instance to multiple `Reader`/`Builder` calls doesn't re-fetch trust-anchor URLs on every call.
 
 ## Using the library
 
