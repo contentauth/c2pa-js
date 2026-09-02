@@ -16,7 +16,7 @@ Complete API documentation is generated from TypeScript source using [TypeDoc](h
 
 ### `Context` and `Settings`
 
-`Settings` is a plain, JSON-serializable object describing SDK behavior — trust anchors, verification options, and builder options. `Context` is a small, immutable wrapper around `Settings`, and is the recommended way to configure the SDK. Clients should create and attach a `Context` once at SDK-initialization time, which then configures every `Reader`/`Builder` created afterwards. It is not passed to individual `Reader`/`Builder` instances or their per-call methods. See [`c2pa-web`'s README](../c2pa-web/README.md#configuring-the-sdk-with-context) for an example.
+`Settings` is a plain, JSON-serializable object configuring SDK behavior around trust anchors, verification options, and `Reader`/`Builder` options. `Context` is a small, immutable wrapper around `Settings`, and is the recommended way to configure a `Reader`/`Builder`. `Context` objects are passed directly to the call that creates a `Reader`/`Builder` instance, so one running SDK instance can freely create many different `Reader`/`Builder`s, each with its own `Context`. See [`c2pa-web`'s README](../c2pa-web/README.md#configuring-behavior-with-context) for an example.
 
 #### Creating a `Context`
 
@@ -35,7 +35,7 @@ const context = new Context({
 
 #### Combining `Settings`
 
-`Context` doesn't merge settings for you — each `Context` just holds whatever single `Settings` object was passed to its constructor. To combine more than one `Settings` source, merge them first with `mergeSettings()`, then construct a `Context` from the single, merged result:
+Each `Context` holds whatever single `Settings` object was passed to its constructor and does not handle any merging of settings. To combine more than one `Settings` source, merge them first with `mergeSettings()`, then construct a `Context` from the single, merged result:
 
 ```typescript
 import { Context, mergeSettings } from '@contentauth/c2pa-utilities';
@@ -49,7 +49,7 @@ const context = new Context(mergeSettings(base, override));
 
 #### Resolving a `Context` to JSON
 
-Bindings pass settings across their JS-to-wasm/native boundary as a JSON string. `toJson()` resolves any trust-anchor URLs embedded in the settings (fetching and validating them) and serializes the result:
+Settings are passed across the WASM (`c2pa-web`)/native(`c2pa-node`) boundary as a JSON string. `toJson()` resolves any trust-anchor URLs embedded in the settings (fetching and validating them) and serializes the result:
 
 ```typescript
 const contextJson = await context.toJson();
@@ -81,12 +81,11 @@ const verifySettings = createVerifySettings({
 
 const settings = mergeSettings(trustSettings, verifySettings);
 
-// Resolves trust-anchor URLs and serializes to the snake_case JSON string the
-// native SDK expects. `Context.toJson()` calls this internally.
+// Resolves trust-anchor URLs and serializes to the snake_case JSON string the native SDK expects.
 const settingsJson = await resolveSettings(settings);
 ```
 
-`resolveSettings` is the entry point most direct callers want: it resolves any `trust`/`cawgTrust` fields that are URLs (fetching and inlining the PEM content, retrying transient failures), and returns the result as a snake_case JSON string. `settings` is merged on top of this package's defaults, so `resolveSettings` always returns a value, even when called with `undefined`. To combine more than one `Settings` object first, merge them with `mergeSettings()` before calling `resolveSettings`, as above.
+`resolveSettings` is the entry point most direct callers want. It resolves any `trust`/`cawgTrust` URL fields (fetching and inlining the PEM content, retrying transient failures), and returns the result as a snake_case JSON string. `settings` is merged on top of this package's defaults, so `resolveSettings` always returns a value, even when called with `undefined`. To combine more than one `Settings` object first, merge them with `mergeSettings()` before calling `resolveSettings`, as above.
 
 Other exports:
 
