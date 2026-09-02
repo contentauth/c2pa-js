@@ -640,10 +640,11 @@ const verifySettings = createVerifySettings({
 const combinedSettings = mergeSettings(trustSettings, verifySettings);
 
 // combinedSettings is a plain Settings object — use it with a Context (recommended)...
-const reader = await Reader.fromAsset(inputAsset, new Context(combinedSettings));
+const readerWithContext = await Reader.fromAsset(inputAsset, new Context(combinedSettings));
 
 // ...or convert it to a JSON string for the deprecated per-instance settings path
 const jsonString = settingsToJson(combinedSettings);
+const readerWithJson = await Reader.fromAsset(inputAsset, jsonString);
 
 // loadSettingsFromFile/loadSettingsFromUrl return a raw JSON string, not a Settings
 // object, so they pair with the deprecated per-instance settings path, not Context, for now.
