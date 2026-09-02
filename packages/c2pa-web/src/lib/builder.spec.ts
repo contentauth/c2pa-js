@@ -35,6 +35,17 @@ describe('builder', () => {
         });
       });
 
+      test('does not expose its internal worker/id via enumeration or serialization', async ({
+        c2pa
+      }) => {
+        const builder = await Builder.new(c2pa);
+
+        // Native #private fields are not own enumerable properties, so none of these should
+        // reveal the underlying WorkerManager/builder id.
+        expect(Object.keys(builder)).toEqual([]);
+        expect(JSON.stringify(builder)).toEqual('{}');
+      });
+
       test('should apply the given Context', async ({ c2pa }) => {
         const context = new Context({
           verify: {

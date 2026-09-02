@@ -57,6 +57,7 @@ export interface ManifestAndAssetBytes {
   asset: Uint8Array<ArrayBuffer>;
 }
 
+// Module-level registry for garbage collection
 const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>(
   ({ worker, id }) => {
     worker.tx.builder_free(id);
@@ -64,13 +65,19 @@ const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>
 );
 
 /**
- * Exposes methods for building C2PA manifests and signing assets.
+ * The `Builder` class supports building C2PA manifests and signing assets.
  */
 export class Builder {
-  private constructor(
-    private worker: WorkerManager,
-    private id: number
-  ) {}
+  // Native private fields, which are inaccessible from outside the class at runtime.
+  // These properties cannot leak and will not appear if the builder object is logged
+  // or serialized.
+  #worker: WorkerManager;
+  #id: number;
+
+  private constructor(worker: WorkerManager, id: number) {
+    this.#worker = worker;
+    this.#id = id;
+  }
 
   /**
    * Create a {@link Builder} with a minimal manifest definition as its initial state.
@@ -148,7 +155,7 @@ export class Builder {
    * @param intent
    */
   async setIntent(intent: BuilderIntent): Promise<void> {
-    await this.worker.tx.builder_setIntent(this.id, intent);
+    await this.#worker.tx.builder_setIntent(this.#id, intent);
   }
 
   /**
@@ -157,7 +164,7 @@ export class Builder {
    * @param action Object representing the action to be added.
    */
   async addAction(action: Action): Promise<void> {
-    await this.worker.tx.builder_addAction(this.id, action);
+    await this.#worker.tx.builder_addAction(this.#id, action);
   }
 
   /**
@@ -167,7 +174,7 @@ export class Builder {
    * @param data The assertion data (any JSON-serializable value).
    */
   async addAssertion(label: string, data: unknown): Promise<void> {
-    await this.worker.tx.builder_addAssertion(this.id, label, data);
+    await this.#worker.tx.builder_addAssertion(this.#id, label, data);
   }
 
   /**
@@ -180,7 +187,7 @@ export class Builder {
    * @param reason The {@link C2paReason} for the redaction.
    */
   async addRedaction(uri: string, reason: C2paReason): Promise<void> {
-    await this.worker.tx.builder_addRedaction(this.id, uri, reason);
+    await this.#worker.tx.builder_addRedaction(this.#id, uri, reason);
   }
 
   /**
@@ -189,16 +196,17 @@ export class Builder {
    * @param url URL pointing to the location the remote manifest will be stored.
    */
   async setRemoteUrl(url: string): Promise<void> {
-    await this.worker.tx.builder_setRemoteUrl(this.id, url);
+    await this.#worker.tx.builder_setRemoteUrl(this.#id, url);
   }
 
   /**
-   * Sets the state of the no_embed flag. To skip embedding a manifest (e.g. for the remote-only case) set this to `true`.
+   * Sets the state of the no_embed flag.
+   * To skip embedding a manifest (e.g. for the remote-only case), set this to `true`.
    *
    * @param noEmbed Value to set the no_embed flag.
    */
   async setNoEmbed(noEmbed: boolean): Promise<void> {
-    await this.worker.tx.builder_setNoEmbed(this.id, noEmbed);
+    await this.#worker.tx.builder_setNoEmbed(this.#id, noEmbed);
   }
 
   /**
@@ -208,7 +216,7 @@ export class Builder {
    * @param blob Blob of the thumbnail bytes
    */
   async setThumbnailFromBlob(format: string, blob: Blob): Promise<void> {
-    await this.worker.tx.builder_setThumbnailFromBlob(this.id, format, blob);
+    await this.#worker.tx.builder_setThumbnailFromBlob(this.#id, format, blob);
   }
 
   /**
@@ -231,8 +239,8 @@ export class Builder {
    * @param keep The action is retained when the predicate returns true.
    */
   async filterActions(keep: (action: Action) => boolean): Promise<void> {
-    const definition: ManifestDefinition = await this.worker.tx.builder_getDefinition(
-      this.id
+    const definition: ManifestDefinition = await this.#worker.tx.builder_getDefinition(
+      this.#id
     );
     const actions = getActionsFromDefinition(definition);
     const indices = actions.reduce<number[]>((kept, action, i) => {
@@ -241,7 +249,7 @@ export class Builder {
       }
       return kept;
     }, []);
-    await this.worker.tx.builder_filterActionsAt(this.id, indices);
+    await this.#worker.tx.builder_filterActionsAt(this.#id, indices);
   }
 
   /**
@@ -260,8 +268,8 @@ export class Builder {
   async filterIngredients(
     rescue: (ingredient: Ingredient) => boolean
   ): Promise<void> {
-    const definition: ManifestDefinition = await this.worker.tx.builder_getDefinition(
-      this.id
+    const definition: ManifestDefinition = await this.#worker.tx.builder_getDefinition(
+      this.#id
     );
     const ingredients: Ingredient[] = definition.ingredients ?? [];
     const indices = ingredients.reduce<number[]>((rescued, ingredient, i) => {
@@ -270,7 +278,7 @@ export class Builder {
       }
       return rescued;
     }, []);
-    await this.worker.tx.builder_filterIngredientsAt(this.id, indices);
+    await this.#worker.tx.builder_filterIngredientsAt(this.#id, indices);
   }
 
   /**
@@ -288,8 +296,8 @@ export class Builder {
     keepAction: (action: Action) => boolean,
     rescueIngredient: (ingredient: Ingredient) => boolean
   ): Promise<void> {
-    const definition: ManifestDefinition = await this.worker.tx.builder_getDefinition(
-      this.id
+    const definition: ManifestDefinition = await this.#worker.tx.builder_getDefinition(
+      this.#id
     );
     const actions = getActionsFromDefinition(definition);
     const actionIndices = actions.reduce<number[]>((kept, action, i) => {
@@ -308,8 +316,8 @@ export class Builder {
       },
       []
     );
-    await this.worker.tx.builder_filterActionsAndIngredientsAt(
-      this.id,
+    await this.#worker.tx.builder_filterActionsAndIngredientsAt(
+      this.#id,
       actionIndices,
       ingredientIndices
     );
@@ -335,14 +343,14 @@ export class Builder {
   async updateActions(
     transform: (actions: Action[]) => Action[]
   ): Promise<void> {
-    const definition: ManifestDefinition = await this.worker.tx.builder_getDefinition(
-      this.id
+    const definition: ManifestDefinition = await this.#worker.tx.builder_getDefinition(
+      this.#id
     );
     // One group per actions assertion: `transform` runs once per assertion
     // Each is rewritten in place under its own label.
     const groups = getActionGroupsFromDefinition(definition);
     const updated = groups.map((actions) => transform(actions));
-    await this.worker.tx.builder_updateActionsAt(this.id, updated);
+    await this.#worker.tx.builder_updateActionsAt(this.#id, updated);
   }
 
   /**
@@ -352,7 +360,7 @@ export class Builder {
    */
   async addIngredient(ingredientDefinition: Ingredient): Promise<void> {
     const json = JSON.stringify(ingredientDefinition);
-    await this.worker.tx.builder_addIngredient(this.id, json);
+    await this.#worker.tx.builder_addIngredient(this.#id, json);
   }
 
   /**
@@ -369,7 +377,7 @@ export class Builder {
     blob: Blob
   ): Promise<void> {
     const json = JSON.stringify(ingredientDefinition);
-    await this.worker.tx.builder_addIngredientFromBlob(this.id, json, format, blob);
+    await this.#worker.tx.builder_addIngredientFromBlob(this.#id, json, format, blob);
   }
 
   /**
@@ -379,7 +387,7 @@ export class Builder {
    * @param blob Blob of the resource's bytes.
    */
   async addResourceFromBlob(resourceId: string, blob: Blob): Promise<void> {
-    await this.worker.tx.builder_addResourceFromBlob(this.id, resourceId, blob);
+    await this.#worker.tx.builder_addResourceFromBlob(this.#id, resourceId, blob);
   }
 
   /**
@@ -388,8 +396,7 @@ export class Builder {
    * @returns The {@link ManifestDefinition} held by the builder.
    */
   async getDefinition(): Promise<ManifestDefinition> {
-    const definition = await this.worker.tx.builder_getDefinition(this.id);
-
+    const definition = await this.#worker.tx.builder_getDefinition(this.#id);
     return definition;
   }
 
@@ -400,8 +407,7 @@ export class Builder {
    * @returns A builder archive in application/c2pa format.
    */
   async toArchive(): Promise<Uint8Array<ArrayBuffer>> {
-    const archive = await this.worker.tx.builder_toArchive(this.id);
-
+    const archive = await this.#worker.tx.builder_toArchive(this.#id);
     return archive;
   }
 
@@ -416,10 +422,10 @@ export class Builder {
     blob: Blob
   ): Promise<Uint8Array<ArrayBuffer>> {
     const payload = await getSerializablePayload(signer);
-    const requestId = this.worker.registerSignReceiver(signer.sign);
+    const requestId = this.#worker.registerSignReceiver(signer.sign);
 
-    const result = await this.worker.tx.builder_sign(
-      this.id,
+    const result = await this.#worker.tx.builder_sign(
+      this.#id,
       requestId,
       payload,
       format,
@@ -440,10 +446,10 @@ export class Builder {
     blob: Blob
   ): Promise<ManifestAndAssetBytes> {
     const payload = await getSerializablePayload(signer);
-    const requestId = this.worker.registerSignReceiver(signer.sign);
+    const requestId = this.#worker.registerSignReceiver(signer.sign);
 
-    const result = await this.worker.tx.builder_signAndGetManifestBytes(
-      this.id,
+    const result = await this.#worker.tx.builder_signAndGetManifestBytes(
+      this.#id,
       requestId,
       payload,
       format,
@@ -458,6 +464,6 @@ export class Builder {
    */
   async free(): Promise<void> {
     registry.unregister(this);
-    await this.worker.tx.builder_free(this.id);
+    await this.#worker.tx.builder_free(this.#id);
   }
 }

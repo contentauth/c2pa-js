@@ -17,6 +17,7 @@ import { Context, validateAssetSize } from '@contentauth/c2pa-utilities';
 // 1 GB
 export const MAX_SIZE_IN_BYTES = 10 ** 9;
 
+// Module-level registry for garbage collection
 const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>(
   async ({ worker, id }) => {
     await worker.tx.reader_free(id);
@@ -24,20 +25,25 @@ const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>
 );
 
 /**
- * Exposes methods for reading C2PA data out of an asset.
+ * The `Reader` class supports reading C2PA data out of an asset.
  *
  * @example Getting an asset's active manifest:
  * ```
  * const reader = await Reader.fromBlob(c2pa, blob.type, blob);
- *
  * const activeManifest = await reader.activeManifest();
  * ```
  */
 export class Reader {
-  private constructor(
-    private worker: WorkerManager,
-    private id: number
-  ) {}
+  // Native private fields, which are inaccessible from outside the class at runtime.
+  // These properties cannot leak and will not appear if the reader object is logged
+  // or serialized.
+  #worker: WorkerManager;
+  #id: number;
+
+  private constructor(worker: WorkerManager, id: number) {
+    this.#worker = worker;
+    this.#id = id;
+  }
 
   /**
    * Create a {@link Reader} from an asset's format and a blob of its bytes.
@@ -47,6 +53,7 @@ export class Reader {
    * @param blob Blob of asset bytes.
    * @param context Optional `Context` configuring this reader's behavior.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
+   * @throws If the specified format is not supported, or if the asset is too large.
    */
   static async fromBlob(
     c2pa: C2pa,
@@ -84,6 +91,7 @@ export class Reader {
    * @param fragment Blob of fragment bytes.
    * @param context Optional `Context` configuring this reader's behavior.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
+   * @throws If the specified format is not supported, or if the asset is too large.
    */
   static async fromBlobFragment(
     c2pa: C2pa,
@@ -123,7 +131,7 @@ export class Reader {
    * @returns The label of the active manifest.
    */
   async activeLabel(): Promise<string | null> {
-    const label = await this.worker.tx.reader_activeLabel(this.id);
+    const label = await this.#worker.tx.reader_activeLabel(this.#id);
     return label;
   }
 
@@ -131,7 +139,7 @@ export class Reader {
    * @returns The asset's full {@link ManifestStore} containing all its manifests, validation statuses, and the URI of the active manifest.
    */
   async manifestStore(): Promise<ManifestStore> {
-    const manifestStore = await this.worker.tx.reader_manifestStore(this.id);
+    const manifestStore = await this.#worker.tx.reader_manifestStore(this.#id);
     return manifestStore;
   }
 
@@ -139,8 +147,7 @@ export class Reader {
    * @returns The asset's active {@link Manifest}.
    */
   async activeManifest(): Promise<Manifest> {
-    const activeManifest = await this.worker.tx.reader_activeManifest(this.id);
-
+    const activeManifest = await this.#worker.tx.reader_activeManifest(this.#id);
     return activeManifest;
   }
 
@@ -150,18 +157,15 @@ export class Reader {
    * @deprecated Use {@link manifestStore} instead.
    */
   async json(): Promise<any> {
-    const json = await this.worker.tx.reader_json(this.id);
-
-    const manifestStore = JSON.parse(json);
-
-    return manifestStore;
+    const json = await this.#worker.tx.reader_json(this.#id);
+    return JSON.parse(json);
   }
 
   /**
    * @returns The asset's manifest store as crJSON.
    */
   async crJson(): Promise<any> {
-    const crJson = await this.worker.tx.reader_crJson(this.id);
+    const crJson = await this.#worker.tx.reader_crJson(this.#id);
     return JSON.parse(crJson);
   }
 
@@ -181,16 +185,17 @@ export class Reader {
    * ```
    */
   async resourceToBytes(uri: string): Promise<Uint8Array<ArrayBuffer>> {
-    const buffer = await this.worker.tx.reader_resourceToBytes(this.id, uri);
+    const buffer = await this.#worker.tx.reader_resourceToBytes(this.#id, uri);
     return buffer;
   }
 
   /**
-   * Dispose of this Reader, freeing the memory it occupied and preventing further use. Call this whenever the Reader is no longer needed.
+   * Dispose of this Reader, freeing the memory it occupied and preventing further use.
+   * Call this whenever the Reader is no longer needed.
    */
   async free(): Promise<void> {
     registry.unregister(this);
-    await this.worker.tx.reader_free(this.id);
+    await this.#worker.tx.reader_free(this.#id);
   }
 }
 

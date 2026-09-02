@@ -119,8 +119,7 @@ describe('reader', () => {
       });
 
       test('supports different Contexts for Readers created from the same c2pa instance', async () => {
-        // One worker/wasm instance (one createC2pa() call), two Readers with opposite trust
-        // configurations — the whole point of Context no longer being tied to the runtime handle.
+        // One worker/wasm instance (one createC2pa() call), two Readers with opposite trust configurations
         const c2pa = await createC2pa({ wasmSrc });
 
         const trustedContext = new Context({
@@ -429,5 +428,20 @@ describe('reader', () => {
     await reader!.free();
 
     await expect(reader!.manifestStore()).rejects.toThrowError();
+  });
+
+  test('does not expose its internal worker/id via enumeration or serialization', async ({
+    c2pa
+  }) => {
+    const blob = await getBlobForAsset(C_with_CAWG_data);
+
+    const reader = await Reader.fromBlob(c2pa, blob.type, blob);
+
+    expect(reader).not.toBeNull();
+
+    // Native #private fields are not own enumerable properties, so none of these should
+    // reveal the underlying WorkerManager/reader id.
+    expect(Object.keys(reader!)).toEqual([]);
+    expect(JSON.stringify(reader)).toEqual('{}');
   });
 });
