@@ -47,8 +47,7 @@ export class Reader implements ReaderInterface {
 
   /**
    * @param settingsOrContext A `Context`, or (@deprecated) a raw `C2paSettings` string/object. Passing a
-   * raw `C2paSettings` value is deprecated and will be removed in a future version. Prefer to pass
-   * a `Context` instead.
+   * raw `C2paSettings` value is deprecated and will be removed in a future version.
    */
   static async fromAsset(
     asset: SourceAsset,
@@ -63,8 +62,7 @@ export class Reader implements ReaderInterface {
 
   /**
    * @param settingsOrContext A `Context`, or (@deprecated) a raw `C2paSettings` string/object. Passing a
-   * raw `C2paSettings` value is deprecated and will be removed in a future version. Prefer to pass
-   * a `Context` instead.
+   * raw `C2paSettings` value is deprecated and will be removed in a future version.
    */
   static async fromManifestDataAndAsset(
     manifestData: Buffer,
