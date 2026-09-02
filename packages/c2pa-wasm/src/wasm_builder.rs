@@ -99,7 +99,7 @@ impl WasmBuilder {
         context_json: Option<String>,
     ) -> Result<WasmBuilder, JsString> {
         let stream = BlobStream::new(archive).map_err(WasmError::other)?;
-        let mut builder = if let Some(ctx_json) = context_json {
+        let builder = if let Some(ctx_json) = context_json {
             let context = Context::new()
                 .with_settings(ctx_json.as_str())
                 .map_err(WasmError::from)?;
@@ -107,15 +107,10 @@ impl WasmBuilder {
                 .with_archive(stream)
                 .map_err(WasmError::from)?
         } else {
-            Builder::default().with_archive(stream).map_err(WasmError::from)?
+            Builder::default()
+                .with_archive(stream)
+                .map_err(WasmError::from)?
         };
-
-        // The ARCHIVE_METADATA assertion is merely working-store bookkeeping used to
-        // reconstruct a builder from an archive.
-        builder
-            .definition
-            .assertions
-            .retain(|a| a.label != c2pa::assertions::labels::ARCHIVE_METADATA);
 
         Ok(WasmBuilder::from_builder(builder))
     }
@@ -253,7 +248,8 @@ impl WasmBuilder {
         self.builder
             .filter_actions_and_ingredients(
                 |_action| {
-                    let keep = u32::try_from(action_i).is_ok_and(|idx| action_indices.contains(&idx));
+                    let keep =
+                        u32::try_from(action_i).is_ok_and(|idx| action_indices.contains(&idx));
                     action_i += 1;
                     keep
                 },
@@ -319,9 +315,8 @@ impl WasmBuilder {
         let mut rewritten: Vec<(usize, Option<serde_json::Value>)> =
             Vec::with_capacity(positions.len());
         for (pos, group) in positions.into_iter().zip(action_groups) {
-            let value =
-                serde_json::to_value(&self.builder.definition.assertions[pos].data)
-                    .map_err(WasmError::other)?;
+            let value = serde_json::to_value(&self.builder.definition.assertions[pos].data)
+                .map_err(WasmError::other)?;
             let mut actions: Actions = serde_json::from_value(value).map_err(WasmError::other)?;
 
             if group.is_empty() {

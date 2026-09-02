@@ -11,7 +11,7 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import * as fs from "fs-extra";
+import fs from "fs-extra";
 
 /**
  * This file contains only Settings functions that are unique to the Node SDK.

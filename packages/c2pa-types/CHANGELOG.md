@@ -1,5 +1,11 @@
 # @contentauth/c2pa-types
 
+## 0.7.4
+
+### Patch Changes
+
+- afccc92: Update c2pa-rs from 0.90.15->0.90.16
+
 ## 0.7.3
 
 ### Patch Changes
