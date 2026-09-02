@@ -3,4 +3,4 @@
 '@contentauth/c2pa-web': minor
 ---
 
-Use Context, deprecate thread-local Settings paths.
+Use Context as the new way to construct and configure Reader and Builder objects. Deprecate thread-local Settings paths and the old Reader and Builder factory pattern.
