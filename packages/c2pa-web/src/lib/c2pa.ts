@@ -28,8 +28,9 @@ export interface Config {
 
 export interface C2pa {
   /**
-   * @internal Not part of the public API. Reader/Builder's static methods take this whole `C2pa`
-   * object and read the worker off of it themselves — there's no need to touch this directly.
+   * @internal Not part of the public API.
+   * Reader/Builder's static methods take this whole `C2pa` object and read the worker off
+   * of it themselves to know which web worker to use. There's no need to touch this directly.
    */
   worker: WorkerManager;
 
@@ -42,9 +43,11 @@ export interface C2pa {
 /**
  * Creates a new instance of c2pa-web by setting up a web worker and preparing a WASM binary.
  *
- * The returned handle carries no `Settings`/`Context` of its own — it's purely the worker/wasm
- * runtime. Create as many `Reader`s/`Builder`s from it as you like, each with its own `Context`;
- * they all share this one worker rather than needing a new `createC2pa()` call per `Context`.
+ * The returned handle carries no unique configuration of its own and is purely the worker runtime
+ * with the WASM binary loaded on it.
+ * 
+ * Clients are free to create as many `Reader`s/`Builder`s from it, each with its own `Context`
+ * to configure their respective behaviors. They all share the same c2pa-web instance and worker.
  *
  * @param config - SDK configuration object.
  * @returns A handle to the running worker, to be passed to `Reader`/`Builder`'s static methods.
@@ -52,7 +55,6 @@ export interface C2pa {
  * @example Creating a new SDK instance and reader:
  * ```
  * const c2pa = await createC2pa({ wasmSrc: 'url/hosting/wasm/binary' });
- *
  * const reader = await Reader.fromBlob(c2pa, imageBlob.type, imageBlob);
  * ```
  */
