@@ -15,7 +15,7 @@
 // import native objects from built native code
 import type { ManifestStore } from "@contentauth/c2pa-types";
 import path from "path";
-import * as fs from "fs-extra";
+import fs from "fs-extra";
 import { AssetTooLargeError, Context } from "@contentauth/c2pa-utilities";
 
 import { Reader } from "./Reader.js";

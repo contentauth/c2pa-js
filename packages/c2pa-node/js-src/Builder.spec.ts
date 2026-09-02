@@ -15,7 +15,7 @@
 
 import type { Manifest, ResourceRef } from "@contentauth/c2pa-types";
 import { Context } from "@contentauth/c2pa-utilities";
-import * as fs from "fs-extra";
+import fs from "fs-extra";
 import path from "path";
 import * as crypto from "crypto";
 

@@ -11,7 +11,7 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import * as fs from "fs-extra";
+import fs from "fs-extra";
 import { Context, settingsToJson, withDefaultSettings } from "@contentauth/c2pa-utilities";
 import type { C2paSettings } from "./types.d.ts";
 

@@ -1,5 +1,12 @@
 # @contentauth/c2pa-wasm
 
+## 0.11.4
+
+### Patch Changes
+
+- afccc92: Update c2pa-rs from 0.90.15->0.90.16
+- f9553a7: Remove redundant archive-metadata assertion filtering
+
 ## 0.11.3
 
 ### Patch Changes

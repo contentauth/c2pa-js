@@ -3,4 +3,4 @@
 '@contentauth/c2pa-web': patch
 ---
 
-Introduce Context, deprecate thread-local Settings.
+Introduce Context class as a wrapper around Settings for configuring Readers and Builders. Add temporary shim in c2pa-web.
