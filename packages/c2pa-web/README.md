@@ -59,7 +59,7 @@ const c2pa = await createC2pa();
 
 ## Configuring behavior with `Context`
 
-`createC2pa` sets up the worker and Wasm binary only. The handle it returns carries no `Settings`/`Context` of its own. Instead, `Reader` and `Builder`'s creation methods each accept an optional `Context` (see [`c2pa-utilities`'s README](../c2pa-utilities/README.md#context-and-settings) for the full API) directly, so the same running worker can create as many `Reader`s/`Builder`s as needed, each configured independently:
+`createC2pa` sets up the worker and Wasm binary; `Reader` and `Builder`'s creation methods each accept an optional `Context` (see [`c2pa-utilities`'s README](../c2pa-utilities/README.md#context-and-settings) for the full API) directly, so the same running worker can create as many `Reader`s/`Builder`s as needed, each configured independently:
 
 ```typescript
 import { createC2pa, Reader, Builder, Context } from '@contentauth/c2pa-web';
@@ -93,6 +93,20 @@ const reader2 = await Reader.fromBlob(
 Each `Context` holds whatever single `Settings` object was passed to its constructor and does not handle any merging of settings. To combine more than one `Settings` source, merge them first with `mergeSettings()`, then construct a `Context` from the single, merged result. See [`c2pa-utilities`'s README](../c2pa-utilities/README.md#combining-settings) for details.
 
 A `Context`'s settings are resolved once upon creation and then memoized for re-use. Passing the same `Context` instance to multiple `Reader`/`Builder` calls doesn't re-fetch trust-anchor URLs on every call.
+
+### Factory API (deprecated)
+
+Earlier versions of `c2pa-web` configured the SDK once via `createC2pa({ settings })`, and created `Reader`/`Builder` objects through `c2pa.reader`/`c2pa.builder` factory methods that took a raw `Settings` object per call, merged over those top-level settings. This is still supported, but deprecated in favor of `Reader`/`Builder`'s static methods with an explicit `Context`, shown above, and will be removed in a future version:
+
+```typescript
+const c2pa = await createC2pa({ wasmSrc, settings: { verify: { verifyTrust: true } } });
+
+// Settings passed here are merged over, and take precedence over, the top-level settings above.
+const reader = await c2pa.reader.fromBlob(blob.type, blob, {
+  trust: { trustAnchors: 'https://example.com/trust-anchors.pem' }
+});
+const builder = await c2pa.builder.new();
+```
 
 ## Using the library
 

@@ -444,4 +444,62 @@ describe('reader', () => {
     expect(Object.keys(reader!)).toEqual([]);
     expect(JSON.stringify(reader)).toEqual('{}');
   });
+
+  describe('ReaderFactory (deprecated)', () => {
+    test('creates a Reader via c2pa.reader.fromBlob', async ({ c2pa }) => {
+      const blob = await getBlobForAsset(C_with_CAWG_data);
+
+      const reader = await c2pa.reader.fromBlob(blob.type, blob);
+
+      expect(reader).not.toBeNull();
+
+      const manifestStore = await reader!.manifestStore();
+
+      expect(manifestStore).toEqual(C_with_CAWG_data_untrusted_ManifestStore);
+    });
+
+    test('creates a Reader via c2pa.reader.fromBlobFragment', async ({
+      c2pa
+    }) => {
+      const initBlob = await getBlobForAsset(dashinit);
+      const fragmentBlob = await getBlobForAsset(dash1);
+
+      const reader = await c2pa.reader.fromBlobFragment(
+        initBlob.type,
+        initBlob,
+        fragmentBlob
+      );
+
+      expect(reader).not.toBeNull();
+
+      const manifestStore = await reader!.manifestStore();
+
+      expect(manifestStore).toEqual(dashinit_ManifestStore);
+    });
+
+    test('merges per-call settings over the top-level settings passed to createC2pa, with per-call taking precedence', async () => {
+      const c2pa = await createC2pa({
+        wasmSrc,
+        settings: {
+          trust: { trustAnchors: anchor_incorrect },
+          verify: { verifyTrust: true }
+        }
+      });
+
+      const blob = await getBlobForAsset(C_with_CAWG_data);
+
+      const reader = await c2pa.reader.fromBlob(blob.type, blob, {
+        trust: { trustAnchors: anchor_correct },
+        cawgTrust: { trustAnchors: anchor_cawg }
+      });
+
+      expect(reader).not.toBeNull();
+
+      const manifestStore = await reader!.manifestStore();
+
+      expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
+
+      c2pa.dispose();
+    });
+  });
 });

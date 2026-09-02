@@ -8,6 +8,9 @@
  */
 import { createWorkerManager, WorkerManager } from './worker/workerManager.js';
 import { WASM_SRI } from '@contentauth/c2pa-wasm';
+import { Settings } from '@contentauth/c2pa-utilities';
+import { createReaderFactory, ReaderFactory } from './reader.js';
+import { createBuilderFactory, BuilderFactory } from './builder.js';
 
 export interface Config {
   /**
@@ -24,6 +27,12 @@ export interface Config {
    * application and pass its URL here.
    */
   workerSrc?: URL;
+
+  /**
+   * @deprecated Use a `Context` to construct a `Reader`/`Builder` via their static methods instead.
+   * Settings for the SDK. Will be inherited by created builders and readers.
+   */
+  settings?: Settings;
 }
 
 export interface C2pa {
@@ -33,6 +42,16 @@ export interface C2pa {
    * of it themselves to know which web worker to use. There's no need to touch this directly.
    */
   worker: WorkerManager;
+
+  /**
+   * @deprecated Use `Reader`'s static methods instead, passing this `C2pa` object and a `Context`.
+   */
+  reader: ReaderFactory;
+
+  /**
+   * @deprecated Use `Builder`'s static methods instead, passing this `C2pa` object and a `Context`.
+   */
+  builder: BuilderFactory;
 
   /**
    * Terminates this instance's underlying web worker.
@@ -59,17 +78,23 @@ export interface C2pa {
  * ```
  */
 export async function createC2pa(config: Config): Promise<C2pa> {
-  const { wasmSrc, workerSrc } = config;
+  const { wasmSrc, workerSrc, settings } = config;
 
   const wasm =
     typeof wasmSrc === 'string' ? await fetchAndCompileWasm(wasmSrc) : wasmSrc;
 
   const worker = await createWorkerManager({ wasm, workerSrc });
 
-  return {
+  const c2pa: C2pa = {
     worker,
+    reader: undefined as unknown as ReaderFactory,
+    builder: undefined as unknown as BuilderFactory,
     dispose: worker.terminate
   };
+  c2pa.reader = createReaderFactory(c2pa, settings);
+  c2pa.builder = createBuilderFactory(c2pa, settings);
+
+  return c2pa;
 }
 
 async function fetchAndCompileWasm(src: string) {

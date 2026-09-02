@@ -17,7 +17,7 @@ import type {
   Ingredient,
   ManifestDefinition
 } from '@contentauth/c2pa-types';
-import { Context } from '@contentauth/c2pa-utilities';
+import { Context, Settings, mergeSettings } from '@contentauth/c2pa-utilities';
 import type { C2pa } from './c2pa.js';
 
 /**
@@ -466,4 +466,62 @@ export class Builder {
     registry.unregister(this);
     await this.#worker.tx.builder_free(this.#id);
   }
+}
+
+/**
+ * @deprecated Use `Builder`'s static methods, passing a `Context`, instead.
+ */
+export interface BuilderFactory {
+  /**
+   * @param settings Optional settings for this builder. Will override any values inherited
+   * from the top-level settings passed to {@link createC2pa}.
+   * @deprecated Use {@link Builder.new} with a `Context` instead.
+   */
+  new: (settings?: Settings) => Promise<Builder>;
+
+  /**
+   * @param settings Optional settings for this builder. Will override any values inherited
+   * from the top-level settings passed to {@link createC2pa}.
+   * @deprecated Use {@link Builder.fromDefinition} with a `Context` instead.
+   */
+  fromDefinition: (
+    definition: ManifestDefinition,
+    settings?: Settings
+  ) => Promise<Builder>;
+
+  /**
+   * @param settings Optional settings for this builder. Will override any values inherited
+   * from the top-level settings passed to {@link createC2pa}.
+   * @deprecated Use {@link Builder.fromArchive} with a `Context` instead.
+   */
+  fromArchive: (archive: Blob, settings?: Settings) => Promise<Builder>;
+}
+
+/**
+ * @deprecated Use `Builder.new`/`Builder.fromDefinition`/`Builder.fromArchive` with a `Context`
+ * instead.
+ * @param c2pa The `C2pa` instance to create builders on.
+ * @param baseSettings Optional settings inherited by every builder created from this factory.
+ * @returns A {@link BuilderFactory} object containing builder creation methods.
+ */
+export function createBuilderFactory(
+  c2pa: C2pa,
+  baseSettings: Settings = {}
+): BuilderFactory {
+  return {
+    new: (settings = {}) =>
+      Builder.new(c2pa, new Context(mergeSettings(baseSettings, settings))),
+    fromDefinition: (definition, settings = {}) =>
+      Builder.fromDefinition(
+        c2pa,
+        definition,
+        new Context(mergeSettings(baseSettings, settings))
+      ),
+    fromArchive: (archive, settings = {}) =>
+      Builder.fromArchive(
+        c2pa,
+        archive,
+        new Context(mergeSettings(baseSettings, settings))
+      )
+  };
 }
