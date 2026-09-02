@@ -35,7 +35,7 @@ export async function loadSettingsFromFile(filePath: string): Promise<string> {
 /**
  * Resolves a `Reader`/`Builder` settings argument (either the deprecated raw `C2paSettings`
  * or a `Context`) into the JSON string the native library expects.
- *
+ * 
  * Unlike `c2pa-web`'s `Context.toJson()`, this does not resolve trust-anchor URLs: `c2pa-node`
  * doesn't perform trust-anchor URL fetching yet, so a `Context`'s settings are only merged with
  * this package's defaults and serialized here.

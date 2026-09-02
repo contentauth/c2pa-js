@@ -180,7 +180,7 @@ export interface HashedUri {
 
 /**
  * Optional settings that can be provided when creating a Reader or Builder.
- * Can be a JSON string, TOML string, or a settings object.
+ * Can be a JSON string or a settings object.
  */
 export type C2paSettings = string | object;
 
