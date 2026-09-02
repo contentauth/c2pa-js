@@ -74,15 +74,8 @@ export class Builder implements BuilderInterface {
    * Create a Builder with a minimal manifest definition, configured by an optional `Context`.
    * Prefer this over the deprecated {@link Builder.new}.
    *
-   * ## Why `async`, when nothing here awaits anything yet
-   *
-   * `resolveSettingsForNeon` doesn't resolve trust-anchor URLs today (see its doc comment in
-   * `Settings.ts` for the proposal to add that), so building a `Context`-backed Builder is
-   * currently just as synchronous as {@link Builder.new}. This method is `async` anyway so that
-   * adding that trust-anchor resolution later — the natural next step once it's signed off —
-   * only has to change what happens *inside* this method, not its public signature. Landing the
-   * `Promise<Builder>` signature now, ahead of the work that actually needs it, means callers
-   * that adopt `Context` today never have to migrate a second time when that work lands.
+   * Declared async for forward compatibility. Upcoming work will allow c2pa-node
+   * to resolve trust anchors at construction time.
    *
    * @param context A `Context` object containing configuration settings for this Builder.
    */
@@ -94,7 +87,7 @@ export class Builder implements BuilderInterface {
 
   /**
    * @deprecated Use {@link Builder.withJsonAsync} instead, passing a `Context`. Will be removed
-   * in a future major version.
+   * in a future version.
    * @param settings A raw `C2paSettings` string/object.
    */
   static withJson(json: Manifest, settings?: C2paSettings): Builder {
@@ -111,8 +104,8 @@ export class Builder implements BuilderInterface {
    * Create a Builder from a manifest definition, configured by an optional `Context`. Prefer
    * this over the deprecated {@link Builder.withJson}.
    *
-   * `async` for the same forward-compatibility reason as {@link Builder.newAsync} — see its doc
-   * comment.
+   * Declared async for forward compatibility. Upcoming work will allow c2pa-node
+   * to resolve trust anchors at construction time.
    */
   static async withJsonAsync(
     json: Manifest,
@@ -193,15 +186,14 @@ export class Builder implements BuilderInterface {
   }
 
   /**
-   * @param settings A `Context`, or (deprecated) a raw `C2paSettings` string/object. Passing a
-   * raw `C2paSettings` value is deprecated and will be removed in a future major version — pass
-   * a `Context` instead.
+   * @param settingsOrContext A `Context`, or (deprecated) a raw `C2paSettings` string/object. Passing a
+   * raw `C2paSettings` value is deprecated and will be removed in a future version.
    */
   static async fromArchive(
     asset: SourceAsset,
-    settings?: C2paSettings | Context,
+    settingsOrContext?: C2paSettings | Context,
   ): Promise<Builder> {
-    const settingsStr = resolveSettingsForNeon(settings);
+    const settingsStr = resolveSettingsForNeon(settingsOrContext);
     return new Builder(
       await getNeonBinary().builderFromArchive(asset, settingsStr),
     );

@@ -992,8 +992,7 @@ describe("Builder", () => {
       const dest = { path: path.join(tempDir, "context_new_signed.jpg") };
       const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
 
-      // Trust verification disabled via Context, unlike the default settings used by the
-      // "should sign data" test above, which reports "signingCredential.untrusted".
+      // Trust verification disabled via Context.
       const context = new Context({ verify: { verifyTrust: false } });
       const builder = await Builder.newAsync(context);
       builder.updateManifestProperty("claim_version", 2);
@@ -1011,6 +1010,7 @@ describe("Builder", () => {
       const dest = { path: path.join(tempDir, "context_withjson_signed.jpg") };
       const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
 
+      // Trust verification disabled via Context.
       const context = new Context({ verify: { verifyTrust: false } });
       const builder = await Builder.withJsonAsync(manifestDefinition, context);
       await builder.addIngredient(parent_json, source);
