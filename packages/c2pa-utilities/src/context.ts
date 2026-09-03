@@ -11,10 +11,14 @@ import type { FetchWithRetryOptions } from './fetchWithRetry.js';
 import { resolveSettings, type Settings } from './settings.js';
 
 /**
- * A `Context` configures the behavior of a single `Reader`/`Builder`. 
+ * A `Context` configures the behavior of a `Reader`/`Builder`. 
  * 
  * It is provided at creation time (e.g. `Reader.fromBlob(c2pa, format, blob, context)`),
  * configuring that instance's behavior independently of other instances.
+ * 
+ * A `Context` is snapshotted when used to create a `Reader`/`Builder`. Changes to
+ * the context do not propagate afterwards, and therefore can be used to create
+ * multiple `Reader`/`Builder` instances.
  */
 export class Context {
   private readonly _settings?: Settings;
@@ -37,17 +41,26 @@ export class Context {
 
   /**
    * Resolves this `Context`'s settings (fetching any embedded trust-anchor URLs) and serializes
-   * the result for consumption by the WASM/native boundary. The result is memoized, so resolution
-   * of this Context's settings should only ever happen once. If different fetch-with-retry options
-   * need to be provided, callers should create a separate `Context` and then call `toJson()`
-   * with the desired options.
+   * the result for consumption by the WASM/native boundary. A successful result is memoized, so
+   * resolution of this Context's settings only happens once. If different fetch-with-retry
+   * options need to be provided, callers should create a separate `Context` and then call
+   * `toJson()` with the desired options.
+   *
+   * A failed resolution is not memoized: the next call to `toJson()` tries again from scratch,
+   * so a transient failure (e.g. a network error while fetching a trust-anchor URL) doesn't
+   * permanently break this `Context`.
    *
    * @param options Optional configurations for fetch-with-retry, used when resolving trust-anchor
-   * URLs. Only consulted on the first call.
+   * URLs. Only consulted on the first call, or the first call after a previous failure.
    * @returns A JSON-serialized string of the resolved settings.
    */
   toJson(options?: FetchWithRetryOptions): Promise<string> {
-    this._jsonPromise ??= resolveSettings(this.settings, options);
+    this._jsonPromise ??= resolveSettings(this.settings, options).catch(
+      (error: unknown) => {
+        this._jsonPromise = undefined;
+        throw error;
+      }
+    );
     return this._jsonPromise;
   }
 }
