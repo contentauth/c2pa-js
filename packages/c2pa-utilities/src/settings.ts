@@ -155,11 +155,11 @@ export interface BuilderSettings {
  * {@link resolveSettings} so a `Reader`/`Builder` gets sane behavior even with no settings
  * provided at all.
  */
-export const DEFAULT_SETTINGS: Settings = {
-  builder: {
+export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
+  builder: Object.freeze({
     generateC2paArchive: true
-  }
-};
+  })
+});
 
 /**
  * Merges `settings` on top of this package's default settings.

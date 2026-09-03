@@ -38,7 +38,7 @@ describe('Context', () => {
     );
   });
 
-  test('toJson() memoizes: repeated calls return the exact same Promise', async () => {
+  test('successful toJson() calls should be memoized', async () => {
     const context = new Context({ verify: { verifyTrust: false } });
 
     const first = context.toJson();
@@ -51,5 +51,38 @@ describe('Context', () => {
         verify: { verify_trust: false }
       })
     );
+  });
+
+  test('failed toJson() calls should not be memoized', async () => {
+    const context = new Context({
+      trust: { trustAnchors: 'https://example.com/anchors.pem' }
+    });
+
+    const failingFetch = async (): Promise<Response> => {
+      throw new Error('network down');
+    };
+
+    const first = context.toJson({ fetch: failingFetch, maxRetries: 0 });
+    await expect(first).rejects.toThrow();
+
+    const succeedingFetch = async (): Promise<Response> =>
+      new Response(
+        '-----BEGIN CERTIFICATE-----\nabcd\n-----END CERTIFICATE-----'
+      );
+
+    const second = context.toJson({ fetch: succeedingFetch });
+
+    // A fresh attempt (a new Promise, not the previously-rejected one), which succeeds.
+    expect(second).not.toBe(first);
+    const result = await second;
+    expect(JSON.parse(result)).toMatchObject({
+      trust: {
+        trust_anchors:
+          '-----BEGIN CERTIFICATE-----\nabcd\n-----END CERTIFICATE-----'
+      }
+    });
+
+    // The successful resolution is memoized as usual from here on.
+    expect(context.toJson()).toBe(second);
   });
 });
