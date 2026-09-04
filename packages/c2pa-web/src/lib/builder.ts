@@ -68,9 +68,6 @@ const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>
  * The `Builder` class supports building C2PA manifests and signing assets.
  */
 export class Builder {
-  // Native private fields, which are inaccessible from outside the class at runtime.
-  // These properties cannot leak and will not appear if the builder object is logged
-  // or serialized.
   #worker: WorkerManager;
   #id: number;
 
