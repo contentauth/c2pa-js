@@ -1,5 +1,5 @@
 ---
-'@contentauth/c2pa-utilities': minor
+'@contentauth/c2pa-utilities': major
 '@contentauth/c2pa-web': patch
 ---
 
