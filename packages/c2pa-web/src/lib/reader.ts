@@ -8,7 +8,7 @@
  */
 
 import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
-import { WasmReader, initSync } from '@contentauth/c2pa-wasm';
+import initWasm, { WasmReader } from '@contentauth/c2pa-wasm';
 import { UnsupportedFormatError } from './error.js';
 import { isSupportedReaderFormat } from './supportedFormats.js';
 import { sanitizeManifestStore } from './worker/sanitizeManifestStore.js';
@@ -23,13 +23,19 @@ import {
 // 1 GB
 export const MAX_SIZE_IN_BYTES = 10 ** 9;
 
-/** Lazily initializes the WASM module on the main thread (for worker-free reads). */
-let mainThreadWasmReady = false;
-function ensureMainThreadWasm(wasm: WebAssembly.Module): void {
-  if (!mainThreadWasmReady) {
-    initSync({ module: wasm });
-    mainThreadWasmReady = true;
+/**
+ * Lazily initializes the WASM module on the main thread (for worker-free reads).
+ *
+ * Uses the async `WebAssembly.instantiate` path rather than `initSync`'s
+ * `new WebAssembly.Instance`: Chrome disallows synchronous instantiation on the
+ * main thread once the module exceeds 8MB, which the c2pa WASM binary does.
+ */
+let mainThreadWasmInit: Promise<unknown> | undefined;
+function ensureMainThreadWasm(wasm: WebAssembly.Module): Promise<unknown> {
+  if (!mainThreadWasmInit) {
+    mainThreadWasmInit = initWasm({ module_or_path: wasm });
   }
+  return mainThreadWasmInit;
 }
 
 /** Options for URL-based readers that fetch bytes over HTTP Range requests. */
@@ -294,7 +300,7 @@ export function createReaderFactory(
         const isAsyncMode =
           options?.mode === 'discover' || options?.mode === 'verify-async';
         if (isAsyncMode && wasm) {
-          ensureMainThreadWasm(wasm);
+          await ensureMainThreadWasm(wasm);
           const onFetch = options?.onFetch;
           const wasmReader = await WasmReader.fromUrl(
             format,
