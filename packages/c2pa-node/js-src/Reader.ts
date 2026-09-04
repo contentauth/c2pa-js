@@ -47,11 +47,12 @@ export class Reader implements ReaderInterface {
 
   /**
    * @param settingsOrContext A `Context`, or (@deprecated) a raw `C2paSettings` string/object. Passing a
-   * raw `C2paSettings` value is deprecated and will be removed in a future version.
+   * raw `C2paSettings` value is deprecated and will be removed in a future version. `null` is treated
+   * the same as `undefined`.
    */
   static async fromAsset(
     asset: SourceAsset,
-    settingsOrContext?: C2paSettings | Context,
+    settingsOrContext?: C2paSettings | Context | null,
   ): Promise<Reader | null> {
     await validateSourceAssetSize(asset);
     const settingsStr = resolveSettingsForNeon(settingsOrContext);
@@ -62,12 +63,13 @@ export class Reader implements ReaderInterface {
 
   /**
    * @param settingsOrContext A `Context`, or (@deprecated) a raw `C2paSettings` string/object. Passing a
-   * raw `C2paSettings` value is deprecated and will be removed in a future version.
+   * raw `C2paSettings` value is deprecated and will be removed in a future version. `null` is treated
+   * the same as `undefined`.
    */
   static async fromManifestDataAndAsset(
     manifestData: Buffer,
     asset: SourceAsset,
-    settingsOrContext?: C2paSettings | Context,
+    settingsOrContext?: C2paSettings | Context | null,
   ): Promise<Reader> {
     await validateSourceAssetSize(asset);
     const settingsStr = resolveSettingsForNeon(settingsOrContext);
