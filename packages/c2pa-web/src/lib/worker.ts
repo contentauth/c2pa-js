@@ -9,12 +9,7 @@
 
 /// <reference lib="webworker" />
 
-import {
-  WasmReader,
-  initSync,
-  loadSettings,
-  WasmBuilder
-} from '@contentauth/c2pa-wasm';
+import { WasmReader, initSync, WasmBuilder } from '@contentauth/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
 import { createWorkerTx, rx } from './worker/rpc.js';
 import { sanitizeManifestStore } from './worker/sanitizeManifestStore.js';
@@ -27,11 +22,8 @@ const tx = createWorkerTx();
 
 rx(
   wrapFunctionsForErrorHandling({
-    async initWorker(module, settings) {
+    async initWorker(module) {
       initSync({ module });
-      if (settings) {
-        loadSettings(settings);
-      }
     },
     async reader_fromBlob(format, blob, contextJson) {
       const reader = await WasmReader.fromBlob(format, blob, contextJson);

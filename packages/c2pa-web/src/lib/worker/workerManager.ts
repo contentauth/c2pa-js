@@ -20,7 +20,6 @@ export interface WorkerManager {
 
 export interface CreateWorkerManagerConfig {
   wasm: WebAssembly.Module;
-  settingsString?: string;
   workerSrc?: URL;
 }
 
@@ -46,7 +45,6 @@ export function validateWorkerSrc(workerSrc: URL): string {
 /**
  * Creates a new web worker and performs initialization steps:
  * - Compile WASM
- * - Load settings (if provided)
  *
  * @param config - configuration object
  * @returns Facade providing convenient control over worker functions
@@ -54,7 +52,7 @@ export function validateWorkerSrc(workerSrc: URL): string {
 export async function createWorkerManager(
   config: CreateWorkerManagerConfig
 ): Promise<WorkerManager> {
-  const { wasm, settingsString, workerSrc } = config;
+  const { wasm, workerSrc } = config;
   let signerRequestId = 0;
 
   const worker = workerSrc
@@ -86,7 +84,7 @@ export async function createWorkerManager(
     return id;
   }
 
-  await tx.initWorker(wasm, settingsString);
+  await tx.initWorker(wasm);
 
   return {
     tx,
