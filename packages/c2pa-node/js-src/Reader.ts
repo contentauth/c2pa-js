@@ -12,9 +12,11 @@
 // each license.
 
 import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
+import type { Context } from "@contentauth/c2pa-utilities";
 
 import { getNeonBinary } from "./binary.js";
 import { validateSourceAssetSize } from "./assetSize.js";
+import { resolveSettingsForNeon } from "./Settings.js";
 import type {
   C2paSettings,
   DestinationAsset,
@@ -43,21 +45,34 @@ export class Reader implements ReaderInterface {
     return getNeonBinary().readerResourceToAsset.call(this.reader, uri, asset);
   }
 
-  static async fromAsset(asset: SourceAsset, settings?: C2paSettings): Promise<Reader | null> {
+  /**
+   * @param settingsOrContext A `Context`, or (@deprecated) a raw `C2paSettings` string/object. Passing a
+   * raw `C2paSettings` value is deprecated and will be removed in a future version. `null` is treated
+   * the same as `undefined`.
+   */
+  static async fromAsset(
+    asset: SourceAsset,
+    settingsOrContext?: C2paSettings | Context | null,
+  ): Promise<Reader | null> {
     await validateSourceAssetSize(asset);
-    const settingsStr = settings ? (typeof settings === 'string' ? settings : JSON.stringify(settings)) : undefined;
+    const settingsStr = resolveSettingsForNeon(settingsOrContext);
     const reader: NeonReaderHandle | null =
       await getNeonBinary().readerFromAsset(asset, settingsStr);
     return reader ? new Reader(reader) : null;
   }
 
+  /**
+   * @param settingsOrContext A `Context`, or (@deprecated) a raw `C2paSettings` string/object. Passing a
+   * raw `C2paSettings` value is deprecated and will be removed in a future version. `null` is treated
+   * the same as `undefined`.
+   */
   static async fromManifestDataAndAsset(
     manifestData: Buffer,
     asset: SourceAsset,
-    settings?: C2paSettings,
+    settingsOrContext?: C2paSettings | Context | null,
   ): Promise<Reader> {
     await validateSourceAssetSize(asset);
-    const settingsStr = settings ? (typeof settings === 'string' ? settings : JSON.stringify(settings)) : undefined;
+    const settingsStr = resolveSettingsForNeon(settingsOrContext);
     const reader: NeonReaderHandle =
       await getNeonBinary().readerFromManifestDataAndAsset(manifestData, asset, settingsStr);
     return new Reader(reader);

@@ -19,8 +19,10 @@ import type {
   Manifest,
   ManifestStore,
 } from "@contentauth/c2pa-types";
+import { Context } from "@contentauth/c2pa-utilities";
 
 import { getNeonBinary } from "./binary.js";
+import { resolveSettingsForNeon } from "./Settings.js";
 import type {
   BuilderInterface,
   C2paSettings,
@@ -38,39 +40,84 @@ import type {
 } from "./types.d.ts";
 import { IdentityAssertionSigner } from "./IdentityAssertion.js";
 
+function stringifyManifestDefinition(json: Manifest): string {
+  try {
+    return JSON.stringify(json);
+  } catch (error) {
+    // TODO: errors should be standardized across JS and Node
+    if (error instanceof Error) {
+      throw new Error(
+        `Failed to stringify JSON Manifest Definition: ${error.message}`,
+      );
+    }
+    throw new Error(
+      "Failed to stringify JSON Manifest Definition: Unknown error",
+    );
+  }
+}
+
 export class Builder implements BuilderInterface {
   constructor(private builder: NeonBuilderHandle) {}
 
+  /**
+   * @deprecated Use {@link Builder.newAsync} instead, passing a `Context`. Will be removed in a
+   * future major version.
+   * @param settings A raw `C2paSettings` string/object.
+   */
   static new(settings?: C2paSettings): Builder {
-    const settingsStr = settings
-      ? typeof settings === "string"
-        ? settings
-        : JSON.stringify(settings)
-      : undefined;
+    const settingsStr = resolveSettingsForNeon(settings);
     const builder: NeonBuilderHandle = getNeonBinary().builderNew(settingsStr);
     return new Builder(builder);
   }
 
+  /**
+   * Create a Builder with a minimal manifest definition, configured by a `Context`.
+   * Prefer this over the deprecated {@link Builder.new}.
+   *
+   * Declared async for forward compatibility. Upcoming work will allow for trust anchor
+   * resolution at construction time.
+   *
+   * @param context A `Context` object containing configuration settings for this Builder.
+   * Defaults to an empty `Context` using default settings if one is not provided.
+   */
+  static async newAsync(context: Context = new Context()): Promise<Builder> {
+    const settingsStr = resolveSettingsForNeon(context);
+    const builder: NeonBuilderHandle = getNeonBinary().builderNew(settingsStr);
+    return new Builder(builder);
+  }
+
+  /**
+   * @deprecated Use {@link Builder.withJsonAsync} instead, passing a `Context`. Will be removed
+   * in a future version.
+   * @param settings A raw `C2paSettings` string/object.
+   */
   static withJson(json: Manifest, settings?: C2paSettings): Builder {
-    let jsonString: string;
-    try {
-      jsonString = JSON.stringify(json);
-    } catch (error) {
-      // TODO: errors should be standardized across JS and Node
-      if (error instanceof Error) {
-        throw new Error(
-          `Failed to stringify JSON Manifest Definition: ${error.message}`,
-        );
-      }
-      throw new Error(
-        "Failed to stringify JSON Manifest Definition: Unknown error",
-      );
-    }
-    const settingsStr = settings
-      ? typeof settings === "string"
-        ? settings
-        : JSON.stringify(settings)
-      : undefined;
+    const jsonString = stringifyManifestDefinition(json);
+    const settingsStr = resolveSettingsForNeon(settings);
+    const builder: NeonBuilderHandle = getNeonBinary().builderWithJson(
+      jsonString,
+      settingsStr,
+    );
+    return new Builder(builder);
+  }
+
+  /**
+   * Create a Builder from a manifest definition, configured by a `Context`. Prefer this over
+   * the deprecated {@link Builder.withJson}.
+   *
+   * Declared async for forward compatibility. Upcoming work will allow c2pa-node
+   * to resolve trust anchors at construction time.
+   *
+   * @param json The manifest JSON.
+   * @param context A `Context` object containing configuration settings for this Builder.
+   * Defaults to an empty `Context` using default settings if one is not provided.
+   */
+  static async withJsonAsync(
+    json: Manifest,
+    context: Context = new Context(),
+  ): Promise<Builder> {
+    const jsonString = stringifyManifestDefinition(json);
+    const settingsStr = resolveSettingsForNeon(context);
     const builder: NeonBuilderHandle = getNeonBinary().builderWithJson(
       jsonString,
       settingsStr,
@@ -143,15 +190,16 @@ export class Builder implements BuilderInterface {
     return getNeonBinary().builderToArchive.call(this.builder, asset);
   }
 
+  /**
+   * @param settingsOrContext A `Context`, or (deprecated) a raw `C2paSettings` string/object. Passing a
+   * raw `C2paSettings` value is deprecated and will be removed in a future version. `null` is treated
+   * the same as `undefined`.
+   */
   static async fromArchive(
     asset: SourceAsset,
-    settings?: C2paSettings,
+    settingsOrContext?: C2paSettings | Context | null,
   ): Promise<Builder> {
-    const settingsStr = settings
-      ? typeof settings === "string"
-        ? settings
-        : JSON.stringify(settings)
-      : undefined;
+    const settingsStr = resolveSettingsForNeon(settingsOrContext);
     return new Builder(
       await getNeonBinary().builderFromArchive(asset, settingsStr),
     );
