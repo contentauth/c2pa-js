@@ -16,7 +16,11 @@ Complete API documentation is generated from TypeScript source using [TypeDoc](h
 
 ### `Context` and `Settings`
 
-`Settings` is a plain, JSON-serializable object configuring SDK behavior around trust anchors, verification options, and `Reader`/`Builder` options. `Context` is a small, immutable wrapper around `Settings`, and is the recommended way to configure a `Reader`/`Builder`. `Context` objects are passed directly to the call that creates a `Reader`/`Builder` instance, so one running SDK instance can freely create many different `Reader`/`Builder`s, each with its own `Context`. See [`c2pa-web`'s README](../c2pa-web/README.md#configuring-behavior-with-context) for an example.
+`Settings` is a plain, JSON-serializable object configuring SDK behavior around trust anchors, verification options, and `Reader`/`Builder` options.
+
+`Context` is a small, immutable wrapper around `Settings`, and is the recommended way to configure a `Reader`/`Builder`. `Context` objects are passed directly to the call that creates a `Reader`/`Builder` instance, so one running SDK instance can freely create many different `Reader`/`Builder`s, each with its own `Context`. `Context` changes do not propagate, since the `Context` is snapshotted when used to construct a `Reader`/`Builder`. Therefore, it can be safely used to construct multiple instances.
+
+See [`c2pa-web`'s README](../c2pa-web/README.md#configuring-behavior-with-context) for an example.
 
 #### Creating a `Context`
 
