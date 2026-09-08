@@ -1,17 +1,20 @@
 
 [workspace]
 resolver = '2'
-members = [
-	'packages/c2pa-wasm',
-	'packages/c2pa-types',
-	'packages/c2pa-node',
-]
+members = ['packages/c2pa-wasm', 'packages/c2pa-types', 'packages/c2pa-node']
 
 [workspace.package]
 rust-version = "1.88.0"
 
 [workspace.dependencies]
-c2pa = { version = "=0.90.16", features = ["unstable_builder_filter", "pdf", "rust_native_crypto", "fetch_remote_manifests", "json_schema", "http_reqwest"], default-features = false }
+c2pa = { version = "=0.90.20", features = [
+    "unstable_builder_filter",
+    "pdf",
+    "rust_native_crypto",
+    "fetch_remote_manifests",
+    "json_schema",
+    "http_reqwest",
+], default-features = false }
 
 [profile.release]
 opt-level = "s"
