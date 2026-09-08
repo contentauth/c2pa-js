@@ -14,9 +14,57 @@ Complete API documentation is generated from TypeScript source using [TypeDoc](h
 
 ## Utilities
 
-### Settings
+### `Context` and `Settings`
 
-Helpers for building, merging, and serializing the `Settings` object consumed by `c2pa-web`'s and `c2pa-node`'s `Reader`/`Builder` constructors.
+`Settings` is a plain, JSON-serializable object configuring SDK behavior around trust anchors, verification options, and `Reader`/`Builder` options.
+
+`Context` is a small, immutable wrapper around `Settings`, and is the recommended way to configure a `Reader`/`Builder`. `Context` objects are passed directly to the call that creates a `Reader`/`Builder` instance, so one running SDK instance can freely create many different `Reader`/`Builder`s, each with its own `Context`. `Context` changes do not propagate, since the `Context` is snapshotted when used to construct a `Reader`/`Builder`. Therefore, it can be safely used to construct multiple instances.
+
+See [`c2pa-web`'s README](../c2pa-web/README.md#configuring-behavior-with-context) for an example.
+
+#### Creating a `Context`
+
+```typescript
+import { Context } from '@contentauth/c2pa-utilities';
+
+const context = new Context({
+  verify: {
+    verifyTrust: true
+  },
+  trust: {
+    trustAnchors: 'https://example.com/trust-anchors.pem'
+  }
+});
+```
+
+#### Combining `Settings`
+
+Each `Context` holds whatever single `Settings` object was passed to its constructor and does not handle any merging of settings. To combine more than one `Settings` source, merge them first with `mergeSettings()`, then construct a `Context` from the single, merged result:
+
+```typescript
+import { Context, mergeSettings } from '@contentauth/c2pa-utilities';
+
+const base = { verify: { verifyTrust: true } };
+const override = { verify: { verifyAfterSign: true } };
+
+const context = new Context(mergeSettings(base, override));
+// context.settings is { verify: { verifyTrust: true, verifyAfterSign: true } }
+```
+
+#### Resolving a `Context` to JSON
+
+Settings are passed across the WASM (`c2pa-web`)/native(`c2pa-node`) boundary as a JSON string. `toJson()` resolves any trust-anchor URLs embedded in the settings (fetching and validating them) and serializes the result:
+
+```typescript
+const contextJson = await context.toJson();
+// '{"verify":{"verify_trust":true},"trust":{"trust_anchors":"-----BEGIN CERTIFICATE-----..."}}'
+```
+
+This step is asynchronous, and can throw if a trust-anchor URL fails to resolve. Bindings call it once, right after building the base `Context`, rather than on every `Reader`/`Builder` call. Internally, `toJson()` is a thin wrapper over `resolveSettings`, below.
+
+#### Building `Settings` directly
+
+`Context` is built on a handful of lower-level `Settings` helpers, which remain available directly for cases that don't need a `Context` at all:
 
 ```typescript
 import {
@@ -37,18 +85,18 @@ const verifySettings = createVerifySettings({
 
 const settings = mergeSettings(trustSettings, verifySettings);
 
-// Merges any override on top of base, fetches trust-anchor URLs, and serializes
-// to the snake_case JSON string the native SDK expects.
-const settingsJson = await resolveSettings(settings, undefined);
+// Resolves trust-anchor URLs and serializes to the snake_case JSON string the native SDK expects.
+const settingsJson = await resolveSettings(settings);
 ```
 
-`resolveSettings` is the top-level entry point most callers want: it deep-merges `overrideSettings` on top of `baseSettings`, resolves any `trust`/`cawgTrust` fields that are URLs (fetching and inlining the PEM content, retrying transient failures), and returns the result as a snake_case JSON string. Pass `undefined` for either argument to skip that step; passing `undefined` for both returns `undefined`.
+`resolveSettings` is the entry point most direct callers want. It resolves any `trust`/`cawgTrust` URL fields (fetching and inlining the PEM content, retrying transient failures), and returns the result as a snake_case JSON string. `settings` is merged on top of this package's defaults, so `resolveSettings` always returns a value, even when called with `undefined`. To combine more than one `Settings` object first, merge them with `mergeSettings()` before calling `resolveSettings`, as above.
 
 Other exports:
 
 - `createTrustSettings` / `createCawgTrustSettings` / `createVerifySettings` — construct a `Settings` fragment for one section.
 - `mergeSettings` — deep-merge any number of `Settings` fragments, with later arguments overriding earlier ones. Nested fields are merged rather than overwritten.
 - `settingsToJson` — serialize a `Settings` object to its snake_case JSON form without resolving trust-anchor URLs.
+- `snakeCaseify` — the lower-level camelCase-to-snake_case object converter `settingsToJson`/`resolveSettings` use internally.
 - `loadSettingsFromUrl` — fetch a settings JSON document from a URL, with retry.
 - `resolveTrustSettings` — resolve just a `TrustSettings` object's URL fields in place; used internally by `resolveSettings`.
 

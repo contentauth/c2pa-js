@@ -17,7 +17,7 @@ import type {
   Ingredient,
   ManifestDefinition
 } from '@contentauth/c2pa-types';
-import { Settings, resolveSettings } from '@contentauth/c2pa-utilities';
+import { mergeSettings, Settings, resolveSettings } from '@contentauth/c2pa-utilities';
 
 /**
  * Functions that permit the creation of Builder objects.
@@ -304,7 +304,11 @@ export function createBuilderFactory(worker: WorkerManager, settings?: Settings)
 
   return {
     async new(settings?: Settings) {
-      const settingsJson = await resolveSettings(baseSettings, settings);
+      // TODO: temporary shim for c2pa-utilities' resolveSettings signature change
+      // (single-argument now); removed once c2pa-web adopts Context in a follow-up PR.
+      const settingsJson = await resolveSettings(
+        settings ? mergeSettings(baseSettings ?? {}, settings) : baseSettings
+      );
       const builderId = await tx.builder_new(settingsJson);
 
       const builder = createBuilder(worker, builderId, () => {
@@ -317,7 +321,11 @@ export function createBuilderFactory(worker: WorkerManager, settings?: Settings)
 
     async fromDefinition(definition: ManifestDefinition, settings?: Settings) {
       const json = JSON.stringify(definition);
-      const settingsJson = await resolveSettings(baseSettings, settings);
+      // TODO: temporary shim for c2pa-utilities' resolveSettings signature change
+      // (single-argument now); removed once c2pa-web adopts Context in a follow-up PR.
+      const settingsJson = await resolveSettings(
+        settings ? mergeSettings(baseSettings ?? {}, settings) : baseSettings
+      );
       const builderId = await tx.builder_fromJson(json, settingsJson);
 
       const builder = createBuilder(worker, builderId, () => {
@@ -329,7 +337,11 @@ export function createBuilderFactory(worker: WorkerManager, settings?: Settings)
     },
 
     async fromArchive(archive: Blob, settings?: Settings) {
-      const settingsJson = await resolveSettings(baseSettings, settings);
+      // TODO: temporary shim for c2pa-utilities' resolveSettings signature change
+      // (single-argument now); removed once c2pa-web adopts Context in a follow-up PR.
+      const settingsJson = await resolveSettings(
+        settings ? mergeSettings(baseSettings ?? {}, settings) : baseSettings
+      );
       const builderId = await tx.builder_fromArchive(archive, settingsJson);
 
       const builder = createBuilder(worker, builderId, () => {
