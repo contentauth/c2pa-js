@@ -61,19 +61,20 @@ This generates HTML documentation in the `docs/` directory at the repo root. It 
 The `Reader` class is used to read and validate C2PA manifests from media files. It can parse embedded manifests or fetch remote manifests. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
 
 ```javascript
-import { Reader } from '@contentauth/c2pa-node';
+import { Reader, Context } from '@contentauth/c2pa-node';
 
 // Read from an asset file
 const reader = await Reader.fromAsset(inputAsset);
 
-// Read with custom settings
-const settings = {
+// Read with a Context — the recommended way to configure settings
+// (see "Using a Context" under "Settings and configuration" below)
+const context = new Context({
   verify: {
-    verify_after_reading: false,
-    verify_trust: true
+    verifyAfterReading: false,
+    verifyTrust: true
   }
-};
-const reader = await Reader.fromAsset(inputAsset, settings);
+});
+const reader = await Reader.fromAsset(inputAsset, context);
 
 // Read from manifest data and asset
 const reader = await Reader.fromManifestDataAndAsset(manifestData, asset);
@@ -91,6 +92,9 @@ const isEmbedded = reader.isEmbedded();
 const remoteUrl = reader.remoteUrl();
 ```
 
+> [!NOTE]
+> `Reader.fromAsset`/`Reader.fromManifestDataAndAsset` also accept a raw settings object in place of a `Context` (e.g. `Reader.fromAsset(inputAsset, { verify: { verify_trust: true } })`), but this is deprecated — see [Per-instance settings (deprecated)](#per-instance-settings-deprecated).
+
 `Reader.fromAsset` and `Reader.fromManifestDataAndAsset` reject assets larger than 10 GB, throwing `AssetTooLargeError` (exported from `@contentauth/c2pa-node`). Note that for a `SourceBufferAsset`, this only rejects after the buffer is already fully allocated in memory. Pass a `FileAsset` instead for large or untrusted assets so oversized files are rejected before being read into memory.
 
 ### Builder
@@ -98,24 +102,25 @@ const remoteUrl = reader.remoteUrl();
 The `Builder` class is the main component for creating and signing C2PA manifests. It provides methods to add assertions, resources, and ingredients to manifests, and handles the signing process. Use the `Signer` class to sign the manifests. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
 
 ```javascript
-import { Builder } from '@contentauth/c2pa-node';
+import { Builder, Context } from '@contentauth/c2pa-node';
 
 // Create a new builder
-const builder = Builder.new();
+const builder = await Builder.newAsync();
 
-// Create with custom settings
-const settings = {
+// Create with a Context — the recommended way to configure settings
+// (see "Using a Context" under "Settings and configuration" below)
+const context = new Context({
   builder: {
-    generate_c2pa_archive: true
+    generateC2paArchive: true
   }
-};
-const builder = Builder.new(settings);
+});
+const builder = await Builder.newAsync(context);
 
 // Or create from an existing manifest definition
-const builder = Builder.withJson(manifestDefinition);
+const builder = await Builder.withJsonAsync(manifestDefinition);
 
-// Or create with both manifest and settings
-const builder = Builder.withJson(manifestDefinition, settings);
+// Or create with both a manifest definition and a Context
+const builder = await Builder.withJsonAsync(manifestDefinition, context);
 
 // Add assertions to the manifest
 builder.addAssertion('c2pa.actions', actionsAssertion);
@@ -127,6 +132,9 @@ await builder.addResource('resource://example', resourceAsset);
 const manifest = builder.sign(signer, inputAsset, outputAsset);
 ```
 
+> [!NOTE]
+> `Builder.new`/`Builder.withJson` (synchronous, taking a raw settings object in place of a `Context`) still work but are deprecated — see [Per-instance settings (deprecated)](#per-instance-settings-deprecated).
+
 #### Setting builder intent
 
 The builder intent describes the type of operation being performed on the asset. This influences how the manifest is structured and what assertions are automatically added. Use one of these intents:
@@ -136,7 +144,7 @@ The builder intent describes the type of operation being performed on the asset.
 - `update`: A restricted version of `edit` for non-editorial changes. There must be only one ingredient, as a parent. No changes can be made to the hashed content of the parent. There are additional restrictions on the types of changes that can be made.
 
 ```javascript
-const builder = Builder.new();
+const builder = await Builder.newAsync();
 
 builder.setIntent({
   create: 'http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia',
@@ -168,7 +176,7 @@ import * as fs from "node:fs/promises";
 const ingredientBuffer = await fs.readFile('path/to/source-image.jpg');
 
 // Create a builder
-const builder = Builder.new();
+const builder = await Builder.newAsync();
 
 // Add the ingredient with its asset
 await builder.addIngredient(
@@ -193,7 +201,7 @@ console.log(definition.ingredients); // Contains the ingredient with embedded da
 You can add multiple ingredients to document complex provenance chains:
 
 ```javascript
-const builder = Builder.new();
+const builder = await Builder.newAsync();
 
 // Load ingredient assets
 const background = await fs.promises.readFile('background.jpg');
@@ -242,7 +250,7 @@ const sourceReader = await Reader.fromAsset({
 });
 
 // Create a builder
-const builder = Builder.new();
+const builder = await Builder.newAsync();
 
 // Add ingredient from reader
 const ingredient = builder.addIngredientFromReader(sourceReader);
@@ -262,14 +270,14 @@ There are two types of archives sharing the same binary format:
 ##### Reading an archive and adding its ingredients
 
 ```javascript
-import { Reader, Builder } from '@contentauth/c2pa-node';
+import { Reader, Builder, Context } from '@contentauth/c2pa-node';
 import * as fs from 'node:fs/promises';
 
 // Read the archive using the application/c2pa MIME type
 const archiveBuffer = await fs.readFile('ingredients.c2pa');
 const reader = await Reader.fromAsset(
   { buffer: archiveBuffer, mimeType: 'application/c2pa' },
-  { verify: { verify_after_reading: false } }
+  new Context({ verify: { verifyAfterReading: false } })
 );
 
 // Get the ingredients from the active manifest
@@ -277,7 +285,7 @@ const activeManifest = reader.getActive();
 const ingredients = activeManifest.ingredients;
 
 // Create a new builder with the ingredients from the archive
-const builder = Builder.withJson({
+const builder = await Builder.withJsonAsync({
   claim_generator_info: [{ name: 'my-app', version: '1.0.0' }],
   ingredients: ingredients,
 });
@@ -312,7 +320,7 @@ When an archive contains multiple ingredients, you can filter to include only th
 ```javascript
 const reader = await Reader.fromAsset(
   { buffer: archiveBuffer, mimeType: 'application/c2pa' },
-  { verify: { verify_after_reading: false } }
+  new Context({ verify: { verifyAfterReading: false } })
 );
 
 const activeManifest = reader.getActive();
@@ -324,7 +332,7 @@ const selected = allIngredients.filter(
 );
 
 // Build with only the selected ingredients
-const builder = Builder.withJson({
+const builder = await Builder.withJsonAsync({
   claim_generator_info: [{ name: 'my-app', version: '1.0.0' }],
   ingredients: selected,
 });
@@ -353,7 +361,7 @@ for (const ingredient of selected) {
 To create an ingredient archive, add ingredients to a `Builder` and save it as an archive:
 
 ```javascript
-const builder = Builder.new();
+const builder = await Builder.newAsync();
 
 // Add ingredients with stable instance_id for later catalog lookups
 await builder.addIngredient(
@@ -375,7 +383,7 @@ Builder archives allow you to save a builder's state (including ingredients) and
 
 ```javascript
 // Create a builder with ingredients
-const builder = Builder.new();
+const builder = await Builder.newAsync();
 
 const ingredientBuffer = await fs.promises.readFile('source.jpg');
 await builder.addIngredient(
@@ -521,11 +529,43 @@ const decodedData = await trustmark.decode(imageBuffer);
 
 ### Settings and configuration
 
-The library provides comprehensive settings management that can be configured per Reader/Builder instance or using helper functions. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
+The library provides comprehensive settings management that can be configured per Reader/Builder instance, via a `Context`, or using helper functions. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
 
-#### Per-instance settings
+#### Using a Context
 
-Settings can be passed directly to `Reader` and `Builder` constructors:
+A `Context` (from [`c2pa-utilities`](../c2pa-utilities/README.md#context-and-settings), re-exported directly from `@contentauth/c2pa-node` so you don't need to add that package yourself) wraps `Settings` and is the recommended way to configure a `Reader` or `Builder`:
+
+```javascript
+import { Reader, Builder, Context } from '@contentauth/c2pa-node';
+
+const context = new Context({
+  verify: {
+    verifyAfterReading: false,
+    verifyAfterSign: false,
+    verifyTrust: true,
+    ocspFetch: true
+  },
+  trust: {
+    verifyTrustList: true,
+    trustAnchors: "path/to/anchors.pem"
+  }
+});
+
+// Pass a Context to Reader
+const reader = await Reader.fromAsset(inputAsset, context);
+
+// Builder has async, Context-aware counterparts to its synchronous factories below
+const builder = await Builder.newAsync(context);
+const builder2 = await Builder.withJsonAsync(manifestDefinition, context);
+const builder3 = await Builder.fromArchive(archiveAsset, context);
+```
+
+> [!NOTE]
+> Unlike `c2pa-web`, `c2pa-node` doesn't fetch trust-anchor URLs embedded in a `Context`'s settings yet — a trust anchor value must be inline PEM content or a local file path, not a URL, until that support lands here too.
+
+#### Per-instance settings (deprecated)
+
+Passing settings directly as a JSON string, or as a raw object matching the native settings shape (snake_case keys, no defaults applied), is deprecated and will be removed in a future major version — use a `Context` instead (above). `Builder.new`/`Builder.withJson` stay synchronous for this deprecated path; prefer their `newAsync`/`withJsonAsync` counterparts with a `Context` instead.
 
 ```javascript
 import { Reader, Builder } from '@contentauth/c2pa-node';
@@ -599,14 +639,18 @@ const verifySettings = createVerifySettings({
 // Merge multiple settings
 const combinedSettings = mergeSettings(trustSettings, verifySettings);
 
-// Convert settings to JSON string
+// combinedSettings is a plain Settings object — use it with a Context (recommended)...
+const readerWithContext = await Reader.fromAsset(inputAsset, new Context(combinedSettings));
+
+// ...or convert it to a JSON string for the deprecated per-instance settings path
 const jsonString = settingsToJson(combinedSettings);
+const readerWithJson = await Reader.fromAsset(inputAsset, jsonString);
 
-// Load settings from file (JSON or TOML)
-const fileSettings = await loadSettingsFromFile('./c2pa-settings.toml');
-const reader = await Reader.fromAsset(inputAsset, fileSettings);
+// loadSettingsFromFile/loadSettingsFromUrl return a raw JSON string, not a Settings
+// object, so they pair with the deprecated per-instance settings path, not Context, for now.
+const fileSettings = await loadSettingsFromFile('./c2pa-settings.json');
+const reader2 = await Reader.fromAsset(inputAsset, fileSettings);
 
-// Load settings from URL
 const urlSettings = await loadSettingsFromUrl('https://example.com/c2pa-settings.json');
 const builder = Builder.new(urlSettings);
 ```

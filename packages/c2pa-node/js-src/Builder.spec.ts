@@ -14,6 +14,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import type { Manifest, ResourceRef } from "@contentauth/c2pa-types";
+import { Context } from "@contentauth/c2pa-utilities";
 import fs from "fs-extra";
 import path from "path";
 import * as crypto from "crypto";
@@ -978,6 +979,83 @@ describe("Builder", () => {
       expect(activeManifest?.ingredients).toBeDefined();
       expect(activeManifest?.ingredients?.length).toBe(1);
     }, 30000);
+  });
+
+  describe("Context", () => {
+    it("newAsync() with no context behaves like new()", async () => {
+      const builder = await Builder.newAsync();
+      const definition = builder.getManifestDefinition();
+      expect(definition).toEqual(Builder.new().getManifestDefinition());
+    });
+
+    it("newAsync(context) applies the Context's settings", async () => {
+      const dest = { path: path.join(tempDir, "context_new_signed.jpg") };
+      const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
+
+      // Trust verification disabled via Context.
+      const context = new Context({ verify: { verifyTrust: false } });
+      const builder = await Builder.newAsync(context);
+      builder.updateManifestProperty("claim_version", 2);
+      await builder.addIngredient(parent_json, source);
+      builder.sign(signer, source, dest);
+
+      const reader = await Reader.fromAsset(dest, context);
+      const manifestStore = reader!.json();
+      expect(manifestStore.validation_status ?? []).not.toContainEqual(
+        expect.objectContaining({ code: "signingCredential.untrusted" }),
+      );
+    });
+
+    it("withJsonAsync(json, context) applies the Context's settings", async () => {
+      const dest = { path: path.join(tempDir, "context_withjson_signed.jpg") };
+      const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
+
+      // Trust verification disabled via Context.
+      const context = new Context({ verify: { verifyTrust: false } });
+      const builder = await Builder.withJsonAsync(manifestDefinition, context);
+      await builder.addIngredient(parent_json, source);
+      await builder.addResource("thumbnail.jpg", {
+        mimeType: "jpeg",
+        buffer: testThumbnail,
+      });
+      await builder.addResource("ingredient-thumb.jpg", {
+        mimeType: "jpeg",
+        buffer: testThumbnail,
+      });
+      builder.sign(signer, source, dest);
+
+      const reader = await Reader.fromAsset(dest, context);
+      const manifestStore = reader!.json();
+      expect(manifestStore.validation_status ?? []).not.toContainEqual(
+        expect.objectContaining({ code: "signingCredential.untrusted" }),
+      );
+    });
+
+    it("fromArchive(asset, context) accepts a Context in place of the deprecated raw settings", async () => {
+      const builder = Builder.withJson(manifestDefinition);
+      await builder.addIngredient(parent_json, source);
+      await builder.addResource("thumbnail.jpg", {
+        mimeType: "jpeg",
+        buffer: testThumbnail,
+      });
+      await builder.addResource("ingredient-thumb.jpg", {
+        mimeType: "jpeg",
+        buffer: testThumbnail,
+      });
+
+      const archive: DestinationBufferAsset = { buffer: null };
+      await builder.toArchive(archive);
+
+      const context = new Context({ verify: { verifyTrust: false } });
+      const restoredBuilder = await Builder.fromArchive(
+        { buffer: archive.buffer! as Buffer, mimeType: "application/c2pa" },
+        context,
+      );
+
+      expect(restoredBuilder.getManifestDefinition().title).toBe(
+        manifestDefinition.title,
+      );
+    });
   });
 
   describe("Filter actions and ingredients", () => {

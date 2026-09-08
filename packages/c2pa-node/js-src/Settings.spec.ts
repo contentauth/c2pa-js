@@ -8,7 +8,14 @@ import fs from "fs-extra";
 import * as path from "path";
 import * as os from "os";
 
-import { loadSettingsFromFile } from "./Settings.js";
+import {
+  Context,
+  DEFAULT_SETTINGS,
+  mergeSettings,
+  settingsToJson,
+} from "@contentauth/c2pa-utilities";
+
+import { loadSettingsFromFile, resolveSettingsForNeon } from "./Settings.js";
 
 describe("Settings", () => {
   describe("loadSettingsFromFile", () => {
@@ -55,6 +62,48 @@ verify_after_sign = false`;
     it("throws error for non-existent file", async () => {
       const filePath = path.join(tempDir, "nonexistent.json");
       await expect(loadSettingsFromFile(filePath)).rejects.toThrow();
+    });
+  });
+
+  describe("resolveSettingsForNeon", () => {
+    it("returns undefined when omitted", () => {
+      expect(resolveSettingsForNeon(undefined)).toBeUndefined();
+    });
+
+    it("returns undefined when null is passed in", () => {
+      // A plain-JS caller can pass `null` explicitly.
+      // It must not fall through to JSON.stringify(null), which would send the
+      // native library the literal string "null" instead of "no settings".
+      expect(resolveSettingsForNeon(null)).toBeUndefined();
+    });
+
+    it("applies defaults for an empty Context", () => {
+      const result = resolveSettingsForNeon(new Context());
+      expect(JSON.parse(result!)).toEqual(
+        JSON.parse(settingsToJson(DEFAULT_SETTINGS)),
+      );
+    });
+
+    it("merges a Context's settings with defaults", () => {
+      const settings = { verify: { verifyTrust: false } };
+      const result = resolveSettingsForNeon(new Context(settings));
+      expect(JSON.parse(result!)).toEqual(
+        JSON.parse(settingsToJson(mergeSettings(DEFAULT_SETTINGS, settings))),
+      );
+    });
+
+    it("passes a raw settings object through as-is, without applying defaults", () => {
+      // The deprecated raw-settings path preserves this package's pre-Context behavior exactly:
+      // no defaults are merged in, unlike the Context path above.
+      const result = resolveSettingsForNeon({
+        verify: { verify_trust: false },
+      });
+      expect(JSON.parse(result!)).toEqual({ verify: { verify_trust: false } });
+    });
+
+    it("passes a raw settings JSON string through unchanged", () => {
+      const json = JSON.stringify({ verify: { verify_trust: false } });
+      expect(resolveSettingsForNeon(json)).toBe(json);
     });
   });
 });
