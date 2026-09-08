@@ -10,8 +10,11 @@
 import { test, describe, expect } from 'test/methods.js';
 import { ManifestDefinition, Ingredient, Action } from '@contentauth/c2pa-types';
 import { getBlobForAsset, createTestSigner } from 'test/utils.js';
-import { Settings } from '@contentauth/c2pa-utilities';
+import { Context } from '@contentauth/c2pa-utilities';
+import { Builder } from './builder.js';
+import { Reader } from './reader.js';
 import { createC2pa } from './c2pa.js';
+
 import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 
 import C_JPG from 'test/assets/C.jpg';
@@ -25,7 +28,7 @@ describe('builder', () => {
       test('should create a builder with a default manifest', async ({
         c2pa
       }) => {
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
         const definition = await builder.getDefinition();
         expect(definition).toEqual({
           assertions: [],
@@ -35,22 +38,25 @@ describe('builder', () => {
         });
       });
 
-      test('should use local "context" settings when provided', async () => {
-        const settings: Settings = {
-          verify: {
-            verifyTrust: false
-          }
-        };
+      test('does not expose its internal worker/id via enumeration or serialization', async ({
+        c2pa
+      }) => {
+        const builder = await Builder.new(c2pa);
 
-        const overrideSettings: Settings = {
+        // Native #private fields are not own enumerable properties, so none of these should
+        // reveal the underlying WorkerManager/builder id.
+        expect(Object.keys(builder)).toEqual([]);
+        expect(JSON.stringify(builder)).toEqual('{}');
+      });
+
+      test('should apply the given Context', async ({ c2pa }) => {
+        const context = new Context({
           verify: {
             verifyTrust: true
           }
-        };
+        });
 
-        const c2pa = await createC2pa({ wasmSrc, settings });
-
-        const builder = await c2pa.builder.new(overrideSettings);
+        const builder = await Builder.new(c2pa, context);
 
         const blob = await getBlobForAsset(C_JPG);
 
@@ -66,97 +72,46 @@ describe('builder', () => {
         expect(ingredientFailureCodes).toContain('signingCredential.untrusted');
       });
 
-      test('should inherit global settings when per-call settings are provided', async () => {
-        // Global settings enable trust verification.
-        const globalSettings: Settings = {
-          verify: {
-            verifyTrust: true
-          }
-        };
+      test('supports different Contexts for Builders created from the same c2pa instance', async ({
+        c2pa
+      }) => {
+        const trusting = new Context({ verify: { verifyTrust: false } });
+        const distrusting = new Context({ verify: { verifyTrust: true } });
 
-        // Per-call settings touch an unrelated key only.
-        const perCallSettings: Settings = {
-          builder: {
-            generateC2paArchive: true
-          }
-        };
+        const blobA = await getBlobForAsset(C_JPG);
+        const blobB = await getBlobForAsset(C_JPG);
 
-        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
+        const builderA = await Builder.new(c2pa, trusting);
+        await builderA.addIngredientFromBlob({}, blobA.type, blobA);
+        const definitionA = await builderA.getDefinition();
 
-        const builder = await c2pa.builder.new(perCallSettings);
+        const builderB = await Builder.new(c2pa, distrusting);
+        await builderB.addIngredientFromBlob({}, blobB.type, blobB);
+        const definitionB = await builderB.getDefinition();
 
-        const blob = await getBlobForAsset(C_JPG);
-
-        await builder.addIngredientFromBlob({}, blob.type, blob);
-
-        const definition = await builder.getDefinition();
-
-        // Trust verification from globalSettings should still be in effect, so the
-        // results should report untrusted.
-        const ingredientFailureCodes =
-          definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
+        const failureCodesA =
+          definitionA.ingredients?.[0].validation_results?.activeManifest?.failure.map(
             (entry) => entry.code
-          );
-
-        expect(ingredientFailureCodes).toContain('signingCredential.untrusted');
-
-        c2pa.dispose();
-      });
-
-      test('should allow per-call settings to override conflicting global settings', async () => {
-        // Global settings enable trust verification.
-        const globalSettings: Settings = {
-          verify: {
-            verifyTrust: true
-          }
-        };
-
-        // Per-call settings disable trust verification and should override the global setting.
-        const perCallSettings: Settings = {
-          verify: {
-            verifyTrust: false
-          }
-        };
-
-        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
-
-        const builder = await c2pa.builder.new(perCallSettings);
-
-        const blob = await getBlobForAsset(C_JPG);
-
-        await builder.addIngredientFromBlob({}, blob.type, blob);
-
-        const definition = await builder.getDefinition();
-
-        const ingredientFailureCodes =
-          definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
+          ) ?? [];
+        const failureCodesB =
+          definitionB.ingredients?.[0].validation_results?.activeManifest?.failure.map(
             (entry) => entry.code
           ) ?? [];
 
-        // Per-call settings should overwrite, so no trust failure should be reported.
-        expect(ingredientFailureCodes).not.toContain('signingCredential.untrusted');
-
-        c2pa.dispose();
+        expect(failureCodesA).not.toContain('signingCredential.untrusted');
+        expect(failureCodesB).toContain('signingCredential.untrusted');
       });
     });
 
     describe('fromDefinition', () => {
-      test('should inherit global settings when per-call settings are provided', async () => {
-        const globalSettings: Settings = {
+      test('should apply the given Context', async ({ c2pa }) => {
+        const context = new Context({
           verify: {
             verifyTrust: true
           }
-        };
+        });
 
-        const perCallSettings: Settings = {
-          builder: {
-            generateC2paArchive: true
-          }
-        };
-
-        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
-
-        const builder = await c2pa.builder.fromDefinition({}, perCallSettings);
+        const builder = await Builder.fromDefinition(c2pa, {}, context);
 
         const blob = await getBlobForAsset(C_JPG);
 
@@ -169,44 +124,7 @@ describe('builder', () => {
             (entry) => entry.code
           );
 
-        // Global settings are configured to verify trust, so the result should be untrusted.
         expect(ingredientFailureCodes).toContain('signingCredential.untrusted');
-
-        c2pa.dispose();
-      });
-
-      test('should allow per-call settings to override conflicting global settings', async () => {
-        const globalSettings: Settings = {
-          verify: {
-            verifyTrust: true
-          }
-        };
-
-        const perCallSettings: Settings = {
-          verify: {
-            verifyTrust: false
-          }
-        };
-
-        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
-
-        const builder = await c2pa.builder.fromDefinition({}, perCallSettings);
-
-        const blob = await getBlobForAsset(C_JPG);
-
-        await builder.addIngredientFromBlob({}, blob.type, blob);
-
-        const definition = await builder.getDefinition();
-
-        const ingredientFailureCodes =
-          definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
-            (entry) => entry.code
-          ) ?? [];
-
-        // Per-call settings should overwrite and not do trust verification, so the result should be trusted
-        expect(ingredientFailureCodes).not.toContain('signingCredential.untrusted');
-
-        c2pa.dispose();
       });
     });
 
@@ -228,7 +146,7 @@ describe('builder', () => {
           ingredients: []
         };
 
-        const builder = await c2pa.builder.fromDefinition(manifestDefinition);
+        const builder = await Builder.fromDefinition(c2pa, manifestDefinition);
 
         const manifestDefinitionFromBuilder = await builder.getDefinition();
 
@@ -237,25 +155,17 @@ describe('builder', () => {
     });
 
     describe('fromArchive', () => {
-      test('should inherit global settings when per-call settings are provided', async () => {
-        const globalSettings: Settings = {
+      test('should apply the given Context', async ({ c2pa }) => {
+        const context = new Context({
           verify: {
             verifyTrust: true
           }
-        };
-
-        const perCallSettings: Settings = {
-          builder: {
-            generateC2paArchive: true
-          }
-        };
-
-        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
+        });
 
         // Build and serialise an archive to restore from.
-        const archive = await (await c2pa.builder.new()).toArchive();
+        const archive = await (await Builder.new(c2pa)).toArchive();
 
-        const builder = await c2pa.builder.fromArchive(new Blob([archive]), perCallSettings);
+        const builder = await Builder.fromArchive(c2pa, new Blob([archive]), context);
 
         const blob = await getBlobForAsset(C_JPG);
 
@@ -269,43 +179,6 @@ describe('builder', () => {
           );
 
         expect(ingredientFailureCodes).toContain('signingCredential.untrusted');
-
-        c2pa.dispose();
-      });
-
-      test('should allow per-call settings to override conflicting global settings', async () => {
-        const globalSettings: Settings = {
-          verify: {
-            verifyTrust: true
-          }
-        };
-
-        const perCallSettings: Settings = {
-          verify: {
-            verifyTrust: false
-          }
-        };
-
-        const c2pa = await createC2pa({ wasmSrc, settings: globalSettings });
-
-        const archive = await (await c2pa.builder.new()).toArchive();
-
-        const builder = await c2pa.builder.fromArchive(new Blob([archive]), perCallSettings);
-
-        const blob = await getBlobForAsset(C_JPG);
-
-        await builder.addIngredientFromBlob({}, blob.type, blob);
-
-        const definition = await builder.getDefinition();
-
-        const ingredientFailureCodes =
-          definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
-            (entry) => entry.code
-          ) ?? [];
-
-        expect(ingredientFailureCodes).not.toContain('signingCredential.untrusted');
-
-        c2pa.dispose();
       });
 
       test('should re-create a builder from an archive', async ({ c2pa }) => {
@@ -322,11 +195,11 @@ describe('builder', () => {
           instance_id: ''
         };
 
-        const builder = await c2pa.builder.fromDefinition(manifestDefinition);
+        const builder = await Builder.fromDefinition(c2pa, manifestDefinition);
 
         const archive = await builder.toArchive();
 
-        const builderFromArchive = await c2pa.builder.fromArchive(
+        const builderFromArchive = await Builder.fromArchive(c2pa, 
           new Blob([archive])
         );
 
@@ -356,7 +229,7 @@ describe('builder', () => {
           instance_id: ''
         };
 
-        const builder = await c2pa.builder.fromDefinition(manifestDefinition);
+        const builder = await Builder.fromDefinition(c2pa, manifestDefinition);
 
         const blob = await getBlobForAsset(C_JPG);
         const blobType = blob.type;
@@ -371,7 +244,7 @@ describe('builder', () => {
 
         const archive = await builder.toArchive();
 
-        const builderFromArchive = await c2pa.builder.fromArchive(
+        const builderFromArchive = await Builder.fromArchive(c2pa, 
           new Blob([archive])
         );
 
@@ -402,7 +275,7 @@ describe('builder', () => {
         };
 
         // Create builder with generateC2paArchive enabled
-        const builder = await c2pa.builder.fromDefinition(manifestDefinition);
+        const builder = await Builder.fromDefinition(c2pa, manifestDefinition);
 
         const blob = await getBlobForAsset(C_JPG);
         const blobType = blob.type;
@@ -421,15 +294,15 @@ describe('builder', () => {
         expect(archive.byteLength).toBeGreaterThan(0);
 
         // Configure reader to skip verification for unsigned archive
-        const readerContext: Settings = {
+        const readerContext = new Context({
           verify: {
             verifyAfterReading: false
           }
-        };
+        });
 
         // Read the C2PA archive with Reader using application/c2pa format
         const archiveBlob = new Blob([archive]);
-        const reader = await c2pa.reader.fromBlob(
+        const reader = await Reader.fromBlob(c2pa,
           'application/c2pa',
           archiveBlob,
           readerContext
@@ -460,7 +333,7 @@ describe('builder', () => {
   describe('methods', () => {
     describe('addAction', () => {
       test('should add the provided actions', async ({ c2pa }) => {
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
 
         await builder.addAction({
           action: 'c2pa.opened'
@@ -501,7 +374,7 @@ describe('builder', () => {
       }) => {
         const blob = await getBlobForAsset(C_with_CAWG_data);
 
-        const originalReader = await c2pa.reader.fromBlob('image/jpeg', blob);
+        const originalReader = await Reader.fromBlob(c2pa, 'image/jpeg', blob);
         const parentLabel = await originalReader!.activeLabel();
 
         const originalManifest = await originalReader!.activeManifest();
@@ -510,17 +383,17 @@ describe('builder', () => {
 
         const thumbnailUri = `self#jumbf=/c2pa/${parentLabel}/c2pa.assertions/c2pa.thumbnail.claim`;
 
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
         await builder.setIntent('edit');
         await builder.addRedaction(thumbnailUri, 'c2pa.PII.present');
 
         const signer = await createTestSigner();
         const signedBytes = await builder.sign(signer, 'image/jpeg', blob);
 
-        const readerSettings: Settings = {
+        const readerSettings = new Context({
           verify: { verifyAfterReading: false }
-        };
-        const signedReader = await c2pa.reader.fromBlob(
+        });
+        const signedReader = await Reader.fromBlob(c2pa,
           'image/jpeg',
           new Blob([signedBytes], { type: 'image/jpeg' }),
           readerSettings
@@ -537,7 +410,7 @@ describe('builder', () => {
         const blob = await getBlobForAsset(C_with_CAWG_data);
 
         // Read the original image to get its active manifest label
-        const originalReader = await c2pa.reader.fromBlob('image/jpeg', blob);
+        const originalReader = await Reader.fromBlob(c2pa, 'image/jpeg', blob);
         const parentLabel = await originalReader!.activeLabel();
         expect(parentLabel).toBeDefined();
 
@@ -551,17 +424,17 @@ describe('builder', () => {
         // Construct JUMBF URI for the assertion to redact
         const redactionUri = `self#jumbf=/c2pa/${parentLabel}/c2pa.assertions/cawg.training-mining`;
 
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
         await builder.setIntent('edit');
         await builder.addRedaction(redactionUri, 'c2pa.PII.present');
 
         const signer = await createTestSigner();
         const signedBytes = await builder.sign(signer, 'image/jpeg', blob);
 
-        const readerSettings: Settings = {
+        const readerSettings = new Context({
           verify: { verifyAfterReading: false }
-        };
-        const signedReader = await c2pa.reader.fromBlob(
+        });
+        const signedReader = await Reader.fromBlob(c2pa,
           'image/jpeg',
           new Blob([signedBytes], { type: 'image/jpeg' }),
           readerSettings
@@ -584,7 +457,7 @@ describe('builder', () => {
 
     describe('addIngredient', () => {
       test('should add the provided ingredient', async ({ c2pa }) => {
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
 
         const ingredient: Ingredient = {
           title: 'source-image.jpg',
@@ -607,7 +480,7 @@ describe('builder', () => {
       });
 
       test('should add multiple ingredients', async ({ c2pa }) => {
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
 
         const ingredient1: Ingredient = {
           title: 'source-image-1.jpg',
@@ -644,7 +517,7 @@ describe('builder', () => {
       }) => {
         const blob = await getBlobForAsset(PirateShip_cloud);
 
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
 
         const ingredient: Ingredient = {
           relationship: 'parentOf',
@@ -665,7 +538,7 @@ describe('builder', () => {
       });
 
       test('should add ingredient with custom metadata', async ({ c2pa }) => {
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
 
         const ingredient: Ingredient = {
           title: 'source-image.jpg',
@@ -697,7 +570,7 @@ describe('builder', () => {
       test('invokes the predicate for each action and honors its return', async ({
         c2pa
       }) => {
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
         await builder.addAction({ action: 'c2pa.created' });
         await builder.addAction({ action: 'c2pa.edited' });
         await builder.addAction({ action: 'c2pa.color_adjustments' });
@@ -737,7 +610,7 @@ describe('builder', () => {
       }) => {
         // Two c2pa.actions assertions, a created-list plus a second list. This state can't be built
         // with addAction, which appends to one, so seed it via fromDefinition.
-        const builder = await c2pa.builder.fromDefinition({
+        const builder = await Builder.fromDefinition(c2pa, {
           claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
           format: 'image/jpeg',
           instance_id: 'multi-actions-1',
@@ -802,7 +675,7 @@ describe('builder', () => {
       });
 
       test('surfaces an error thrown by the predicate', async ({ c2pa }) => {
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
         await builder.addAction({ action: 'c2pa.created' });
         await builder.addAction({ action: 'c2pa.edited' });
 
@@ -818,7 +691,7 @@ describe('builder', () => {
       test('patches a parameter on an existing action, preserving every actions assertion', async ({
         c2pa
       }) => {
-        const builder = await c2pa.builder.fromDefinition({
+        const builder = await Builder.fromDefinition(c2pa, {
           claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
           format: 'image/jpeg',
           instance_id: 'update-actions-1',
@@ -887,7 +760,7 @@ describe('builder', () => {
       test('adds a new parameter alongside the existing ones', async ({
         c2pa
       }) => {
-        const builder = await c2pa.builder.fromDefinition({
+        const builder = await Builder.fromDefinition(c2pa, {
           claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
           format: 'image/jpeg',
           instance_id: 'update-actions-added',
@@ -965,7 +838,7 @@ describe('builder', () => {
       test('is no-op when there is no actions assertion', async ({
         c2pa
       }) => {
-        const builder = await c2pa.builder.fromDefinition({
+        const builder = await Builder.fromDefinition(c2pa, {
           claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
           format: 'image/jpeg',
           instance_id: 'update-actions-none',
@@ -993,7 +866,7 @@ describe('builder', () => {
       }) => {
         // (this means there could be no actions, so in non-test code, something after such a call
         // should make sure the manifest is still valid and inception actions are here as needed!)
-        const builder = await c2pa.builder.fromDefinition({
+        const builder = await Builder.fromDefinition(c2pa, {
           claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
           format: 'image/jpeg',
           instance_id: 'update-actions-empty',
@@ -1039,7 +912,7 @@ describe('builder', () => {
       test('preserves per-assertion metadata across a round trip', async ({
         c2pa
       }) => {
-        const builder = await c2pa.builder.fromDefinition({
+        const builder = await Builder.fromDefinition(c2pa, {
           claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
           format: 'image/jpeg',
           instance_id: 'update-actions-metadata',
@@ -1087,7 +960,7 @@ describe('builder', () => {
       test('preserves action order when transform patches in place', async ({
         c2pa
       }) => {
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
         await builder.addAction({ action: 'c2pa.created' });
         await builder.addAction({ action: 'c2pa.color_adjustments' });
         await builder.addAction({ action: 'c2pa.edited' });
@@ -1118,7 +991,7 @@ describe('builder', () => {
       });
 
       test('surfaces an error thrown by transform', async ({ c2pa }) => {
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
         await builder.addAction({ action: 'c2pa.created' });
 
         await expect(
@@ -1131,7 +1004,7 @@ describe('builder', () => {
       test('preserves allActionsIncluded/softwareAgents/templates/metadata not seen by transform', async ({
         c2pa
       }) => {
-        const builder = await c2pa.builder.fromDefinition({
+        const builder = await Builder.fromDefinition(c2pa, {
           claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
           format: 'image/jpeg',
           instance_id: 'update-actions-2',
@@ -1183,7 +1056,7 @@ describe('builder', () => {
       test('invokes the predicate and prunes ingredients it does not rescue', async ({
         c2pa
       }) => {
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
         await builder.addAction({ action: 'c2pa.created' });
         await builder.addIngredient({
           title: 'orphan',
@@ -1207,7 +1080,7 @@ describe('builder', () => {
       });
 
       test('surfaces an error thrown by the predicate', async ({ c2pa }) => {
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
         await builder.addAction({ action: 'c2pa.created' });
         await builder.addIngredient({
           title: 'orphan',
@@ -1231,17 +1104,17 @@ describe('builder', () => {
 
         const jxlMimetype = 'image/jxl';
 
-        const builder = await c2pa.builder.new();
+        const builder = await Builder.new(c2pa);
         const signer = await createTestSigner();
         const signedBytes = await builder.sign(signer, jxlMimetype, blob);
 
         expect(signedBytes).toBeDefined();
         expect(signedBytes.byteLength).toBeGreaterThan(0);
 
-        const readerSettings: Settings = {
+        const readerSettings = new Context({
           verify: { verifyAfterReading: false }
-        };
-        const reader = await c2pa.reader.fromBlob(
+        });
+        const reader = await Reader.fromBlob(c2pa,
           jxlMimetype,
           new Blob([signedBytes], { type: jxlMimetype }),
           readerSettings
@@ -1254,6 +1127,75 @@ describe('builder', () => {
         expect(manifestStore.manifests).toBeDefined();
         expect(manifestStore.active_manifest).toBeDefined();
       });
+    });
+  });
+
+  describe('BuilderFactory (deprecated)', () => {
+    test('creates a Builder via c2pa.builder.new', async ({ c2pa }) => {
+      const builder = await c2pa.builder.new();
+      const definition = await builder.getDefinition();
+      expect(definition).toEqual({
+        assertions: [],
+        format: '',
+        ingredients: [],
+        instance_id: ''
+      });
+    });
+
+    test('creates a Builder via c2pa.builder.fromDefinition', async ({
+      c2pa
+    }) => {
+      const manifestDefinition: ManifestDefinition = {
+        format: 'image/jpeg',
+        instance_id: '1234',
+        assertions: [],
+        ingredients: []
+      };
+
+      const builder = await c2pa.builder.fromDefinition(manifestDefinition);
+      const definition = await builder.getDefinition();
+
+      expect(definition).toEqual(manifestDefinition);
+    });
+
+    test('creates a Builder via c2pa.builder.fromArchive', async ({
+      c2pa
+    }) => {
+      const archive = await (await c2pa.builder.new()).toArchive();
+
+      const builder = await c2pa.builder.fromArchive(new Blob([archive]));
+      const definition = await builder.getDefinition();
+
+      expect(definition).toMatchObject({
+        assertions: [],
+        format: '',
+        ingredients: [],
+        instance_id: ''
+      });
+    });
+
+    test('merges per-call settings over the top-level settings passed to createC2pa, with per-call taking precedence', async () => {
+      const c2pa = await createC2pa({
+        wasmSrc,
+        settings: { verify: { verifyTrust: false } }
+      });
+
+      const builder = await c2pa.builder.new({
+        verify: { verifyTrust: true }
+      });
+
+      const blob = await getBlobForAsset(C_JPG);
+      await builder.addIngredientFromBlob({}, blob.type, blob);
+
+      const definition = await builder.getDefinition();
+      const ingredientFailureCodes =
+        definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
+          (entry) => entry.code
+        );
+
+      expect(ingredientFailureCodes).toContain('signingCredential.untrusted');
+
+      c2pa.dispose();
     });
   });
 });
