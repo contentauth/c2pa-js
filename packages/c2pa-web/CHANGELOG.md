@@ -1,5 +1,14 @@
 # @contentauth/c2pa-web
 
+## 0.14.5
+
+### Patch Changes
+
+- cd843e5: Remove supported format checks from c2pa-web, as this is done by the native library.
+- 843c2d0: c2pa-rs version bump to v0.90.20
+- Updated dependencies [843c2d0]
+  - @contentauth/c2pa-wasm@0.11.5
+
 ## 0.14.4
 
 ### Patch Changes
