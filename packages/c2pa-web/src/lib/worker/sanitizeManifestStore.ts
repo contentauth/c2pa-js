@@ -18,6 +18,12 @@
  * copies own properties, so it would disappear in transit. We detect this by
  * checking whether the prototype was changed, and restore the manifest as an
  * own property before the value leaves the worker.
+ *
+ * The recovered value's key is always the literal string "__proto__" -
+ * that's the only key whose bracket assignment triggers [[SetPrototypeOf]] -
+ * regardless of which manifest is active. It must be restored under that
+ * key rather than `store.active_manifest`, otherwise a poisoned manifest
+ * that isn't the active one would overwrite the genuine active manifest.
  */
 export function sanitizeManifestStore(store: any): any {
   if (!store?.manifests) {
@@ -28,8 +34,8 @@ export function sanitizeManifestStore(store: any): any {
   const sanitizedManifests = Object.assign(Object.create(null), rawManifests);
 
   const proto = Object.getPrototypeOf(rawManifests);
-  if (proto !== null && proto !== Object.prototype && store.active_manifest) {
-    sanitizedManifests[store.active_manifest] = proto;
+  if (proto !== null && proto !== Object.prototype) {
+    sanitizedManifests['__proto__'] = proto;
   }
 
   store.manifests = sanitizedManifests;
