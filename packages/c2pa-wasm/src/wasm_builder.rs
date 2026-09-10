@@ -9,7 +9,7 @@ use std::io::Cursor;
 
 use c2pa::{
     Builder, BuilderIntent, Context, Ingredient,
-    assertions::{Action, C2paReason},
+    assertions::{Action, Actions, C2paReason},
 };
 use js_sys::{JsString, Uint8Array};
 use serde::{Deserialize, Serialize};
@@ -53,14 +53,13 @@ impl WasmBuilder {
     /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = new)]
     pub fn new(context_json: Option<String>) -> Result<WasmBuilder, JsString> {
-        let builder = if let Some(json) = context_json {
-            let context = Context::new()
+        let context = match context_json {
+            Some(json) => Context::new()
                 .with_settings(json.as_str())
-                .map_err(WasmError::from)?;
-            Builder::from_context(context)
-        } else {
-            Builder::new()
+                .map_err(WasmError::from)?,
+            None => Context::new(),
         };
+        let builder = Builder::from_context(context);
 
         Ok(WasmBuilder::from_builder(builder))
     }
@@ -79,20 +78,15 @@ impl WasmBuilder {
     /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = fromJson)]
     pub fn from_json(json: &str, context_json: Option<String>) -> Result<WasmBuilder, JsString> {
-        let builder = if let Some(ctx_json) = context_json {
-            let context = Context::new()
+        let context = match context_json {
+            Some(ctx_json) => Context::new()
                 .with_settings(ctx_json.as_str())
-                .map_err(WasmError::from)?;
-            let mut builder = Builder::from_context(context);
-            // Parse the manifest definition and set it directly
-            let definition = Builder::from_json(json)
-                .map_err(WasmError::from)?
-                .definition;
-            builder.definition = definition;
-            builder
-        } else {
-            Builder::from_json(json).map_err(WasmError::from)?
+                .map_err(WasmError::from)?,
+            None => Context::new(),
         };
+        let builder = Builder::from_context(context)
+            .with_definition(json)
+            .map_err(WasmError::from)?;
 
         Ok(WasmBuilder::from_builder(builder))
     }
@@ -104,7 +98,7 @@ impl WasmBuilder {
         archive: &Blob,
         context_json: Option<String>,
     ) -> Result<WasmBuilder, JsString> {
-        let stream = BlobStream::new(archive);
+        let stream = BlobStream::new(archive).map_err(WasmError::other)?;
         let builder = if let Some(ctx_json) = context_json {
             let context = Context::new()
                 .with_settings(ctx_json.as_str())
@@ -113,7 +107,9 @@ impl WasmBuilder {
                 .with_archive(stream)
                 .map_err(WasmError::from)?
         } else {
-            Builder::from_archive(stream).map_err(WasmError::from)?
+            Builder::default()
+                .with_archive(stream)
+                .map_err(WasmError::from)?
         };
 
         Ok(WasmBuilder::from_builder(builder))
@@ -134,6 +130,19 @@ impl WasmBuilder {
         let action: Action = serde_wasm_bindgen::from_value(action).map_err(WasmError::from)?;
 
         self.builder.add_action(action).map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
+    /// Add an assertion to the manifest under `label` with the given `data`.
+    #[wasm_bindgen(js_name = addAssertion)]
+    pub fn add_assertion(&mut self, label: String, data: JsValue) -> Result<(), JsString> {
+        let data: serde_json::Value =
+            serde_wasm_bindgen::from_value(data).map_err(WasmError::from)?;
+
+        self.builder
+            .add_assertion(&label, &data)
+            .map_err(WasmError::from)?;
 
         Ok(())
     }
@@ -162,6 +171,182 @@ impl WasmBuilder {
         Ok(())
     }
 
+    /// Retains only the actions at the given 0-based indices into the actions currently returned
+    /// by [`Self::get_definition`]'s `c2pa.actions` assertion.
+    ///
+    /// The inception action, `c2pa.created` or `c2pa.opened`, is always kept regardless of
+    /// `indices`, and is moved to index 0 if needed, so the manifest stays valid per the C2PA
+    /// spec. Sets `allActionsIncluded = false` when anything is removed.
+    ///
+    /// Indices are resolved on the JS side, rather than accepting a predicate here, because the
+    /// builder lives in a worker and JS callbacks can't be invoked synchronously across that
+    /// boundary.
+    ///
+    /// This does not touch ingredients. Call [`Self::filter_ingredients_at`] with an empty list
+    /// to drop all orphans afterwards if you also want to drop ingredients now orphaned by the
+    /// removed actions.
+    #[wasm_bindgen(js_name = filterActionsAt)]
+    pub fn filter_actions_at(&mut self, indices: Vec<u32>) -> Result<(), JsString> {
+        let indices: std::collections::HashSet<u32> = indices.into_iter().collect();
+        // `usize` position counter: it can never exceed the number of actions in memory, so it
+        // cannot overflow the way a `u32` counter theoretically could.
+        let mut i: usize = 0;
+        self.builder
+            .filter_actions(|_action| {
+                let keep = u32::try_from(i).is_ok_and(|idx| indices.contains(&idx));
+                i += 1;
+                keep
+            })
+            .map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
+    /// Retains ingredients, rescuing an otherwise-orphaned ingredient when its 0-based index into
+    /// [`Self::get_definition`]'s `ingredients` array is present in `indices`. Referenced and
+    /// `parentOf` ingredients are always kept, per `Builder::filter_ingredients`; `indices` can
+    /// only rescue an orphan, never drop a referenced or lineage ingredient.
+    ///
+    /// See [`Self::filter_actions_at`] for why this takes indices rather than a predicate.
+    #[wasm_bindgen(js_name = filterIngredientsAt)]
+    pub fn filter_ingredients_at(&mut self, indices: Vec<u32>) -> Result<(), JsString> {
+        let indices: std::collections::HashSet<u32> = indices.into_iter().collect();
+        // See `filter_actions_at`: `usize` cannot overflow for an in-memory ingredient count.
+        let mut i: usize = 0;
+        self.builder
+            .filter_ingredients(|_ingredient| {
+                let rescue = u32::try_from(i).is_ok_and(|idx| indices.contains(&idx));
+                i += 1;
+                rescue
+            })
+            .map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
+    /// Retains actions and ingredients together in one step, per
+    /// `Builder::filter_actions_and_ingredients`. `action_indices`/`ingredient_indices` are
+    /// 0-based indices into [`Self::get_definition`]'s `c2pa.actions` assertion / `ingredients`
+    /// array, resolved on the JS side for the same reason as [`Self::filter_actions_at`].
+    ///
+    /// `rescue_ingredient` (driven by `ingredient_indices`) is evaluated for every ingredient
+    /// first; any action referencing an ingredient it would rescue is force-kept regardless of
+    /// `keep_action`.
+    #[wasm_bindgen(js_name = filterActionsAndIngredientsAt)]
+    pub fn filter_actions_and_ingredients_at(
+        &mut self,
+        action_indices: Vec<u32>,
+        ingredient_indices: Vec<u32>,
+    ) -> Result<(), JsString> {
+        let action_indices: std::collections::HashSet<u32> = action_indices.into_iter().collect();
+        let ingredient_indices: std::collections::HashSet<u32> =
+            ingredient_indices.into_iter().collect();
+        // See `filter_actions_at`: `usize` cannot overflow for an in-memory action/ingredient
+        // count.
+        let mut action_i: usize = 0;
+        let mut ingredient_i: usize = 0;
+        self.builder
+            .filter_actions_and_ingredients(
+                |_action| {
+                    let keep =
+                        u32::try_from(action_i).is_ok_and(|idx| action_indices.contains(&idx));
+                    action_i += 1;
+                    keep
+                },
+                |_ingredient| {
+                    let rescue = u32::try_from(ingredient_i)
+                        .is_ok_and(|idx| ingredient_indices.contains(&idx));
+                    ingredient_i += 1;
+                    rescue
+                },
+            )
+            .map_err(WasmError::from)?;
+
+        Ok(())
+    }
+
+    /// Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions with
+    /// `action_groups`, computed on the JS side (see [`Self::filter_actions_at`]).
+    /// `softwareAgents`/`allActionsIncluded`/`templates`/`metadata` are preserved as-is.
+    ///
+    /// A manifest can carry more than one actions assertion (the created-list and gathered-list
+    /// entries are distinct assertions), so `action_groups` is a list-of-lists: one entry per
+    /// actions assertion, in the same positional order this binding enumerates them.
+    ///
+    /// Each assertion is rewritten in place, which keeps its label, `created` flag, `kind`, and
+    /// position in the assertion list — mirroring `Builder::filter_actions` in c2pa-rs. A group
+    /// that is empty drops its assertion rather than writing an invalid empty actions array.
+    /// No-op if there is no actions assertion. Use `add_action` for those.
+    ///
+    /// All fallible work runs before any mutation, so a failure never leaves a partially-rewritten
+    /// builder. An existing but malformed actions assertion is surfaced as an error rather than
+    /// silently replaced.
+    ///
+    /// The groups are written back verbatim: they are not validated or reordered, and unlike
+    /// [`Self::filter_actions_at`] the inception action is not force-kept. A caller that drops
+    /// `c2pa.created`/`c2pa.opened` or moves it out of first position can produce an actions
+    /// array that fails validation at signing time.
+    #[wasm_bindgen(js_name = updateActionsAt)]
+    pub fn update_actions_at(&mut self, action_groups: JsValue) -> Result<(), JsString> {
+        let action_groups: Vec<Vec<Action>> =
+            serde_wasm_bindgen::from_value(action_groups).map_err(WasmError::from)?;
+
+        // Every actions assertion, in positional order.
+        let positions: Vec<usize> = self
+            .builder
+            .definition
+            .assertions
+            .iter()
+            .enumerate()
+            .filter(|(_, a)| a.label.starts_with(Actions::LABEL))
+            .map(|(i, _)| i)
+            .collect();
+
+        if action_groups.len() != positions.len() {
+            return Err(JsString::from(format!(
+                "updateActionsAt: expected {} action group(s) to match the actions assertions in \
+                 this manifest, got {}",
+                positions.len(),
+                action_groups.len()
+            )));
+        }
+
+        // Decode and re-encode everything before mutating...
+        let mut rewritten: Vec<(usize, Option<serde_json::Value>)> =
+            Vec::with_capacity(positions.len());
+        for (pos, group) in positions.into_iter().zip(action_groups) {
+            let value = serde_json::to_value(&self.builder.definition.assertions[pos].data)
+                .map_err(WasmError::other)?;
+            let mut actions: Actions = serde_json::from_value(value).map_err(WasmError::other)?;
+
+            if group.is_empty() {
+                rewritten.push((pos, None));
+                continue;
+            }
+            actions.actions = group;
+            let encoded = serde_json::to_value(&actions).map_err(WasmError::other)?;
+            rewritten.push((pos, Some(encoded)));
+        }
+
+        // Mutate in place.
+        let mut emptied: Vec<usize> = Vec::new();
+        for (pos, value) in rewritten {
+            match value {
+                Some(value) => {
+                    let data = serde_json::from_value(value).map_err(WasmError::other)?;
+                    self.builder.definition.assertions[pos].data = data;
+                }
+                None => emptied.push(pos),
+            }
+        }
+        // Remove emptied assertions from the back so earlier indices stay valid.
+        for pos in emptied.into_iter().rev() {
+            self.builder.definition.assertions.remove(pos);
+        }
+
+        Ok(())
+    }
+
     /// Sets the remote_url for a remote manifest.
     ///
     /// The URL must return the manifest data and is injected into the destination asset when signing.
@@ -180,7 +365,7 @@ impl WasmBuilder {
     /// Sets a thumbnail from a [`Blob`] to be included in the manifest. The thumbnail should represent the asset being signed.
     #[wasm_bindgen(js_name = setThumbnailFromBlob)]
     pub fn set_thumbnail_from_blob(&mut self, format: &str, blob: &Blob) -> Result<(), JsString> {
-        let mut stream = BlobStream::new(blob);
+        let mut stream = BlobStream::new(blob).map_err(WasmError::other)?;
         self.builder
             .set_thumbnail(format, &mut stream)
             .map_err(WasmError::from)?;
@@ -213,7 +398,7 @@ impl WasmBuilder {
         format: &str,
         blob: &Blob,
     ) -> Result<(), JsString> {
-        let mut stream = BlobStream::new(blob);
+        let mut stream = BlobStream::new(blob).map_err(WasmError::other)?;
         self.builder
             .add_ingredient_from_stream_async(json, format, &mut stream)
             .await
@@ -225,7 +410,7 @@ impl WasmBuilder {
     /// Add a [`Blob`] to the manifest as a resource. The ID must match an identifier in the manifest.
     #[wasm_bindgen(js_name = addResourceFromBlob)]
     pub fn add_resource_from_blob(&mut self, id: &str, blob: &Blob) -> Result<(), JsString> {
-        let mut stream = BlobStream::new(blob);
+        let mut stream = BlobStream::new(blob).map_err(WasmError::other)?;
         self.builder
             .add_resource(id, &mut stream)
             .map_err(WasmError::from)?;
@@ -305,7 +490,7 @@ impl WasmBuilder {
         dest: &mut Vec<u8>,
     ) -> Result<Vec<u8>, JsString> {
         let signer = WasmSigner::from_definition(signer_definition)?;
-        let mut stream = BlobStream::new(source);
+        let mut stream = BlobStream::new(source).map_err(WasmError::other)?;
 
         let mut cursor = Cursor::new(dest);
 

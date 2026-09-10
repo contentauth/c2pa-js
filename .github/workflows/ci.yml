@@ -11,6 +11,20 @@ permissions:
   contents: read
 
 jobs:
+  cargo_fmt:
+    name: Enforce Rust code format
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install nightly toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - name: Check format
+        run: cargo +nightly fmt --all -- --check
+
   main:
     runs-on: ubuntu-24.04
     steps:

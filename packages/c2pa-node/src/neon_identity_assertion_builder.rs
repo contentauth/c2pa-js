@@ -11,7 +11,9 @@
 // specific language governing permissions and limitations under
 // each license.
 
-use crate::neon_credential_holder::NeonCallbackCredentialHolder;
+use std::ops::Deref;
+use std::sync::RwLock;
+
 use c2pa::{
     dynamic_assertion::{AsyncDynamicAssertion, DynamicAssertionContent},
     identity::{builder::AsyncCredentialHolder, SignerPayload},
@@ -19,8 +21,8 @@ use c2pa::{
 use neon::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
-use std::ops::Deref;
-use std::sync::RwLock;
+
+use crate::neon_credential_holder::NeonCallbackCredentialHolder;
 
 /// A `NeonIdentityAssertionBuilder` gathers the necessary components
 /// for an identity assertion using a Neon-based credential holder.

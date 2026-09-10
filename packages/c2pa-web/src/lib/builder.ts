@@ -11,12 +11,13 @@ import { WorkerManager } from './worker/workerManager.js';
 import { getSerializablePayload, type Signer } from './signer.js';
 import type {
   Action,
+  AssertionDefinition,
   BuilderIntent,
   C2paReason,
   Ingredient,
   ManifestDefinition
 } from '@contentauth/c2pa-types';
-import { Settings, resolveSettings } from './settings.js';
+import { Settings, resolveSettings } from '@contentauth/c2pa-utilities';
 
 /**
  * Functions that permit the creation of Builder objects.
@@ -72,6 +73,14 @@ export interface Builder {
   addAction: (action: Action) => Promise<void>;
 
   /**
+   * Add an assertion to the manifest under the given label.
+   *
+   * @param label The assertion label (reverse-domain format).
+   * @param data The assertion data (any JSON-serializable value).
+   */
+  addAssertion: (label: string, data: unknown) => Promise<void>;
+
+  /**
    * Sets the remote URL for a remote manifest. The manifest is expected to be available at this location.
    *
    * @param url URL pointing to the location the remote manifest will be stored.
@@ -103,6 +112,73 @@ export interface Builder {
    * @param reason The {@link C2paReason} for the redaction.
    */
   addRedaction: (uri: string, reason: C2paReason) => Promise<void>;
+
+  /**
+   * Experimental.
+   * Retains only the actions for which `keep` returns true.
+   *
+   * The inception action, `c2pa.created` or `c2pa.opened`, is always kept regardless of `keep`,
+   * and is moved to index 0 if needed, so the manifest stays valid per the C2PA spec. Sets
+   * `allActionsIncluded = false` when anything is removed. This does not touch ingredients.
+   * Call {@link Builder.filterIngredients}, using `filterIngredients(() => false)` to drop all
+   * orphans, afterwards if you also want to drop ingredients now orphaned by the removed
+   * actions.
+   *
+   * @param keep The action is retained when the predicate returns true.
+   */
+  filterActions: (keep: (action: Action) => boolean) => Promise<void>;
+
+  /**
+   * Experimental.
+   * Retains ingredients, then rewrites positional ingredient references so linked actions
+   * stay valid.
+   *
+   * An ingredient is kept if it is referenced by a current action, is a `parentOf` ingredient,
+   * or `rescue` returns true for it. `rescue` therefore only ever rescues an otherwise-orphaned
+   * ingredient. It can never drop a referenced or lineage ingredient. Call
+   * {@link Builder.filterActions} first if you are also removing actions: the keep-set is
+   * computed from whatever actions currently remain.
+   *
+   * @param rescue Can rescue an otherwise-orphaned ingredient by returning true.
+   */
+  filterIngredients: (
+    rescue: (ingredient: Ingredient) => boolean
+  ) => Promise<void>;
+
+  /**
+   * Experimental.
+   * Retains actions and ingredients together in one step.
+   *
+   * `rescueIngredient` is evaluated for every ingredient first; any action referencing an
+   * ingredient it would rescue is force-kept regardless of `keepAction`.
+   *
+   * @param keepAction The action is retained when the predicate returns true.
+   * @param rescueIngredient Can rescue an otherwise-orphaned ingredient (and the action
+   * referencing it) by returning true.
+   */
+  filterActionsAndIngredients: (
+    keepAction: (action: Action) => boolean,
+    rescueIngredient: (ingredient: Ingredient) => boolean
+  ) => Promise<void>;
+
+  /**
+   * Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions.
+   *
+   * A manifest can carry more than one actions assertion (the created-list and
+   * gathered-list entries are distinct assertions). `transform` is therefore
+   * invoked once per actions assertion, in positional order, with that
+   * assertion's own actions.
+   *
+   * A no-op if there is no actions assertion. Use `addAction` for those.
+   *
+   * The returned list is written back as is.
+   * `transform` can therefore produce an actions array that fails
+   * validation at signing time, for example by removing the inception action
+   * (`c2pa.created`/`c2pa.opened`) or moving it out of first position.
+   *
+   * @param transform Receives one assertion's actions and returns its full replacement list.
+   */
+  updateActions: (transform: (actions: Action[]) => Action[]) => Promise<void>;
 
   /**
    * Add an ingredient to the builder from a definition only.
@@ -174,6 +250,38 @@ export interface Builder {
    * Dispose of this Builder, freeing the memory it occupied and preventing further use. Call this whenever the Builder is no longer needed.
    */
   free: () => Promise<void>;
+}
+
+/**
+ * Flattens the actions from every `c2pa.actions` assertion, since a manifest may carry both a
+ * created-list and a gathered-list assertion, in positional order.
+ *
+ * This enumeration is coupled to c2pa-rs. `filterActions` maps the caller's predicate
+ * over this flat list to compute a set of indices, and the wasm `filterActionsAt` binding walks
+ * c2pa-rs `Builder::filter_actions`, which visits actions in the same order: every assertion
+ * whose label starts with `c2pa.actions`, in `definition.assertions` order, each assertion's
+ * `actions` array in order. If the two orderings ever diverge, filtering silently targets the
+ * wrong actions. The ordering ideally comes authoritatively from Rust, but c2pa-rs exposes no
+ * public actions accessor, so we mirror the rule here. The `filterActions` "multi actions-assertion"
+ * spec pins this against real filtering.
+ */
+function getActionsFromDefinition(definition: ManifestDefinition): Action[] {
+  return getActionGroupsFromDefinition(definition).flat();
+}
+
+/**
+ * The same enumeration as {@link getActionsFromDefinition}, but kept grouped per
+ * action assertion instead of flattened.
+ */
+function getActionGroupsFromDefinition(
+  definition: ManifestDefinition
+): Action[][] {
+  return (definition.assertions ?? [])
+    .filter((a: AssertionDefinition) => a.label.startsWith('c2pa.actions'))
+    .map((a: AssertionDefinition) => {
+      const data = a.data as { actions?: Action[] } | undefined;
+      return data?.actions ?? [];
+    });
 }
 
 export interface ManifestAndAssetBytes {
@@ -250,6 +358,10 @@ function createBuilder(
       await tx.builder_addAction(id, action);
     },
 
+    async addAssertion(label, data) {
+      await tx.builder_addAssertion(id, label, data);
+    },
+
     async addRedaction(uri, reason) {
       await tx.builder_addRedaction(id, uri, reason);
     },
@@ -264,6 +376,73 @@ function createBuilder(
 
     async setThumbnailFromBlob(format, blob) {
       await tx.builder_setThumbnailFromBlob(id, format, blob);
+    },
+
+    // Unlike the Node binding, Neon, which can invoke the JS predicate synchronously from Rust,
+    // the WASM builder lives in a Web Worker. A predicate closure can't be called across the
+    // worker boundary, so we evaluate it here on the main thread and send the resulting indices
+    // to the worker, where WASM applies the equivalent index-based filter. The action/ingredient
+    // ordering here must match what WASM iterates. See `filterActionsAt` and `filterIngredientsAt`.
+    async filterActions(keep: (action: Action) => boolean) {
+      const definition: ManifestDefinition = await tx.builder_getDefinition(id);
+      const actions = getActionsFromDefinition(definition);
+      const indices = actions.reduce<number[]>((kept, action, i) => {
+        if (keep(action)) {
+          kept.push(i);
+        }
+        return kept;
+      }, []);
+      await tx.builder_filterActionsAt(id, indices);
+    },
+
+    async filterIngredients(rescue: (ingredient: Ingredient) => boolean) {
+      const definition: ManifestDefinition = await tx.builder_getDefinition(id);
+      const ingredients: Ingredient[] = definition.ingredients ?? [];
+      const indices = ingredients.reduce<number[]>((rescued, ingredient, i) => {
+        if (rescue(ingredient)) {
+          rescued.push(i);
+        }
+        return rescued;
+      }, []);
+      await tx.builder_filterIngredientsAt(id, indices);
+    },
+
+    async filterActionsAndIngredients(
+      keepAction: (action: Action) => boolean,
+      rescueIngredient: (ingredient: Ingredient) => boolean
+    ) {
+      const definition: ManifestDefinition = await tx.builder_getDefinition(id);
+      const actions = getActionsFromDefinition(definition);
+      const actionIndices = actions.reduce<number[]>((kept, action, i) => {
+        if (keepAction(action)) {
+          kept.push(i);
+        }
+        return kept;
+      }, []);
+      const ingredients: Ingredient[] = definition.ingredients ?? [];
+      const ingredientIndices = ingredients.reduce<number[]>(
+        (rescued, ingredient, i) => {
+          if (rescueIngredient(ingredient)) {
+            rescued.push(i);
+          }
+          return rescued;
+        },
+        []
+      );
+      await tx.builder_filterActionsAndIngredientsAt(
+        id,
+        actionIndices,
+        ingredientIndices
+      );
+    },
+
+    async updateActions(transform: (actions: Action[]) => Action[]) {
+      const definition: ManifestDefinition = await tx.builder_getDefinition(id);
+      // One group per actions assertion: `transform` runs once per assertion
+      // Each is rewritten in place under its own label.
+      const groups = getActionGroupsFromDefinition(definition);
+      const updated = groups.map((actions) => transform(actions));
+      await tx.builder_updateActionsAt(id, updated);
     },
 
     async addIngredient(ingredientDefinition: Ingredient) {

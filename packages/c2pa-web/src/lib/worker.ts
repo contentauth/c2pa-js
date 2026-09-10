@@ -17,6 +17,7 @@ import {
 } from '@contentauth/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
 import { createWorkerTx, rx } from './worker/rpc.js';
+import { sanitizeManifestStore } from './worker/sanitizeManifestStore.js';
 import { transfer } from 'highgain';
 
 const readerMap = createWorkerObjectMap<WasmReader>();
@@ -53,7 +54,7 @@ rx(
     },
     reader_manifestStore(readerId) {
       const reader = readerMap.get(readerId);
-      return reader.manifestStore();
+      return sanitizeManifestStore(reader.manifestStore());
     },
     reader_activeManifest(readerId) {
       const reader = readerMap.get(readerId);
@@ -100,9 +101,36 @@ rx(
       const builder = builderMap.get(builderId);
       builder.addAction(action);
     },
+    builder_addAssertion(builderId, label, data) {
+      const builder = builderMap.get(builderId);
+      builder.addAssertion(label, data);
+    },
     builder_addRedaction(builderId, uri, reason) {
       const builder = builderMap.get(builderId);
       builder.addRedaction(uri, reason);
+    },
+    builder_filterActionsAt(builderId, indices) {
+      const builder = builderMap.get(builderId);
+      builder.filterActionsAt(Uint32Array.from(indices));
+    },
+    builder_updateActionsAt(builderId, actionGroups) {
+      const builder = builderMap.get(builderId);
+      builder.updateActionsAt(actionGroups);
+    },
+    builder_filterIngredientsAt(builderId, indices) {
+      const builder = builderMap.get(builderId);
+      builder.filterIngredientsAt(Uint32Array.from(indices));
+    },
+    builder_filterActionsAndIngredientsAt(
+      builderId,
+      actionIndices,
+      ingredientIndices
+    ) {
+      const builder = builderMap.get(builderId);
+      builder.filterActionsAndIngredientsAt(
+        Uint32Array.from(actionIndices),
+        Uint32Array.from(ingredientIndices)
+      );
     },
     builder_setRemoteUrl(builderId, url) {
       const builder = builderMap.get(builderId);

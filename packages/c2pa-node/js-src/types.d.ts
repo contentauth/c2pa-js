@@ -14,30 +14,23 @@
 // This file contains types not included in @contentauth/c2pa-types and not directly applicable to the neon generated code (index.node.d.ts)
 import { Buffer } from "buffer";
 import type {
+  Action,
   BuilderIntent,
   C2paReason,
   Ingredient,
   Manifest,
+  ManifestAssertionKind,
   ManifestStore,
 } from "@contentauth/c2pa-types";
+import type { SigningAlg } from "@contentauth/c2pa-utilities";
 
-export type { C2paReason, Ingredient } from "@contentauth/c2pa-types";
-
-/**
- * Describes the digital signature algorithms allowed by the C2PA spec
- *
- * Per <https://c2pa.org/specifications/specifications/1.0/specs/C2PA_Specification.html#_digital_signatures>:
- *
- * > All digital signatures that are stored in a C2PA Manifest shall > be generated using one of the digital signature algorithms and > key types listed as described in this section
- */
-export type SigningAlg =
-  | "es256"
-  | "es384"
-  | "es512"
-  | "ps256"
-  | "ps384"
-  | "ps512"
-  | "ed25519";
+export type {
+  Action,
+  C2paReason,
+  Ingredient,
+  ManifestAssertionKind,
+} from "@contentauth/c2pa-types";
+export type { SigningAlg } from "@contentauth/c2pa-utilities";
 
 export type ClaimVersion = 1 | 2;
 
@@ -62,8 +55,6 @@ export type TrustmarkVariant =
   | "P"
   // Quality Trustmark model
   | "Q";
-
-export type ManifestAssertionKind = "Cbor" | "Json" | "Binary" | "Uri";
 
 /**
  * A buffer for the source asset
@@ -194,7 +185,9 @@ export interface HashedUri {
 export type C2paSettings = string | object;
 
 export interface BuilderInterface {
-  /** An intent lets the API know what kind of manifest to create.
+  /** 
+   * An intent lets the API know what kind of manifest to create.
+   * 
    * Intents are `Create`, `Edit`, or `Update`.
    * This allows the API to check that you are doing the right thing.
    * It can also do things for you, like add parent ingredients from the source asset
@@ -343,6 +336,81 @@ export interface BuilderInterface {
   addRedaction(uri: string, reason: C2paReason): void;
 
   /**
+   * Experimental.
+   * Retains only the actions for which `keep` returns true.
+   *
+   * The inception action, `c2pa.created` or `c2pa.opened`, is always kept regardless of `keep`,
+   * and is moved to index 0 if needed, so the manifest stays valid per the C2PA spec. Sets
+   * `allActionsIncluded = false` when anything is removed. This does not touch ingredients.
+   * Call {@link filterIngredients}, using `filterIngredients(() => false)` to drop all orphans,
+   * afterwards if you also want to drop ingredients now orphaned by the removed actions.
+   * @param keep The action is retained when the predicate returns true.
+   */
+  filterActions(keep: (action: Action) => boolean): void;
+
+  /**
+   * Experimental.
+   * Retains ingredients, then rewrites positional ingredient references so linked actions
+   * stay valid.
+   *
+   * An ingredient is kept if it is referenced by a current action, is a `parentOf` ingredient,
+   * or `rescue` returns true for it. `rescue` therefore only ever rescues an otherwise-orphaned
+   * ingredient. It can never drop a referenced or lineage ingredient. Call {@link filterActions}
+   * first if you are also removing actions: the keep-set is computed from whatever actions
+   * currently remain.
+   *
+   * `rescue` receives the ingredient and its `provenance`: the ingredient's embedded
+   * `manifest_data` parsed into a {@link ManifestStore}, or `null` when it has no embedded
+   * manifest. This lets the predicate make provenance-aware decisions, e.g. "this ingredient's
+   * chain contains AI", without re-reading the whole builder first.
+   * @param rescue Can rescue an otherwise-orphaned ingredient by returning true.
+   */
+  filterIngredients(
+    rescue: (
+      ingredient: Ingredient,
+      provenance: ManifestStore | null,
+    ) => boolean,
+  ): void;
+
+  /**
+   * Experimental.
+   * Retains actions and ingredients together.
+   *
+   * `rescueIngredient` is evaluated for every ingredient first; any action referencing an
+   * ingredient it would rescue is force-kept regardless of `keepAction`.
+   *
+   * @param keepAction The action is retained when the predicate returns true.
+   * @param rescueIngredient Can rescue an otherwise-orphaned ingredient and the action
+   * referencing it by returning true.
+   */
+  filterActionsAndIngredients(
+    keepAction: (action: Action) => boolean,
+    rescueIngredient: (
+      ingredient: Ingredient,
+      provenance: ManifestStore | null,
+    ) => boolean,
+  ): void;
+
+  /**
+   * Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions.
+   *
+   * A manifest can carry more than one actions assertion (the created-list and
+   * gathered-list entries are distinct assertions). `transform` is therefore
+   * invoked once per actions assertion, in positional order, with that
+   * assertion's own actions.
+   *
+   * A no-op if there is no actions assertion. Use `addAction` for those.
+   *
+   * The returned list is written back as is.
+   * `transform` can therefore produce an actions array that fails
+   * validation at signing time, for example by removing the inception action
+   * (`c2pa.created`/`c2pa.opened`) or moving it out of first position.
+   *
+   * @param transform Receives one assertion's actions and returns its full replacement list.
+   */
+  updateActions(transform: (actions: Action[]) => Action[]): void;
+
+  /**
    * Get the internal handle for use with Neon bindings
    */
   getHandle(): NeonBuilderHandle;
@@ -440,62 +508,26 @@ export interface TrustmarkConfig {
   modelPath?: string;
 }
 
-/**
- * Configuration for trust settings in C2PA.
- * Controls certificate trust validation and trust anchor management.
- */
-export interface TrustConfig {
-  /** Whether to verify against the trust list */
-  verifyTrustList: boolean;
-  /** User-provided trust anchors (PEM format or base64-encoded certificate hashes) */
-  userAnchors?: string;
-  /** Trust anchors for validation (PEM format or base64-encoded certificate hashes) */
-  trustAnchors?: string;
-  /** Trust configuration file path */
-  trustConfig?: string;
-  /** Allowed list of certificates (PEM format or base64-encoded certificate hashes) */
-  allowedList?: string;
-}
+import type {
+  Settings as _Settings,
+  TrustSettings as _TrustSettings,
+  VerifySettings as _VerifySettings
+} from "@contentauth/c2pa-utilities";
 
 /**
- * Configuration for verification settings in C2PA.
- * Controls various verification behaviors and options.
+ * @deprecated Use `TrustSettings` instead, which encapsulates both normal trust and CAWG trust settings.
+ * Kept as an alias for backwards compatibility.
  */
-export interface VerifyConfig {
-  /** Whether to verify after reading a manifest */
-  verifyAfterReading?: boolean;
-  /** Whether to verify after signing a manifest */
-  verifyAfterSign?: boolean;
-  /** Whether to verify trust during validation */
-  verifyTrust?: boolean;
-  /** Whether to verify timestamp trust */
-  verifyTimestampTrust?: boolean;
-  /** Whether to fetch OCSP responses */
-  ocspFetch?: boolean;
-  /** Whether to fetch remote manifests */
-  remoteManifestFetch?: boolean;
-  /** Whether to skip ingredient conflict resolution */
-  skipIngredientConflictResolution?: boolean;
-  /** Whether to use strict v1 validation */
-  strictV1Validation?: boolean;
-}
+export type TrustConfig = _TrustSettings;
 
 /**
- * Settings configuration object that can be passed to Reader and Builder constructors.
- * Only trust, verify, and builder settings are configurable from the Node SDK.
- * Uses snake_case internally to match the c2pa-rs settings format.
+ * @deprecated Use `VerifySettings` instead.
+ * Kept as an alias for backwards compatibility.
  */
-export interface SettingsContext {
-  /** C2PA trust configuration */
-  trust?: TrustConfig;
-  /** CAWG trust configuration */
-  cawgTrust?: TrustConfig;
-  /** Verification configuration */
-  verify?: VerifyConfig;
-  /** Builder configuration */
-  builder?: {
-    thumbnail?: {
-      enabled?: boolean;
-    };
-  };
-}
+export type VerifyConfig = _VerifySettings;
+
+/**
+ * @deprecated Use `Settings` instead.
+ * Kept as an alias for backwards compatibility.
+ */
+export type SettingsContext = _Settings;

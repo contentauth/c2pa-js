@@ -11,16 +11,18 @@
 // specific language governing permissions and limitations under
 // each license.
 
-use crate::asset::parse_asset;
-use crate::error::{as_js_error, Error, Result};
-use crate::runtime::runtime;
-use crate::utils::parse_settings;
+use std::sync::Arc;
+
 use c2pa::Reader;
 use neon::context::Context as NeonContext;
 use neon::prelude::*;
 use neon::types::buffer::TypedArray;
-use std::sync::Arc;
 use tokio::sync::Mutex;
+
+use crate::asset::parse_asset;
+use crate::error::{as_js_error, Error, Result};
+use crate::runtime::runtime;
+use crate::utils::parse_settings;
 
 #[derive(Debug)]
 pub struct NeonReader {

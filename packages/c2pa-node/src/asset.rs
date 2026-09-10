@@ -11,13 +11,15 @@
 // specific language governing permissions and limitations under
 // each license.
 
-use crate::error::Error;
-use c2pa::format_from_path;
-use neon::prelude::*;
-use neon::types::buffer::TypedArray;
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, Cursor, Read, Seek, Write};
 use std::path::Path;
+
+use c2pa::format_from_path;
+use neon::prelude::*;
+use neon::types::buffer::TypedArray;
+
+use crate::error::Error;
 
 pub(crate) trait NeonReadStreamTrait: Read + Seek + Send {}
 pub(crate) trait NeonWriteStreamTrait: Write + Read + Seek + Send {}

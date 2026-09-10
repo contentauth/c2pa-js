@@ -11,13 +11,6 @@
 // specific language governing permissions and limitations under
 // each license.
 
-use crate::error::{as_js_error, as_js_error_fn, Error, Result};
-use crate::runtime::runtime;
-use neon::prelude::*;
-use neon::result::{JsResult, NeonResult};
-use neon::types::{buffer::TypedArray, Finalize, JsObject};
-use rand::{distributions::Standard, prelude::Distribution as _};
-use reqwest::Client;
 use std::{
     fs::OpenOptions,
     io::Write,
@@ -25,7 +18,16 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
+
+use neon::prelude::*;
+use neon::result::{JsResult, NeonResult};
+use neon::types::{buffer::TypedArray, Finalize, JsObject};
+use rand::{distributions::Standard, prelude::Distribution as _};
+use reqwest::Client;
 use trustmark::{Trustmark, Variant, Version};
+
+use crate::error::{as_js_error, as_js_error_fn, Error, Result};
+use crate::runtime::runtime;
 
 #[derive(Clone)]
 pub struct WatermarkConfig {

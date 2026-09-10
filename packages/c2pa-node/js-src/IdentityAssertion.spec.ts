@@ -14,7 +14,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import type { Manifest } from "@contentauth/c2pa-types";
-import * as fs from "fs-extra";
+import fs from "fs-extra";
 import * as crypto from "crypto";
 import { encode } from "cbor2";
 
@@ -84,10 +84,8 @@ describe("IdentityAssertionBuilder", () => {
           actions: [
             {
               action: "c2pa.created",
-              parameters: {
-                digitalSourceType:
-                  "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
-              },
+              digitalSourceType:
+                "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
             },
           ],
         } as any,

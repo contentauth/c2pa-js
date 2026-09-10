@@ -1,5 +1,66 @@
 # @contentauth/c2pa-wasm
 
+## 0.11.5
+
+### Patch Changes
+
+- 843c2d0: c2pa-rs version bump to v0.90.20
+
+## 0.11.4
+
+### Patch Changes
+
+- afccc92: Update c2pa-rs from 0.90.15->0.90.16
+- f9553a7: Remove redundant archive-metadata assertion filtering
+
+## 0.11.3
+
+### Patch Changes
+
+- 2de9ba5: c2pa-rs bump
+- facb1f0: Bump c2pa-rs version to 0.90.14
+- 1102535: Bump c2pa-rs version to v0.90.10
+- 4c8ad00: c2pa-rs version bump to v0.90.12
+- b82e854: Bump c2pa-rs to v0.90.15
+
+## 0.11.2
+
+### Patch Changes
+
+- bd63c58: Add updateActions builder methods
+
+## 0.11.1
+
+### Patch Changes
+
+- b558be8: feat: incorporate c2pa builder filter_actions_and_ingredients
+- a5a904b: Update c2pa to 0.90.4
+
+## 0.11.0
+
+### Minor Changes
+
+- 684942a: Strip archive metadata assertion when constructing builder from archive
+
+## 0.10.0
+
+### Minor Changes
+
+- fc4f6e3: Include new experimental builder reduction methods
+
+## 0.9.2
+
+### Patch Changes
+
+- a18cf0e: Update C2PA version to 0.90.0.
+
+## 0.9.1
+
+### Patch Changes
+
+- c5dd375: Update for c2pa 0.89.3
+- 2214c82: Eliminate repeated JS/WASM boundary crossings in BlobStream
+
 ## 0.9.0
 
 ### Minor Changes

@@ -14,6 +14,9 @@
     },
     {
       "path": "./packages/c2pa-types"
+    },
+    {
+      "path": "./packages/c2pa-utilities"
     }
   ]
 }

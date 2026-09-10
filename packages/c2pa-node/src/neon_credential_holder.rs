@@ -11,13 +11,14 @@
 // specific language governing permissions and limitations under
 // each license.
 
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use c2pa::identity::builder::{AsyncCredentialHolder, IdentityBuilderError};
 use c2pa::identity::SignerPayload;
 use neon::prelude::*;
 use neon::types::buffer::TypedArray;
 use neon_serde4;
-use std::sync::Arc;
 use tokio::sync::oneshot;
 
 /// NeonCallbackCredentialHolder allows JS to asynchronously sign a SignerPayload.

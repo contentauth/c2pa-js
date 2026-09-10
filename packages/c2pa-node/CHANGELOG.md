@@ -1,5 +1,129 @@
 # @contentauth/c2pa-node
 
+## 0.9.4
+
+### Patch Changes
+
+- 843c2d0: c2pa-rs version bump to v0.90.20
+
+## 0.9.3
+
+### Patch Changes
+
+- 4abe0a1: Switch fs-extra import from namespace import to default import.
+
+## 0.9.2
+
+### Patch Changes
+
+- afccc92: Update c2pa-rs from 0.90.15->0.90.16
+- f9553a7: Remove redundant archive-metadata assertion filtering
+- Updated dependencies [afccc92]
+  - @contentauth/c2pa-types@0.7.4
+  - @contentauth/c2pa-utilities@0.2.2
+
+## 0.9.1
+
+### Patch Changes
+
+- 9c87188: Republish to fix `@contentauth/c2pa-utilities` dependency, which resolved to `0.2.0` — the broken version published with an unresolved `workspace:*` dependency of its own (see the `c2pa-utilities` patch in this same release). This release has no source changes; it exists to pick up the corrected `c2pa-utilities` version once published.
+- Updated dependencies [a62320c]
+  - @contentauth/c2pa-utilities@0.2.1
+
+## 0.9.0
+
+### Minor Changes
+
+- b3b3196: Introduce new c2pa-utilities package, and update c2pa-web and c2pa-node to use it.
+- f2f6ada: Move the Reader asset size check into `c2pa-utilities`, shared by both `c2pa-web` and `c2pa-node`. `c2pa-node`'s Reader now validates asset size before reading, using its own server-appropriate limit.
+
+  `validateAssetSize` treats a `maxSizeInBytes` of `0` as a request to use the new `DEFAULT_MAX_SIZE_IN_BYTES`, and throws a `RangeError` for non-finite or negative size/limit values.
+
+### Patch Changes
+
+- 2de9ba5: c2pa-rs bump
+- facb1f0: Bump c2pa-rs version to 0.90.14
+- 1102535: Bump c2pa-rs version to v0.90.10
+- 4c8ad00: c2pa-rs version bump to v0.90.12
+- b82e854: Bump c2pa-rs to v0.90.15
+- 0f42fe8: Consolidate the `SigningAlg` type into `@contentauth/c2pa-utilities` (derived from `@contentauth/c2pa-types`'s schema-generated type). Re-use `ManifestAssertionKind` from `@contentauth/c2pa-types` instead of a duplicate hand-written copy. Fix `c2pa-node`'s `package.json` to list `@contentauth/c2pa-types` as a `dependency` rather than a `devDependency`, matching `c2pa-web`.
+- Updated dependencies [f038dc1]
+- Updated dependencies [b3b3196]
+- Updated dependencies [f2f6ada]
+- Updated dependencies [0f42fe8]
+  - @contentauth/c2pa-utilities@0.2.0
+
+## 0.8.3
+
+### Patch Changes
+
+- bd63c58: Add updateActions builder methods
+
+## 0.8.2
+
+### Patch Changes
+
+- dc1f034: Bump c2pa-rs version to v0.90.5
+
+## 0.8.1
+
+### Patch Changes
+
+- b558be8: feat: incorporate c2pa builder filter_actions_and_ingredients
+- a5a904b: Update c2pa to 0.90.4
+
+## 0.8.0
+
+### Minor Changes
+
+- 684942a: Strip archive metadata assertion when constructing builder from archive
+
+### Patch Changes
+
+- 219c3df: Fix node binary download
+
+## 0.7.0
+
+### Minor Changes
+
+- fc4f6e3: Include new experimental builder reduction methods
+
+## 0.6.4
+
+### Patch Changes
+
+- 2cf74c2: Update ts-deepmerge to 8.0.0
+
+## 0.6.3
+
+### Patch Changes
+
+- 1a492a3: Fix prebuilt native binary distribution.
+
+  - Release workflow now looks up the GitHub release by its real changesets tag
+    (`@contentauth/c2pa-node@<version>`) instead of `v<version>`, so binary assets
+    actually attach to the release. Previously the tag lookup returned `null`, the
+    upload silently POSTed to `/releases/null/assets` and 404'd while the job stayed
+    green.
+  - Resolve the published version from the c2pa-node entry in `publishedPackages`
+    rather than index `[0]`, which is unreliable in multi-package changesets runs.
+  - Add `--fail` to the release-id and upload curls so a broken upload fails the job
+    instead of passing silently.
+  - `postinstall` now downloads from the same scoped tag, so the client fetches the
+    correct asset URL.
+
+## 0.6.2
+
+### Patch Changes
+
+- a18cf0e: Update C2PA version to 0.90.0.
+
+## 0.6.1
+
+### Patch Changes
+
+- c5dd375: Update for c2pa 0.89.3
+
 ## 0.6.0
 
 ### Minor Changes

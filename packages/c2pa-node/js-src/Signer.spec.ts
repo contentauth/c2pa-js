@@ -12,7 +12,7 @@
 // each license.
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import * as fs from "fs-extra";
+import fs from "fs-extra";
 import * as crypto from "crypto";
 
 import { CallbackSigner } from "./Signer.js";
@@ -147,6 +147,7 @@ describe("CallbackSigner", () => {
     };
 
     const builder = Builder.withJson(manifestDefinition);
+    builder.setIntent({ create: "http://c2pa.org/digitalsourcetype/empty" });
     const source = {
       buffer: await fs.readFile("./tests/fixtures/CA.jpg"),
       mimeType: "image/jpeg",

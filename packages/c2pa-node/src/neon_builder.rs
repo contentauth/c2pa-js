@@ -11,6 +11,20 @@
 // specific language governing permissions and limitations under
 // each license.
 
+use std::io::Cursor;
+use std::ops::Deref;
+use std::sync::Arc;
+
+use c2pa::{
+    assertions::{Action, Actions},
+    Builder, BuilderIntent, Ingredient, Reader,
+};
+use neon::context::Context as NeonContext;
+use neon::prelude::*;
+use neon_serde4;
+use serde_json;
+use tokio::sync::Mutex;
+
 use crate::asset::parse_asset;
 use crate::error::{as_js_error, Error};
 use crate::neon_identity_assertion_signer::NeonIdentityAssertionSigner;
@@ -18,14 +32,6 @@ use crate::neon_reader::NeonReader;
 use crate::neon_signer::{CallbackSignerConfig, NeonCallbackSigner, NeonLocalSigner};
 use crate::runtime::runtime;
 use crate::utils::parse_settings;
-use c2pa::{assertions::Action, Builder, BuilderIntent, Ingredient};
-use neon::context::Context as NeonContext;
-use neon::prelude::*;
-use neon_serde4;
-use serde_json;
-use std::ops::Deref;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 pub struct NeonBuilder {
     builder: Arc<Mutex<Builder>>,
@@ -613,6 +619,313 @@ impl NeonBuilder {
         Ok(cx.string(json).upcast())
     }
 
+    /// Retains only the actions for which the JS `keep` predicate returns true. The inception
+    /// action, `c2pa.created` or `c2pa.opened`, is always kept, per `Builder::filter_actions`.
+    ///
+    /// If `keep` throws or returns a non-boolean, the exception is surfaced to the caller. Because
+    /// the underlying filter mutates in place, the builder may be left partially filtered when the
+    /// predicate throws midway; callers should discard it on error.
+    ///
+    /// # Deadlock
+    /// The builder's lock is held for the entire call, so the `keep` predicate must not call back
+    /// into the same builder, for example `getManifestDefinition` or another filter: the lock is not
+    /// re-entrant and re-entry would deadlock. The predicate should only inspect the `action`
+    /// argument it is given.
+    pub fn filter_actions(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<Self>>()?;
+        let keep = cx.argument::<JsFunction>(0)?;
+        let undefined = cx.undefined();
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+
+        // The c2pa filter closure is `FnMut(&Action) -> bool` with no error channel, so capture a
+        // JS exception out-of-band and re-raise it after filtering. Once a throw is pending we
+        // stop invoking JS entirely, since calling more JS APIs with an exception pending is unsound.
+        // This means the predicate is not run for the remaining actions, which is intentional: we
+        // abort and re-raise, and the caller must discard the partially mutated builder anyway,
+        // so their side effects would not be observable regardless.
+        let mut pending: Option<neon::result::Throw> = None;
+        let filter_result = builder
+            .filter_actions(|action| {
+                if pending.is_some() {
+                    return false;
+                }
+                let js_action = match neon_serde4::to_value(&mut cx, action) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        pending = cx.throw_error::<_, ()>(e.to_string()).err();
+                        return false;
+                    }
+                };
+                match callback_returns_true(&mut cx, &keep, undefined, js_action) {
+                    Ok(keep) => keep,
+                    Err(throw) => {
+                        pending = Some(throw);
+                        false
+                    }
+                }
+            })
+            .map(|_| ());
+
+        // A pending JS exception is the root cause and takes precedence over any Rust-side error.
+        if let Some(throw) = pending {
+            return Err(throw);
+        }
+        filter_result.or_else(|err| cx.throw_error(err.to_string()))?;
+        Ok(cx.undefined())
+    }
+
+    /// Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions.
+    /// `softwareAgents`/`allActionsIncluded`/`templates`/`metadata` are preserved as-is.
+    ///
+    /// A manifest can carry more than one actions assertion (the created-list and gathered-list
+    /// entries are distinct assertions). `transform` is invoked once per actions assertion,
+    /// in positional order, with that assertion's own actions. It return value
+    /// replaces only that assertion's actions.
+    /// No-op if there is no actions assertion. Use `add_action` for those.
+    ///
+    /// If `transform` throws or its return value doesn't deserialize into an action list, the
+    /// exception is surfaced to the caller and the builder is left unchanged. The same applies
+    /// when an existing actions assertion is present but malformed. All fallible work runs
+    /// before any mutation, so a failure never leaves a partially-rewritten builder.
+    ///
+    /// An assertion whose `transform` returns an empty list is dropped rather than written as an
+    /// invalid empty actions array, matching `filter_actions`.
+    ///
+    /// The returned list is written back verbatim: it is not validated or reordered, and unlike
+    /// [`Self::filter_actions`] the inception action is not force-kept. A `transform` that drops
+    /// `c2pa.created`/`c2pa.opened` or moves it out of first position can produce an actions
+    /// array that fails validation at signing time.
+    ///
+    /// # Deadlock
+    /// The builder's lock is held for the whole call, so `transform` must not call back into the
+    /// same builder, for example `getManifestDefinition` or a filter: the lock is not re-entrant
+    /// and re-entry would deadlock.
+    pub fn update_actions(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<Self>>()?;
+        let transform = cx.argument::<JsFunction>(0)?;
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+
+        // Every actions assertion, in positional order.
+        let positions: Vec<usize> = builder
+            .definition
+            .assertions
+            .iter()
+            .enumerate()
+            .filter(|(_, a)| a.label.starts_with(Actions::LABEL))
+            .map(|(i, _)| i)
+            .collect();
+
+        // Decode every assertion up front.
+        // The roundtrip is so we can access what we need to without the direct type access.
+        let mut decoded: Vec<(usize, Actions)> = Vec::with_capacity(positions.len());
+        for pos in positions {
+            let value = serde_json::to_value(&builder.definition.assertions[pos].data)
+                .or_else(|err| cx.throw_error(err.to_string()))?;
+            let actions: Actions =
+                serde_json::from_value(value).or_else(|err| cx.throw_error(err.to_string()))?;
+            decoded.push((pos, actions));
+        }
+
+        // Run the transform for every assertion before mutating anything...
+        let mut rewritten: Vec<(usize, Option<serde_json::Value>)> =
+            Vec::with_capacity(decoded.len());
+        for (pos, mut actions) in decoded {
+            let js_actions = neon_serde4::to_value(&mut cx, &actions.actions)
+                .or_else(|err| cx.throw_error(err.to_string()))?;
+            let undefined = cx.undefined();
+            let result = transform.call(&mut cx, undefined, [js_actions])?;
+            let updated_actions: Vec<Action> = neon_serde4::from_value(&mut cx, result)
+                .or_else(|err| cx.throw_error(err.to_string()))?;
+
+            if updated_actions.is_empty() {
+                rewritten.push((pos, None));
+                continue;
+            }
+            actions.actions = updated_actions;
+            let value =
+                serde_json::to_value(&actions).or_else(|err| cx.throw_error(err.to_string()))?;
+            rewritten.push((pos, Some(value)));
+        }
+
+        // Mutate in place.
+        let mut emptied: Vec<usize> = Vec::new();
+        for (pos, value) in rewritten {
+            match value {
+                Some(value) => {
+                    let data = serde_json::from_value(value)
+                        .or_else(|err| cx.throw_error(err.to_string()))?;
+                    builder.definition.assertions[pos].data = data;
+                }
+                None => emptied.push(pos),
+            }
+        }
+        // Remove emptied assertions from the back so earlier indices stay valid.
+        for pos in emptied.into_iter().rev() {
+            builder.definition.assertions.remove(pos);
+        }
+
+        Ok(cx.undefined())
+    }
+
+    /// Retains ingredients, rescuing an otherwise-orphaned ingredient when the JS `rescue`
+    /// predicate returns true for it. Referenced and `parentOf` ingredients are always kept,
+    /// per `Builder::filter_ingredients`.
+    ///
+    /// The `rescue` predicate is called with two arguments: the ingredient, and its parsed
+    /// provenance as a manifest store, `ManifestStore`, derived from the ingredient's embedded
+    /// `manifest_data`, or `null` when the ingredient has no embedded manifest. This lets the
+    /// predicate make provenance-aware decisions, for example "the ingredient's chain contains AI",
+    /// without the caller having to re-read the whole builder first.
+    ///
+    /// If `rescue` throws or returns a non-boolean, the exception is surfaced to the caller. As
+    /// with [`Self::filter_actions`], the builder may be left partially filtered when the
+    /// predicate throws midway; callers should discard it on error.
+    ///
+    /// # Deadlock
+    /// As with [`Self::filter_actions`], the builder's lock is held for the whole call, so `rescue`
+    /// must not call back into the same builder; doing so would deadlock. It should only inspect
+    /// the `ingredient` and `provenance` arguments it is given.
+    pub fn filter_ingredients(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<Self>>()?;
+        let rescue = cx.argument::<JsFunction>(0)?;
+        let undefined = cx.undefined();
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+
+        // See `filter_actions`: capture a JS exception out-of-band and re-raise it afterwards,
+        // short-circuiting once a throw is pending.
+        let mut pending: Option<neon::result::Throw> = None;
+        let filter_result = builder
+            .filter_ingredients(|ingredient| {
+                if pending.is_some() {
+                    return false;
+                }
+                let js_ingredient = match neon_serde4::to_value(&mut cx, ingredient) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        pending = cx.throw_error::<_, ()>(e.to_string()).err();
+                        return false;
+                    }
+                };
+                let js_provenance = ingredient_provenance_value(&mut cx, ingredient);
+                match callback_returns_true_with(
+                    &mut cx,
+                    &rescue,
+                    undefined,
+                    &[js_ingredient, js_provenance],
+                ) {
+                    Ok(rescue) => rescue,
+                    Err(throw) => {
+                        pending = Some(throw);
+                        false
+                    }
+                }
+            })
+            .map(|_| ());
+
+        if let Some(throw) = pending {
+            return Err(throw);
+        }
+        filter_result.or_else(|err| cx.throw_error(err.to_string()))?;
+        Ok(cx.undefined())
+    }
+
+    /// Retains actions and ingredients together in one step, per
+    /// `Builder::filter_actions_and_ingredients`.
+    ///
+    /// `rescue_ingredient` is evaluated for every ingredient first; any action referencing an
+    /// ingredient it would rescue is force-kept regardless of `keep_action`.
+    ///
+    /// If either predicate throws or returns a non-boolean, the exception is surfaced to the
+    /// caller. As with [`Self::filter_actions`], the builder may be left partially filtered when a
+    /// predicate throws midway; callers should discard it on error.
+    ///
+    /// # Deadlock
+    /// As with [`Self::filter_actions`], the builder's lock is held for the whole call, so neither
+    /// predicate must call back into the same builder; doing so would deadlock.
+    pub fn filter_actions_and_ingredients(cx: FunctionContext) -> JsResult<JsUndefined> {
+        let rt = runtime();
+        // `cx` and `pending` are each borrowed mutably from one closure at a time, never by both
+        // closures simultaneously (calls into `filter_actions_and_ingredients` are synchronous and
+        // sequential), so `RefCell` lets both `FnMut` closures below share access without a
+        // conflicting double mutable borrow of `cx`/`pending` themselves.
+        let cx_cell = std::cell::RefCell::new(cx);
+        let pending: std::cell::RefCell<Option<neon::result::Throw>> =
+            std::cell::RefCell::new(None);
+
+        let (this, keep_action, rescue_ingredient, undefined) = {
+            let mut cx = cx_cell.borrow_mut();
+            let this = cx.this::<JsBox<Self>>()?;
+            let keep_action = cx.argument::<JsFunction>(0)?;
+            let rescue_ingredient = cx.argument::<JsFunction>(1)?;
+            let undefined = cx.undefined();
+            (this, keep_action, rescue_ingredient, undefined)
+        };
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+
+        // See `filter_actions`/`filter_ingredients`: capture a JS exception out-of-band and
+        // re-raise it afterwards, short-circuiting once a throw is pending.
+        let filter_result = builder
+            .filter_actions_and_ingredients(
+                |action| {
+                    if pending.borrow().is_some() {
+                        return false;
+                    }
+                    let mut cx = cx_cell.borrow_mut();
+                    let js_action = match neon_serde4::to_value(&mut *cx, action) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            *pending.borrow_mut() = cx.throw_error::<_, ()>(e.to_string()).err();
+                            return false;
+                        }
+                    };
+                    match callback_returns_true(&mut cx, &keep_action, undefined, js_action) {
+                        Ok(keep) => keep,
+                        Err(throw) => {
+                            *pending.borrow_mut() = Some(throw);
+                            false
+                        }
+                    }
+                },
+                |ingredient| {
+                    if pending.borrow().is_some() {
+                        return false;
+                    }
+                    let mut cx = cx_cell.borrow_mut();
+                    let js_ingredient = match neon_serde4::to_value(&mut *cx, ingredient) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            *pending.borrow_mut() = cx.throw_error::<_, ()>(e.to_string()).err();
+                            return false;
+                        }
+                    };
+                    let js_provenance = ingredient_provenance_value(&mut cx, ingredient);
+                    match callback_returns_true_with(
+                        &mut cx,
+                        &rescue_ingredient,
+                        undefined,
+                        &[js_ingredient, js_provenance],
+                    ) {
+                        Ok(rescue) => rescue,
+                        Err(throw) => {
+                            *pending.borrow_mut() = Some(throw);
+                            false
+                        }
+                    }
+                },
+            )
+            .map(|_| ());
+
+        let mut cx = cx_cell.into_inner();
+        if let Some(throw) = pending.into_inner() {
+            return Err(throw);
+        }
+        filter_result.or_else(|err| cx.throw_error(err.to_string()))?;
+        Ok(cx.undefined())
+    }
+
     /// Update a manifest property. Available properties are limited to strings and numbers.
     /// There are other methods for thumbnails, ingredients and assertions, etc.
     pub fn update_manifest_property(mut cx: FunctionContext) -> JsResult<JsUndefined> {
@@ -672,3 +985,51 @@ impl NeonBuilder {
 }
 
 impl Finalize for NeonBuilder {}
+
+/// Synchronously calls a JS predicate with a single argument and returns its boolean result.
+/// Propagates the pending JS exception if the predicate throws, and raises a `TypeError` if it
+/// returns a non-boolean value.
+fn callback_returns_true(
+    cx: &mut FunctionContext,
+    callback: &Handle<JsFunction>,
+    this: Handle<JsUndefined>,
+    arg: Handle<JsValue>,
+) -> NeonResult<bool> {
+    callback_returns_true_with(cx, callback, this, &[arg])
+}
+
+/// Like [`callback_returns_true`] but forwards multiple arguments to the JS predicate.
+fn callback_returns_true_with(
+    cx: &mut FunctionContext,
+    callback: &Handle<JsFunction>,
+    this: Handle<JsUndefined>,
+    args: &[Handle<JsValue>],
+) -> NeonResult<bool> {
+    let result = callback.call(cx, this, args)?;
+    let boolean = result
+        .downcast::<JsBoolean, _>(cx)
+        .or_else(|_| cx.throw_error("filter predicate must return a boolean"))?;
+    Ok(boolean.value(cx))
+}
+
+/// Parses an ingredient's embedded `manifest_data` into a manifest-store JSON value for the JS
+/// predicate. Returns `null` when the ingredient has no embedded manifest or it cannot be parsed.
+fn ingredient_provenance_value<'a>(
+    cx: &mut FunctionContext<'a>,
+    ingredient: &Ingredient,
+) -> Handle<'a, JsValue> {
+    let null = cx.null().upcast::<JsValue>();
+    let Some(data) = ingredient.manifest_data() else {
+        return null;
+    };
+    let Ok(reader) = Reader::default().with_stream("c2pa", Cursor::new(data.as_ref())) else {
+        return null;
+    };
+    match serde_json::from_str::<serde_json::Value>(&reader.json())
+        .ok()
+        .and_then(|value| neon_serde4::to_value(cx, &value).ok())
+    {
+        Some(value) => value,
+        None => null,
+    }
+}

@@ -49,7 +49,7 @@ pub fn parse_settings(
                     .downcast::<JsString, _>(cx)
                     .map_err(|_| {
                         Error::Signing(format!("{error_prefix}: Expected settings string"))
-                    })? 
+                    })?
                     .value(cx);
 
                 // Create context with settings

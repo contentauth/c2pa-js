@@ -7,6 +7,9 @@
       "path": "../c2pa-types"
     },
     {
+      "path": "../c2pa-utilities"
+    },
+    {
       "path": "./tsconfig.lib.json"
     },
     {

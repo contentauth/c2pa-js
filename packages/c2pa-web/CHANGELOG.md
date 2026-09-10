@@ -1,5 +1,150 @@
 # @contentauth/c2pa-web
 
+## 0.14.5
+
+### Patch Changes
+
+- cd843e5: Remove supported format checks from c2pa-web, as this is done by the native library.
+- 843c2d0: c2pa-rs version bump to v0.90.20
+- Updated dependencies [843c2d0]
+  - @contentauth/c2pa-wasm@0.11.5
+
+## 0.14.4
+
+### Patch Changes
+
+- afccc92: Update c2pa-rs from 0.90.15->0.90.16
+- Updated dependencies [afccc92]
+- Updated dependencies [f9553a7]
+  - @contentauth/c2pa-types@0.7.4
+  - @contentauth/c2pa-utilities@0.2.2
+  - @contentauth/c2pa-wasm@0.11.4
+
+## 0.14.3
+
+### Patch Changes
+
+- 6ed087a: Republish `c2pa-web` again. `0.14.0`–`0.14.2` all published with unresolved `workspace:*` dependencies and unmerged `publishConfig`. The actual root cause: `packages/c2pa-web` had a stray, long-committed `package-lock.json`, which caused confusion in CI when determining whether to use `npm` or `pnpm` to publish. No source changes; this release exists solely to get a correctly published package out now that the stray lockfile is gone.
+
+## 0.14.2
+
+### Patch Changes
+
+- 1b3b9ed: Republish again — `0.14.1` still published with unresolved `workspace:*` dependencies, because the serial-publish patch from #194 was applied to a `@changesets/cli` resolution that the release pipeline never actually invoked (see the patch-targeting fix in this same release). No source changes; this release exists solely to get a correctly published package out now that the patch is wired up correctly.
+
+## 0.14.1
+
+### Patch Changes
+
+- 9c87188: Republish to fix `@contentauth/c2pa-types`, `@contentauth/c2pa-utilities`, and `@contentauth/c2pa-wasm` dependencies, which were published as the literal string `workspace:*` instead of resolved versions. This happened because this package's publish ran concurrently with `c2pa-node`'s in the same release, hitting a race in pnpm's workspace-protocol rewrite during `pnpm publish` (now patched to publish serially). No source changes are included; this release exists solely to get a correctly published package out.
+- Updated dependencies [a62320c]
+  - @contentauth/c2pa-utilities@0.2.1
+
+## 0.14.0
+
+### Minor Changes
+
+- b3b3196: Introduce new c2pa-utilities package, and update c2pa-web and c2pa-node to use it.
+- f2f6ada: Move the Reader asset size check into `c2pa-utilities`, shared by both `c2pa-web` and `c2pa-node`. `c2pa-node`'s Reader now validates asset size before reading, using its own server-appropriate limit.
+
+  `validateAssetSize` treats a `maxSizeInBytes` of `0` as a request to use the new `DEFAULT_MAX_SIZE_IN_BYTES`, and throws a `RangeError` for non-finite or negative size/limit values.
+
+### Patch Changes
+
+- 2de9ba5: c2pa-rs bump
+- 4b22953: Remove ts-deepmerge from vite.config.ts's external array so that it gets bundled into c2pa-web.
+- facb1f0: Bump c2pa-rs version to 0.90.14
+- 1102535: Bump c2pa-rs version to v0.90.10
+- 4c8ad00: c2pa-rs version bump to v0.90.12
+- b82e854: Bump c2pa-rs to v0.90.15
+- 0f42fe8: Consolidate the `SigningAlg` type into `@contentauth/c2pa-utilities` (derived from `@contentauth/c2pa-types`'s schema-generated type). Re-use `ManifestAssertionKind` from `@contentauth/c2pa-types` instead of a duplicate hand-written copy. Fix `c2pa-node`'s `package.json` to list `@contentauth/c2pa-types` as a `dependency` rather than a `devDependency`, matching `c2pa-web`.
+- Updated dependencies [2de9ba5]
+- Updated dependencies [facb1f0]
+- Updated dependencies [f038dc1]
+- Updated dependencies [b3b3196]
+- Updated dependencies [1102535]
+- Updated dependencies [4c8ad00]
+- Updated dependencies [b82e854]
+- Updated dependencies [f2f6ada]
+- Updated dependencies [0f42fe8]
+  - @contentauth/c2pa-wasm@0.11.3
+  - @contentauth/c2pa-utilities@0.2.0
+
+## 0.13.4
+
+### Patch Changes
+
+- bd63c58: Add updateActions builder methods
+- Updated dependencies [bd63c58]
+  - @contentauth/c2pa-wasm@0.11.2
+
+## 0.13.3
+
+### Patch Changes
+
+- dc1f034: Bump c2pa-rs version to v0.90.5
+
+## 0.13.2
+
+### Patch Changes
+
+- b558be8: feat: incorporate c2pa builder filter_actions_and_ingredients
+- a5a904b: Update c2pa to 0.90.4
+- Updated dependencies [b558be8]
+- Updated dependencies [a5a904b]
+  - @contentauth/c2pa-wasm@0.11.1
+  - @contentauth/c2pa-types@0.7.3
+
+## 0.13.1
+
+### Patch Changes
+
+- Updated dependencies [684942a]
+  - @contentauth/c2pa-wasm@0.11.0
+
+## 0.13.0
+
+### Minor Changes
+
+- fc4f6e3: Include new experimental builder reduction methods
+
+### Patch Changes
+
+- Updated dependencies [fc4f6e3]
+  - @contentauth/c2pa-wasm@0.10.0
+
+## 0.12.4
+
+### Patch Changes
+
+- 2cf74c2: Update ts-deepmerge to 8.0.0
+- 51f67eb: Add retry with exponential backoff for fetching trust resources.
+
+## 0.12.3
+
+### Patch Changes
+
+- a18cf0e: Update C2PA version to 0.90.0.
+- Updated dependencies [a18cf0e]
+  - @contentauth/c2pa-types@0.7.2
+  - @contentauth/c2pa-wasm@0.9.2
+
+## 0.12.2
+
+### Patch Changes
+
+- c5dd375: Update for c2pa 0.89.3
+- Updated dependencies [c5dd375]
+- Updated dependencies [2214c82]
+  - @contentauth/c2pa-wasm@0.9.1
+  - @contentauth/c2pa-types@0.7.1
+
+## 0.12.1
+
+### Patch Changes
+
+- cb697aa: Sanitize manifest labels.
+
 ## 0.12.0
 
 ### Minor Changes

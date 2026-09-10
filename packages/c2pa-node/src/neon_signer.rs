@@ -11,7 +11,9 @@
 // specific language governing permissions and limitations under
 // each license.
 
-use crate::runtime::runtime;
+use std::ops::Deref;
+use std::{boxed::Box, str::FromStr, sync::Arc};
+
 use async_trait::async_trait;
 use c2pa::{
     create_signer,
@@ -25,11 +27,10 @@ use c2pa::{
 };
 use neon::prelude::*;
 use neon::types::buffer::TypedArray;
-use std::ops::Deref;
-use std::{boxed::Box, str::FromStr, sync::Arc};
 use tokio::sync::oneshot;
 
 use crate::error::Error;
+use crate::runtime::runtime;
 
 #[derive(Debug, Clone)]
 pub struct CallbackSignerConfig {

@@ -40,7 +40,7 @@ impl WasmReader {
         blob: &Blob,
         context_json: Option<String>,
     ) -> Result<WasmReader, JsString> {
-        let stream = BlobStream::new(blob);
+        let stream = BlobStream::new(blob).map_err(WasmError::other)?;
         WasmReader::from_stream(format, stream, context_json).await
     }
 
@@ -49,19 +49,16 @@ impl WasmReader {
         stream: impl Read + Seek + Send,
         context_json: Option<String>,
     ) -> Result<WasmReader, JsString> {
-        let reader = if let Some(json) = context_json {
-            let context = Context::new()
+        let context = match context_json {
+            Some(json) => Context::new()
                 .with_settings(json.as_str())
-                .map_err(WasmError::from)?;
-            Reader::from_context(context)
-                .with_stream_async(format, stream)
-                .await
-                .map_err(WasmError::from)?
-        } else {
-            Reader::from_stream_async(format, stream)
-                .await
-                .map_err(WasmError::from)?
+                .map_err(WasmError::from)?,
+            None => Context::new(),
         };
+        let reader = Reader::from_context(context)
+            .with_stream_async(format, stream)
+            .await
+            .map_err(WasmError::from)?;
 
         Ok(WasmReader::from_reader(reader).await)
     }
@@ -93,8 +90,8 @@ impl WasmReader {
         fragment: &Blob,
         context_json: Option<String>,
     ) -> Result<WasmReader, JsString> {
-        let init_stream = BlobStream::new(init);
-        let fragment_stream = BlobStream::new(fragment);
+        let init_stream = BlobStream::new(init).map_err(WasmError::other)?;
+        let fragment_stream = BlobStream::new(fragment).map_err(WasmError::other)?;
 
         WasmReader::from_stream_fragment(format, init_stream, fragment_stream, context_json).await
     }
@@ -105,19 +102,16 @@ impl WasmReader {
         fragment: impl Read + Seek + Send,
         context_json: Option<String>,
     ) -> Result<WasmReader, JsString> {
-        let reader = if let Some(json) = context_json {
-            let context = Context::new()
+        let context = match context_json {
+            Some(json) => Context::new()
                 .with_settings(json.as_str())
-                .map_err(WasmError::from)?;
-            Reader::from_context(context)
-                .with_fragment_async(format, init, fragment)
-                .await
-                .map_err(WasmError::from)?
-        } else {
-            Reader::from_fragment_async(format, init, fragment)
-                .await
-                .map_err(WasmError::from)?
+                .map_err(WasmError::from)?,
+            None => Context::new(),
         };
+        let reader = Reader::from_context(context)
+            .with_fragment_async(format, init, fragment)
+            .await
+            .map_err(WasmError::from)?;
 
         Ok(WasmReader::from_reader(reader).await)
     }

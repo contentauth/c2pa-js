@@ -25,6 +25,10 @@ const { promisify } = require('node:util');
 const pExec = promisify(exec);
 
 async function isInPnpmWorkspace(startDir) {
+	if (startDir.split(path.sep).includes('node_modules')) {
+		return false;
+	}
+
 	let dir = path.dirname(startDir);
 	while (true) {
 		const parent = path.dirname(dir);
@@ -144,11 +148,14 @@ async function downloadBinary(appRoot) {
 
 	if (repoBase && version && platform) {
 		const fileName = `c2pa-node_${platform}-v${version}.zip`;
+		// Releases are tagged "<pkg>@<version>" by changesets
+		// (e.g. "@contentauth/c2pa-node@0.6.2"), not "v<version>".
+		const tag = `${pkg.name}@${version}`;
 		const downloadUrl = [
 			repoBase,
 			'releases',
 			'download',
-			`v${version}`,
+			encodeURIComponent(tag),
 			fileName,
 		].join('/');
 		return downloadFromUrl(appRoot, downloadUrl);

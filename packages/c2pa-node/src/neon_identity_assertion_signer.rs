@@ -11,9 +11,9 @@
 // specific language governing permissions and limitations under
 // each license.
 
-use crate::{
-    neon_identity_assertion_builder::NeonIdentityAssertionBuilder, neon_signer::NeonCallbackSigner,
-};
+use std::ops::Deref;
+use std::sync::RwLock;
+
 use async_trait::async_trait;
 use c2pa::{
     crypto::{
@@ -25,8 +25,10 @@ use c2pa::{
 };
 use neon::prelude::FunctionContext;
 use neon::prelude::*;
-use std::ops::Deref;
-use std::sync::RwLock;
+
+use crate::{
+    neon_identity_assertion_builder::NeonIdentityAssertionBuilder, neon_signer::NeonCallbackSigner,
+};
 
 pub struct NeonIdentityAssertionSigner {
     signer: RwLock<NeonCallbackSigner>,
