@@ -21,6 +21,8 @@ import C_with_CAWG_data_ManifestStore from 'test/manifests/C_with_CAWG_data.js';
 
 import C_with_CAWG_data_trusted_ManifestStore from 'test/manifests/C_with_CAWG_data_trusted.js';
 import C_with_CAWG_data_untrusted_ManifestStore from 'test/manifests/C_with_CAWG_data_untrusted.js';
+import C_with_CAWG_data_cawg_only_trusted_ManifestStore from 'test/manifests/C_with_CAWG_data_cawg_only_trusted.js';
+import C_with_CAWG_data_signature_only_trusted_ManifestStore from 'test/manifests/C_with_CAWG_data_signature_only_trusted.js';
 import no_alg from 'test/assets/no_alg.jpg';
 import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';
 import dashinit from 'test/assets/dashinit.mp4';
@@ -108,8 +110,13 @@ describe('reader', () => {
 
         const manifestStore = await reader!.manifestStore();
 
-        // Using the overrideSettings, the asset is trusted.
-        expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
+        // The overrideSettings enable trust verification and provide a matching
+        // trust.trustAnchors, so the main signature is trusted. cawgTrust.verifyTrustList
+        // is not touched by overrideSettings, so it's inherited as `false` from the base
+        // settings, and no CAWG identity trust check is performed at all.
+        expect(manifestStore).toEqual(
+          C_with_CAWG_data_signature_only_trusted_ManifestStore
+        );
 
         c2pa.dispose();
       });
@@ -183,8 +190,12 @@ describe('reader', () => {
 
         const manifestStore = await reader!.manifestStore();
 
-        // Per-call anchor wins over the global one, so the result is untrusted.
-        expect(manifestStore).toEqual(C_with_CAWG_data_untrusted_ManifestStore);
+        // Per-call anchor wins over the global one, so the main signature is untrusted.
+        // cawgTrust is unaffected by the per-call override and is inherited from
+        // globalSettings, so the cawg.identity assertion is still trusted.
+        expect(manifestStore).toEqual(
+          C_with_CAWG_data_cawg_only_trusted_ManifestStore
+        );
 
         c2pa.dispose();
       });
