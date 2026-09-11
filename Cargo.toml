@@ -7,7 +7,7 @@ members = ['packages/c2pa-wasm', 'packages/c2pa-types', 'packages/c2pa-node']
 rust-version = "1.88.0"
 
 [workspace.dependencies]
-c2pa = { version = "=0.90.20", features = [
+c2pa = { version = "=0.90.22", features = [
     "unstable_builder_filter",
     "pdf",
     "rust_native_crypto",
