@@ -1,5 +1,14 @@
 # @contentauth/c2pa-web
 
+## 0.14.6
+
+### Patch Changes
+
+- 5fddbfb: Fix sanitization of manifest store.
+- 8d8536f: c2pa-rs version bump to v0.90.22
+- Updated dependencies [8d8536f]
+  - @contentauth/c2pa-wasm@0.11.6
+
 ## 0.14.5
 
 ### Patch Changes
