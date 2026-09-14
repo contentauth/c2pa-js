@@ -6,11 +6,11 @@
  * accordance with the terms of the Adobe license agreement accompanying
  * it.
  */
-import { createWorkerManager } from './worker/workerManager.js';
-import { createReaderFactory, ReaderFactory } from './reader.js';
+import { createWorkerManager, WorkerManager } from './worker/workerManager.js';
 import { WASM_SRI } from '@contentauth/c2pa-wasm';
-import { Settings, resolveSettings } from '@contentauth/c2pa-utilities';
-import { BuilderFactory, createBuilderFactory } from './builder.js';
+import { Settings } from '@contentauth/c2pa-utilities';
+import { createReaderFactory, ReaderFactory } from './reader.js';
+import { createBuilderFactory, BuilderFactory } from './builder.js';
 
 export interface Config {
   /**
@@ -29,24 +29,32 @@ export interface Config {
   workerSrc?: URL;
 
   /**
+   * @deprecated Use a `Context` to construct a `Reader`/`Builder` via their static methods instead.
    * Settings for the SDK. Will be inherited by created builders and readers.
    */
   settings?: Settings;
 }
 
-export interface C2paSdk {
+export interface C2pa {
   /**
-   * Contains methods for creating Reader objects.
+   * @internal Not part of the public API.
+   * Reader/Builder's static methods take this whole `C2pa` object and read the worker off
+   * of it themselves to know which web worker to use. There's no need to touch this directly.
+   */
+  worker: WorkerManager;
+
+  /**
+   * @deprecated Use `Reader`'s static methods instead, passing this `C2pa` object and a `Context`.
    */
   reader: ReaderFactory;
 
   /**
-   * Contains methods for creating Builder objects.
+   * @deprecated Use `Builder`'s static methods instead, passing this `C2pa` object and a `Context`.
    */
   builder: BuilderFactory;
 
   /**
-   * Terminates the SDK's underlying web worker.
+   * Terminates this instance's underlying web worker.
    */
   dispose: () => void;
 }
@@ -54,30 +62,39 @@ export interface C2paSdk {
 /**
  * Creates a new instance of c2pa-web by setting up a web worker and preparing a WASM binary.
  *
+ * The returned handle carries no unique configuration of its own and is purely the worker runtime
+ * with the WASM binary loaded on it.
+ * 
+ * Clients are free to create as many `Reader`s/`Builder`s from it, each with its own `Context`
+ * to configure their respective behaviors. They all share the same c2pa-web instance and worker.
+ *
  * @param config - SDK configuration object.
- * @returns An object providing access to factory methods for creating new reader objects.
+ * @returns A handle to the running worker, to be passed to `Reader`/`Builder`'s static methods.
  *
  * @example Creating a new SDK instance and reader:
  * ```
  * const c2pa = await createC2pa({ wasmSrc: 'url/hosting/wasm/binary' });
- *
- * const reader = await c2pa.reader.fromBlob(imageBlob.type, imageBlob);
+ * const reader = await Reader.fromBlob(c2pa, imageBlob.type, imageBlob);
  * ```
  */
-export async function createC2pa(config: Config): Promise<C2paSdk> {
+export async function createC2pa(config: Config): Promise<C2pa> {
   const { wasmSrc, workerSrc, settings } = config;
 
   const wasm =
     typeof wasmSrc === 'string' ? await fetchAndCompileWasm(wasmSrc) : wasmSrc;
 
-  const settingsString = await resolveSettings(settings);
-  const worker = await createWorkerManager({ wasm, workerSrc, settingsString });
+  const worker = await createWorkerManager({ wasm, workerSrc });
 
-  return {
-    reader: createReaderFactory(worker, settings),
-    builder: createBuilderFactory(worker, settings),
+  const c2pa: C2pa = {
+    worker,
+    reader: undefined as unknown as ReaderFactory,
+    builder: undefined as unknown as BuilderFactory,
     dispose: worker.terminate
   };
+  c2pa.reader = createReaderFactory(c2pa, settings);
+  c2pa.builder = createBuilderFactory(c2pa, settings);
+
+  return c2pa;
 }
 
 async function fetchAndCompileWasm(src: string) {
