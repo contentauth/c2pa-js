@@ -32,9 +32,6 @@ const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>
  * ```
  */
 export class Reader {
-  // Native private fields, which are inaccessible from outside the class at runtime.
-  // These properties cannot leak and will not appear if the reader object is logged
-  // or serialized.
   #worker: WorkerManager;
   #id: number;
 
@@ -51,7 +48,7 @@ export class Reader {
    * @param blob Blob of asset bytes.
    * @param context Optional `Context` configuring this reader's behavior.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
-   * @throws If the specified format is not supported, or if the asset is too large.
+   * @throws If the asset is too large.
    */
   static async fromBlob(
     c2pa: C2pa,
@@ -85,7 +82,7 @@ export class Reader {
    * @param fragment Blob of fragment bytes.
    * @param context Optional `Context` configuring this reader's behavior.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
-   * @throws If the specified format is not supported, or if the asset is too large.
+   * @throws If the asset is too large.
    */
   static async fromBlobFragment(
     c2pa: C2pa,
@@ -168,9 +165,7 @@ export class Reader {
    * @example Retrieving a thumbnail from the resource store:
    * ```
    * const reader = await Reader.fromBlob(c2pa, blob.type, blob);
-   *
    * const activeManifest = await reader.activeManifest();
-   *
    * const thumbnailBuffer = await reader.resourceToBytes(activeManifest.thumbnail!.identifier);
    * ```
    */
@@ -190,7 +185,7 @@ export class Reader {
 }
 
 /**
- * @deprecated Use `Reader`'s static methods, passing a `Context`, instead.
+ * @deprecated Use `Reader`'s static methods instead.
  */
 export interface ReaderFactory {
   /**
