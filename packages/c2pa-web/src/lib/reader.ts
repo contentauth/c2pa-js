@@ -10,6 +10,7 @@
 import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
 import type { WorkerManager } from './worker/workerManager.js';
 import {
+  mergeSettings,
   Settings,
   resolveSettings,
   validateAssetSize
@@ -135,7 +136,11 @@ export function createReaderFactory(worker: WorkerManager, settings?: Settings):
       validateAssetSize(blob.size, MAX_SIZE_IN_BYTES);
 
       try {
-        const settingsJson = await resolveSettings(baseSettings, settings);
+        // TODO: temporary shim for c2pa-utilities' resolveSettings signature change
+        // (single-argument now); removed once c2pa-web adopts Context in a follow-up PR.
+        const settingsJson = await resolveSettings(
+          settings ? mergeSettings(baseSettings ?? {}, settings) : baseSettings
+        );
 
         const readerId = await tx.reader_fromBlob(format, blob, settingsJson);
 
@@ -160,7 +165,11 @@ export function createReaderFactory(worker: WorkerManager, settings?: Settings):
       validateAssetSize(fragment.size, MAX_SIZE_IN_BYTES);
 
       try {
-        const settingsJson = await resolveSettings(baseSettings, settings);
+        // TODO: temporary shim for c2pa-utilities' resolveSettings signature change
+        // (single-argument now); removed once c2pa-web adopts Context in a follow-up PR.
+        const settingsJson = await resolveSettings(
+          settings ? mergeSettings(baseSettings ?? {}, settings) : baseSettings
+        );
 
         const readerId = await tx.reader_fromBlobFragment(
           format,
