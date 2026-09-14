@@ -65,4 +65,21 @@ describe('sanitizeManifestStore', () => {
     expect(result.manifests['__proto__']).toBe(activeManifest);
     expect(result.manifests['urn:c2pa:sibling']).toBe(siblingManifest);
   });
+
+  test('does not clobber the active manifest when the "__proto__"-labeled manifest is not active', () => {
+    const activeManifest = { title: 'active' };
+    const poisonedManifest = { title: 'FORGED' };
+
+    const poisoned: Record<string, unknown> = {
+      'urn:c2pa:genuine': activeManifest
+    };
+    // eslint-disable-next-line no-proto
+    (poisoned as any).__proto__ = poisonedManifest;
+
+    const store = { active_manifest: 'urn:c2pa:genuine', manifests: poisoned };
+    const result = sanitizeManifestStore(store);
+
+    expect(result.manifests[result.active_manifest]).toBe(activeManifest);
+    expect(result.manifests['__proto__']).toBe(poisonedManifest);
+  });
 });

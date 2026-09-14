@@ -8,8 +8,6 @@
  */
 
 import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
-import { UnsupportedFormatError } from './error.js';
-import { isSupportedReaderFormat } from './supportedFormats.js';
 import type { WorkerManager } from './worker/workerManager.js';
 import {
   mergeSettings,
@@ -135,10 +133,6 @@ export function createReaderFactory(worker: WorkerManager, settings?: Settings):
       blob: Blob,
       settings?: Settings
     ): Promise<Reader | null> {
-      if (!isSupportedReaderFormat(format)) {
-        throw new UnsupportedFormatError(format);
-      }
-
       validateAssetSize(blob.size, MAX_SIZE_IN_BYTES);
 
       try {
@@ -167,10 +161,6 @@ export function createReaderFactory(worker: WorkerManager, settings?: Settings):
       fragment: Blob,
       settings?: Settings
     ) {
-      if (!isSupportedReaderFormat(format)) {
-        throw new UnsupportedFormatError(format);
-      }
-
       validateAssetSize(init.size, MAX_SIZE_IN_BYTES);
       validateAssetSize(fragment.size, MAX_SIZE_IN_BYTES);
 
