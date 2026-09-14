@@ -23,7 +23,6 @@ import C_with_CAWG_data_ManifestStore from 'test/manifests/C_with_CAWG_data.js';
 
 import C_with_CAWG_data_trusted_ManifestStore from 'test/manifests/C_with_CAWG_data_trusted.js';
 import C_with_CAWG_data_untrusted_ManifestStore from 'test/manifests/C_with_CAWG_data_untrusted.js';
-import C_with_CAWG_data_signature_only_trusted_ManifestStore from 'test/manifests/C_with_CAWG_data_signature_only_trusted.js';
 import no_alg from 'test/assets/no_alg.jpg';
 import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';
 import dashinit from 'test/assets/dashinit.mp4';
@@ -103,13 +102,7 @@ describe('reader', () => {
 
         const manifestStore = await reader!.manifestStore();
 
-        // The overrideSettings enable trust verification and provide a matching
-        // trust.trustAnchors, so the main signature is trusted. cawgTrust.verifyTrustList
-        // is not touched by overrideSettings, so it's inherited as `false` from the base
-        // settings, and no CAWG identity trust check is performed at all.
-        expect(manifestStore).toEqual(
-          C_with_CAWG_data_signature_only_trusted_ManifestStore
-        );
+        expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
 
         c2pa.dispose();
       });
