@@ -15,10 +15,5 @@ export type { ReaderFactory } from './lib/reader.js';
 
 export type { Signer, SigningAlg } from './lib/signer.js';
 
-export {
-  isSupportedReaderFormat,
-  READER_SUPPORTED_FORMATS
-} from './lib/supportedFormats.js';
-
 // Re-export types from c2pa-types for convenience.
 export type * from '@contentauth/c2pa-types';

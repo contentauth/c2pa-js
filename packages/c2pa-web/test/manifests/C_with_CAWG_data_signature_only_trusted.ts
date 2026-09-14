@@ -1,5 +1,5 @@
 /**
- * Copyright 2025 Adobe
+ * Copyright 2026 Adobe
  * All Rights Reserved.
  *
  * NOTICE: Adobe permits you to use, modify, and distribute this file in
@@ -161,12 +161,6 @@ export default {
           code: 'assertion.dataHash.match',
           explanation: 'data hash valid',
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.hash.data'
-        },
-        {
-          code: 'signingCredential.trusted',
-          explanation:
-            'signing certificate trusted, found in System trust anchors',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
         },
         {
           code: 'cawg.identity.well-formed',

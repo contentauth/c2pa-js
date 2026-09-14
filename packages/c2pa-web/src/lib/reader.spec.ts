@@ -12,7 +12,6 @@ import { vi } from 'vitest';
 import { createC2pa } from './c2pa.js';
 import { Reader } from './reader.js';
 import { AssetTooLargeError, Context, Settings } from '@contentauth/c2pa-utilities';
-import { UnsupportedFormatError } from './error.js';
 import { getBlobForAsset } from 'test/utils.js';
 import { MAX_SIZE_IN_BYTES } from './reader.js';
 
@@ -24,6 +23,7 @@ import C_with_CAWG_data_ManifestStore from 'test/manifests/C_with_CAWG_data.js';
 
 import C_with_CAWG_data_trusted_ManifestStore from 'test/manifests/C_with_CAWG_data_trusted.js';
 import C_with_CAWG_data_untrusted_ManifestStore from 'test/manifests/C_with_CAWG_data_untrusted.js';
+import C_with_CAWG_data_signature_only_trusted_ManifestStore from 'test/manifests/C_with_CAWG_data_signature_only_trusted.js';
 import no_alg from 'test/assets/no_alg.jpg';
 import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';
 import dashinit from 'test/assets/dashinit.mp4';
@@ -60,16 +60,6 @@ describe('reader', () => {
         const reader = await Reader.fromBlob(c2pa, blob.type, blob);
 
         expect(reader).toBeNull();
-      });
-
-      test('should throw UnsupportedFormatError for an unsupported format', async ({
-        c2pa
-      }) => {
-        const blob = await getBlobForAsset(C_with_CAWG_data);
-
-        await expect(
-          Reader.fromBlob(c2pa, 'application/x-not-real', blob)
-        ).rejects.toThrow(UnsupportedFormatError);
       });
 
       test('should throw AssetTooLargeError when the blob exceeds the max size', async ({
@@ -113,7 +103,13 @@ describe('reader', () => {
 
         const manifestStore = await reader!.manifestStore();
 
-        expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
+        // The overrideSettings enable trust verification and provide a matching
+        // trust.trustAnchors, so the main signature is trusted. cawgTrust.verifyTrustList
+        // is not touched by overrideSettings, so it's inherited as `false` from the base
+        // settings, and no CAWG identity trust check is performed at all.
+        expect(manifestStore).toEqual(
+          C_with_CAWG_data_signature_only_trusted_ManifestStore
+        );
 
         c2pa.dispose();
       });
@@ -213,22 +209,6 @@ describe('reader', () => {
         );
 
         expect(reader).toBeNull();
-      });
-
-      test('should throw UnsupportedFormatError for an unsupported format', async ({
-        c2pa
-      }) => {
-        const initBlob = await getBlobForAsset(dashinit);
-        const fragmentBlob = await getBlobForAsset(dash1);
-
-        await expect(
-          Reader.fromBlobFragment(
-            c2pa,
-            'application/x-not-real',
-            initBlob,
-            fragmentBlob
-          )
-        ).rejects.toThrow(UnsupportedFormatError);
       });
 
       test('should throw AssetTooLargeError when the init blob exceeds the max size', async ({

@@ -17,7 +17,7 @@ import type {
   Ingredient,
   ManifestDefinition
 } from '@contentauth/c2pa-types';
-import { Context, Settings, mergeSettings } from '@contentauth/c2pa-utilities';
+import { Context, mergeSettings, Settings } from '@contentauth/c2pa-utilities';
 import type { C2pa } from './c2pa.js';
 
 /**

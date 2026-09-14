@@ -8,8 +8,6 @@
  */
 
 import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
-import { UnsupportedFormatError } from './error.js';
-import { isSupportedReaderFormat } from './supportedFormats.js';
 import type { C2pa } from './c2pa.js';
 import type { WorkerManager } from './worker/workerManager.js';
 import { Context, Settings, mergeSettings, validateAssetSize } from '@contentauth/c2pa-utilities';
@@ -61,10 +59,6 @@ export class Reader {
     blob: Blob,
     context: Context = new Context()
   ): Promise<Reader | null> {
-    if (!isSupportedReaderFormat(format)) {
-      throw new UnsupportedFormatError(format);
-    }
-
     validateAssetSize(blob.size, MAX_SIZE_IN_BYTES);
 
     try {
@@ -100,10 +94,6 @@ export class Reader {
     fragment: Blob,
     context: Context = new Context()
   ): Promise<Reader | null> {
-    if (!isSupportedReaderFormat(format)) {
-      throw new UnsupportedFormatError(format);
-    }
-
     validateAssetSize(init.size, MAX_SIZE_IN_BYTES);
     validateAssetSize(fragment.size, MAX_SIZE_IN_BYTES);
 
