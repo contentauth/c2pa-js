@@ -7,7 +7,9 @@ members = ['packages/c2pa-wasm', 'packages/c2pa-types', 'packages/c2pa-node']
 rust-version = "1.88.0"
 
 [workspace.dependencies]
-c2pa = { version = "=0.90.22", features = [
+# Testing against the c2pa-rs 0.91.0-rc.1 release candidate tag (not published
+# to crates.io). Revert to a crates.io version once 0.91.0 is released.
+c2pa = { git = "https://github.com/contentauth/c2pa-rs.git", tag = "c2pa-rc-v0.91.0-rc.1", features = [
     "unstable_builder_filter",
     "pdf",
     "rust_native_crypto",
