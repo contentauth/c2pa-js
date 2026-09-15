@@ -64,6 +64,7 @@ export default {
               alg: 'Ed25519',
               cert_serial_number:
                 '638838410810235485828984295321338730070538954823',
+              common_name: 'C2PA Signer',
               issuer: 'C2PA Test Signing Cert',
               revocation_status: true
             },
@@ -100,7 +101,7 @@ export default {
       explanation: 'signing certificate untrusted'
     },
     {
-      code: 'signingCredential.untrusted',
+      code: 'cawg.x509.credential.untrusted',
       explanation: 'signing certificate untrusted',
       url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
     }
@@ -160,12 +161,22 @@ export default {
           explanation: 'data hash valid'
         },
         {
+          code: 'cawg.x509.signature.validated',
+          explanation: 'X.509 identity assertion signature validated',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
+        },
+        {
           code: 'cawg.identity.well-formed',
           explanation: 'CAWG X.509 identity signature valid',
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
         }
       ],
       informational: [
+        {
+          code: 'signingCredential.ocsp.skipped',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
+          explanation: 'OCSP fetching skipped'
+        },
         {
           code: 'timeStamp.untrusted',
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature',
@@ -180,12 +191,13 @@ export default {
           explanation: 'signing certificate untrusted'
         },
         {
-          code: 'signingCredential.untrusted',
+          code: 'cawg.x509.credential.untrusted',
           explanation: 'signing certificate untrusted',
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
         }
       ]
-    }
+    },
+    specVersion: '2.4.0'
   },
   validation_state: 'Valid'
 } satisfies ManifestStore;
