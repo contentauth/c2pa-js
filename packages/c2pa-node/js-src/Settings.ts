@@ -12,6 +12,8 @@
 // each license.
 
 import fs from "fs-extra";
+import { Context, settingsToJson, withDefaultSettings } from "@contentauth/c2pa-utilities";
+import type { C2paSettings } from "./types.d.ts";
 
 /**
  * This file contains only Settings functions that are unique to the Node SDK.
@@ -28,4 +30,28 @@ import fs from "fs-extra";
 export async function loadSettingsFromFile(filePath: string): Promise<string> {
   const content = await fs.readFile(filePath, "utf8");
   return content;
+}
+
+/**
+ * Resolves a settings argument (either the deprecated raw `C2paSettings or a `Context`) into
+ * a JSON string that can be passed into the native library.
+ *
+ * Unlike `c2pa-web`'s `Context.toJson()`, this does not resolve trust-anchor URLs: `c2pa-node`
+ * doesn't perform trust-anchor URL fetching yet, so a `Context`'s settings are only merged with
+ * this package's defaults and serialized here.
+ */
+export function resolveSettingsForNeon(
+  settingsOrContext: C2paSettings | Context | null | undefined,
+): string | undefined {
+  if (settingsOrContext == null) {
+    return undefined;
+  }
+
+  if (settingsOrContext instanceof Context) {
+    return settingsToJson(withDefaultSettings(settingsOrContext.settings));
+  }
+
+  return typeof settingsOrContext === "string"
+    ? settingsOrContext
+    : JSON.stringify(settingsOrContext);
 }
