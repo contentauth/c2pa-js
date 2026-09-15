@@ -84,10 +84,15 @@ export interface TrustSettings {
    */
   allowedList?: string | string[];
   /**
-   * Enable CAWG trust validation. The default value is "true."
+   * Enable trust-list validation for this section (`trust` or `cawgTrust`). The default value
+   * is "true."
    *
-   * Only has an effect when set on `cawgTrust` — mirrors `c2pa-rs`'s `Trust` struct, which is
-   * shared by both the `trust` and `cawg_trust` settings sections and carries this field on both.
+   * `c2pa-rs` 0.91 removed the separate `cawg_trust` settings section and the underlying
+   * "check trust but don't report anything" toggle it backed. Setting this to `false` is
+   * approximated by omitting this section's anchors entirely from the resolved settings, which
+   * prevents the corresponding certificate chain from being trusted — but unlike before, the
+   * SDK's own validation still runs and now reports an explicit "untrusted" status rather than
+   * staying silent.
    */
   verifyTrustList?: boolean;
 }
@@ -102,7 +107,11 @@ export interface VerifySettings {
    */
   verifyAfterReading?: boolean;
   /**
-   * Whether to verify the manifest after signing in the Builder. The default value is "false."
+   * Whether to verify the manifest after signing in the Builder.
+   *
+   * `c2pa-rs` 0.91 flipped its own default to `true` (previously `false`). We don't override
+   * that default here, so callers using a signer that can't be locally re-verified (e.g. a
+   * signer that returns placeholder/remote-only bytes) must now explicitly set this to `false`.
    */
   verifyAfterSign?: boolean;
   /**
@@ -209,7 +218,77 @@ export async function resolveSettings(
   // Wait for all trust list resolutions to complete.
   await Promise.all(resolvePromises);
 
-  return JSON.stringify(snakeCaseify(finalSettings as SettingsObjectType));
+  return JSON.stringify(snakeCaseify(toWireSettings(finalSettings)));
+}
+
+/**
+ * `c2pa-rs` 0.91 replaced the separate top-level `cawg_trust` settings section (and the flat,
+ * now-deprecated `trust_anchors`/`user_anchors` string fields) with a single `trust.anchors[]`
+ * list, where each entry is tagged with a `trustKind` identifying which certificate chain it
+ * applies to. This builds that shape directly from our own `trust`/`cawgTrust` sections rather
+ * than relying on the deprecated fields, which are slated for removal in 0.92.
+ *
+ * Must run after {@link resolveTrustSettings} has resolved `settings`' anchor fields to plain
+ * strings.
+ */
+function toWireSettings(settings: Settings): SettingsObjectType {
+  const { trust, cawgTrust, ...rest } = settings;
+  const anchors = [
+    ...buildTrustAnchorEntries(trust, 'manifest'),
+    ...buildTrustAnchorEntries(cawgTrust, 'cawg')
+  ];
+
+  const wireSettings = rest as SettingsObjectType;
+  if (anchors.length > 0 || trust?.trustConfig) {
+    wireSettings.trust = {
+      ...(anchors.length > 0 ? { anchors } : {}),
+      ...(trust?.trustConfig
+        ? { trustConfig: trust.trustConfig as string }
+        : {})
+    };
+  }
+
+  return wireSettings;
+}
+
+type TrustAnchorKind = 'manifest' | 'cawg';
+
+function buildTrustAnchorEntries(
+  settings: TrustSettings | undefined,
+  kind: TrustAnchorKind
+): SettingsObjectType[] {
+  // There's no upstream equivalent left for "run this trust kind's checks but report nothing" -
+  // omitting its anchors is the closest approximation. Unlike before, validation still runs and
+  // now reports an explicit "untrusted" status instead of staying silent.
+  if (!settings || settings.verifyTrustList === false) {
+    return [];
+  }
+
+  const trustConfig = settings.trustConfig as string | undefined;
+  const allowedList = settings.allowedList as string | undefined;
+  const entries: SettingsObjectType[] = [];
+
+  if (settings.userAnchors) {
+    entries.push({
+      trustAnchors: settings.userAnchors as string,
+      trustUri: `${kind}_user_anchors`,
+      trustKind: kind,
+      ...(trustConfig ? { trustConfig } : {}),
+      ...(allowedList ? { allowedList } : {})
+    });
+  }
+
+  if (settings.trustAnchors) {
+    entries.push({
+      trustAnchors: settings.trustAnchors as string,
+      trustUri: `${kind}_system_anchors`,
+      trustKind: kind,
+      ...(trustConfig ? { trustConfig } : {}),
+      ...(allowedList ? { allowedList } : {})
+    });
+  }
+
+  return entries;
 }
 
 // =================================
@@ -268,7 +347,7 @@ export function mergeSettings(...settings: Settings[]): Settings {
  * @returns JSON string representation with snake_case keys
  */
 export function settingsToJson(settings: Settings): string {
-  return JSON.stringify(snakeCaseify(settings as SettingsObjectType));
+  return JSON.stringify(snakeCaseify(toWireSettings(settings)));
 }
 
 // =================================

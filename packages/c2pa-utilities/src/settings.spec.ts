@@ -75,11 +75,12 @@ describe('settings', () => {
       });
 
       test('should not throw when a nested settings value is null', async () => {
+        // A null (falsy) anchors value produces no anchor entry, so `trust` is
+        // omitted entirely rather than being sent as `{ user_anchors: null }`.
         const result = await resolveSettings({ trust: { userAnchors: null as any } });
         expect(result).toEqual(
           JSON.stringify({
-            builder: { generate_c2pa_archive: true },
-            trust: { user_anchors: null }
+            builder: { generate_c2pa_archive: true }
           })
         );
       });
@@ -102,20 +103,44 @@ describe('settings', () => {
           }
         });
 
+        // `trust`/`cawgTrust` are unified into a single `trust.anchors[]` list, each
+        // entry tagged with the trust_kind it applies to. The `trust`-level `trustConfig`
+        // stays a top-level field; the `cawgTrust`-level one becomes a per-anchor override.
         expect(result).toEqual(
           JSON.stringify({
             builder: { generate_c2pa_archive: true },
             trust: {
-              user_anchors: 'foo',
-              trust_anchors: 'bar',
-              allowed_list: 'baz',
+              anchors: [
+                {
+                  trust_anchors: 'foo',
+                  trust_uri: 'manifest_user_anchors',
+                  trust_kind: 'manifest',
+                  trust_config: 'qux',
+                  allowed_list: 'baz'
+                },
+                {
+                  trust_anchors: 'bar',
+                  trust_uri: 'manifest_system_anchors',
+                  trust_kind: 'manifest',
+                  trust_config: 'qux',
+                  allowed_list: 'baz'
+                },
+                {
+                  trust_anchors: 'cawg foo',
+                  trust_uri: 'cawg_user_anchors',
+                  trust_kind: 'cawg',
+                  trust_config: 'cawg qux',
+                  allowed_list: 'cawg baz'
+                },
+                {
+                  trust_anchors: 'cawg bar',
+                  trust_uri: 'cawg_system_anchors',
+                  trust_kind: 'cawg',
+                  trust_config: 'cawg qux',
+                  allowed_list: 'cawg baz'
+                }
+              ],
               trust_config: 'qux'
-            },
-            cawg_trust: {
-              user_anchors: 'cawg foo',
-              trust_anchors: 'cawg bar',
-              allowed_list: 'cawg baz',
-              trust_config: 'cawg qux'
             }
           })
         );
@@ -156,19 +181,40 @@ describe('settings', () => {
           JSON.stringify({
             builder: { generate_c2pa_archive: true },
             trust: {
-              user_anchors:
-                '-----BEGIN CERTIFICATE-----foo-----END CERTIFICATE-----',
-              trust_anchors:
-                '-----BEGIN CERTIFICATE-----bar-----END CERTIFICATE-----',
-              allowed_list: 'allowed',
-              trust_config: 'config'
-            },
-            cawg_trust: {
-              user_anchors:
-                '-----BEGIN CERTIFICATE-----foo-----END CERTIFICATE-----',
-              trust_anchors:
-                '-----BEGIN CERTIFICATE-----bar-----END CERTIFICATE-----',
-              allowed_list: 'allowed',
+              anchors: [
+                {
+                  trust_anchors:
+                    '-----BEGIN CERTIFICATE-----foo-----END CERTIFICATE-----',
+                  trust_uri: 'manifest_user_anchors',
+                  trust_kind: 'manifest',
+                  trust_config: 'config',
+                  allowed_list: 'allowed'
+                },
+                {
+                  trust_anchors:
+                    '-----BEGIN CERTIFICATE-----bar-----END CERTIFICATE-----',
+                  trust_uri: 'manifest_system_anchors',
+                  trust_kind: 'manifest',
+                  trust_config: 'config',
+                  allowed_list: 'allowed'
+                },
+                {
+                  trust_anchors:
+                    '-----BEGIN CERTIFICATE-----foo-----END CERTIFICATE-----',
+                  trust_uri: 'cawg_user_anchors',
+                  trust_kind: 'cawg',
+                  trust_config: 'config',
+                  allowed_list: 'allowed'
+                },
+                {
+                  trust_anchors:
+                    '-----BEGIN CERTIFICATE-----bar-----END CERTIFICATE-----',
+                  trust_uri: 'cawg_system_anchors',
+                  trust_kind: 'cawg',
+                  trust_config: 'config',
+                  allowed_list: 'allowed'
+                }
+              ],
               trust_config: 'config'
             }
           })
@@ -197,8 +243,14 @@ describe('settings', () => {
           JSON.stringify({
             builder: { generate_c2pa_archive: true },
             trust: {
-              user_anchors:
-                '-----BEGIN CERTIFICATE-----qux-----END CERTIFICATE----------BEGIN CERTIFICATE-----qux-----END CERTIFICATE-----'
+              anchors: [
+                {
+                  trust_anchors:
+                    '-----BEGIN CERTIFICATE-----qux-----END CERTIFICATE----------BEGIN CERTIFICATE-----qux-----END CERTIFICATE-----',
+                  trust_uri: 'manifest_user_anchors',
+                  trust_kind: 'manifest'
+                }
+              ]
             }
           })
         );
@@ -489,7 +541,7 @@ describe('settingsToJson', () => {
     expect(parsed.verify.verify_after_reading).toBe(true);
   });
 
-  it('does not include undefined values in CAWG trust settings JSON', () => {
+  it('does not emit a dead cawg_trust key, and omits trust entirely when there are no anchors', () => {
     const trustConfig: TrustSettings = {
       verifyTrustList: true
     };
@@ -498,11 +550,10 @@ describe('settingsToJson', () => {
     const json = settingsToJson(settings);
     const parsed = JSON.parse(json);
 
-    expect(parsed.cawg_trust.verify_trust_list).toBe(true);
-    expect('user_anchors' in parsed.cawg_trust).toBe(false);
-    expect('trust_anchors' in parsed.cawg_trust).toBe(false);
-    expect('trust_config' in parsed.cawg_trust).toBe(false);
-    expect('allowed_list' in parsed.cawg_trust).toBe(false);
+    // `cawg_trust` no longer exists in c2pa-rs 0.91 — CAWG trust settings are folded into
+    // `trust.anchors[]`. With no anchors configured, there's nothing to send.
+    expect('cawg_trust' in parsed).toBe(false);
+    expect('trust' in parsed).toBe(false);
   });
 
   it('does not include undefined values in verify settings JSON', () => {
@@ -545,9 +596,11 @@ describe('settingsToJson', () => {
     const json = settingsToJson(merged);
     const parsed = JSON.parse(json);
 
-    expect(parsed.cawg_trust.verify_trust_list).toBe(true);
-    expect(parsed.cawg_trust.user_anchors).toBe('test');
-    expect('allowed_list' in parsed.cawg_trust).toBe(false);
+    expect('cawg_trust' in parsed).toBe(false);
+    const [cawgAnchor] = parsed.trust.anchors;
+    expect(cawgAnchor.trust_kind).toBe('cawg');
+    expect(cawgAnchor.trust_anchors).toBe('test');
+    expect('allowed_list' in cawgAnchor).toBe(false);
     expect(parsed.verify.verify_after_reading).toBe(false);
   });
 });
