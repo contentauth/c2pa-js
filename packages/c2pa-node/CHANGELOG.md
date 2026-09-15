@@ -1,5 +1,13 @@
 # @contentauth/c2pa-node
 
+## 0.9.6
+
+### Patch Changes
+
+- 4aa0a07: Use Context as the new way to construct and configure Reader and Builder objects. Deprecate Settings-based workflows.
+- Updated dependencies [92a1619]
+  - @contentauth/c2pa-utilities@0.3.0
+
 ## 0.9.5
 
 ### Patch Changes

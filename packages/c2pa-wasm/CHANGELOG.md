@@ -1,5 +1,11 @@
 # @contentauth/c2pa-wasm
 
+## 0.12.0
+
+### Minor Changes
+
+- 1f04ad3: Use Context as the new way to construct and configure Reader and Builder objects. Deprecate thread-local Settings paths and the old Reader and Builder factory pattern.
+
 ## 0.11.6
 
 ### Patch Changes
