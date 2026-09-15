@@ -9,7 +9,7 @@ Install these before running the testbed. Full details are in the [c2pa-js READM
 - **Node.js** v22.22 or later
 - **pnpm** and the **Nx** CLI (`npm install -g pnpm nx`)
 - **Rust toolchain** and related tools to build `c2pa-wasm` from source:
-  - Rust 1.96.0+ with the `wasm32-unknown-unknown` target
+  - Rust 1.88.0+ with the `wasm32-unknown-unknown` target
   - `wasm-bindgen-cli` (version must match [`Cargo.toml`](../../packages/c2pa-wasm/Cargo.toml))
   - `wasm-pack` 0.13.1
 

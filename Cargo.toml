@@ -4,7 +4,7 @@ resolver = '2'
 members = ['packages/c2pa-wasm', 'packages/c2pa-types', 'packages/c2pa-node']
 
 [workspace.package]
-rust-version = "1.96.0"
+rust-version = "1.88.0"
 
 [workspace.dependencies]
 # Testing against the c2pa-rs 0.91.0-rc.1 release candidate tag (not published
