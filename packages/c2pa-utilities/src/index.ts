@@ -7,6 +7,7 @@
  * it.
  */
 
+export * from './context.js';
 export * from './settings.js';
 export * from './fetchWithRetry.js';
 export * from './caseConversion.js';

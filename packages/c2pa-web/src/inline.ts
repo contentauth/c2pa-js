@@ -18,13 +18,13 @@ export type InlineConfig = Omit<Config, 'wasmSrc'>;
  * This is the "inline" version which compiles the WASM binary from an inlined, base64-encoded string.
  *
  * @param config - SDK configuration object.
- * @returns An object providing access to factory methods for creating new reader objects.
+ * @returns A handle to the running worker, to be passed to `Reader`/`Builder`'s static methods.
  *
  * @example Creating a new SDK instance and reader:
  * ```
  * const c2pa = await createC2pa();
  *
- * const reader = await c2pa.reader.fromBlob(imageBlob.type, imageBlob);
+ * const reader = await Reader.fromBlob(c2pa, imageBlob.type, imageBlob);
  * ```
  */
 export async function createC2pa(config?: InlineConfig) {
@@ -36,6 +36,8 @@ export async function createC2pa(config?: InlineConfig) {
   });
 }
 
+export { Reader } from './lib/reader.js';
+export { Builder } from './lib/builder.js';
 export * from './common.js';
 
 function dataUrlToArrayBuffer(dataUrl: string) {

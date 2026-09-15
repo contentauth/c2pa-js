@@ -8,7 +8,7 @@
  */
 
 import { test, describe, expect } from 'test/methods.js';
-import { createC2pa } from './inline.js';
+import { createC2pa, Reader } from './inline.js';
 import { getBlobForAsset } from 'test/utils.js';
 import C_with_CAWG_data from 'test/assets/C_with_CAWG_data.jpg';
 import C_with_CAWG_data_untrusted_ManifestStore from 'test/manifests/C_with_CAWG_data_untrusted.js';
@@ -21,7 +21,7 @@ describe.skipIf(navigator.userAgent.includes('Firefox'))(
 
       const blob = await getBlobForAsset(C_with_CAWG_data);
 
-      const reader = await c2pa.reader.fromBlob(blob.type, blob);
+      const reader = await Reader.fromBlob(c2pa, blob.type, blob);
 
       expect(reader).not.toBeNull();
 

@@ -25,9 +25,6 @@ pub mod wasm_builder;
 /// Exposes a JS Callback signer API to JS via wasm-bindgen.
 pub mod wasm_signer;
 
-/// Provides a JS interface for loading c2pa-rs settings.
-pub mod settings;
-
 /// Internal utility functions
 pub(crate) mod utils;
 
