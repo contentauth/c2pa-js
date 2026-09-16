@@ -70,6 +70,7 @@
     "vite-tsconfig-paths": "^5.1.4"
   },
   "scripts": {
-    "build:docs": "typedoc src/index.ts src/inline.ts"
+    "build:docs": "typedoc src/index.ts src/inline.ts",
+    "read-manifest": "node scripts/read-manifest.js"
   }
 }
