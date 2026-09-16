@@ -8,7 +8,13 @@
  */
 
 import type { WorkerManager } from './worker/workerManager.js';
-import { getSerializablePayload, type Signer } from './signer.js';
+import {
+  getSerializablePayload,
+  getSerializableIdentityAssertion,
+  type SerializableIdentityAssertion,
+  type Signer,
+  type SignOptions
+} from './signer.js';
 import type {
   Action,
   AssertionDefinition,
@@ -55,6 +61,27 @@ function getActionGroupsFromDefinition(
 export interface ManifestAndAssetBytes {
   manifest: Uint8Array<ArrayBuffer>;
   asset: Uint8Array<ArrayBuffer>;
+}
+
+/**
+ * Registers each identity assertion's credential-holder `sign` on the main
+ * thread (via `WorkerManager.registerCredentialHolderReceiver`, mirroring
+ * `registerSignReceiver` for the plain signer) and builds the serializable
+ * payload sent to the worker alongside the main signer payload. The
+ * credential-holder callbacks themselves never cross into the worker.
+ */
+function getSerializableIdentityAssertions(
+  worker: WorkerManager,
+  options: SignOptions | undefined
+): SerializableIdentityAssertion[] {
+  const identityAssertions = options?.identityAssertions ?? [];
+
+  return identityAssertions.map((identityAssertion) => {
+    const requestId = worker.registerCredentialHolderReceiver(
+      identityAssertion.credentialHolder.sign
+    );
+    return getSerializableIdentityAssertion(identityAssertion, requestId);
+  });
 }
 
 // Module-level registry for garbage collection
@@ -411,20 +438,32 @@ export class Builder {
   /**
    * Sign an asset.
    *
+   * @param signer The signer to use for the manifest's claim signature.
+   * @param format The format (MIME type) of the asset.
+   * @param blob The asset bytes.
+   * @param options Optional {@link SignOptions}. `identityAssertions` attaches
+   * one or more CAWG identity assertions (`cawg.identity`) to the manifest.
+   *
    * @todo Docs coming soon
    */
   async sign(
     signer: Signer,
     format: string,
-    blob: Blob
+    blob: Blob,
+    options?: SignOptions
   ): Promise<Uint8Array<ArrayBuffer>> {
     const payload = await getSerializablePayload(signer);
     const requestId = this.#worker.registerSignReceiver(signer.sign);
+    const identityAssertions = getSerializableIdentityAssertions(
+      this.#worker,
+      options
+    );
 
     const result = await this.#worker.tx.builder_sign(
       this.#id,
       requestId,
       payload,
+      identityAssertions,
       format,
       blob
     );
@@ -435,20 +474,32 @@ export class Builder {
   /**
    * Sign an asset and get both the signed asset bytes and the manifest bytes.
    *
+   * @param signer The signer to use for the manifest's claim signature.
+   * @param format The format (MIME type) of the asset.
+   * @param blob The asset bytes.
+   * @param options Optional {@link SignOptions}. `identityAssertions` attaches
+   * one or more CAWG identity assertions (`cawg.identity`) to the manifest.
+   *
    * @todo Docs coming soon
    */
   async signAndGetManifestBytes(
     signer: Signer,
     format: string,
-    blob: Blob
+    blob: Blob,
+    options?: SignOptions
   ): Promise<ManifestAndAssetBytes> {
     const payload = await getSerializablePayload(signer);
     const requestId = this.#worker.registerSignReceiver(signer.sign);
+    const identityAssertions = getSerializableIdentityAssertions(
+      this.#worker,
+      options
+    );
 
     const result = await this.#worker.tx.builder_signAndGetManifestBytes(
       this.#id,
       requestId,
       payload,
+      identityAssertions,
       format,
       blob
     );

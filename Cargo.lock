@@ -495,7 +495,7 @@ dependencies = [
  "byteorder",
  "byteordered",
  "bytes",
- "c2pa_cbor",
+ "c2pa_cbor 0.77.2",
  "chrono",
  "console_log",
  "const-hex",
@@ -576,7 +576,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "c2pa",
- "ciborium",
+ "c2pa_cbor 0.78.0",
  "futures",
  "image",
  "neon",
@@ -609,6 +609,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "c2pa",
+ "c2pa_cbor 0.78.0",
  "console_error_panic_hook",
  "console_log",
  "getrandom 0.3.4",
@@ -631,6 +632,17 @@ name = "c2pa_cbor"
 version = "0.77.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a32d9f47773390b9e3400021ddd9ef7a8d61b8a6501cf72aecd6409d6d447c89"
+dependencies = [
+ "half",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
+name = "c2pa_cbor"
+version = "0.78.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b413817d7fcff304f37381bb36de9b5fa08c060b3bd4916de7fcbe0d0c874254"
 dependencies = [
  "half",
  "serde",

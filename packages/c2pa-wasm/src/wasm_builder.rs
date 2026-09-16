@@ -21,6 +21,7 @@ use crate::{
     error::WasmError,
     stream::BlobStream,
     utils::cursor_to_u8array,
+    wasm_identity_assertion::{WasmIdentityAssertionSigner, parse_identity_assertions},
     wasm_signer::{SignerDefinition, WasmSigner},
 };
 
@@ -445,34 +446,54 @@ impl WasmBuilder {
     }
 
     /// Sign an asset using the provided SignerDefinition, format, and source Blob.
+    ///
+    /// `identity_assertions` is an array of `IdentityAssertionDefinition` (see
+    /// `wasm_identity_assertion`'s typescript_custom_section); pass an empty
+    /// array when no CAWG identity assertions are requested.
     #[wasm_bindgen]
     pub async fn sign(
         &mut self,
         signer_definition: &SignerDefinition,
+        identity_assertions: JsValue,
         format: &str,
         source: &Blob,
     ) -> Result<Vec<u8>, JsString> {
         let mut asset: Vec<u8> = Vec::new();
 
-        self.sign_internal(signer_definition, format, source, &mut asset)
-            .await?;
+        self.sign_internal(
+            signer_definition,
+            identity_assertions,
+            format,
+            source,
+            &mut asset,
+        )
+        .await?;
 
         Ok(asset)
     }
 
     /// Sign an asset using the provided SignerDefinition, format, and source Blob.
     /// Use this method to get both the manifest bytes and the bytes of the signed asset.
+    ///
+    /// See [`Self::sign`] for `identity_assertions`.
     #[wasm_bindgen(js_name = signAndGetManifestBytes)]
     pub async fn sign_and_get_manifest_bytes(
         &mut self,
         signer_definition: &SignerDefinition,
+        identity_assertions: JsValue,
         format: &str,
         source: &Blob,
     ) -> Result<JsValue, JsString> {
         let mut asset: Vec<u8> = Vec::new();
 
         let manifest = self
-            .sign_internal(signer_definition, format, source, &mut asset)
+            .sign_internal(
+                signer_definition,
+                identity_assertions,
+                format,
+                source,
+                &mut asset,
+            )
             .await?;
 
         let result = AssetAndManifestBytes { manifest, asset }
@@ -485,20 +506,35 @@ impl WasmBuilder {
     async fn sign_internal(
         &mut self,
         signer_definition: &SignerDefinition,
+        identity_assertions: JsValue,
         format: &str,
         source: &Blob,
         dest: &mut Vec<u8>,
     ) -> Result<Vec<u8>, JsString> {
         let signer = WasmSigner::from_definition(signer_definition)?;
+        let identity_assertion_builders = parse_identity_assertions(&identity_assertions)?;
         let mut stream = BlobStream::new(source).map_err(WasmError::other)?;
 
         let mut cursor = Cursor::new(dest);
 
-        let manifest = self
-            .builder
-            .sign_async(&signer, format, &mut stream, &mut cursor)
-            .await
-            .map_err(WasmError::from)?;
+        // When no identity assertions are requested, sign with the plain
+        // `WasmSigner` exactly as before (backward compatible / unchanged
+        // path). Otherwise wrap it in a `WasmIdentityAssertionSigner` so the
+        // CAWG identity assertion(s) get included via `dynamic_assertions()`.
+        let manifest = if identity_assertion_builders.is_empty() {
+            self.builder
+                .sign_async(&signer, format, &mut stream, &mut cursor)
+                .await
+                .map_err(WasmError::from)?
+        } else {
+            let identity_signer =
+                WasmIdentityAssertionSigner::new(signer, identity_assertion_builders);
+
+            self.builder
+                .sign_async(&identity_signer, format, &mut stream, &mut cursor)
+                .await
+                .map_err(WasmError::from)?
+        };
 
         Ok(manifest)
     }

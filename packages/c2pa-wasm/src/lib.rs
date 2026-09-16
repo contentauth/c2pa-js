@@ -25,6 +25,13 @@ pub mod wasm_builder;
 /// Exposes a JS Callback signer API to JS via wasm-bindgen.
 pub mod wasm_signer;
 
+/// Exposes a JS Callback CAWG credential-holder API to JS via wasm-bindgen.
+pub mod wasm_credential_holder;
+
+/// Builds CAWG identity assertions (`cawg.identity`) from a JS credential
+/// holder callback.
+pub mod wasm_identity_assertion;
+
 /// Internal utility functions
 pub(crate) mod utils;
 
