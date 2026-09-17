@@ -26,11 +26,19 @@ export const MAX_SIZE_IN_BYTES = 10 ** 9;
 /**
  * Lazily initializes the WASM module on the main thread (for worker-free reads).
  *
- * Uses the async `WebAssembly.instantiate` path rather than `initSync`'s
- * `new WebAssembly.Instance`: Chrome disallows synchronous instantiation on the
- * main thread once the module exceeds 8MB, which the c2pa WASM binary does.
+ * Uses the async `WebAssembly.instantiate` path: Chrome disallows `initSync`'s
+ * synchronous `new WebAssembly.Instance` on the main thread once the module
+ * exceeds 8MB, which the c2pa WASM binary does.
  */
 let mainThreadWasmInit: Promise<unknown> | undefined;
+/** The wasm binding takes the whole-object limit as a string, so a byte count is stringified. */
+function wholeObjectLimitArg(
+  limit: FromUrlOptions['wholeObjectLimit']
+): string | undefined {
+  if (limit === undefined) return undefined;
+  return typeof limit === 'number' ? String(limit) : limit;
+}
+
 function ensureMainThreadWasm(wasm: WebAssembly.Module): Promise<unknown> {
   if (!mainThreadWasmInit) {
     mainThreadWasmInit = initWasm({ module_or_path: wasm });
@@ -46,30 +54,33 @@ export interface FromUrlOptions {
   onFetch?: (event: RangeFetchEvent) => void;
   /**
    * Read strategy:
-   * - `'verify'` (default): full validation including the data-hash binding. Runs
-   *   in the Web Worker (synchronous XHR). Preferred wherever a worker is
-   *   available, since it overlaps reading with hashing on a worker thread.
-   * - `'verify-async'`: full validation including the data-hash binding, driven
-   *   over asynchronous `fetch` with no Web Worker. For runtimes that have no
-   *   synchronous XHR at all — browser extension service workers, Cloudflare
-   *   Workers. Verification reads the whole asset, streamed in `hashChunkBytes`
-   *   pieces so memory stays bounded.
-   * - `'discover'`: manifest + signature validation only, driven over asynchronous
-   *   `fetch`; no data-hash binding is checked, so the returned validation state
-   *   says nothing about whether the asset bytes match the manifest. Reads far
-   *   fewer bytes than either verifying mode.
+   * - `'verify'` (default): full validation including the data-hash binding. Runs in
+   *   the Web Worker (synchronous XHR).
+   * - `'verify-async'`: full validation over asynchronous `fetch`, no Web Worker. For
+   *   runtimes with no synchronous XHR: extension service workers, Cloudflare Workers.
+   *   Peak memory is bounded by `hashBufferSizeInKb`.
+   * - `'discover'`: manifest and signature validation only, no data-hash binding,
+   *   over asynchronous `fetch`. Reads far fewer bytes than either verifying mode.
    *
-   * Box hashes and merkle-hashed non-fragmented BMFF cannot be checked over
-   * asynchronous ranges; `'verify-async'` reports an explicit error on such assets
-   * rather than passing them unchecked. Use `'verify'` for those.
+   * Box hashes and merkle-hashed non-fragmented BMFF can't be checked over
+   * asynchronous ranges; `'verify-async'` errors on such assets. Use `'verify'`
+   * for those.
    */
   mode?: 'verify' | 'verify-async' | 'discover';
   /**
-   * Bytes held at once while hashing in `'verify-async'`; ignored by other modes.
-   * Defaults to the SDK's own value. Lower it where memory is capped (a workerd
-   * isolate is limited to 128 MB).
+   * Kilobytes the hasher holds at once. Applies to every verifying mode, the
+   * worker included. Defaults to the SDK's own value. Lower it where memory is
+   * capped (a workerd isolate is limited to 128 MB).
    */
-  hashChunkBytes?: number;
+  hashBufferSizeInKb?: number;
+  /**
+   * Bounds the whole-object read the async modes fall back to for a handler that
+   * reads its input to end, such as JPEG. A byte count, `'unbounded'` for a host
+   * that can hold the object, or `'disabled'` to refuse the fallback. Defaults to
+   * the SDK's 256 MiB. The object still arrives in `maxRequest` pieces; the tab
+   * holds the assembled object for the length of the read.
+   */
+  wholeObjectLimit?: number | 'unbounded' | 'disabled';
 }
 
 /**
@@ -107,7 +118,7 @@ export interface ReaderFactory {
 
   /**
    * Create a {@link Reader} from an asset's format and URL, reading only the bytes
-   * needed via HTTP Range requests instead of downloading the whole asset.
+   * needed via HTTP Range requests.
    *
    * @param format Asset format.
    * @param url URL of the asset. The host must support HTTP Range requests.
@@ -311,7 +322,8 @@ export function createReaderFactory(
                   onFetch({ offset, length, total })
               : undefined,
             options.mode,
-            options?.hashChunkBytes
+            options?.hashBufferSizeInKb,
+            wholeObjectLimitArg(options?.wholeObjectLimit)
           );
           return createMainThreadReader(wasmReader);
         }
@@ -321,7 +333,8 @@ export function createReaderFactory(
           url,
           settingsJson,
           options?.mode,
-          options?.hashChunkBytes
+          options?.hashBufferSizeInKb,
+          wholeObjectLimitArg(options?.wholeObjectLimit)
         );
 
         const reader = createReader(worker, readerId, () => {
@@ -358,7 +371,8 @@ export function createReaderFactory(
           format,
           initUrl,
           fragmentUrls,
-          settingsJson
+          settingsJson,
+          options?.hashBufferSizeInKb
         );
 
         const reader = createReader(worker, readerId, () => {

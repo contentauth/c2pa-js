@@ -14,7 +14,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use c2pa::{AssetRef, AssetRequest, AssetSourceError, RangeAssetSource};
+use c2pa::asset_transport::{AssetRef, AssetRequest, AssetTransportError, SyncRangeAssetTransport};
 use neon::prelude::*;
 
 use super::stream::NodeRangeReader;
@@ -25,20 +25,20 @@ pub(crate) struct SourceEntry {
     pub read_range: Arc<Root<JsFunction>>,
 }
 
-/// Builds a [`RangeAssetSource`] that maps a URL reference to its registered JS
+/// Builds a [`SyncRangeAssetTransport`] that maps a URL reference to its registered JS
 /// `readRange` callback. Transport lives entirely in JavaScript; no HTTP client is
 /// compiled into Rust.
 pub(crate) fn range_source(
     channel: Channel,
     sources: Arc<HashMap<String, SourceEntry>>,
     on_fetch: Option<Arc<Root<JsFunction>>>,
-) -> RangeAssetSource<impl Fn(&AssetRequest<'_>) -> Result<NodeRangeReader, AssetSourceError>> {
-    RangeAssetSource::new(move |request: &AssetRequest<'_>| {
+) -> SyncRangeAssetTransport<impl Fn(&AssetRequest<'_>) -> Result<NodeRangeReader, AssetTransportError>> {
+    SyncRangeAssetTransport::new(move |request: &AssetRequest<'_>| {
         let url = match request.reference {
-            AssetRef::Uri(u) | AssetRef::Opaque(u) => u,
-            _ => return Err(AssetSourceError::UnsupportedReference),
+            AssetRef::Uri(u) | AssetRef::Custom(u) => u,
+            _ => return Err(AssetTransportError::UnsupportedReference),
         };
-        let entry = sources.get(url).ok_or_else(|| AssetSourceError::NotFound {
+        let entry = sources.get(url).ok_or_else(|| AssetTransportError::NotFound {
             reference: url.to_owned(),
         })?;
         Ok(NodeRangeReader::new(
@@ -46,6 +46,7 @@ pub(crate) fn range_source(
             entry.read_range.clone(),
             on_fetch.clone(),
             entry.size,
+            url.to_owned(),
         ))
     })
 }

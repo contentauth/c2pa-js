@@ -16,7 +16,7 @@ use web_sys::Blob;
 
 use crate::{
     error::WasmError,
-    range::{async_http_range_source, http_range_source},
+    range::{async_http_range_source, http_range_source, whole_object_config},
     stream::BlobStream,
     utils::cursor_to_u8array,
 };
@@ -28,17 +28,12 @@ pub struct WasmReader {
     serializer: Serializer,
 }
 
-/**
- * NOTE: we can only return Err(JsString) or Err(JsValue) as error types here, because for some as-of-yet unknown
- * reason, wasm-bindgen appears to mishandle JsErrors when created in a Firefox web worker.
- *
- * See: https://github.com/wasm-bindgen/wasm-bindgen/issues/4961
- */
+// wasm-bindgen mishandles `JsError` in a Firefox worker; return `JsString`/`JsValue`
+// instead (wasm-bindgen/wasm-bindgen#4961).
 
 #[wasm_bindgen]
 impl WasmReader {
-    /// Attempts to create a new `WasmReader` from an asset format and `Blob` of the asset's bytes.
-    /// Optionally accepts a context JSON string to configure the reader.
+    /// Creates a `WasmReader` from an asset format and a `Blob`, with optional context JSON.
     #[wasm_bindgen(js_name = fromBlob)]
     pub async fn from_blob(
         format: &str,
@@ -68,8 +63,7 @@ impl WasmReader {
         Ok(WasmReader::from_reader(reader).await)
     }
 
-    /// Attempts to create a new `WasmReader` from an asset format, a `Blob` of the bytes of the initial segment, and a fragment `Blob`.
-    /// Optionally accepts a context JSON string to configure the reader.
+    /// Creates a `WasmReader` from an initial-segment `Blob` and a fragment `Blob`, with optional context JSON.
     #[wasm_bindgen(js_name = fromBlobFragment)]
     pub async fn from_blob_fragment(
         format: &str,
@@ -117,17 +111,20 @@ impl WasmReader {
     /// - `"verify"` (default): synchronous XHR with full data-hash verification.
     ///   Must run in a Web Worker (synchronous XHR is forbidden on the main thread).
     /// - `"verify-async"`: asynchronous `fetch` with full data-hash verification,
-    ///   driven by the SDK on any thread (no Web Worker required). The asset is
-    ///   streamed back through the same source to check the binding, holding at most
-    ///   `hash_chunk_bytes` at a time, so a runtime with no blocking read and a hard
-    ///   memory ceiling can still verify.
+    ///   driven by the SDK on any thread (no Web Worker required). Data hashes and
+    ///   file-level BMFF hashes verify one buffer at a time, bounding peak memory to
+    ///   the buffer size. Box hashes and merkle BMFF report `UnverifiableOverRanges`.
     /// - `"discover"`: asynchronous `fetch`, no Web Worker required. Validates the
     ///   manifest and signature but not the data-hash binding, so it reads far fewer
     ///   bytes than either verifying mode.
     ///
-    /// `hash_chunk_bytes` bounds the bytes held at once while hashing in
-    /// `"verify-async"`; it is ignored by the other modes. Leave it unset for the
+    /// `hash_buffer_size_in_kb` bounds the kilobytes the hasher holds at once. It
+    /// applies to every verifying mode, the worker included. Leave it unset for the
     /// SDK default.
+    ///
+    /// `whole_object_limit` bounds the whole-object rung the async modes fall back to
+    /// for a handler that reads its input to end: a byte count, `"unbounded"`, or
+    /// `"disabled"`. Leave it unset for the SDK default of 256 MiB.
     #[wasm_bindgen(js_name = fromUrl)]
     pub async fn from_url(
         format: &str,
@@ -135,24 +132,26 @@ impl WasmReader {
         context_json: Option<String>,
         on_fetch: Option<Function>,
         mode: Option<String>,
-        hash_chunk_bytes: Option<u32>,
+        hash_buffer_size_in_kb: Option<u32>,
+        whole_object_limit: Option<String>,
     ) -> Result<WasmReader, JsString> {
         let context = build_context(context_json)?;
-        let hash_chunk = hash_chunk_bytes.map(u64::from);
+        let context = with_hash_buffer(context, hash_buffer_size_in_kb)?;
+        let range_config = whole_object_config(whole_object_limit.as_deref())?;
         let context = match mode.as_deref() {
             // Discovery stays a read: the async path is now able to check the
             // binding, so verification has to be turned off explicitly.
             Some("discover") => context
                 .with_settings(r#"{"verify": {"verify_after_reading": false}}"#)
                 .map_err(WasmError::from)?
-                .with_async_asset_source(async_http_range_source(on_fetch, hash_chunk)),
+                .with_asset_transport_async(async_http_range_source(on_fetch, range_config)),
             Some("verify-async") => {
-                context.with_async_asset_source(async_http_range_source(on_fetch, hash_chunk))
+                context.with_asset_transport_async(async_http_range_source(on_fetch, range_config))
             }
-            _ => context.with_sync_asset_source(http_range_source(on_fetch)),
+            _ => context.with_asset_transport(http_range_source(on_fetch)),
         };
         let reader = Reader::from_context(context)
-            .with_reference_async(format, url)
+            .with_reference_async(format_hint(format), url)
             .await
             .map_err(WasmError::from)?;
 
@@ -171,11 +170,12 @@ impl WasmReader {
         fragment_urls: Vec<String>,
         context_json: Option<String>,
         on_fetch: Option<Function>,
+        hash_buffer_size_in_kb: Option<u32>,
     ) -> Result<WasmReader, JsString> {
-        let context =
-            build_context(context_json)?.with_sync_asset_source(http_range_source(on_fetch));
+        let context = with_hash_buffer(build_context(context_json)?, hash_buffer_size_in_kb)?
+            .with_asset_transport(http_range_source(on_fetch));
         let reader = Reader::from_context(context)
-            .with_fragment_references_async(format, init_url, &fragment_urls)
+            .with_fragment_references_async(format_hint(format), init_url, &fragment_urls)
             .await
             .map_err(WasmError::from)?;
 
@@ -237,7 +237,30 @@ impl WasmReader {
     }
 }
 
+/// Turns a JavaScript format string into the SDK's format hint.
+///
+/// JavaScript has no `Option`, so an empty string is how a caller says "unknown".
+/// The SDK wants `None` there, since `""` would otherwise read as a real hint and
+/// suppress the transport's own `Content-Type`.
+fn format_hint(format: &str) -> Option<&str> {
+    let format = format.trim();
+    (!format.is_empty()).then_some(format)
+}
+
 /// Build a [`Context`] from an optional settings-JSON string.
+/// Folds the hasher's buffer size into the context settings.
+///
+/// It reaches every verifying mode this way, the synchronous worker path included,
+/// because the hasher reads it from `Settings`.
+fn with_hash_buffer(context: Context, kb: Option<u32>) -> Result<Context, JsString> {
+    match kb {
+        Some(kb) => Ok(context
+            .with_settings(format!(r#"{{"core": {{"hash_buffer_size_in_kb": {kb}}}}}"#).as_str())
+            .map_err(WasmError::from)?),
+        None => Ok(context),
+    }
+}
+
 fn build_context(context_json: Option<String>) -> Result<Context, JsString> {
     match context_json {
         Some(json) => Ok(Context::new()

@@ -11,7 +11,7 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import * as fs from "fs-extra";
+import { stat } from "node:fs/promises";
 import { validateAssetSize } from "@contentauth/c2pa-utilities";
 import type { SourceAsset } from "./types.d.ts";
 
@@ -38,6 +38,6 @@ export async function validateSourceAssetSize(
     return;
   }
 
-  const { size } = await fs.stat(asset.path);
+  const { size } = await stat(asset.path);
   validateAssetSize(size, MAX_SIZE_IN_BYTES);
 }

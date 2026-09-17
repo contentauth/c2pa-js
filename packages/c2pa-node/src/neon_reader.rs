@@ -91,24 +91,30 @@ impl NeonReader {
         let (deferred, promise) = cx.promise();
         let rt = runtime();
 
-        rt.spawn(async move {
-            let result: Result<Reader> = async {
-                let context = context_opt.unwrap_or_else(Context::new).with_sync_asset_source(
+        rt.spawn_blocking(move || {
+            let result: Result<Reader> = (|| {
+                let context = context_opt.unwrap_or_else(Context::new).with_asset_transport(
                     range_source(channel.clone(), sources.clone(), on_fetch.clone()),
                 );
+                // JavaScript has no `Option`, so an empty format string is how a caller
+                // says "unknown". The SDK wants `None` there, since `""` would read as a
+                // real hint and suppress the transport's own `Content-Type`.
+                let format_hint = {
+                    let trimmed = format.trim();
+                    (!trimmed.is_empty()).then_some(trimmed)
+                };
                 let reader = if mode == "fragment" {
                     let fragments = urls[1..].to_vec();
-                    Reader::from_context(context)
-                        .with_fragment_references_async(&format, &urls[0], &fragments)
-                        .await?
+                    Reader::from_context(context).with_fragment_references(
+                        format_hint,
+                        &urls[0],
+                        &fragments,
+                    )?
                 } else {
-                    Reader::from_context(context)
-                        .with_reference_async(&format, &urls[0])
-                        .await?
+                    Reader::from_context(context).with_reference(format_hint, &urls[0])?
                 };
                 Ok(reader)
-            }
-            .await;
+            })();
 
             deferred.settle_with(&channel, move |mut cx| match result {
                 Ok(reader) => {
@@ -134,7 +140,6 @@ impl NeonReader {
             .argument::<JsObject>(0)
             .and_then(|obj| parse_asset(&mut cx, obj))?;
 
-        // Parse optional settings parameter (argument 1)
         let context_opt =
             parse_settings(&mut cx, 1, "Reader").or_else(|err| cx.throw_error(err.to_string()))?;
 
@@ -150,7 +155,6 @@ impl NeonReader {
 
                 let stream = source.into_read_stream()?;
 
-                // Create reader with or without context
                 let reader = if let Some(context) = context_opt {
                     Reader::from_context(context)
                         .with_stream_async(&format, stream)
@@ -171,8 +175,7 @@ impl NeonReader {
                     Ok(boxed_reader.upcast::<JsValue>())
                 }
                 Err(err) => {
-                    // Check if the error is due to missing C2PA data
-                    // Return null instead of throwing for these specific cases
+                    // Missing C2PA data resolves to null instead of throwing.
                     match &err {
                         Error::C2pa(c2pa_err) => match c2pa_err {
                             c2pa::Error::JumbfNotFound => Ok(cx.null().upcast::<JsValue>()),
@@ -194,8 +197,7 @@ impl NeonReader {
             .argument::<JsObject>(1)
             .and_then(|obj| parse_asset(&mut cx, obj))?;
 
-        // Parse optional settings parameter (argument 2) - note: settings are not currently used
-        // for from_manifest_data_and_asset as the c2pa-rs API doesn't support context for this method yet
+        // Settings for the manifest-data-and-asset path.
         let context_opt =
             parse_settings(&mut cx, 2, "Reader").or_else(|err| cx.throw_error(err.to_string()))?;
 

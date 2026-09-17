@@ -11,7 +11,7 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import * as fs from "fs-extra";
+import { readFile } from "node:fs/promises";
 
 /**
  * This file contains only Settings functions that are unique to the Node SDK.
@@ -26,6 +26,6 @@ import * as fs from "fs-extra";
  * @returns Settings as a string (TOML or JSON depending on file extension)
  */
 export async function loadSettingsFromFile(filePath: string): Promise<string> {
-  const content = await fs.readFile(filePath, "utf8");
+  const content = await readFile(filePath, "utf8");
   return content;
 }

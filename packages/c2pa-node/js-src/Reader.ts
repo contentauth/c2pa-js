@@ -24,11 +24,52 @@ import type {
   NeonReaderHandle,
 } from "./types.d.ts";
 
-/** A synchronous-from-Rust byte source: fetches `length` bytes at `offset`. */
+/**
+ * What one range read yields when the transport can describe the response.
+ *
+ * `offset` is the position the response reported, read from `Content-Range`. Omit
+ * it when unknown.
+ * `version` is a strong validator, normally the `ETag`, and pins every read of one
+ * asset to a single version of it.
+ */
+export interface RangeResult {
+  bytes: Buffer | Uint8Array;
+  offset?: number;
+  version?: string;
+}
+
+/**
+ * One range response as it arrived, for the SDK to apply the range contract to.
+ *
+ * Preferred over {@link RangeResult}: the RFC 9110 rules that decide whether a
+ * response is usable at the requested offset live in one shared implementation,
+ * reused by every c2pa range transport. Header names are lowercase.
+ * `content-encoding` matters because a range over encoded bytes does not address
+ * the object, and across origins it needs `Access-Control-Expose-Headers`.
+ */
+export interface RawRangeResponse {
+  bytes: Buffer | Uint8Array;
+  status: number;
+  headers?: {
+    "content-range"?: string;
+    etag?: string;
+    "last-modified"?: string;
+    "content-encoding"?: string;
+  };
+}
+
+/**
+ * A synchronous-from-Rust byte source: fetches `length` bytes at `offset`.
+ *
+ * Resolving bare bytes is still supported, and leaves the SDK without a served
+ * offset or version to check against. Resolving a {@link RawRangeResponse} is the
+ * shape to prefer; an object carrying `status` as well as `offset` or `version` is
+ * rejected, since those place the bytes twice.
+ */
 export type ReadRange = (
   offset: number,
   length: number,
-) => Promise<Buffer | Uint8Array>;
+) => Promise<Buffer | Uint8Array | RangeResult | RawRangeResponse>;
 
 /** Options for URL-based readers that fetch bytes over HTTP Range requests. */
 export interface FromUrlOptions {
@@ -40,6 +81,12 @@ export interface FromUrlOptions {
   readRange?: (url: string) => ReadRange;
   /** Invoked for each Range fetch: (offset, length, total). */
   onFetch?: (offset: number, length: number, total: number) => void;
+  /**
+   * Kilobytes the hasher holds at once. Bounds peak memory when verifying a large
+   * asset. The native path hashes on a second thread and holds two buffers, so its
+   * peak is twice this value. Defaults to the SDK's own value.
+   */
+  hashBufferSizeInKb?: number;
 }
 
 interface RangeSource {
@@ -48,17 +95,41 @@ interface RangeSource {
   readRange: ReadRange;
 }
 
-/** Default range transport: one ranged GET per read via global `fetch`. */
+/**
+ * The object's total length from a `Content-Range`, for the size probe.
+ *
+ * Only `discoverSize` needs this: every other rule the range contract defines is
+ * applied by the SDK, on the raw response {@link defaultReadRange} hands back.
+ */
+function contentRangeTotal(contentRange: string | null): number | undefined {
+  if (!contentRange) return undefined;
+  const match = /^\s*bytes\s+(\d+)-(\d+)\/(\d+)\s*$/i.exec(contentRange);
+  if (!match) return undefined;
+  const last = Number(match[2]);
+  const total = Number(match[3]);
+  return last < Number(match[1]) || total <= last ? undefined : total;
+}
+
+/**
+ * Default range transport: one ranged GET per read via global `fetch`.
+ *
+ * Returns the response as it arrived. The SDK decides whether the status, encoding and
+ * `Content-Range` make it usable, so the rules are not restated here.
+ */
 function defaultReadRange(url: string): ReadRange {
   return async (offset, length) => {
     const end = offset + length - 1;
     const res = await fetch(url, { headers: { Range: `bytes=${offset}-${end}` } });
-    if (res.status !== 206) {
-      throw new Error(
-        `expected 206 Partial Content from ${url}, got ${res.status} (host must honor Range)`,
-      );
-    }
-    return Buffer.from(await res.arrayBuffer());
+    return {
+      bytes: Buffer.from(await res.arrayBuffer()),
+      status: res.status,
+      headers: {
+        "content-range": res.headers.get("content-range") ?? undefined,
+        etag: res.headers.get("etag") ?? undefined,
+        "last-modified": res.headers.get("last-modified") ?? undefined,
+        "content-encoding": res.headers.get("content-encoding") ?? undefined,
+      },
+    };
   };
 }
 
@@ -70,10 +141,9 @@ async function discoverSize(url: string): Promise<number> {
     return Number(contentLength);
   }
   const probe = await fetch(url, { headers: { Range: "bytes=0-0" } });
-  const contentRange = probe.headers.get("content-range");
-  const total = contentRange?.split("/").pop();
-  if (total && total !== "*") {
-    return Number(total);
+  const total = contentRangeTotal(probe.headers.get("content-range"));
+  if (total !== undefined) {
+    return total;
   }
   throw new Error(`cannot determine size of ${url} (no Content-Length or Content-Range)`);
 }
@@ -87,18 +157,40 @@ async function resolveRangeSource(
   return { url, size, readRange };
 }
 
+/**
+ * Merges `hashBufferSizeInKb` into the caller's settings.
+ *
+ * The hasher reads the buffer size from `Settings`, so it has to travel this way to
+ * reach every verifying path.
+ */
+function buildSettings(options?: FromUrlOptions): string | undefined {
+  const settings = options?.settings;
+  const base =
+    settings === undefined
+      ? undefined
+      : typeof settings === "string"
+        ? (JSON.parse(settings) as Record<string, unknown>)
+        : (settings as Record<string, unknown>);
+
+  if (options?.hashBufferSizeInKb === undefined) {
+    return base === undefined ? undefined : JSON.stringify(base);
+  }
+
+  const merged = { ...(base ?? {}) } as Record<string, unknown>;
+  merged.core = {
+    ...((merged.core as Record<string, unknown>) ?? {}),
+    hash_buffer_size_in_kb: options.hashBufferSizeInKb,
+  };
+  return JSON.stringify(merged);
+}
+
 async function fromRangeSources(
   format: string,
   mode: "single" | "fragment",
   sources: RangeSource[],
   options?: FromUrlOptions,
 ): Promise<Reader | null> {
-  const settings = options?.settings;
-  const settingsStr = settings
-    ? typeof settings === "string"
-      ? settings
-      : JSON.stringify(settings)
-    : undefined;
+  const settingsStr = buildSettings(options);
   const handle: NeonReaderHandle | null = await getNeonBinary().readerFromRangeSources(
     format,
     mode,
@@ -152,7 +244,7 @@ export class Reader implements ReaderInterface {
 
   /**
    * Create a Reader from a URL, reading only the bytes c2pa-rs needs via HTTP Range
-   * requests instead of downloading the whole asset. The host must support Range.
+   * requests. The host must support Range.
    *
    * @param format Asset MIME type.
    * @param url Asset URL.

@@ -15,6 +15,8 @@
 // import native objects from built native code
 import type { ManifestStore } from "@contentauth/c2pa-types";
 import path from "path";
+import * as http from "http";
+import type { AddressInfo } from "net";
 import * as fs from "fs-extra";
 import { AssetTooLargeError } from "@contentauth/c2pa-utilities";
 
@@ -316,5 +318,121 @@ describe("Reader", () => {
 
     const reader = await Reader.fromAsset(asset);
     expect(reader).toBeNull();
+  });
+  // Runs a real HTTP server: the default `readRange` reads `Content-Range` and
+  // `ETag` off an actual Range response.
+  describe("fromUrl", () => {
+    let server: http.Server;
+    let url: string;
+
+    beforeAll(async () => {
+      const bytes = await fs.readFile("./tests/fixtures/CA.jpg");
+      server = http.createServer((req, res) => {
+        const match = /^bytes=(\d+)-(\d+)$/.exec(req.headers.range ?? "");
+        if (!match) {
+          res.writeHead(200, {
+            "Content-Length": String(bytes.length),
+            ETag: '"ca-jpg"',
+          });
+          res.end(bytes);
+          return;
+        }
+        const start = Number(match[1]);
+        const endInclusive = Math.min(Number(match[2]), bytes.length - 1);
+        const slice = bytes.subarray(start, endInclusive + 1);
+        res.writeHead(206, {
+          "Content-Range": `bytes ${start}-${endInclusive}/${bytes.length}`,
+          "Content-Length": String(slice.length),
+          ETag: '"ca-jpg"',
+        });
+        res.end(slice);
+      });
+      await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+      const { port } = server.address() as AddressInfo;
+      url = `http://127.0.0.1:${port}/CA.jpg`;
+    });
+
+    afterAll(async () => {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    });
+
+    it("should read a manifest over ranges with the default readRange", async () => {
+      const lengths: number[] = [];
+      const reader = await Reader.fromUrl("image/jpeg", url, {
+        onFetch: (_offset, length) => lengths.push(length),
+      });
+
+      expect(reader).not.toBeNull();
+      const json = reader!.json();
+      expect(json.active_manifest).toEqual(manifestStore.active_manifest);
+      expect(json.manifests).toEqual(manifestStore.manifests);
+      // More than one fetch proves the reader used ranges.
+      expect(lengths.length).toBeGreaterThan(1);
+    });
+
+    // The placed shape: the callback read `Content-Range` and `ETag` itself.
+    it("should accept a custom readRange that places the bytes itself", async () => {
+      const reader = await Reader.fromUrl("image/jpeg", url, {
+        readRange: (target: string) => async (offset: number, length: number) => {
+          const res = await fetch(target, {
+            headers: { Range: `bytes=${offset}-${offset + length - 1}` },
+          });
+          const contentRange = res.headers.get("content-range");
+          const etag = res.headers.get("etag") ?? undefined;
+          return {
+            bytes: Buffer.from(await res.arrayBuffer()),
+            offset: contentRange
+              ? Number(/bytes (\d+)-/.exec(contentRange)?.[1])
+              : undefined,
+            version: etag?.startsWith('"') ? etag : undefined,
+          };
+        },
+      });
+
+      expect(reader).not.toBeNull();
+      expect(reader!.json().active_manifest).toEqual(
+        manifestStore.active_manifest,
+      );
+    });
+
+    // `status` and `offset`/`version` each name a different placement owner; an
+    // object carrying both is refused.
+    it("should reject a readRange result that is both raw and placed", async () => {
+      await expect(
+        Reader.fromUrl("image/jpeg", url, {
+          readRange: (target: string) => async (offset: number, length: number) => {
+            const res = await fetch(target, {
+              headers: { Range: `bytes=${offset}-${offset + length - 1}` },
+            });
+            return {
+              bytes: Buffer.from(await res.arrayBuffer()),
+              status: res.status,
+              offset,
+            };
+          },
+        }),
+      ).rejects.toThrow(/status/);
+    });
+
+    // A range over encoded bytes does not address the object, so the SDK refuses it.
+    it("should refuse a raw response that carries a content encoding", async () => {
+      await expect(
+        Reader.fromUrl("image/jpeg", url, {
+          readRange: (target: string) => async (offset: number, length: number) => {
+            const res = await fetch(target, {
+              headers: { Range: `bytes=${offset}-${offset + length - 1}` },
+            });
+            return {
+              bytes: Buffer.from(await res.arrayBuffer()),
+              status: res.status,
+              headers: {
+                "content-range": res.headers.get("content-range") ?? undefined,
+                "content-encoding": "gzip",
+              },
+            };
+          },
+        }),
+      ).rejects.toThrow(/content encoding/);
+    });
   });
 });

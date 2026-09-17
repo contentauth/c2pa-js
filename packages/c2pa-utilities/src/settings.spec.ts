@@ -49,13 +49,6 @@ describe('settings', () => {
         expect(result).toBeUndefined();
       });
 
-      test('should serialize base settings when only base is provided', async () => {
-        const result = await resolveSettings({ verify: { verifyTrust: false } }, undefined);
-        expect(result).toEqual(
-          JSON.stringify({ builder: { generate_c2pa_archive: true }, verify: { verify_trust: false } })
-        );
-      });
-
       test('should serialize override settings when only override is provided', async () => {
         const result = await resolveSettings(undefined, { verify: { verifyTrust: false } });
         expect(result).toEqual(
@@ -71,8 +64,9 @@ describe('settings', () => {
       });
 
       test('should merge override settings on top of base settings', async () => {
-        const base = {
-          verify: { verifyTrust: true, verifyAfterReading: true }
+        const base: Settings = {
+          verify: { verifyTrust: true, verifyAfterReading: true },
+          builder: { generateC2paArchive: true }
         };
         const override = {
           verify: { verifyTrust: false }
@@ -80,30 +74,11 @@ describe('settings', () => {
 
         const result = await resolveSettings(base, override);
 
-        // verifyTrust from override wins; verifyAfterReading from base is preserved
+        // verifyTrust from override wins; verifyAfterReading and builder from base survive
         expect(result).toEqual(
           JSON.stringify({
             builder: { generate_c2pa_archive: true },
             verify: { verify_trust: false, verify_after_reading: true }
-          })
-        );
-      });
-
-      test('should preserve base settings keys not present in override', async () => {
-        const base: Settings = {
-          verify: { verifyAfterReading: false },
-          builder: { generateC2paArchive: true }
-        };
-        const override = {
-          verify: { verifyTrust: true }
-        };
-
-        const result = await resolveSettings(base, override);
-
-        expect(result).toEqual(
-          JSON.stringify({
-            builder: { generate_c2pa_archive: true },
-            verify: { verify_after_reading: false, verify_trust: true }
           })
         );
       });

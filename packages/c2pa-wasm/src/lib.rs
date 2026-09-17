@@ -39,3 +39,15 @@ pub(crate) mod utils;
 pub fn run() {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 }
+
+/// Returns the size of the WebAssembly linear memory in bytes.
+///
+/// Linear memory never shrinks, so this is the session peak rather than a live
+/// figure. Read it before and after a single read in a fresh page to size that read.
+#[wasm_bindgen(js_name = wasmMemoryBytes)]
+pub fn wasm_memory_bytes() -> f64 {
+    wasm_bindgen::memory()
+        .dyn_into::<js_sys::WebAssembly::Memory>()
+        .map(|m| m.buffer().unchecked_into::<js_sys::ArrayBuffer>().byte_length() as f64)
+        .unwrap_or(0.0)
+}

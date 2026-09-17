@@ -48,7 +48,14 @@ rx(
       const readerId = readerMap.add(reader);
       return readerId;
     },
-    async reader_fromUrl(format, url, contextJson, mode, hashChunkBytes) {
+    async reader_fromUrl(
+      format,
+      url,
+      contextJson,
+      mode,
+      hashBufferSizeInKb,
+      wholeObjectLimit
+    ) {
       const onFetch = (offset: number, length: number, total: number) => {
         tx.fetchEvent({ offset, length, total });
       };
@@ -58,12 +65,19 @@ rx(
         contextJson,
         onFetch,
         mode,
-        hashChunkBytes
+        hashBufferSizeInKb,
+        wholeObjectLimit
       );
       const readerId = readerMap.add(reader);
       return readerId;
     },
-    async reader_fromUrlFragment(format, initUrl, fragmentUrls, contextJson) {
+    async reader_fromUrlFragment(
+      format,
+      initUrl,
+      fragmentUrls,
+      contextJson,
+      hashBufferSizeInKb
+    ) {
       const onFetch = (offset: number, length: number, total: number) => {
         tx.fetchEvent({ offset, length, total });
       };
@@ -72,7 +86,8 @@ rx(
         initUrl,
         fragmentUrls,
         contextJson,
-        onFetch
+        onFetch,
+        hashBufferSizeInKb
       );
       const readerId = readerMap.add(reader);
       return readerId;
@@ -256,10 +271,8 @@ rx(
 );
 
 /**
- * Wraps all functions with additional error-handling code that converts any thrown strings into Error objects.
- * This is only necessary because a bug (likely in wasm-bindgen, see https://github.com/wasm-bindgen/wasm-bindgen/issues/4961)
- * prevents the proper handling of Error objects. As a workaround, we "throw" strings from our wasm-bindgen
- * functions and convert them into errors here.
+ * Converts thrown strings back to `Error`: wasm-bindgen mishandles thrown `Error` in a
+ * Firefox worker (wasm-bindgen/wasm-bindgen#4961).
  */
 function wrapFunctionsForErrorHandling<
   T extends Record<string, (...args: any[]) => any>

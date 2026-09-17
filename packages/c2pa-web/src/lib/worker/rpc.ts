@@ -44,13 +44,15 @@ const { createTx, rx } = channel<{
     url: string,
     contextJson?: string,
     mode?: string,
-    hashChunkBytes?: number
+    hashBufferSizeInKb?: number,
+    wholeObjectLimit?: string
   ) => Promise<number>;
   reader_fromUrlFragment: (
     format: string,
     initUrl: string,
     fragmentUrls: string[],
-    contextJson?: string
+    contextJson?: string,
+    hashBufferSizeInKb?: number
   ) => Promise<number>;
 
   // Reader methods
