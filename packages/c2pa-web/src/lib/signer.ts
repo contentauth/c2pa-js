@@ -51,8 +51,7 @@ export interface HashedUri {
 /**
  * The data a CAWG {@link CredentialHolder} is asked to sign over. Passed to
  * {@link CredentialHolder.sign} exactly as built by c2pa-wasm's
- * `WasmCredentialHolder` (camelCase field names, matching the
- * adobe-web/utilities `encodeSignerPayload` contract).
+ * `WasmCredentialHolder`.
  */
 export interface SignerPayload {
   referencedAssertions: HashedUri[];

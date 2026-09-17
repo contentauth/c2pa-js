@@ -76,6 +76,18 @@ function getSerializableIdentityAssertions(
 ): SerializableIdentityAssertion[] {
   const identityAssertions = options?.identityAssertions ?? [];
 
+  // TODO: c2pa-rs 0.90.x's write_dynamic_assertions assumes each dynamic
+  // assertion label is unique, with no instance suffixing for duplicates, so
+  // multiple `cawg.identity` assertions here would collide under the same
+  // label. 0.91.0 adds instance suffixing to support this; remove this guard
+  // once the `c2pa` dependency is bumped to 0.91.0.
+  // https://github.com/contentauth/c2pa-js/pull/222#discussion_r4032764519
+  if (identityAssertions.length > 1) {
+    throw new Error(
+      'Only one identity assertion is currently supported per signing operation.'
+    );
+  }
+
   return identityAssertions.map((identityAssertion) => {
     const requestId = worker.registerCredentialHolderReceiver(
       identityAssertion.credentialHolder.sign

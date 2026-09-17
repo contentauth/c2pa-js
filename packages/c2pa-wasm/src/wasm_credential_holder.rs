@@ -8,7 +8,7 @@
 use async_trait::async_trait;
 use c2pa::identity::SignerPayload;
 use c2pa::identity::builder::{AsyncCredentialHolder, IdentityBuilderError};
-use js_sys::{Function as JsFunction, JsString, Number, Promise as JsPromise, Reflect, Uint8Array};
+use js_sys::{Function as JsFunction, JsString, Promise as JsPromise, Reflect, Uint8Array};
 use serde::Serialize;
 use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::JsValue;
@@ -97,7 +97,14 @@ impl WasmCredentialHolder {
     /// `reserveSize`, and `sign` fields (a subset of the identity-assertion
     /// definition object; see `WasmIdentityAssertionBuilder::from_definition`).
     pub(crate) fn from_definition(def: &JsValue) -> Result<Self, JsString> {
-        let reserve_size: Number = Reflect::get(def, &"reserveSize".into())?.into();
+        let reserve_size = Reflect::get(def, &"reserveSize".into())?
+            .as_f64()
+            .filter(|n| n.is_finite() && *n >= 0.0)
+            .ok_or_else(|| {
+                JsString::from(
+                    "identity assertion reserveSize must be a non-negative finite number",
+                )
+            })?;
         let sig_type: JsString = Reflect::get(def, &"sigType".into())?.into();
         let sign_fn: JsFunction = Reflect::get(def, &"sign".into())?.into();
 
@@ -107,7 +114,7 @@ impl WasmCredentialHolder {
 
         Ok(WasmCredentialHolder {
             sign_fn,
-            reserve_size: reserve_size.into(),
+            reserve_size,
             sig_type,
         })
     }

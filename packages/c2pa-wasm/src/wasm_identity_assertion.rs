@@ -155,6 +155,7 @@ impl AsyncDynamicAssertion for WasmIdentityAssertionBuilder {
     }
 }
 
+// Copied from c2pa-rs/sdk/src/identity/builder/identity_assertion_builder.rs
 fn finalize_identity_assertion(
     signer_payload: SignerPayload,
     size: Option<usize>,
@@ -171,7 +172,6 @@ fn finalize_identity_assertion(
     let mut assertion_cbor: Vec<u8> = vec![];
     c2pa_cbor::to_writer(&mut assertion_cbor, &ia)
         .map_err(|e| c2pa::Error::BadParam(e.to_string()))?;
-    // TO DO: Think through how errors map into crate::Error.
 
     if let Some(assertion_size) = size {
         if assertion_cbor.len() > assertion_size {
