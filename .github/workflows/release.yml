@@ -44,7 +44,7 @@ jobs:
       contains(needs.release.outputs.publishedPackages, '@contentauth/c2pa-node')
     name: Build native binary for ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
+    timeout-minutes: 60
     env:
       COREPACK_ENABLE_STRICT: 0
     strategy:
