@@ -13,7 +13,15 @@ export type { ManifestAndAssetBytes, BuilderFactory } from './lib/builder.js';
 
 export type { ReaderFactory } from './lib/reader.js';
 
-export type { Signer, SigningAlg } from './lib/signer.js';
+export type {
+  Signer,
+  SigningAlg,
+  HashedUri,
+  SignerPayload,
+  CredentialHolder,
+  IdentityAssertion,
+  SignOptions
+} from './lib/signer.js';
 
 // Re-export types from c2pa-types for convenience.
 export type * from '@contentauth/c2pa-types';

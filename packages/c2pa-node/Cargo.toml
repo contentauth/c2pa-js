@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 async-trait = "0.1.77"
-ciborium = "0.2.2"
+c2pa_cbor = "0.78.0"
 c2pa = { workspace = true, features = ["file_io", "add_thumbnails"] }
 futures = "0.3"
 image = "0.25.6"

@@ -14,6 +14,7 @@ import { Context } from '@contentauth/c2pa-utilities';
 import { Builder } from './builder.js';
 import { Reader } from './reader.js';
 import { createC2pa } from './c2pa.js';
+import type { CredentialHolder, SignerPayload } from './signer.js';
 
 import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 
@@ -1126,6 +1127,73 @@ describe('builder', () => {
         expect(manifestStore).toBeDefined();
         expect(manifestStore.manifests).toBeDefined();
         expect(manifestStore.active_manifest).toBeDefined();
+      });
+    });
+
+    describe('sign with a CAWG identity assertion', () => {
+      test('invokes the credential holder sign with the expected SignerPayload shape, signs successfully, and embeds a cawg.identity assertion', async ({
+        c2pa
+      }) => {
+        const blob = await getBlobForAsset(SAMPLE1_JXL);
+        const jxlMimetype = 'image/jxl';
+
+        const builder = await Builder.new(c2pa);
+        const signer = await createTestSigner();
+
+        const FIXED_SIGNATURE = new Uint8Array(64).fill(7);
+        const receivedPayloads: SignerPayload[] = [];
+
+        const credentialHolder: CredentialHolder = {
+          sigType: 'cawg.test-signature',
+          reserveSize: 10000,
+          sign: async (payload) => {
+            receivedPayloads.push(payload);
+            return FIXED_SIGNATURE;
+          }
+        };
+
+        const signedBytes = await builder.sign(signer, jxlMimetype, blob, {
+          identityAssertions: [{ credentialHolder }]
+        });
+
+        expect(signedBytes).toBeDefined();
+        expect(signedBytes.byteLength).toBeGreaterThan(0);
+
+        // The credential holder's `sign` should have been invoked exactly
+        // once, with a SignerPayload of the expected (camelCase) shape.
+        expect(receivedPayloads).toHaveLength(1);
+        const [payload] = receivedPayloads;
+        expect(payload.sigType).toBe('cawg.test-signature');
+        expect(payload.roles).toEqual([]);
+        expect(Array.isArray(payload.referencedAssertions)).toBe(true);
+        expect(payload.referencedAssertions.length).toBeGreaterThan(0);
+        for (const referencedAssertion of payload.referencedAssertions) {
+          expect(typeof referencedAssertion.url).toBe('string');
+          expect(referencedAssertion.hash).toBeInstanceOf(Uint8Array);
+        }
+
+        // Read the signed asset back and confirm a cawg.identity assertion
+        // was embedded in the manifest.
+        const readerSettings = new Context({
+          verify: { verifyAfterReading: false }
+        });
+        const reader = await Reader.fromBlob(
+          c2pa,
+          jxlMimetype,
+          new Blob([signedBytes], { type: jxlMimetype }),
+          readerSettings
+        );
+
+        expect(reader).not.toBeNull();
+
+        const activeLabel = await reader!.activeLabel();
+        const manifestStore = await reader!.manifestStore();
+        const activeManifest = manifestStore.manifests![activeLabel!];
+        const assertionLabels = activeManifest.assertions!.map(
+          (a) => a.label
+        );
+
+        expect(assertionLabels).toContain('cawg.identity');
       });
     });
   });
