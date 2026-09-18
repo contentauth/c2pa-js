@@ -1146,7 +1146,10 @@ describe('builder', () => {
         const blob = await getBlobForAsset(SAMPLE1_JXL);
         const jxlMimetype = 'image/jxl';
 
-        const builder = await Builder.new(c2pa);
+        // createTestSigner() returns placeholder bytes that can't be locally
+        // re-verified, so skip the SDK's post-sign verification.
+        const context = new Context({ verify: { verifyAfterSign: false } });
+        const builder = await Builder.new(c2pa, context);
         const signer = await createTestSigner();
 
         const FIXED_SIGNATURE = new Uint8Array(64).fill(7);
