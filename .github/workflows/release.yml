@@ -44,6 +44,7 @@ jobs:
       contains(needs.release.outputs.publishedPackages, '@contentauth/c2pa-node')
     name: Build native binary for ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
     env:
       COREPACK_ENABLE_STRICT: 0
     strategy:
@@ -83,13 +84,21 @@ jobs:
           # serve a just-published version, so retry rather than failing on
           # the first miss (same reasoning as the release-id lookup below).
           found=false
-          for attempt in 1 2 3 4 5; do
+          delays=(5 10 20 30 50 70)
+          attempt=1
+          total_attempts=$(( ${#delays[@]} + 1 ))
+          while true; do
             if npm view "@contentauth/c2pa-node@${version}" version >/dev/null 2>&1; then
               found=true
               break
             fi
-            echo "@contentauth/c2pa-node@${version} not visible on npm yet (attempt ${attempt}/5); retrying in 10s..."
-            sleep 10
+            if [ "$attempt" -ge "$total_attempts" ]; then
+              break
+            fi
+            delay="${delays[$((attempt - 1))]}"
+            echo "@contentauth/c2pa-node@${version} not visible on npm yet (attempt ${attempt}/${total_attempts}); retrying in ${delay}s..."
+            sleep "$delay"
+            attempt=$((attempt + 1))
           done
 
           if [ "$found" != true ]; then
@@ -184,7 +193,9 @@ jobs:
           # The GitHub release is created by changesets/action right before
           # this job runs, so retry briefly in case of eventual consistency
           # rather than failing hard on the first miss.
-          for attempt in 1 2 3 4 5; do
+          delays=(5 10 20 30 50 70)
+          total_attempts=$(( ${#delays[@]} + 1 ))
+          for attempt in $(seq 1 "$total_attempts"); do
             http_code=$(curl -sSL -o response.json -w '%{http_code}' \
               -H 'Accept: application/vnd.github+json' \
               -H "Authorization: Bearer ${GITHUB_TOKEN}" \
@@ -197,8 +208,12 @@ jobs:
               exit 0
             fi
 
-            echo "GitHub release for tag ${tag} not found yet (attempt ${attempt}/5, HTTP ${http_code}); retrying in 10s..."
-            sleep 10
+            if [ "$attempt" -ge "$total_attempts" ]; then
+              break
+            fi
+            delay="${delays[$((attempt - 1))]}"
+            echo "GitHub release for tag ${tag} not found yet (attempt ${attempt}/${total_attempts}, HTTP ${http_code}); retrying in ${delay}s..."
+            sleep "$delay"
           done
 
           echo "::error::Could not find a GitHub release tagged ${tag} after retrying" >&2
