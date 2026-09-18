@@ -40,7 +40,6 @@ export type {
   Role,
   Shape,
   SignatureInfo,
-  SigningAlg,
   StatusCodes,
   Text,
   TextSelector,
@@ -51,6 +50,10 @@ export type {
   ValidationState,
   ValidationStatus
 } from './types/ManifestStore.js';
+
+// `SigningAlg` no longer implements `schemars::JsonSchema` directly upstream, so
+// the generated schema exposes a mirror type named `SigningAlgSchema` instead.
+export type { SigningAlgSchema as SigningAlg } from './types/ManifestStore.js';
 
 export type {
   AssertionDefinition,

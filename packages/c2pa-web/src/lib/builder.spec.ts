@@ -384,7 +384,10 @@ describe('builder', () => {
 
         const thumbnailUri = `self#jumbf=/c2pa/${parentLabel}/c2pa.assertions/c2pa.thumbnail.claim`;
 
-        const builder = await Builder.new(c2pa);
+        // createTestSigner() returns placeholder bytes that can't be locally
+        // re-verified, so skip the SDK's post-sign verification.
+        const context = new Context({ verify: { verifyAfterSign: false } });
+        const builder = await Builder.new(c2pa, context);
         await builder.setIntent('edit');
         await builder.addRedaction(thumbnailUri, 'c2pa.PII.present');
 
@@ -425,7 +428,10 @@ describe('builder', () => {
         // Construct JUMBF URI for the assertion to redact
         const redactionUri = `self#jumbf=/c2pa/${parentLabel}/c2pa.assertions/cawg.training-mining`;
 
-        const builder = await Builder.new(c2pa);
+        // createTestSigner() returns placeholder bytes that can't be locally
+        // re-verified, so skip the SDK's post-sign verification.
+        const context = new Context({ verify: { verifyAfterSign: false } });
+        const builder = await Builder.new(c2pa, context);
         await builder.setIntent('edit');
         await builder.addRedaction(redactionUri, 'c2pa.PII.present');
 
@@ -1105,7 +1111,10 @@ describe('builder', () => {
 
         const jxlMimetype = 'image/jxl';
 
-        const builder = await Builder.new(c2pa);
+        // createTestSigner() returns placeholder bytes that can't be locally
+        // re-verified, so skip the SDK's post-sign verification.
+        const context = new Context({ verify: { verifyAfterSign: false } });
+        const builder = await Builder.new(c2pa, context);
         const signer = await createTestSigner();
         const signedBytes = await builder.sign(signer, jxlMimetype, blob);
 
@@ -1137,7 +1146,10 @@ describe('builder', () => {
         const blob = await getBlobForAsset(SAMPLE1_JXL);
         const jxlMimetype = 'image/jxl';
 
-        const builder = await Builder.new(c2pa);
+        // createTestSigner() returns placeholder bytes that can't be locally
+        // re-verified, so skip the SDK's post-sign verification.
+        const context = new Context({ verify: { verifyAfterSign: false } });
+        const builder = await Builder.new(c2pa, context);
         const signer = await createTestSigner();
 
         const FIXED_SIGNATURE = new Uint8Array(64).fill(7);
