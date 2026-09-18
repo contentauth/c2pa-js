@@ -7,7 +7,7 @@
  * it.
  */
 
-import { Signer } from '../signer.js';
+import { CredentialHolder, Signer } from '../signer.js';
 import { createTx, workerRx } from './rpc.js';
 import InlineWorker from '../worker?worker&inline';
 import { transfer } from 'highgain';
@@ -15,6 +15,9 @@ import { transfer } from 'highgain';
 export interface WorkerManager {
   tx: ReturnType<typeof createTx>;
   registerSignReceiver: (signFn: Signer['sign']) => number;
+  registerCredentialHolderReceiver: (
+    signFn: CredentialHolder['sign']
+  ) => number;
   terminate: () => void;
 }
 
@@ -62,6 +65,7 @@ export async function createWorkerManager(
   const tx = createTx(worker);
 
   const signingRequestMap = new Map<number, Signer['sign']>();
+  const credentialHolderRequestMap = new Map<number, CredentialHolder['sign']>();
 
   workerRx(
     {
@@ -72,6 +76,20 @@ export async function createWorkerManager(
           throw new Error('No signer registered for request');
         }
         const result = await signFn(bytes, reserveSize);
+        return transfer(result, result.buffer);
+      },
+      // Reverse-RPC handler for a CAWG credential holder's `sign`, mirroring
+      // `sign` above: the callback was registered on the main thread by
+      // `Builder.sign`/`signAndGetManifestBytes` (see
+      // `registerCredentialHolderReceiver`) and is looked up and run here,
+      // never inside the worker.
+      cawgSign: async (id, payload) => {
+        const signFn = credentialHolderRequestMap.get(id);
+        credentialHolderRequestMap.delete(id);
+        if (!signFn) {
+          throw new Error('No credential holder registered for request');
+        }
+        const result = await signFn(payload);
         return transfer(result, result.buffer);
       }
     },
@@ -84,11 +102,18 @@ export async function createWorkerManager(
     return id;
   }
 
+  function registerCredentialHolderReceiver(signFn: CredentialHolder['sign']) {
+    const id = signerRequestId++;
+    credentialHolderRequestMap.set(id, signFn);
+    return id;
+  }
+
   await tx.initWorker(wasm);
 
   return {
     tx,
     registerSignReceiver,
+    registerCredentialHolderReceiver,
     terminate: () => worker.terminate()
   };
 }

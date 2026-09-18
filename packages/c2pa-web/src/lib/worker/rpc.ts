@@ -9,7 +9,11 @@
 
 import { Action, BuilderIntent, C2paReason } from '@contentauth/c2pa-types';
 import { ManifestAndAssetBytes } from '../builder.js';
-import type { SerializableSigningPayload } from '../signer.js';
+import type {
+  SerializableIdentityAssertion,
+  SerializableSigningPayload,
+  SignerPayload
+} from '../signer.js';
 
 import { channel } from 'highgain';
 
@@ -89,6 +93,7 @@ const { createTx, rx } = channel<{
     builderId: number,
     requestId: number,
     payload: SerializableSigningPayload,
+    identityAssertions: SerializableIdentityAssertion[],
     format: string,
     blob: Blob
   ) => Promise<Uint8Array<ArrayBuffer>>;
@@ -96,6 +101,7 @@ const { createTx, rx } = channel<{
     builderId: number,
     requestId: number,
     payload: SerializableSigningPayload,
+    identityAssertions: SerializableIdentityAssertion[],
     format: string,
     blob: Blob
   ) => Promise<ManifestAndAssetBytes>;
@@ -108,6 +114,14 @@ const { createTx: createWorkerTx, rx: workerRx } = channel<{
     requestId: number,
     bytes: Uint8Array<ArrayBuffer>,
     reserveSize: number
+  ) => Promise<Uint8Array<ArrayBuffer>>;
+  // Reverse-RPC for a CAWG credential holder's `sign`, mirroring `sign` above.
+  // The credential-holder callback lives on the main thread (it's supplied by
+  // the caller of `Builder.sign`/`signAndGetManifestBytes`), so the worker
+  // calls back into the browser instead of invoking it directly.
+  cawgSign: (
+    requestId: number,
+    payload: SignerPayload
   ) => Promise<Uint8Array<ArrayBuffer>>;
 }>('worker');
 

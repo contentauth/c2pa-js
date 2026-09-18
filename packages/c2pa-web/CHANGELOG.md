@@ -1,5 +1,19 @@
 # @contentauth/c2pa-web
 
+## 0.15.0
+
+### Minor Changes
+
+- 1f04ad3: Use Context as the new way to construct and configure Reader and Builder objects. Deprecate thread-local Settings paths and the old Reader and Builder factory pattern.
+
+### Patch Changes
+
+- 92a1619: Introduce Context class as a wrapper around Settings for configuring Readers and Builders. Add temporary shim in c2pa-web.
+- Updated dependencies [92a1619]
+- Updated dependencies [1f04ad3]
+  - @contentauth/c2pa-utilities@0.3.0
+  - @contentauth/c2pa-wasm@0.12.0
+
 ## 0.14.6
 
 ### Patch Changes

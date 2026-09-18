@@ -79,9 +79,21 @@ jobs:
 
           # publishedPackages reflects what changesets/action *attempted*, not
           # what actually landed on the registry, so verify directly against npm
-          # before releasing artifacts.
-          if ! npm view "@contentauth/c2pa-node@${version}" version >/dev/null 2>&1; then
-            echo "::error::@contentauth/c2pa-node@${version} is not on the npm registry; refusing to build/upload binaries for it" >&2
+          # before releasing artifacts. The registry can take a few seconds to
+          # serve a just-published version, so retry rather than failing on
+          # the first miss (same reasoning as the release-id lookup below).
+          found=false
+          for attempt in 1 2 3 4 5; do
+            if npm view "@contentauth/c2pa-node@${version}" version >/dev/null 2>&1; then
+              found=true
+              break
+            fi
+            echo "@contentauth/c2pa-node@${version} not visible on npm yet (attempt ${attempt}/5); retrying in 10s..."
+            sleep 10
+          done
+
+          if [ "$found" != true ]; then
+            echo "::error::@contentauth/c2pa-node@${version} is not on the npm registry after retrying; refusing to build/upload binaries for it" >&2
             exit 1
           fi
 

@@ -13,12 +13,39 @@ import { WasmReader, initSync, WasmBuilder } from '@contentauth/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
 import { createWorkerTx, rx } from './worker/rpc.js';
 import { sanitizeManifestStore } from './worker/sanitizeManifestStore.js';
+import type { SerializableIdentityAssertion, SignerPayload } from './signer.js';
 import { transfer } from 'highgain';
 
 const readerMap = createWorkerObjectMap<WasmReader>();
 const builderMap = createWorkerObjectMap<WasmBuilder>();
 
 const tx = createWorkerTx();
+
+/**
+ * Maps the serializable `identityAssertions` payload (browser->worker) to the
+ * WASM identity-assertion definitions `WasmBuilder.sign`/
+ * `signAndGetManifestBytes` expect: each entry's `sign` closure reverse-RPCs
+ * into the main thread via `cawgSign`, exactly like the plain signer's `sign`
+ * closure above reverse-RPCs via `tx.sign`. The credential holder callback
+ * itself never runs in the worker.
+ */
+function buildWasmIdentityAssertions(
+  identityAssertions: SerializableIdentityAssertion[]
+) {
+  return identityAssertions.map((ia) => ({
+    sigType: ia.sigType,
+    reserveSize: ia.reserveSize,
+    referencedAssertions: ia.referencedAssertions,
+    roles: ia.roles,
+    sign: async (payload: SignerPayload) => {
+      // Transfer the hash buffers nested in referencedAssertions, mirroring
+      // how the plain signer's `sign` closure transfers its `bytes` argument.
+      const buffers = payload.referencedAssertions.map((ra) => ra.hash.buffer);
+      const result = await tx.cawgSign(ia.requestId, transfer(payload, buffers));
+      return result;
+    }
+  }));
+}
 
 rx(
   wrapFunctionsForErrorHandling({
@@ -157,7 +184,14 @@ rx(
       const archive = builder.toArchive() as Uint8Array<ArrayBuffer>;
       return transfer(archive, archive.buffer);
     },
-    async builder_sign(builderId, requestId, payload, format, blob) {
+    async builder_sign(
+      builderId,
+      requestId,
+      payload,
+      identityAssertions,
+      format,
+      blob
+    ) {
       const builder = builderMap.get(builderId);
       const signedBytes = (await builder.sign(
         {
@@ -172,6 +206,7 @@ rx(
             return result;
           }
         },
+        buildWasmIdentityAssertions(identityAssertions),
         format,
         blob
       )) as Uint8Array<ArrayBuffer>;
@@ -181,6 +216,7 @@ rx(
       builderId,
       requestId,
       payload,
+      identityAssertions,
       format,
       blob
     ) {
@@ -198,6 +234,7 @@ rx(
             return result;
           }
         },
+        buildWasmIdentityAssertions(identityAssertions),
         format,
         blob
       );
