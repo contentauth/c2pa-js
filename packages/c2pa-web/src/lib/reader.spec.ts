@@ -74,6 +74,35 @@ describe('reader', () => {
         );
       });
 
+      test('should honor a lower max size from the given Context', async ({
+        c2pa
+      }) => {
+        const blob = await getBlobForAsset(C_with_CAWG_data);
+        const context = new Context(undefined, { maxSizeInBytes: 1 });
+
+        await expect(
+          Reader.fromBlob(c2pa, blob.type, blob, context)
+        ).rejects.toThrow(AssetTooLargeError);
+      });
+
+      test('should honor a higher max size from the given Context', async ({
+        c2pa
+      }) => {
+        const blob = await getBlobForAsset(C_with_CAWG_data);
+        Object.defineProperty(blob, 'size', {
+          value: MAX_SIZE_IN_BYTES + 1
+        });
+        const context = new Context(undefined, {
+          maxSizeInBytes: MAX_SIZE_IN_BYTES + 2
+        });
+
+        // The blob is over this package's default limit so it only resolves if the
+        // Context's larger limit is being honored.
+        await expect(
+          Reader.fromBlob(c2pa, blob.type, blob, context)
+        ).resolves.not.toBeNull();
+      });
+
       test('should apply the given Context', async () => {
         const settings: Settings = {
           trust: {
@@ -229,6 +258,22 @@ describe('reader', () => {
 
         await expect(
           Reader.fromBlobFragment(c2pa, initBlob.type, initBlob, fragmentBlob)
+        ).rejects.toThrow(AssetTooLargeError);
+      });
+
+      test('should honor a max size from the given Context', async ({ c2pa }) => {
+        const initBlob = await getBlobForAsset(dashinit);
+        const fragmentBlob = await getBlobForAsset(dash1);
+        const context = new Context(undefined, { maxSizeInBytes: 1 });
+
+        await expect(
+          Reader.fromBlobFragment(
+            c2pa,
+            initBlob.type,
+            initBlob,
+            fragmentBlob,
+            context
+          )
         ).rejects.toThrow(AssetTooLargeError);
       });
     });
