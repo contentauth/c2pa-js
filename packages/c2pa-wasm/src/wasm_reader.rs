@@ -53,8 +53,9 @@ impl WasmReader {
     /// Same as [`WasmReader::from_blob`], taking a mandatory context and an options object.
     ///
     /// `options` accepts `progress`, called as
-    /// `(phase: string, step: number, total: number)`. Progress cannot influence the
-    /// read: its return value is ignored and a thrown error only drops that one report.
+    /// `(phase: string, step: number, total: number)`. Returning `false` cancels the
+    /// read at that checkpoint, failing it with `OperationCancelled`; any other return
+    /// value, including a thrown error, continues.
     #[wasm_bindgen(js_name = fromBlobWithOptions)]
     pub async fn from_blob_with_options(
         format: &str,
@@ -295,6 +296,36 @@ mod tests {
         assert!(
             reader.active_label().is_some(),
             "the read must still produce the active manifest"
+        );
+    }
+
+    #[wasm_bindgen_test]
+    async fn a_false_progress_return_cancels_the_read() {
+        // The cancellation transport: c2pa-rs turns a `false` return into
+        // Error::OperationCancelled at the next checkpoint (context.rs:790).
+        let callback = Closure::<dyn FnMut(JsValue, JsValue, JsValue) -> JsValue>::new(
+            move |_phase, _step, _total| -> JsValue { JsValue::FALSE },
+        );
+
+        let options = Object::new();
+        Reflect::set(&options, &"progress".into(), callback.as_ref())
+            .expect("setting a property on a fresh object cannot fail");
+
+        let result = WasmReader::from_bytes_with_options(
+            "image/jpeg",
+            SIGNED_JPEG.to_vec(),
+            "{}".to_string(),
+            options.into(),
+        )
+        .await;
+
+        let Err(error) = result else {
+            panic!("a `false` progress return must cancel the read");
+        };
+        let message = String::from(error);
+        assert!(
+            message.contains("OperationCancelled"),
+            "expected an OperationCancelled error, got: {message}"
         );
     }
 

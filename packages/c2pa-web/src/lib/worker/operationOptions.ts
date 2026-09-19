@@ -12,31 +12,80 @@ import type { OperationOptions } from './rpc.js';
 import type { WorkerManager } from './workerManager.js';
 
 /**
- * Runs a worker call, attaching per-operation options when the `Context` asks for any.
+ * Registers whatever the `Context` asks for on the main thread for one operation: a
+ * progress handler, an abort listener, or both.
  *
- * `run` receives an `OperationOptions` to pass to the options-carrying worker method,
- * or `undefined` when the context requests nothing beyond settings — in which case the
- * caller runs the plain method, exactly as it did before options existed. The resolved
- * settings JSON is passed by the caller as its own argument, beside the options.
+ * Returns the options describing it — `undefined` when the context wants nothing beyond
+ * settings, so the caller uses the plain worker method unchanged — and a `release` that
+ * unregisters everything. Callers must invoke `release` exactly once, when the operation
+ * can no longer report or be cancelled: at the end of the call for a reader, and when
+ * the builder is freed for a builder.
  *
- * Anything registered on the main thread for the duration of the call is released in a
- * `finally`, so a rejected operation cannot leak it.
+ * Progress and cancellation share one `operationId`: the worker keys reports by it and
+ * names the operation to cancel with it.
+ */
+export function registerOperation(
+  worker: WorkerManager,
+  context: Context
+): { options: OperationOptions | undefined; release: () => void } {
+  const { onProgress, signal } = context;
+
+  if (!onProgress && !signal) {
+    return { options: undefined, release: () => undefined };
+  }
+
+  const releases: (() => void)[] = [];
+  let operationId: number;
+
+  if (onProgress) {
+    const progress = worker.registerProgressReceiver(onProgress);
+    operationId = progress.operationId;
+    releases.push(progress.unregister);
+  } else {
+    operationId = worker.nextOperationId();
+  }
+
+  if (signal) {
+    const onAbort = () => {
+      // One-way: the worker records the request and its progress closure observes it at
+      // the engine's next checkpoint. A worker blocked in a synchronous read cannot act
+      // on this until that read yields.
+      worker.tx.operation_cancel(operationId);
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+    // An AbortSignal holds a strong reference to its listeners, so a long-lived signal
+    // would otherwise retain this closure for every operation it ever configured.
+    releases.push(() => signal.removeEventListener('abort', onAbort));
+  }
+
+  return {
+    options: {
+      operationId,
+      reportsProgress: Boolean(onProgress),
+      cancellable: Boolean(signal)
+    },
+    release: () => releases.forEach((release) => release())
+  };
+}
+
+/**
+ * Runs a worker call with the options the `Context` asks for, releasing them afterwards.
+ *
+ * Suits an operation whose work ends when the call resolves, such as creating a reader.
+ * A builder outlives its constructor, so it reserves and releases around its own
+ * lifetime instead.
  */
 export async function withOperationOptions<T>(
   worker: WorkerManager,
   context: Context,
   run: (options: OperationOptions | undefined) => Promise<T>
 ): Promise<T> {
-  const { onProgress } = context;
-  if (!onProgress) {
-    return run(undefined);
-  }
+  context.signal?.throwIfAborted();
 
-  const { operationId, unregister } =
-    worker.registerProgressReceiver(onProgress);
+  const { options, release } = registerOperation(worker, context);
   try {
-    return await run({ progressOperationId: operationId });
+    return await run(options);
   } finally {
-    unregister();
+    release();
   }
 }

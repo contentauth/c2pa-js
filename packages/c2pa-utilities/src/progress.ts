@@ -69,4 +69,29 @@ export interface ContextOptions {
    * may be dropped if it would arrive after the operation resolves.
    */
   onProgress?: (event: ProgressEvent) => void;
+
+  /**
+   * Requests cancellation of the operations this `Context` configures.
+   *
+   * Aborting before the call starts rejects it immediately, with the signal's reason.
+   * Aborting during the call makes it reject with an `Error` whose message is
+   * `C2pa(OperationCancelled)`, since the cancellation is reported by the underlying
+   * engine rather than by the signal.
+   *
+   * **Cancellation is cooperative and coarse.** The underlying engine only observes it
+   * at its own checkpoints, and hashing reports one checkpoint per 256 MiB of asset.
+   * An asset below that size therefore hashes in a single uninterruptible step, so an
+   * abort arriving during it cannot stop that work — it takes effect at the next
+   * checkpoint, if any remain. Treat this as "stop as soon as it is safe to", not as a
+   * guarantee that work halts promptly.
+   *
+   * Measured on a 479 KB JPEG: aborting at the first `reading` report still ran
+   * `fetchingRemoteManifest` and `verifyingManifest` before stopping. Expect work to
+   * continue for one or more phases after `abort()`, and note that a network phase in
+   * that window still completes.
+   *
+   * The same signal may drive several operations, and aborting it cancels all of them.
+   * Use a separate `AbortController` per operation to cancel them independently.
+   */
+  signal?: AbortSignal;
 }

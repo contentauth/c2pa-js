@@ -149,6 +149,152 @@ describe('progress', () => {
     await builder.free();
   });
 
+  test('an already-aborted signal rejects without calling the worker', async ({
+    c2pa
+  }) => {
+    const controller = new AbortController();
+    controller.abort();
+
+    let progressEvents = 0;
+    const context = new Context(settings, {
+      onProgress: () => progressEvents++,
+      signal: controller.signal
+    });
+
+    const blob = await getBlobForAsset(PirateShip_cloud);
+    await expect(
+      Reader.fromBlob(c2pa, 'image/jpeg', blob, context)
+    ).rejects.toThrow();
+
+    // Nothing was dispatched, so the engine never ran.
+    expect(progressEvents).toBe(0);
+  });
+
+  test('aborting during a read rejects it as cancelled', async ({ c2pa }) => {
+    const controller = new AbortController();
+    const phasesSeen: ProgressPhase[] = [];
+
+    // Abort at the first report, which is the earliest point the engine is running.
+    const context = new Context(settings, {
+      onProgress: (event) => {
+        phasesSeen.push(event.phase);
+        controller.abort();
+      },
+      signal: controller.signal
+    });
+
+    const blob = await getBlobForAsset(PirateShip_cloud);
+
+    let message = '';
+    try {
+      await Reader.fromBlob(c2pa, 'image/jpeg', blob, context);
+    } catch (e: unknown) {
+      message = e instanceof Error ? e.message : String(e);
+    }
+
+    expect(message).toContain('OperationCancelled');
+    // Records where cancellation actually lands. With a small asset the engine may
+    // complete several phases first: the guarantee is that it stops at a checkpoint,
+    // not that it stops immediately.
+    expect(phasesSeen.length).toBeGreaterThan(0);
+  });
+
+  test('a read with no signal is unaffected', async ({ c2pa }) => {
+    const context = new Context(settings, { onProgress: () => undefined });
+    expect(context.signal).toBeUndefined();
+
+    const blob = await getBlobForAsset(PirateShip_cloud);
+    const reader = await Reader.fromBlob(c2pa, 'image/jpeg', blob, context);
+
+    expect(reader).not.toBeNull();
+    await reader?.free();
+  });
+
+  test('separate Contexts cancel independently', async ({ c2pa }) => {
+    // Independent cancellation needs a Context each, since the signal lives on the
+    // Context. Aborting one must not reach the other — which is what would fail if the
+    // worker's cancellation set leaked across operation ids.
+    const doomed = new AbortController();
+    const cancelledContext = new Context(settings, {
+      onProgress: () => doomed.abort(),
+      signal: doomed.signal
+    });
+    const survivingContext = new Context(settings, {
+      signal: new AbortController().signal
+    });
+
+    const blob = await getBlobForAsset(PirateShip_cloud);
+    const [cancelled, survivor] = await Promise.allSettled([
+      Reader.fromBlob(c2pa, 'image/jpeg', blob, cancelledContext),
+      Reader.fromBlob(c2pa, 'image/jpeg', blob, survivingContext)
+    ]);
+
+    expect(cancelled.status).toBe('rejected');
+    expect(survivor.status).toBe('fulfilled');
+
+    if (survivor.status === 'fulfilled') {
+      expect(survivor.value).not.toBeNull();
+      await survivor.value?.free();
+    }
+  });
+
+  test('one Context cancels every read it configures', async ({ c2pa }) => {
+    // A signal lives on the Context, so reads sharing one share its cancellation:
+    // aborting stops all of them. Documented behaviour, pinned here because the
+    // alternative — cancelling only the first, or only the one that reported — would
+    // be a silent difference.
+    const controller = new AbortController();
+    const context = new Context(settings, {
+      onProgress: () => controller.abort(),
+      signal: controller.signal
+    });
+
+    const blob = await getBlobForAsset(PirateShip_cloud);
+
+    // A bystander on its own Context, in flight at the same time: the abort must reach
+    // exactly the reads that share the signal and no others.
+    const [first, second, third, bystander] = await Promise.allSettled([
+      Reader.fromBlob(c2pa, 'image/jpeg', blob, context),
+      Reader.fromBlob(c2pa, 'image/jpeg', blob, context),
+      Reader.fromBlob(c2pa, 'image/jpeg', blob, context),
+      Reader.fromBlob(c2pa, 'image/jpeg', blob, new Context(settings))
+    ]);
+
+    for (const result of [first, second, third]) {
+      expect(result.status).toBe('rejected');
+    }
+    expect(bystander.status).toBe('fulfilled');
+
+    if (bystander.status === 'fulfilled') {
+      expect(bystander.value).not.toBeNull();
+      await bystander.value?.free();
+    }
+  });
+
+  test('a cancelled operation does not poison a later one', async ({ c2pa }) => {
+    // The worker clears an operation's cancellation entry when it settles. If it did
+    // not, a later operation could inherit it and fail for no reason.
+    const controller = new AbortController();
+    const cancelledContext = new Context(settings, {
+      onProgress: () => controller.abort(),
+      signal: controller.signal
+    });
+
+    const blob = await getBlobForAsset(PirateShip_cloud);
+    await expect(
+      Reader.fromBlob(c2pa, 'image/jpeg', blob, cancelledContext)
+    ).rejects.toThrow();
+
+    const reader = await Reader.fromBlob(
+      c2pa,
+      'image/jpeg',
+      blob,
+      new Context(settings)
+    );
+    expect(reader).not.toBeNull();
+    await reader?.free();
+  });
+
   test('a throwing onProgress does not fail the read', async ({ c2pa }) => {
     let calls = 0;
     const context = new Context(settings, {

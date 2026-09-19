@@ -22,59 +22,78 @@ const settings = {
 
 const dropzone = document.getElementById('drop-zone');
 const panel = document.getElementById('progress-panel');
-const phaseLabel = document.getElementById('progress-phase');
-const bar = document.getElementById('progress-bar');
+const status = document.getElementById('progress-status');
+const cancelButton = document.getElementById('progress-cancel');
 const log = document.getElementById('progress-log');
 
-function resetProgress() {
+// Set while a read is in flight, so the Cancel button knows what to abort.
+let inFlight: AbortController | undefined;
+
+function startProgress(controller: AbortController) {
+  inFlight = controller;
   panel?.classList.add('visible');
   if (log) {
     log.textContent = '';
   }
-  setPhase('starting', 0, 0);
+  setStatus('reading', 'busy');
+  if (cancelButton instanceof HTMLButtonElement) {
+    cancelButton.disabled = false;
+  }
 }
 
-function setPhase(phase: string, step: number, total: number) {
-  if (phaseLabel) {
-    phaseLabel.textContent =
-      total > 1 ? `${phase} ${step}/${total}` : phase;
-  }
-
-  if (!bar) {
-    return;
-  }
-
-  // `total === 0` means the count is not known ahead of time, so show a moving bar
-  // rather than a fraction.
-  if (total > 1) {
-    bar.classList.remove('indeterminate');
-    bar.style.width = `${Math.round((step / total) * 100)}%`;
-  } else {
-    bar.classList.add('indeterminate');
-    bar.style.width = '100%';
+function setStatus(text: string, state: 'busy' | 'done' | 'cancelled' | 'error') {
+  if (status) {
+    status.textContent = text;
+    status.dataset.state = state;
   }
 }
 
 function appendProgress(event: ProgressEvent) {
-  setPhase(event.phase, event.step, event.total);
+  setStatus(event.phase, 'busy');
 
-  if (log) {
-    const line = document.createElement('div');
-    line.textContent = `${event.phase} ${event.step}/${event.total}`;
-    log.appendChild(line);
-    log.scrollTop = log.scrollHeight;
+  if (!log) {
+    return;
+  }
+
+  const row = document.createElement('div');
+  row.className = 'progress-row';
+
+  const phase = document.createElement('span');
+  phase.className = 'progress-row-phase';
+  phase.textContent = event.phase;
+
+  const count = document.createElement('span');
+  count.className = 'progress-row-count';
+  // `total === 0` means the count is not known ahead of time, so a fraction would be
+  // misleading; `total === 1` is a single-shot phase and needs no count at all.
+  count.textContent =
+    event.total > 1
+      ? `${event.step}/${event.total}`
+      : event.total === 0
+        ? `step ${event.step}`
+        : '';
+
+  row.append(phase, count);
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+}
+
+function finishProgress(
+  text: string,
+  state: 'done' | 'cancelled' | 'error'
+) {
+  inFlight = undefined;
+  setStatus(text, state);
+  if (cancelButton instanceof HTMLButtonElement) {
+    cancelButton.disabled = true;
   }
 }
 
-function finishProgress(text: string) {
-  if (phaseLabel) {
-    phaseLabel.textContent = text;
-  }
-  bar?.classList.remove('indeterminate');
-  if (bar) {
-    bar.style.width = '100%';
-  }
-}
+cancelButton?.addEventListener('click', () => {
+  inFlight?.abort();
+  // The engine only stops at its next checkpoint, so the read is still running here.
+  setStatus('cancelling…', 'busy');
+});
 
 dropzone?.addEventListener('dragenter', () => {
   dropzone.classList.add('active');
@@ -100,28 +119,34 @@ dropzone?.addEventListener('drop', (e) => {
           throw new Error('Could not get item as file');
         }
 
-        resetProgress();
+        const controller = new AbortController();
+        startProgress(controller);
 
         try {
           const start = performance.now();
 
           const context = new Context(settings, {
-            onProgress: appendProgress
+            onProgress: appendProgress,
+            signal: controller.signal
           });
           const reader = await Reader.fromBlob(c2pa, file.type, file, context);
           const manifestStore = await reader?.manifestStore();
 
-          const end = performance.now();
-          const elapsed = Math.round(end - start);
+          const elapsed = Math.round(performance.now() - start);
 
           console.log(manifestStore);
           console.log(`Took ${elapsed}ms`);
-          finishProgress(`done in ${elapsed}ms`);
+          finishProgress(`done in ${elapsed}ms`, 'done');
 
           await reader?.free();
         } catch (e) {
-          console.log('caught error', e);
-          finishProgress('error — see console');
+          const message = e instanceof Error ? e.message : String(e);
+          if (message.includes('OperationCancelled')) {
+            finishProgress('cancelled', 'cancelled');
+          } else {
+            console.log('caught error', e);
+            finishProgress('error — see console', 'error');
+          }
         }
       }
     });

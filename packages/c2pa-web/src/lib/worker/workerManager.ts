@@ -30,6 +30,13 @@ export interface WorkerManager {
     operationId: number;
     unregister: () => void;
   };
+  /**
+   * Reserves an operation id without registering a progress handler.
+   *
+   * For an operation that is cancellable but reports no progress: it still needs an id
+   * to be named by `operation_cancel`.
+   */
+  nextOperationId: () => number;
   terminate: () => void;
 }
 
@@ -151,8 +158,12 @@ export async function createWorkerManager(
     return id;
   }
 
+  function nextOperationId() {
+    return progressOperationId++;
+  }
+
   function registerProgressReceiver(onProgress: (event: ProgressEvent) => void) {
-    const operationId = progressOperationId++;
+    const operationId = nextOperationId();
     progressHandlers.set(operationId, onProgress);
     return {
       operationId,
@@ -167,6 +178,7 @@ export async function createWorkerManager(
     registerSignReceiver,
     registerCredentialHolderReceiver,
     registerProgressReceiver,
+    nextOperationId,
     terminate: () => worker.terminate()
   };
 }

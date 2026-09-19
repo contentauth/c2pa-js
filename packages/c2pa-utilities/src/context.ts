@@ -24,11 +24,24 @@ import { resolveSettings, type Settings } from './settings.js';
 export class Context {
   private readonly _settings?: Settings;
   private readonly _onProgress?: (event: ProgressEvent) => void;
+  private readonly _signal?: AbortSignal;
   private _jsonPromise?: Promise<string>;
 
   constructor(settings?: Settings, options?: ContextOptions) {
     this._settings = settings;
     this._onProgress = options?.onProgress;
+    this._signal = options?.signal;
+  }
+
+  /**
+   * The `AbortSignal` that cancels operations created from this `Context`, if any.
+   *
+   * See {@link ContextOptions.signal} for what cancellation does and does not
+   * guarantee. Like {@link Context.settings}, it is read when a `Reader`/`Builder` is
+   * created; one signal can cancel every operation the `Context` configures.
+   */
+  get signal(): AbortSignal | undefined {
+    return this._signal;
   }
 
   /**

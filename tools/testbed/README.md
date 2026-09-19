@@ -40,14 +40,22 @@ Drag and drop a C2PA-enabled image onto the drop zone, then open the browser dev
 
 ### Progress reporting
 
-The panel below the drop zone shows the phases reported while an asset is read, driven by the `onProgress` callback on `Context`:
+The panel below the drop zone lists the phases reported while an asset is read, driven by the `onProgress` callback on `Context`. The **Cancel** button aborts the read through the same `Context`:
 
 ```ts
-const context = new Context(settings, { onProgress: (event) => ... });
+const controller = new AbortController();
+const context = new Context(settings, {
+  onProgress: (event) => ...,
+  signal: controller.signal
+});
 const reader = await Reader.fromBlob(c2pa, file.type, file, context);
+// Cancel:
+controller.abort();
 ```
 
-Use a **large** asset to see more than a flash. Assets under 50 MB are loaded into memory before the first phase is reported, and a small file finishes verifying almost immediately, so the panel may jump straight to `done`. The bar shows a fraction when a phase knows its total and animates without one when it reports `total` as `0`.
+Use a **large** asset to see more than a flash. Assets under 50 MB are loaded into memory before the first phase is reported, and a small file finishes verifying almost immediately, so the panel may jump straight to `done`.
+
+Cancellation stops the read at the engine's next checkpoint, not instantly — expect a few more phases to appear after pressing Cancel before the status turns to `cancelled`. On a small asset the read often completes first, in which case Cancel has no visible effect.
 
 ### Other commands
 

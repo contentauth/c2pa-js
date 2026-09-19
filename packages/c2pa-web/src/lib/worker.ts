@@ -56,34 +56,97 @@ function buildWasmIdentityAssertions(
 /**
  * Turns the options received over RPC into the object the WASM entry points read.
  *
- * The wire form carries a `progressOperationId` because a function cannot be cloned
- * across `postMessage`; here that id becomes an actual callback that posts one message
- * per report. Posted raw rather than over the RPC channel: the worker is blocked inside
- * a synchronous operation while these fire, so nothing can be awaited, and a channel
- * call would retain a pending promise per event for a reply no one reads.
+ * The wire form carries an `operationId` rather than a callback, because a function
+ * cannot be cloned across `postMessage`; here that id becomes a real callback that
+ * posts one message per report and reports cancellation back to the engine. Posted raw
+ * rather than over the RPC channel: the worker is blocked inside a synchronous
+ * operation while these fire, so nothing can be awaited, and a channel call would
+ * retain a pending promise per event for a reply no one reads.
  *
  * The settings JSON is not part of this: it travels as its own mandatory argument to
  * each entry point, so a context is always present wherever options are.
  */
 function toWasmOptions(options: OperationOptions) {
-  const { progressOperationId } = options;
+  const { operationId, reportsProgress, cancellable } = options;
 
-  if (progressOperationId === undefined) {
+  // With neither progress nor cancellation there is nothing for a callback to do, so
+  // none is installed and the engine runs without per-checkpoint overhead.
+  if (operationId === undefined || (!reportsProgress && !cancellable)) {
     return {};
   }
 
   return {
     progress: (phase: string, step: number, total: number) => {
-      const message: ProgressMessage = {
-        type: PROGRESS_MESSAGE_TYPE,
-        operationId: progressOperationId,
-        phase,
-        step,
-        total
-      };
-      self.postMessage(message);
+      if (reportsProgress) {
+        const message: ProgressMessage = {
+          type: PROGRESS_MESSAGE_TYPE,
+          operationId,
+          phase,
+          step,
+          total
+        };
+        self.postMessage(message);
+      }
+
+      // Returning false asks the engine to stop here. This closure is the only place a
+      // cancellation can be observed: it runs on the worker's own stack inside the
+      // otherwise-blocking operation, where no inbound message could be delivered.
+      return !cancelledOperations.has(operationId);
     }
   };
+}
+
+/**
+ * Operations the main thread has asked to cancel.
+ *
+ * An id is added by `operation_cancel` and removed once the operation settles, so the
+ * set only ever holds in-flight requests.
+ */
+const cancelledOperations = new Set<number>();
+
+/**
+ * The operation id backing each builder, so freeing one clears its cancellation entry.
+ *
+ * A reader's operation ends when its constructor resolves, but a builder's spans its
+ * whole life: the progress closure installed at construction is what reports and
+ * cancels during `sign`. Its id therefore lives until the builder is freed.
+ */
+const builderOperations = new Map<number, number>();
+
+/** Records a builder's operation id, if the operation has one. */
+function trackBuilder(builderId: number, operationId: number | undefined): number {
+  if (operationId !== undefined) {
+    builderOperations.set(builderId, operationId);
+  }
+  return builderId;
+}
+
+/**
+ * Runs a read that the main thread can cancel, releasing its cancellation entry once
+ * the read settles.
+ *
+ * Constructing a reader **is** the read: `WasmReader.fromBlob` parses, hashes and
+ * verifies the asset before it returns, and the reader's other methods only serialize
+ * what is already in memory. This call is therefore the entire window in which a read
+ * can be cancelled, and the entry is useless afterwards.
+ *
+ * The opposite of {@link trackBuilder}, which keeps its entry past construction because
+ * a builder does its work later, during signing. Without the release here the set would
+ * keep an entry for every cancelled read for the life of the worker.
+ */
+async function cancellableRead<T>(
+  operationId: number | undefined,
+  run: () => Promise<T>
+): Promise<T> {
+  if (operationId === undefined) {
+    return run();
+  }
+
+  try {
+    return await run();
+  } finally {
+    cancelledOperations.delete(operationId);
+  }
 }
 
 rx(
@@ -106,12 +169,17 @@ rx(
       const readerId = readerMap.add(reader);
       return readerId;
     },
+    operation_cancel(operationId) {
+      cancelledOperations.add(operationId);
+    },
     async reader_fromBlobWithOptions(format, blob, contextJson, options) {
-      const reader = await WasmReader.fromBlobWithOptions(
-        format,
-        blob,
-        contextJson,
-        toWasmOptions(options)
+      const reader = await cancellableRead(options.operationId, () =>
+        WasmReader.fromBlobWithOptions(
+          format,
+          blob,
+          contextJson,
+          toWasmOptions(options)
+        )
       );
       const readerId = readerMap.add(reader);
       return readerId;
@@ -123,12 +191,14 @@ rx(
       contextJson,
       options
     ) {
-      const reader = await WasmReader.fromBlobFragmentWithOptions(
-        format,
-        init,
-        fragment,
-        contextJson,
-        toWasmOptions(options)
+      const reader = await cancellableRead(options.operationId, () =>
+        WasmReader.fromBlobFragmentWithOptions(
+          format,
+          init,
+          fragment,
+          contextJson,
+          toWasmOptions(options)
+        )
       );
       const readerId = readerMap.add(reader);
       return readerId;
@@ -183,8 +253,7 @@ rx(
         contextJson,
         toWasmOptions(options)
       );
-      const builderId = builderMap.add(builder);
-      return builderId;
+      return trackBuilder(builderMap.add(builder), options.operationId);
     },
     builder_fromJsonWithOptions(json: string, contextJson, options) {
       const builder = WasmBuilder.fromJsonWithOptions(
@@ -192,8 +261,7 @@ rx(
         contextJson,
         toWasmOptions(options)
       );
-      const builderId = builderMap.add(builder);
-      return builderId;
+      return trackBuilder(builderMap.add(builder), options.operationId);
     },
     builder_fromArchiveWithOptions(archive, contextJson, options) {
       const builder = WasmBuilder.fromArchiveWithOptions(
@@ -201,8 +269,7 @@ rx(
         contextJson,
         toWasmOptions(options)
       );
-      const builderId = builderMap.add(builder);
-      return builderId;
+      return trackBuilder(builderMap.add(builder), options.operationId);
     },
     builder_setIntent(builderId, intent) {
       const builder = builderMap.get(builderId);
@@ -343,6 +410,14 @@ rx(
       const builder = builderMap.get(builderId);
       builder.free();
       builderMap.remove(builderId);
+
+      // A builder's operation lasts as long as the builder, so its cancellation entry
+      // is cleared here rather than when a constructor resolves.
+      const operationId = builderOperations.get(builderId);
+      if (operationId !== undefined) {
+        cancelledOperations.delete(operationId);
+        builderOperations.delete(builderId);
+      }
     }
   })
 );

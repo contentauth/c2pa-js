@@ -77,22 +77,27 @@ impl OperationOptions {
 
     /// Builds the `Context` for an operation from its mandatory settings and these options.
     ///
-    /// Progress reporting is advisory and can never cancel the operation: c2pa-rs treats
-    /// a `false` return as a cancellation request, so this bridge always returns `true`,
-    /// including when the JS callback throws. A broken progress handler must not turn a
-    /// valid asset into a cancelled read; a throwing callback only drops that one report.
+    /// The callback's return value is how cancellation reaches c2pa-rs: returning `false`
+    /// makes the next checkpoint fail with `Error::OperationCancelled`. Anything that is
+    /// not an explicit `false` continues, so a callback that throws — or returns a
+    /// non-boolean — cannot turn a valid asset into a cancelled read. That matters
+    /// because the same callback carries ordinary progress reports, and a broken
+    /// progress handler must not look like a cancellation request.
     pub(crate) fn build_context(self, context_json: &str) -> Result<Context, WasmError> {
         let mut context = Context::new().with_settings(context_json)?;
 
         if let Some(callback) = self.progress {
             context = context.with_progress_callback(move |phase, step, total| {
-                let _ = callback.call3(
-                    &JsValue::NULL,
-                    &JsValue::from_str(phase_name(phase)),
-                    &JsValue::from(step),
-                    &JsValue::from(total),
-                );
-                true
+                callback
+                    .call3(
+                        &JsValue::NULL,
+                        &JsValue::from_str(phase_name(phase)),
+                        &JsValue::from(step),
+                        &JsValue::from(total),
+                    )
+                    .ok()
+                    .and_then(|value| value.as_bool())
+                    .unwrap_or(true)
             });
         }
 

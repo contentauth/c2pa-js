@@ -32,10 +32,25 @@ import { channel } from 'highgain';
  */
 export interface OperationOptions {
   /**
-   * Identifies the progress handler registered on the main thread. Present only when
-   * the caller supplied `onProgress`; absent means no progress reporting.
+   * Identifies this operation on the main thread, and in the worker's cancellation set.
+   *
+   * Present when the caller supplied `onProgress`, a `signal`, or both: progress reports
+   * are keyed by it, and `operation_cancel` names the operation to stop with it.
    */
-  progressOperationId?: number;
+  operationId?: number;
+
+  /**
+   * Whether the caller supplied an `onProgress` callback. When false, the worker still
+   * installs a progress closure if the operation is cancellable, but posts no events.
+   */
+  reportsProgress?: boolean;
+
+  /**
+   * Whether the caller supplied an `AbortSignal`. The worker installs a progress
+   * closure for a cancellable operation even with no `onProgress`, because that
+   * closure is the only place cancellation can be observed.
+   */
+  cancellable?: boolean;
 }
 
 // Define browser-to-worker RPC interface
@@ -72,6 +87,13 @@ const { createTx, rx } = channel<{
     contextJson: string,
     options: OperationOptions
   ) => Promise<number>;
+
+  // Requests cancellation of an in-flight operation by its `operationId`.
+  //
+  // The worker records the request; the operation's progress closure observes it at the
+  // engine's next checkpoint and stops there. A worker blocked inside a synchronous read
+  // cannot process this until that read yields, so cancellation is never immediate.
+  operation_cancel: (operationId: number) => void;
 
   // Reader methods
   reader_activeLabel: (readerId: number) => string | null;
