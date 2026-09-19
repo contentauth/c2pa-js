@@ -8,6 +8,7 @@
  */
 
 import type { FetchWithRetryOptions } from './fetchWithRetry.js';
+import type { ContextOptions, ProgressEvent } from './progress.js';
 import { resolveSettings, type Settings } from './settings.js';
 
 /**
@@ -22,10 +23,24 @@ import { resolveSettings, type Settings } from './settings.js';
  */
 export class Context {
   private readonly _settings?: Settings;
+  private readonly _onProgress?: (event: ProgressEvent) => void;
   private _jsonPromise?: Promise<string>;
 
-  constructor(settings?: Settings) {
+  constructor(settings?: Settings, options?: ContextOptions) {
     this._settings = settings;
+    this._onProgress = options?.onProgress;
+  }
+
+  /**
+   * The progress callback attached to this `Context`, if any.
+   *
+   * Only consulted by entry points that support progress reporting; elsewhere it is
+   * ignored. Like {@link Context.settings}, it is snapshotted when a `Reader`/`Builder`
+   * is created, so one `Context` can drive several operations and each reports
+   * independently.
+   */
+  get onProgress(): ((event: ProgressEvent) => void) | undefined {
+    return this._onProgress;
   }
 
   /**

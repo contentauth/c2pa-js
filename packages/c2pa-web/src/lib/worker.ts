@@ -11,7 +11,13 @@
 
 import { WasmReader, initSync, WasmBuilder } from '@contentauth/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
-import { createWorkerTx, rx } from './worker/rpc.js';
+import {
+  createWorkerTx,
+  rx,
+  PROGRESS_MESSAGE_TYPE,
+  type OperationOptions,
+  type ProgressMessage
+} from './worker/rpc.js';
 import { sanitizeManifestStore } from './worker/sanitizeManifestStore.js';
 import type { SerializableIdentityAssertion, SignerPayload } from './signer.js';
 import { transfer } from 'highgain';
@@ -47,6 +53,39 @@ function buildWasmIdentityAssertions(
   }));
 }
 
+/**
+ * Turns the options received over RPC into the object the WASM entry points read.
+ *
+ * The wire form carries a `progressOperationId` because a function cannot be cloned
+ * across `postMessage`; here that id becomes an actual callback that posts one message
+ * per report. Posted raw rather than over the RPC channel: the worker is blocked inside
+ * a synchronous operation while these fire, so nothing can be awaited, and a channel
+ * call would retain a pending promise per event for a reply no one reads.
+ *
+ * The settings JSON is not part of this: it travels as its own mandatory argument to
+ * each entry point, so a context is always present wherever options are.
+ */
+function toWasmOptions(options: OperationOptions) {
+  const { progressOperationId } = options;
+
+  if (progressOperationId === undefined) {
+    return {};
+  }
+
+  return {
+    progress: (phase: string, step: number, total: number) => {
+      const message: ProgressMessage = {
+        type: PROGRESS_MESSAGE_TYPE,
+        operationId: progressOperationId,
+        phase,
+        step,
+        total
+      };
+      self.postMessage(message);
+    }
+  };
+}
+
 rx(
   wrapFunctionsForErrorHandling({
     async initWorker(module) {
@@ -63,6 +102,33 @@ rx(
         init,
         fragment,
         contextJson
+      );
+      const readerId = readerMap.add(reader);
+      return readerId;
+    },
+    async reader_fromBlobWithOptions(format, blob, contextJson, options) {
+      const reader = await WasmReader.fromBlobWithOptions(
+        format,
+        blob,
+        contextJson,
+        toWasmOptions(options)
+      );
+      const readerId = readerMap.add(reader);
+      return readerId;
+    },
+    async reader_fromBlobFragmentWithOptions(
+      format,
+      init,
+      fragment,
+      contextJson,
+      options
+    ) {
+      const reader = await WasmReader.fromBlobFragmentWithOptions(
+        format,
+        init,
+        fragment,
+        contextJson,
+        toWasmOptions(options)
       );
       const readerId = readerMap.add(reader);
       return readerId;
@@ -109,6 +175,32 @@ rx(
     },
     builder_fromArchive(archive, contextJson) {
       const builder = WasmBuilder.fromArchive(archive, contextJson);
+      const builderId = builderMap.add(builder);
+      return builderId;
+    },
+    builder_newWithOptions(contextJson, options) {
+      const builder = WasmBuilder.newWithOptions(
+        contextJson,
+        toWasmOptions(options)
+      );
+      const builderId = builderMap.add(builder);
+      return builderId;
+    },
+    builder_fromJsonWithOptions(json: string, contextJson, options) {
+      const builder = WasmBuilder.fromJsonWithOptions(
+        json,
+        contextJson,
+        toWasmOptions(options)
+      );
+      const builderId = builderMap.add(builder);
+      return builderId;
+    },
+    builder_fromArchiveWithOptions(archive, contextJson, options) {
+      const builder = WasmBuilder.fromArchiveWithOptions(
+        archive,
+        contextJson,
+        toWasmOptions(options)
+      );
       const builderId = builderMap.add(builder);
       return builderId;
     },

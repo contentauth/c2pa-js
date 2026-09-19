@@ -14,7 +14,12 @@ use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 use web_sys::Blob;
 
-use crate::{error::WasmError, stream::BlobStream, utils::cursor_to_u8array};
+use crate::{
+    error::WasmError,
+    options::{OperationOptions, context_from_json},
+    stream::BlobStream,
+    utils::cursor_to_u8array,
+};
 
 /// Wraps a `c2pa::Reader`.
 #[wasm_bindgen]
@@ -41,20 +46,34 @@ impl WasmReader {
         context_json: Option<String>,
     ) -> Result<WasmReader, JsString> {
         let stream = BlobStream::new(blob).map_err(WasmError::other)?;
-        WasmReader::from_stream(format, stream, context_json).await
+        let context = context_from_json(context_json).map_err(WasmError::from)?;
+        WasmReader::from_stream(format, stream, context).await
+    }
+
+    /// Same as [`WasmReader::from_blob`], taking a mandatory context and an options object.
+    ///
+    /// `options` accepts `progress`, called as
+    /// `(phase: string, step: number, total: number)`. Progress cannot influence the
+    /// read: its return value is ignored and a thrown error only drops that one report.
+    #[wasm_bindgen(js_name = fromBlobWithOptions)]
+    pub async fn from_blob_with_options(
+        format: &str,
+        blob: &Blob,
+        context_json: String,
+        options: JsValue,
+    ) -> Result<WasmReader, JsString> {
+        let stream = BlobStream::new(blob).map_err(WasmError::other)?;
+        let context = OperationOptions::from_js(&options)
+            .build_context(&context_json)
+            .map_err(WasmError::from)?;
+        WasmReader::from_stream(format, stream, context).await
     }
 
     async fn from_stream(
         format: &str,
         stream: impl Read + Seek + Send,
-        context_json: Option<String>,
+        context: Context,
     ) -> Result<WasmReader, JsString> {
-        let context = match context_json {
-            Some(json) => Context::new()
-                .with_settings(json.as_str())
-                .map_err(WasmError::from)?,
-            None => Context::new(),
-        };
         let reader = Reader::from_context(context)
             .with_stream_async(format, stream)
             .await
@@ -78,7 +97,25 @@ impl WasmReader {
         context_json: Option<String>,
     ) -> Result<WasmReader, JsString> {
         let stream = Cursor::new(bytes);
-        WasmReader::from_stream(format, stream, context_json).await
+        let context = context_from_json(context_json).map_err(WasmError::from)?;
+        WasmReader::from_stream(format, stream, context).await
+    }
+
+    /// Same as [`WasmReader::from_bytes`], taking a mandatory context and an options object.
+    ///
+    /// See [`WasmReader::from_blob_with_options`] for the accepted fields.
+    #[wasm_bindgen(js_name = fromBytesWithOptions)]
+    pub async fn from_bytes_with_options(
+        format: &str,
+        bytes: Vec<u8>,
+        context_json: String,
+        options: JsValue,
+    ) -> Result<WasmReader, JsString> {
+        let stream = Cursor::new(bytes);
+        let context = OperationOptions::from_js(&options)
+            .build_context(&context_json)
+            .map_err(WasmError::from)?;
+        WasmReader::from_stream(format, stream, context).await
     }
 
     /// Attempts to create a new `WasmReader` from an asset format, a `Blob` of the bytes of the initial segment, and a fragment `Blob`.
@@ -93,21 +130,37 @@ impl WasmReader {
         let init_stream = BlobStream::new(init).map_err(WasmError::other)?;
         let fragment_stream = BlobStream::new(fragment).map_err(WasmError::other)?;
 
-        WasmReader::from_stream_fragment(format, init_stream, fragment_stream, context_json).await
+        let context = context_from_json(context_json).map_err(WasmError::from)?;
+        WasmReader::from_stream_fragment(format, init_stream, fragment_stream, context).await
+    }
+
+    /// Same as [`WasmReader::from_blob_fragment`], taking a mandatory context and an
+    /// options object.
+    ///
+    /// See [`WasmReader::from_blob_with_options`] for the accepted fields.
+    #[wasm_bindgen(js_name = fromBlobFragmentWithOptions)]
+    pub async fn from_blob_fragment_with_options(
+        format: &str,
+        init: &Blob,
+        fragment: &Blob,
+        context_json: String,
+        options: JsValue,
+    ) -> Result<WasmReader, JsString> {
+        let init_stream = BlobStream::new(init).map_err(WasmError::other)?;
+        let fragment_stream = BlobStream::new(fragment).map_err(WasmError::other)?;
+
+        let context = OperationOptions::from_js(&options)
+            .build_context(&context_json)
+            .map_err(WasmError::from)?;
+        WasmReader::from_stream_fragment(format, init_stream, fragment_stream, context).await
     }
 
     async fn from_stream_fragment(
         format: &str,
         init: impl Read + Seek + Send,
         fragment: impl Read + Seek + Send,
-        context_json: Option<String>,
+        context: Context,
     ) -> Result<WasmReader, JsString> {
-        let context = match context_json {
-            Some(json) => Context::new()
-                .with_settings(json.as_str())
-                .map_err(WasmError::from)?,
-            None => Context::new(),
-        };
         let reader = Reader::from_context(context)
             .with_fragment_async(format, init, fragment)
             .await
@@ -179,6 +232,10 @@ impl WasmReader {
 
 #[cfg(test)]
 mod tests {
+    use std::{cell::Cell, rc::Rc};
+
+    use js_sys::{Object, Reflect};
+    use wasm_bindgen::closure::Closure;
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
@@ -200,6 +257,44 @@ mod tests {
         assert!(
             reader.active_label().is_some(),
             "a signed asset should expose an active manifest"
+        );
+    }
+
+    #[wasm_bindgen_test]
+    async fn progress_is_reported_and_a_throwing_callback_cannot_fail_the_read() {
+        // Counts calls and throws on every one. c2pa-rs treats a `false` return from the
+        // progress callback as a cancellation request, so a callback that blows up must
+        // not be allowed to turn a valid asset into a failed or cancelled read.
+        let calls = Rc::new(Cell::new(0u32));
+        let seen = calls.clone();
+
+        let callback = Closure::<dyn FnMut(JsValue, JsValue, JsValue) -> JsValue>::new(
+            move |_phase, _step, _total| -> JsValue {
+                seen.set(seen.get() + 1);
+                wasm_bindgen::throw_str("progress handler is broken");
+            },
+        );
+
+        let options = Object::new();
+        Reflect::set(&options, &"progress".into(), callback.as_ref())
+            .expect("setting a property on a fresh object cannot fail");
+
+        let reader = WasmReader::from_bytes_with_options(
+            "image/jpeg",
+            SIGNED_JPEG.to_vec(),
+            "{}".to_string(),
+            options.into(),
+        )
+        .await
+        .expect("a throwing progress callback must not fail an otherwise valid read");
+
+        assert!(
+            calls.get() > 0,
+            "reading a signed asset should report at least one progress event"
+        );
+        assert!(
+            reader.active_label().is_some(),
+            "the read must still produce the active manifest"
         );
     }
 

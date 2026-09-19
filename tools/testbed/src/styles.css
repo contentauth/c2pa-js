@@ -7,6 +7,14 @@ body {
   height: 100vh;
   padding: 20px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#drop-zone {
+  flex: 1;
+  min-height: 0;
 }
 
 #drop-zone {
@@ -16,7 +24,6 @@ body {
   flex-direction: column;
   width: 100%;
   background-color: #f8f8f8;
-  height: 100%;
   border-width: 4px;
   border-style: dashed;
   border-color: #b1b1b1;
@@ -38,4 +45,69 @@ body {
   padding-top: 4px;
   color: #464646;
   /* font-size: 16px; */
+}
+
+#progress-panel {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid #d8d8d8;
+  border-radius: 10px;
+  background-color: #fbfbfb;
+}
+
+#progress-panel.visible {
+  display: flex;
+}
+
+#progress-phase {
+  font-size: 14px;
+  color: #222222;
+}
+
+#progress-track {
+  height: 6px;
+  border-radius: 3px;
+  background-color: #e6e6e6;
+  overflow: hidden;
+}
+
+#progress-bar {
+  height: 100%;
+  width: 0;
+  background-color: #1473e6;
+  transition: width 120ms linear;
+}
+
+/* Phases report `total === 0` when the count is not known in advance; the stripes
+   show that work continues without implying a fraction. */
+#progress-bar.indeterminate {
+  background-image: linear-gradient(
+    90deg,
+    #1473e6 0 25%,
+    #7cb2f2 25% 50%,
+    #1473e6 50% 75%,
+    #7cb2f2 75% 100%
+  );
+  background-size: 40px 100%;
+  animation: progress-sweep 900ms linear infinite;
+  transition: none;
+}
+
+@keyframes progress-sweep {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 40px 0;
+  }
+}
+
+#progress-log {
+  max-height: 120px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 12px;
+  color: #464646;
 }

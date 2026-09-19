@@ -17,6 +17,27 @@ import type {
 
 import { channel } from 'highgain';
 
+/**
+ * Per-operation options for the `*WithOptions` constructors, shared by readers and
+ * builders.
+ *
+ * The context travels as its own mandatory parameter beside this object, never inside
+ * it: options configure an operation that a `Context` already defines, so a signature
+ * that could carry options without one would describe a state that cannot exist.
+ *
+ * A later capability is added as another optional field, and both threads keep
+ * compiling: the worker consults whichever of those fields are present. Must stay
+ * structured-cloneable — no functions. A callback is represented by the id the main
+ * thread registered it under, not by the callback itself.
+ */
+export interface OperationOptions {
+  /**
+   * Identifies the progress handler registered on the main thread. Present only when
+   * the caller supplied `onProgress`; absent means no progress reporting.
+   */
+  progressOperationId?: number;
+}
+
 // Define browser-to-worker RPC interface
 const { createTx, rx } = channel<{
   initWorker: (module: WebAssembly.Module) => void;
@@ -32,6 +53,24 @@ const { createTx, rx } = channel<{
     init: Blob,
     fragment: Blob,
     contextJson?: string
+  ) => Promise<number>;
+
+  // Options-carrying counterparts of the two constructors above. They are separate
+  // methods rather than extra parameters so the originals keep their exact contract,
+  // and they take an options object rather than positional flags so later features
+  // extend `OperationOptions` instead of adding another method pair.
+  reader_fromBlobWithOptions: (
+    format: string,
+    blob: Blob,
+    contextJson: string,
+    options: OperationOptions
+  ) => Promise<number>;
+  reader_fromBlobFragmentWithOptions: (
+    format: string,
+    init: Blob,
+    fragment: Blob,
+    contextJson: string,
+    options: OperationOptions
   ) => Promise<number>;
 
   // Reader methods
@@ -50,6 +89,23 @@ const { createTx, rx } = channel<{
   builder_new: (contextJson?: string) => number;
   builder_fromJson: (json: string, contextJson?: string) => number;
   builder_fromArchive: (archive: Blob, contextJson?: string) => number;
+
+  // Options-carrying counterparts of the three constructors above, mirroring the
+  // reader pair. A builder reports progress during signing.
+  builder_newWithOptions: (
+    contextJson: string,
+    options: OperationOptions
+  ) => number;
+  builder_fromJsonWithOptions: (
+    json: string,
+    contextJson: string,
+    options: OperationOptions
+  ) => number;
+  builder_fromArchiveWithOptions: (
+    archive: Blob,
+    contextJson: string,
+    options: OperationOptions
+  ) => number;
 
   // Builder methods
   builder_setIntent: (builderId: number, intent: BuilderIntent) => void;
@@ -124,5 +180,32 @@ const { createTx: createWorkerTx, rx: workerRx } = channel<{
     payload: SignerPayload
   ) => Promise<Uint8Array<ArrayBuffer>>;
 }>('worker');
+
+/**
+ * Discriminator for progress messages, which bypass the RPC channels above.
+ *
+ * highgain allocates a pending `{resolve, reject}` pair for every call and always
+ * replies, which is the wrong shape for a one-way stream of many events. Progress is
+ * therefore posted as a raw message; highgain ignores it because it carries no
+ * matching `channelName`.
+ */
+export const PROGRESS_MESSAGE_TYPE = 'c2pa:progress';
+
+/** A single progress report travelling worker -> main thread. */
+export interface ProgressMessage {
+  type: typeof PROGRESS_MESSAGE_TYPE;
+  operationId: number;
+  phase: string;
+  step: number;
+  total: number;
+}
+
+export function isProgressMessage(data: unknown): data is ProgressMessage {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    (data as { type?: unknown }).type === PROGRESS_MESSAGE_TYPE
+  );
+}
 
 export { createTx, rx, createWorkerTx, workerRx };

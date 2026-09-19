@@ -10,6 +10,7 @@
 import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
 import type { C2pa } from './c2pa.js';
 import type { WorkerManager } from './worker/workerManager.js';
+import { withOperationOptions } from './worker/operationOptions.js';
 import { Context, Settings, mergeSettings, validateAssetSize } from '@contentauth/c2pa-utilities';
 
 // 1 GB
@@ -21,6 +22,7 @@ const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>
     await worker.tx.reader_free(id);
   }
 );
+
 
 /**
  * The `Reader` class supports reading C2PA data out of an asset.
@@ -62,7 +64,16 @@ export class Reader {
       const settingsJson = await context.toJson();
       const { worker } = c2pa;
 
-      const readerId = await worker.tx.reader_fromBlob(format, blob, settingsJson);
+      const readerId = await withOperationOptions(worker, context, (options) =>
+        options === undefined
+          ? worker.tx.reader_fromBlob(format, blob, settingsJson)
+          : worker.tx.reader_fromBlobWithOptions(
+              format,
+              blob,
+              settingsJson,
+              options
+            )
+      );
 
       const reader = new Reader(worker, readerId);
       registry.register(reader, { worker, id: readerId }, reader);
@@ -98,11 +109,21 @@ export class Reader {
       const settingsJson = await context.toJson();
       const { worker } = c2pa;
 
-      const readerId = await worker.tx.reader_fromBlobFragment(
-        format,
-        init,
-        fragment,
-        settingsJson
+      const readerId = await withOperationOptions(worker, context, (options) =>
+        options === undefined
+          ? worker.tx.reader_fromBlobFragment(
+              format,
+              init,
+              fragment,
+              settingsJson
+            )
+          : worker.tx.reader_fromBlobFragmentWithOptions(
+              format,
+              init,
+              fragment,
+              settingsJson,
+              options
+            )
       );
 
       const reader = new Reader(worker, readerId);

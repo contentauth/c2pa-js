@@ -38,6 +38,17 @@ Open **https://localhost:4200/** in your browser. The dev server uses [vite-plug
 
 Drag and drop a C2PA-enabled image onto the drop zone, then open the browser developer console to view the parsed manifest store and read time.
 
+### Progress reporting
+
+The panel below the drop zone shows the phases reported while an asset is read, driven by the `onProgress` callback on `Context`:
+
+```ts
+const context = new Context(settings, { onProgress: (event) => ... });
+const reader = await Reader.fromBlob(c2pa, file.type, file, context);
+```
+
+Use a **large** asset to see more than a flash. Assets under 50 MB are loaded into memory before the first phase is reported, and a small file finishes verifying almost immediately, so the panel may jump straight to `done`. The bar shows a fraction when a phase knows its total and animates without one when it reports `total` as `0`.
+
 ### Other commands
 
 ```sh

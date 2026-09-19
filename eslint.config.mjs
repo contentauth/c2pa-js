@@ -26,6 +26,9 @@ export default [
     ignores: [
       '**/docs',
       '**/dist',
+      // Generated declaration output, like `dist` above: gitignored, and the license
+      // header rule does not apply to files no one authors.
+      '**/out-tsc',
       '**/vite.config.*.timestamp*',
       '**/vitest.config.*.timestamp*'
     ]

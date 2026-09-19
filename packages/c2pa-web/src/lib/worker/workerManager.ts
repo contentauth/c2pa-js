@@ -7,8 +7,9 @@
  * it.
  */
 
+import type { ProgressEvent, ProgressPhase } from '@contentauth/c2pa-utilities';
 import { CredentialHolder, Signer } from '../signer.js';
-import { createTx, workerRx } from './rpc.js';
+import { createTx, workerRx, isProgressMessage } from './rpc.js';
 import InlineWorker from '../worker?worker&inline';
 import { transfer } from 'highgain';
 
@@ -18,6 +19,17 @@ export interface WorkerManager {
   registerCredentialHolderReceiver: (
     signFn: CredentialHolder['sign']
   ) => number;
+  /**
+   * Registers a progress handler and returns the id identifying this operation.
+   *
+   * Unlike the signer receivers, a progress handler is invoked many times, so the
+   * caller must release it with the returned `unregister` once the operation settles
+   * — nothing removes it automatically.
+   */
+  registerProgressReceiver: (onProgress: (event: ProgressEvent) => void) => {
+    operationId: number;
+    unregister: () => void;
+  };
   terminate: () => void;
 }
 
@@ -67,6 +79,37 @@ export async function createWorkerManager(
   const signingRequestMap = new Map<number, Signer['sign']>();
   const credentialHolderRequestMap = new Map<number, CredentialHolder['sign']>();
 
+  // Kept separate from the signer maps: those are single-use and delete on first
+  // invocation, whereas a progress handler must survive every event of its operation.
+  let progressOperationId = 0;
+  const progressHandlers = new Map<number, (event: ProgressEvent) => void>();
+
+  // Progress arrives as a raw message rather than over the RPC channel (see
+  // PROGRESS_MESSAGE_TYPE), so it needs its own listener.
+  worker.addEventListener('message', (event: MessageEvent) => {
+    const message = event.data;
+    if (!isProgressMessage(message)) {
+      return;
+    }
+
+    const handler = progressHandlers.get(message.operationId);
+    // A late event for a settled operation has no handler; dropping it is intended.
+    if (!handler) {
+      return;
+    }
+
+    try {
+      handler({
+        phase: message.phase as ProgressPhase,
+        step: message.step,
+        total: message.total
+      });
+    } catch (e) {
+      // Reporting is advisory: a caller's broken handler must not fail their read.
+      console.error('c2pa: onProgress callback threw', e);
+    }
+  });
+
   workerRx(
     {
       sign: async (id, bytes, reserveSize) => {
@@ -108,12 +151,22 @@ export async function createWorkerManager(
     return id;
   }
 
+  function registerProgressReceiver(onProgress: (event: ProgressEvent) => void) {
+    const operationId = progressOperationId++;
+    progressHandlers.set(operationId, onProgress);
+    return {
+      operationId,
+      unregister: () => progressHandlers.delete(operationId)
+    };
+  }
+
   await tx.initWorker(wasm);
 
   return {
     tx,
     registerSignReceiver,
     registerCredentialHolderReceiver,
+    registerProgressReceiver,
     terminate: () => worker.terminate()
   };
 }

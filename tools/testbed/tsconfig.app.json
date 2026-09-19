@@ -20,6 +20,9 @@
   "references": [
     {
       "path": "../../packages/c2pa-web/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/c2pa-utilities/tsconfig.lib.json"
     }
   ]
 }

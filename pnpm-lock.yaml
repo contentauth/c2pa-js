@@ -10,7 +10,7 @@ importers:
     devDependencies:
       '@changesets/cli':
         specifier: ^2.31.0
-        version: 2.31.0(patch_hash=3a8bdb9beaa04fc87b82cb2d08e95cc959c23a3a5a384098b71a2d25751dc6be)(@types/node@18.16.9)
+        version: 2.31.0(@types/node@18.16.9)
       '@eslint/js':
         specifier: ^9.8.0
         version: 9.39.2
@@ -313,6 +313,9 @@ importers:
 
   tools/testbed:
     dependencies:
+      '@contentauth/c2pa-utilities':
+        specifier: workspace:*
+        version: link:../../packages/c2pa-utilities
       '@contentauth/c2pa-wasm':
         specifier: workspace:*
         version: link:../../packages/c2pa-wasm
@@ -8433,7 +8436,7 @@ snapshots:
     dependencies:
       '@changesets/types': 6.1.0
 
-  '@changesets/cli@2.31.0(patch_hash=3a8bdb9beaa04fc87b82cb2d08e95cc959c23a3a5a384098b71a2d25751dc6be)(@types/node@18.16.9)':
+  '@changesets/cli@2.31.0(@types/node@18.16.9)':
     dependencies:
       '@changesets/apply-release-plan': 7.1.1
       '@changesets/assemble-release-plan': 6.0.10

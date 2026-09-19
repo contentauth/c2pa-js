@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@contentauth/c2pa-utilities": "workspace:*",
     "@contentauth/c2pa-wasm": "workspace:*",
     "@contentauth/c2pa-web": "workspace:*"
   },

@@ -32,6 +32,9 @@ pub mod wasm_credential_holder;
 /// holder callback.
 pub mod wasm_identity_assertion;
 
+/// Per-operation options shared by the `*WithOptions` entry points.
+pub(crate) mod options;
+
 /// Internal utility functions
 pub(crate) mod utils;
 

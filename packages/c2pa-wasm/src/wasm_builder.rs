@@ -19,6 +19,7 @@ use web_sys::Blob;
 
 use crate::{
     error::WasmError,
+    options::OperationOptions,
     stream::BlobStream,
     utils::cursor_to_u8array,
     wasm_identity_assertion::{WasmIdentityAssertionSigner, parse_identity_assertions},
@@ -65,6 +66,20 @@ impl WasmBuilder {
         Ok(WasmBuilder::from_builder(builder))
     }
 
+    /// Same as [`WasmBuilder::new`], taking a mandatory context and an options object.
+    ///
+    /// `options` accepts `progress`, called as
+    /// `(phase: string, step: number, total: number)`. Progress cannot influence the
+    /// operation: its return value is ignored and a thrown error only drops that report.
+    #[wasm_bindgen(js_name = newWithOptions)]
+    pub fn new_with_options(context_json: String, options: JsValue) -> Result<WasmBuilder, JsString> {
+        let context = OperationOptions::from_js(&options)
+            .build_context(&context_json)
+            .map_err(WasmError::from)?;
+
+        Ok(WasmBuilder::from_builder(Builder::from_context(context)))
+    }
+
     /// Sets the builder "intent."
     #[wasm_bindgen(js_name = setIntent)]
     pub fn set_intent(&mut self, json_intent: JsValue) -> Result<(), JsString> {
@@ -92,6 +107,25 @@ impl WasmBuilder {
         Ok(WasmBuilder::from_builder(builder))
     }
 
+    /// Same as [`WasmBuilder::from_json`], taking a mandatory context and an options object.
+    ///
+    /// See [`WasmBuilder::new_with_options`] for the accepted fields.
+    #[wasm_bindgen(js_name = fromJsonWithOptions)]
+    pub fn from_json_with_options(
+        json: &str,
+        context_json: String,
+        options: JsValue,
+    ) -> Result<WasmBuilder, JsString> {
+        let context = OperationOptions::from_js(&options)
+            .build_context(&context_json)
+            .map_err(WasmError::from)?;
+        let builder = Builder::from_context(context)
+            .with_definition(json)
+            .map_err(WasmError::from)?;
+
+        Ok(WasmBuilder::from_builder(builder))
+    }
+
     /// Attempts to create a new `WasmBuilder` from a builder archive.
     /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = fromArchive)]
@@ -112,6 +146,26 @@ impl WasmBuilder {
                 .with_archive(stream)
                 .map_err(WasmError::from)?
         };
+
+        Ok(WasmBuilder::from_builder(builder))
+    }
+
+    /// Same as [`WasmBuilder::from_archive`], taking a mandatory context and an options object.
+    ///
+    /// See [`WasmBuilder::new_with_options`] for the accepted fields.
+    #[wasm_bindgen(js_name = fromArchiveWithOptions)]
+    pub fn from_archive_with_options(
+        archive: &Blob,
+        context_json: String,
+        options: JsValue,
+    ) -> Result<WasmBuilder, JsString> {
+        let stream = BlobStream::new(archive).map_err(WasmError::other)?;
+        let context = OperationOptions::from_js(&options)
+            .build_context(&context_json)
+            .map_err(WasmError::from)?;
+        let builder = Builder::from_context(context)
+            .with_archive(stream)
+            .map_err(WasmError::from)?;
 
         Ok(WasmBuilder::from_builder(builder))
     }

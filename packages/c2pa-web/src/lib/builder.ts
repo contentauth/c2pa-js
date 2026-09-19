@@ -8,6 +8,7 @@
  */
 
 import type { WorkerManager } from './worker/workerManager.js';
+import type { OperationOptions } from './worker/rpc.js';
 import {
   getSerializablePayload,
   getSerializableIdentityAssertion,
@@ -97,11 +98,41 @@ function getSerializableIdentityAssertions(
 }
 
 // Module-level registry for garbage collection
-const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>(
-  ({ worker, id }) => {
-    worker.tx.builder_free(id);
+const registry = new FinalizationRegistry<{
+  worker: WorkerManager;
+  id: number;
+  releaseProgress: () => void;
+}>(({ worker, id, releaseProgress }) => {
+  // Unlike a reader's, a builder's progress handler outlives its constructor: reports
+  // arrive during signing. It is therefore released alongside the builder itself, so a
+  // builder that is dropped without `free()` cannot strand the handler.
+  releaseProgress();
+  worker.tx.builder_free(id);
+});
+
+/**
+ * Registers `context.onProgress` for the lifetime of a builder, if one was supplied.
+ *
+ * Returns the options to construct the builder with — `undefined` when there is no
+ * callback, meaning the caller uses the plain constructor unchanged — and the function
+ * that releases the handler.
+ */
+function registerBuilderProgress(
+  worker: WorkerManager,
+  context: Context
+): { options: OperationOptions | undefined; unregister: () => void } {
+  const { onProgress } = context;
+  if (!onProgress) {
+    return { options: undefined, unregister: () => undefined };
   }
-);
+
+  const { operationId, unregister } =
+    worker.registerProgressReceiver(onProgress);
+  return {
+    options: { progressOperationId: operationId },
+    unregister
+  };
+}
 
 /**
  * The `Builder` class supports building C2PA manifests and signing assets.
@@ -109,10 +140,28 @@ const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>
 export class Builder {
   #worker: WorkerManager;
   #id: number;
+  #releaseProgress: () => void;
 
-  private constructor(worker: WorkerManager, id: number) {
+  private constructor(
+    worker: WorkerManager,
+    id: number,
+    releaseProgress: () => void
+  ) {
     this.#worker = worker;
     this.#id = id;
+    this.#releaseProgress = releaseProgress;
+  }
+
+  /** Wraps a worker-side builder id and arranges for both it and the progress
+   * handler to be released, whether by `free()` or by garbage collection. */
+  static #adopt(
+    worker: WorkerManager,
+    id: number,
+    releaseProgress: () => void
+  ): Builder {
+    const builder = new Builder(worker, id, releaseProgress);
+    registry.register(builder, { worker, id, releaseProgress }, builder);
+    return builder;
   }
 
   /**
@@ -126,12 +175,21 @@ export class Builder {
     const settingsJson = await context.toJson();
     const { worker } = c2pa;
 
-    const builderId = await worker.tx.builder_new(settingsJson);
+    const progress = registerBuilderProgress(worker, context);
+    try {
+      const builderId =
+        progress.options === undefined
+          ? await worker.tx.builder_new(settingsJson)
+          : await worker.tx.builder_newWithOptions(
+              settingsJson,
+              progress.options
+            );
 
-    const builder = new Builder(worker, builderId);
-    registry.register(builder, { worker, id: builderId }, builder);
-
-    return builder;
+      return Builder.#adopt(worker, builderId, progress.unregister);
+    } catch (e: unknown) {
+      progress.unregister();
+      throw e;
+    }
   }
 
   /**
@@ -151,12 +209,22 @@ export class Builder {
     const settingsJson = await context.toJson();
     const { worker } = c2pa;
 
-    const builderId = await worker.tx.builder_fromJson(json, settingsJson);
+    const progress = registerBuilderProgress(worker, context);
+    try {
+      const builderId =
+        progress.options === undefined
+          ? await worker.tx.builder_fromJson(json, settingsJson)
+          : await worker.tx.builder_fromJsonWithOptions(
+              json,
+              settingsJson,
+              progress.options
+            );
 
-    const builder = new Builder(worker, builderId);
-    registry.register(builder, { worker, id: builderId }, builder);
-
-    return builder;
+      return Builder.#adopt(worker, builderId, progress.unregister);
+    } catch (e: unknown) {
+      progress.unregister();
+      throw e;
+    }
   }
 
   /**
@@ -175,12 +243,22 @@ export class Builder {
     const settingsJson = await context.toJson();
     const { worker } = c2pa;
 
-    const builderId = await worker.tx.builder_fromArchive(archive, settingsJson);
+    const progress = registerBuilderProgress(worker, context);
+    try {
+      const builderId =
+        progress.options === undefined
+          ? await worker.tx.builder_fromArchive(archive, settingsJson)
+          : await worker.tx.builder_fromArchiveWithOptions(
+              archive,
+              settingsJson,
+              progress.options
+            );
 
-    const builder = new Builder(worker, builderId);
-    registry.register(builder, { worker, id: builderId }, builder);
-
-    return builder;
+      return Builder.#adopt(worker, builderId, progress.unregister);
+    } catch (e: unknown) {
+      progress.unregister();
+      throw e;
+    }
   }
 
   /**
@@ -524,6 +602,7 @@ export class Builder {
    */
   async free(): Promise<void> {
     registry.unregister(this);
+    this.#releaseProgress();
     await this.#worker.tx.builder_free(this.#id);
   }
 }
