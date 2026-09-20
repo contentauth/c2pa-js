@@ -122,10 +122,11 @@ dropzone?.addEventListener('drop', (e) => {
         const controller = new AbortController();
         startProgress(controller);
 
+        let reader: Reader | null = null;
         try {
           const start = performance.now();
 
-          const reader = await Reader.fromBlob(c2pa, file.type, file, context, {
+          reader = await Reader.fromBlob(c2pa, file.type, file, context, {
             onProgress: appendProgress,
             signal: controller.signal
           });
@@ -136,8 +137,6 @@ dropzone?.addEventListener('drop', (e) => {
           console.log(manifestStore);
           console.log(`Took ${elapsed}ms`);
           finishProgress(`done in ${elapsed}ms`, 'done');
-
-          await reader?.free();
         } catch (e) {
           if (isCancelled(e)) {
             finishProgress('cancelled', 'cancelled');
@@ -145,6 +144,8 @@ dropzone?.addEventListener('drop', (e) => {
             console.log('caught error', e);
             finishProgress('error — see console', 'error');
           }
+        } finally {
+          await reader?.free();
         }
       }
     });

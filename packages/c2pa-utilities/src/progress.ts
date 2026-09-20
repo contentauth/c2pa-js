@@ -7,23 +7,29 @@
  * it.
  */
 
+/**
+ * Known phases reported by the library.
+ */
+export const PROGRESS_PHASES = [
+  'reading',
+  'verifyingManifest',
+  'verifyingSignature',
+  'verifyingIngredient',
+  'verifyingAssetHash',
+  'addingIngredient',
+  'thumbnail',
+  'hashing',
+  'signing',
+  'embedding',
+  'fetchingRemoteManifest',
+  'writing',
+  'fetchingOcsp',
+  'fetchingTimestamp',
+  'unknown'
+] as const;
+
 /** Phases of C2PA-related work reported while reading or signing an asset. */
-export type ProgressPhase =
-  | 'reading'
-  | 'verifyingManifest'
-  | 'verifyingSignature'
-  | 'verifyingIngredient'
-  | 'verifyingAssetHash'
-  | 'addingIngredient'
-  | 'thumbnail'
-  | 'hashing'
-  | 'signing'
-  | 'embedding'
-  | 'fetchingRemoteManifest'
-  | 'writing'
-  | 'fetchingOcsp'
-  | 'fetchingTimestamp'
-  | 'unknown';
+export type ProgressPhase = (typeof PROGRESS_PHASES)[number];
 
 /**
  * A progress report event (fired by the underlying library).

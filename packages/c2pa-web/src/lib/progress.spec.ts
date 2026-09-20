@@ -13,6 +13,7 @@ import { Builder } from './builder.js';
 import {
   Context,
   isCancelled,
+  PROGRESS_PHASES,
   type ProgressReportEvent,
   type ProgressPhase
 } from '@contentauth/c2pa-utilities';
@@ -20,25 +21,6 @@ import { getBlobForAsset, createTestSigner } from 'test/utils.js';
 
 import C from 'test/assets/C.jpg';
 import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';
-
-// Known phases.
-const KNOWN_PHASES: ProgressPhase[] = [
-  'reading',
-  'verifyingManifest',
-  'verifyingSignature',
-  'verifyingIngredient',
-  'verifyingAssetHash',
-  'addingIngredient',
-  'thumbnail',
-  'hashing',
-  'signing',
-  'embedding',
-  'fetchingRemoteManifest',
-  'writing',
-  'fetchingOcsp',
-  'fetchingTimestamp',
-  'unknown'
-];
 
 const settings = { verify: { verifyTrust: false } };
 
@@ -58,7 +40,7 @@ describe('progress and cancellation', () => {
     expect(events.length).toBeGreaterThan(0);
 
     for (const event of events) {
-      expect(KNOWN_PHASES).toContain(event.phase);
+      expect(PROGRESS_PHASES).toContain(event.phase);
       expect(event.step).toBeGreaterThanOrEqual(1);
       if (event.total !== null) {
         expect(event.total).toBeGreaterThanOrEqual(1);
@@ -100,7 +82,7 @@ describe('progress and cancellation', () => {
     expect(signedBytes.length).toBeGreaterThan(0);
     expect(events.length).toBeGreaterThan(0);
     for (const event of events) {
-      expect(KNOWN_PHASES).toContain(event.phase);
+      expect(PROGRESS_PHASES).toContain(event.phase);
     }
 
     await builder.free();

@@ -101,24 +101,64 @@ mod tests {
 
     use super::*;
 
+    const ALL_PHASES: [ProgressPhase; 14] = [
+        ProgressPhase::Reading,
+        ProgressPhase::VerifyingManifest,
+        ProgressPhase::VerifyingSignature,
+        ProgressPhase::VerifyingIngredient,
+        ProgressPhase::VerifyingAssetHash,
+        ProgressPhase::AddingIngredient,
+        ProgressPhase::Thumbnail,
+        ProgressPhase::Hashing,
+        ProgressPhase::Signing,
+        ProgressPhase::Embedding,
+        ProgressPhase::FetchingRemoteManifest,
+        ProgressPhase::Writing,
+        ProgressPhase::FetchingOCSP,
+        ProgressPhase::FetchingTimestamp,
+    ];
+
+    /// Verify TS and Rust agree on progress phases.
+    const TYPESCRIPT_UNION: [&str; 15] = [
+        "reading",
+        "verifyingManifest",
+        "verifyingSignature",
+        "verifyingIngredient",
+        "verifyingAssetHash",
+        "addingIngredient",
+        "thumbnail",
+        "hashing",
+        "signing",
+        "embedding",
+        "fetchingRemoteManifest",
+        "writing",
+        "fetchingOcsp",
+        "fetchingTimestamp",
+        "unknown",
+    ];
+
+    #[wasm_bindgen_test]
+    fn phase_names_match_the_typescript_union() {
+        for phase in ALL_PHASES {
+            let name = phase_name(phase);
+            assert!(
+                TYPESCRIPT_UNION.contains(&name),
+                "{name:?} is not in the TypeScript ProgressPhase union"
+            );
+        }
+
+        let mapped: Vec<&str> = ALL_PHASES.iter().cloned().map(phase_name).collect();
+        for declared in TYPESCRIPT_UNION {
+            assert!(
+                declared == "unknown" || mapped.contains(&declared),
+                "the TypeScript union declares {declared:?}, which no phase maps to"
+            );
+        }
+    }
+
     #[wasm_bindgen_test]
     fn every_phase_has_a_distinct_name() {
-        let phases = [
-            ProgressPhase::Reading,
-            ProgressPhase::VerifyingManifest,
-            ProgressPhase::VerifyingSignature,
-            ProgressPhase::VerifyingIngredient,
-            ProgressPhase::VerifyingAssetHash,
-            ProgressPhase::AddingIngredient,
-            ProgressPhase::Thumbnail,
-            ProgressPhase::Hashing,
-            ProgressPhase::Signing,
-            ProgressPhase::Embedding,
-            ProgressPhase::FetchingRemoteManifest,
-            ProgressPhase::Writing,
-            ProgressPhase::FetchingOCSP,
-            ProgressPhase::FetchingTimestamp,
-        ];
+        let phases = ALL_PHASES;
 
         let mut names: Vec<&str> = phases.iter().cloned().map(phase_name).collect();
         let total = names.len();
