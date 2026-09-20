@@ -57,10 +57,10 @@ impl WasmReader {
         format: &str,
         blob: &Blob,
         context_json: String,
-        options: JsValue,
+        operation_options: JsValue,
     ) -> Result<WasmReader, JsString> {
         let stream = BlobStream::new(blob).map_err(WasmError::other)?;
-        let context = OperationOptions::from_js(&options)
+        let context = OperationOptions::from_js(&operation_options)
             .build_context(&context_json)
             .map_err(WasmError::from)?;
         WasmReader::from_stream(format, stream, context).await
@@ -106,10 +106,10 @@ impl WasmReader {
         format: &str,
         bytes: Vec<u8>,
         context_json: String,
-        options: JsValue,
+        operation_options: JsValue,
     ) -> Result<WasmReader, JsString> {
         let stream = Cursor::new(bytes);
-        let context = OperationOptions::from_js(&options)
+        let context = OperationOptions::from_js(&operation_options)
             .build_context(&context_json)
             .map_err(WasmError::from)?;
         WasmReader::from_stream(format, stream, context).await
@@ -141,12 +141,12 @@ impl WasmReader {
         init: &Blob,
         fragment: &Blob,
         context_json: String,
-        options: JsValue,
+        operation_options: JsValue,
     ) -> Result<WasmReader, JsString> {
         let init_stream = BlobStream::new(init).map_err(WasmError::other)?;
         let fragment_stream = BlobStream::new(fragment).map_err(WasmError::other)?;
 
-        let context = OperationOptions::from_js(&options)
+        let context = OperationOptions::from_js(&operation_options)
             .build_context(&context_json)
             .map_err(WasmError::from)?;
         WasmReader::from_stream_fragment(format, init_stream, fragment_stream, context).await

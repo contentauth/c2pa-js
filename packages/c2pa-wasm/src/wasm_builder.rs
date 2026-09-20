@@ -69,8 +69,8 @@ impl WasmBuilder {
     /// Same as [`WasmBuilder::new`], with a mandatory context,
     /// since behavioral functional options need a context.
     #[wasm_bindgen(js_name = newWithOptions)]
-    pub fn new_with_options(context_json: String, options: JsValue) -> Result<WasmBuilder, JsString> {
-        let context = OperationOptions::from_js(&options)
+    pub fn new_with_options(context_json: String, operation_options: JsValue) -> Result<WasmBuilder, JsString> {
+        let context = OperationOptions::from_js(&operation_options)
             .build_context(&context_json)
             .map_err(WasmError::from)?;
 
@@ -110,9 +110,9 @@ impl WasmBuilder {
     pub fn from_json_with_options(
         json: &str,
         context_json: String,
-        options: JsValue,
+        operation_options: JsValue,
     ) -> Result<WasmBuilder, JsString> {
-        let context = OperationOptions::from_js(&options)
+        let context = OperationOptions::from_js(&operation_options)
             .build_context(&context_json)
             .map_err(WasmError::from)?;
         let builder = Builder::from_context(context)
@@ -152,10 +152,10 @@ impl WasmBuilder {
     pub fn from_archive_with_options(
         archive: &Blob,
         context_json: String,
-        options: JsValue,
+        operation_options: JsValue,
     ) -> Result<WasmBuilder, JsString> {
         let stream = BlobStream::new(archive).map_err(WasmError::other)?;
-        let context = OperationOptions::from_js(&options)
+        let context = OperationOptions::from_js(&operation_options)
             .build_context(&context_json)
             .map_err(WasmError::from)?;
         let builder = Builder::from_context(context)

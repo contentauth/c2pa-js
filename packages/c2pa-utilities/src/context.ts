@@ -24,13 +24,13 @@ import { resolveSettings, type Settings } from './settings.js';
 export class Context {
   private readonly _settings?: Settings;
   private readonly _onProgress?: (event: ProgressReportEvent) => void;
-  private readonly _signal?: AbortSignal;
+  private readonly _cancellationSignal?: AbortSignal;
   private _jsonPromise?: Promise<string>;
 
   constructor(settings?: Settings, options?: ContextOptions) {
     this._settings = settings;
     this._onProgress = options?.onProgress;
-    this._signal = options?.signal;
+    this._cancellationSignal = options?.signal;
   }
 
   /**
@@ -38,7 +38,7 @@ export class Context {
    * See {@link ContextOptions.signal} for what cancellation does and does not guarantee.
    */
   get signal(): AbortSignal | undefined {
-    return this._signal;
+    return this._cancellationSignal;
   }
 
   /** Progress callback attached to this `Context`, if any. */
