@@ -154,6 +154,28 @@ describe('progress and cancellation', () => {
     await builder.free();
   });
 
+  test('keeps reporting across a sign', async ({ c2pa }) => {
+    const events: ProgressReportEvent[] = [];
+    const context = new Context(settings, {
+      onProgress: (event) => events.push(event)
+    });
+
+    const builder = await Builder.new(c2pa, context);
+    await builder.setIntent('edit');
+
+    const blob = await getBlobForAsset(C);
+    const signer = await createTestSigner();
+
+    await builder.sign(signer, 'image/jpeg', blob);
+    const afterFirst = events.length;
+    expect(afterFirst).toBeGreaterThan(0);
+
+    await builder.sign(signer, 'image/jpeg', blob);
+    expect(events.length).toBeGreaterThan(afterFirst);
+
+    await builder.free();
+  });
+
   test('rejects before starting when already aborted', async ({ c2pa }) => {
     const controller = new AbortController();
     controller.abort();

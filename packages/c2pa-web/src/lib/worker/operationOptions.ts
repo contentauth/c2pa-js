@@ -77,9 +77,11 @@ export function registerOperation(
 }
 
 /**
- * Attaches a call's progress handler and abort listener to a reserved operation id.
+ * Attaches a call's own progress handler and abort listener to an operation id.
+ * Only what the call supplies is attached, since the `Context`'s own options
+ * were registered and are released by {@link registerOperation}.
  *
- * @throws the signal's reason if it has already been aborted.
+ * @throws the merged signal's reason if it has already been aborted.
  */
 export function attachToOperation(
   worker: WorkerManager,
@@ -87,14 +89,18 @@ export function attachToOperation(
   context: Context,
   callOptions?: ContextOptions
 ): () => void {
-  const { onProgress, signal } = mergeOperationOptions(context, callOptions);
-
-  signal?.throwIfAborted();
+  mergeOperationOptions(context, callOptions).signal?.throwIfAborted();
 
   const releases: (() => void)[] = [];
+  const { onProgress, signal } = callOptions ?? {};
 
   if (onProgress) {
-    releases.push(worker.registerProgressHandler(operationId, onProgress));
+    const unregister = worker.registerProgressHandler(operationId, onProgress);
+    worker.tx.operation_setReporting(operationId, true);
+    releases.push(() => {
+      worker.tx.operation_setReporting(operationId, false);
+      unregister();
+    });
   }
 
   if (signal) {

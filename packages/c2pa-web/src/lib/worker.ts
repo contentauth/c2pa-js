@@ -71,14 +71,16 @@ function toWasmOptions(options: OperationOptions) {
 
   return {
     progress: (phase: string, step: number, total: number) => {
-      const message: ProgressMessage = {
-        type: PROGRESS_MESSAGE_TYPE,
-        operationId,
-        phase,
-        step,
-        total
-      };
-      self.postMessage(message);
+      if (reportsProgress || reportingOperations.has(operationId)) {
+        const message: ProgressMessage = {
+          type: PROGRESS_MESSAGE_TYPE,
+          operationId,
+          phase,
+          step,
+          total
+        };
+        self.postMessage(message);
+      }
 
       return !cancelledOperations.has(operationId);
     }
@@ -87,6 +89,9 @@ function toWasmOptions(options: OperationOptions) {
 
 /** Operation ids the main thread has asked to cancel (holds only in-flight ids). */
 const cancelledOperations = new Set<number>();
+
+/** Operation ids whose progress handler arrived after the closure was installed. */
+const reportingOperations = new Set<number>();
 
 /** A builder's operation id, kept until `free()` */
 const builderOperations = new Map<number, number>();
@@ -137,6 +142,13 @@ rx(
     },
     operation_cancel(operationId) {
       cancelledOperations.add(operationId);
+    },
+    operation_setReporting(operationId, on) {
+      if (on) {
+        reportingOperations.add(operationId);
+      } else {
+        reportingOperations.delete(operationId);
+      }
     },
     async reader_fromBlobWithOptions(format, blob, contextJson, options) {
       const reader = await cancellableRead(options.operationId, () =>
@@ -382,6 +394,7 @@ rx(
       const operationId = builderOperations.get(builderId);
       if (operationId !== undefined) {
         cancelledOperations.delete(operationId);
+        reportingOperations.delete(operationId);
         builderOperations.delete(builderId);
       }
     }

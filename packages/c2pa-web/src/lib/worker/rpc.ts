@@ -73,6 +73,10 @@ const { createTx, rx } = channel<{
   // Requests cancellation of an in-flight operation.
   operation_cancel: (operationId: number) => void;
 
+  // Turns progress posting on or off for an operation
+  // whose handler arrived after construction.
+  operation_setReporting: (operationId: number, on: boolean) => void;
+
   // Reader methods
   reader_activeLabel: (readerId: number) => string | null;
   reader_manifestStore: (readerId: number) => any;
