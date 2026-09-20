@@ -26,11 +26,14 @@ export interface OperationOptions {
    * Present when the caller supplied `onProgress`, a `signal`, or both. */
   operationId?: number;
 
-  /** Whether the caller supplied `onProgress`.
-   * When false, the worker still installs a progress closure for a cancellable operation, but posts no events. */
+  /** Whether the caller supplied `onProgress`. */
   reportsProgress?: boolean;
 
-  /** Whether the caller supplied an `AbortSignal`. */
+  /**
+   * Whether the operation can be cancelled.
+   * Also true when nothing is cancellable yet but a later call may be,
+   * as for a builder that signs after construction.
+   */
   cancellable?: boolean;
 }
 

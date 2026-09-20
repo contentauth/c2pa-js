@@ -8,7 +8,10 @@
  */
 
 import type { WorkerManager } from './worker/workerManager.js';
-import { registerOperation } from './worker/operationOptions.js';
+import {
+  attachToOperation,
+  registerOperation
+} from './worker/operationOptions.js';
 import {
   getSerializablePayload,
   getSerializableIdentityAssertion,
@@ -121,24 +124,38 @@ export class Builder {
   #worker: WorkerManager;
   #id: number;
   #releaseOperation: () => void;
+  #context: Context;
+  #operationId?: number;
 
   private constructor(
     worker: WorkerManager,
     id: number,
-    releaseOperation: () => void
+    releaseOperation: () => void,
+    context: Context,
+    operationId?: number
   ) {
     this.#worker = worker;
     this.#id = id;
     this.#releaseOperation = releaseOperation;
+    this.#context = context;
+    this.#operationId = operationId;
   }
 
   /** Wraps a worker-side builder id and makes sure both get eventually freed. */
   static #adopt(
     worker: WorkerManager,
     id: number,
-    releaseOperation: () => void
+    releaseOperation: () => void,
+    context: Context,
+    operationId?: number
   ): Builder {
-    const builder = new Builder(worker, id, releaseOperation);
+    const builder = new Builder(
+      worker,
+      id,
+      releaseOperation,
+      context,
+      operationId
+    );
     registry.register(builder, { worker, id, releaseOperation }, builder);
     return builder;
   }
@@ -160,7 +177,7 @@ export class Builder {
     const settingsJson = await context.toJson();
     const { worker } = c2pa;
 
-    const operation = registerOperation(worker, context, contextOptions);
+    const operation = registerOperation(worker, context, contextOptions, true);
     try {
       const builderId =
         operation.options === undefined
@@ -170,7 +187,13 @@ export class Builder {
               operation.options
             );
 
-      return Builder.#adopt(worker, builderId, operation.release);
+      return Builder.#adopt(
+        worker,
+        builderId,
+        operation.release,
+        context,
+        operation.options?.operationId
+      );
     } catch (e: unknown) {
       operation.release();
       throw e;
@@ -197,7 +220,7 @@ export class Builder {
     const settingsJson = await context.toJson();
     const { worker } = c2pa;
 
-    const operation = registerOperation(worker, context, contextOptions);
+    const operation = registerOperation(worker, context, contextOptions, true);
     try {
       const builderId =
         operation.options === undefined
@@ -208,7 +231,13 @@ export class Builder {
               operation.options
             );
 
-      return Builder.#adopt(worker, builderId, operation.release);
+      return Builder.#adopt(
+        worker,
+        builderId,
+        operation.release,
+        context,
+        operation.options?.operationId
+      );
     } catch (e: unknown) {
       operation.release();
       throw e;
@@ -234,7 +263,7 @@ export class Builder {
     const settingsJson = await context.toJson();
     const { worker } = c2pa;
 
-    const operation = registerOperation(worker, context, contextOptions);
+    const operation = registerOperation(worker, context, contextOptions, true);
     try {
       const builderId =
         operation.options === undefined
@@ -245,7 +274,13 @@ export class Builder {
               operation.options
             );
 
-      return Builder.#adopt(worker, builderId, operation.release);
+      return Builder.#adopt(
+        worker,
+        builderId,
+        operation.release,
+        context,
+        operation.options?.operationId
+      );
     } catch (e: unknown) {
       operation.release();
       throw e;
@@ -524,6 +559,9 @@ export class Builder {
    * @param blob The asset bytes.
    * @param options Optional {@link SignOptions}. `identityAssertions` attaches
    * one or more CAWG identity assertions (`cawg.identity`) to the manifest.
+   * @param contextOptions Optional per-call `onProgress`/`signal`, each overriding the
+   * same value on the `Context` this builder was created with. Once cancelled, a builder
+   * is spent: signing it again rejects.
    *
    * @todo Docs coming soon
    */
@@ -531,25 +569,31 @@ export class Builder {
     signer: Signer,
     format: string,
     blob: Blob,
-    options?: SignOptions
+    options?: SignOptions,
+    contextOptions?: ContextOptions
   ): Promise<Uint8Array<ArrayBuffer>> {
-    const payload = await getSerializablePayload(signer);
-    const requestId = this.#worker.registerSignReceiver(signer.sign);
-    const identityAssertions = getSerializableIdentityAssertions(
-      this.#worker,
-      options
-    );
+    const release = this.#attachSignOperation(contextOptions);
+    try {
+      const payload = await getSerializablePayload(signer);
+      const requestId = this.#worker.registerSignReceiver(signer.sign);
+      const identityAssertions = getSerializableIdentityAssertions(
+        this.#worker,
+        options
+      );
 
-    const result = await this.#worker.tx.builder_sign(
-      this.#id,
-      requestId,
-      payload,
-      identityAssertions,
-      format,
-      blob
-    );
+      const result = await this.#worker.tx.builder_sign(
+        this.#id,
+        requestId,
+        payload,
+        identityAssertions,
+        format,
+        blob
+      );
 
-    return result;
+      return result;
+    } finally {
+      release();
+    }
   }
 
   /**
@@ -560,6 +604,9 @@ export class Builder {
    * @param blob The asset bytes.
    * @param options Optional {@link SignOptions}. `identityAssertions` attaches
    * one or more CAWG identity assertions (`cawg.identity`) to the manifest.
+   * @param contextOptions Optional per-call `onProgress`/`signal`, each overriding the
+   * same value on the `Context` this builder was created with. Once cancelled, a builder
+   * is spent: signing it again rejects.
    *
    * @todo Docs coming soon
    */
@@ -567,25 +614,45 @@ export class Builder {
     signer: Signer,
     format: string,
     blob: Blob,
-    options?: SignOptions
+    options?: SignOptions,
+    contextOptions?: ContextOptions
   ): Promise<ManifestAndAssetBytes> {
-    const payload = await getSerializablePayload(signer);
-    const requestId = this.#worker.registerSignReceiver(signer.sign);
-    const identityAssertions = getSerializableIdentityAssertions(
+    const release = this.#attachSignOperation(contextOptions);
+    try {
+      const payload = await getSerializablePayload(signer);
+      const requestId = this.#worker.registerSignReceiver(signer.sign);
+      const identityAssertions = getSerializableIdentityAssertions(
+        this.#worker,
+        options
+      );
+
+      const result = await this.#worker.tx.builder_signAndGetManifestBytes(
+        this.#id,
+        requestId,
+        payload,
+        identityAssertions,
+        format,
+        blob
+      );
+
+      return result;
+    } finally {
+      release();
+    }
+  }
+
+  /** Attaches per-call options to this builder's operation, if it has one. */
+  #attachSignOperation(contextOptions?: ContextOptions): () => void {
+    if (this.#operationId === undefined) {
+      return () => undefined;
+    }
+
+    return attachToOperation(
       this.#worker,
-      options
+      this.#operationId,
+      this.#context,
+      contextOptions
     );
-
-    const result = await this.#worker.tx.builder_signAndGetManifestBytes(
-      this.#id,
-      requestId,
-      payload,
-      identityAssertions,
-      format,
-      blob
-    );
-
-    return result;
   }
 
   /**

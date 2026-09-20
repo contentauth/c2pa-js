@@ -65,18 +65,15 @@ function toWasmOptions(options: OperationOptions) {
 
   return {
     progress: (phase: string, step: number, total: number) => {
-      if (reportsProgress) {
-        const message: ProgressMessage = {
-          type: PROGRESS_MESSAGE_TYPE,
-          operationId,
-          phase,
-          step,
-          total
-        };
-        self.postMessage(message);
-      }
+      const message: ProgressMessage = {
+        type: PROGRESS_MESSAGE_TYPE,
+        operationId,
+        phase,
+        step,
+        total
+      };
+      self.postMessage(message);
 
-      // Cancellation observation point.
       return !cancelledOperations.has(operationId);
     }
   };

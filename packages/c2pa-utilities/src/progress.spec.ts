@@ -42,6 +42,23 @@ describe('isCancelled', () => {
     expect(isCancelled(new TypeError('bad argument'))).toBe(false);
   });
 
+  test('does not report an error that merely mentions the marker', () => {
+    expect(
+      isCancelled(new Error('ENOENT: OperationCancelled.jpg not found'))
+    ).toBe(false);
+    expect(
+      isCancelled(
+        new Error('field "OperationCancelled" is not a valid enum value')
+      )
+    ).toBe(false);
+  });
+
+  test('recognizes the engine error when something wrapped it', () => {
+    expect(
+      isCancelled(new Error('retry 3/3 exhausted: C2pa(OperationCancelled)'))
+    ).toBe(true);
+  });
+
   test('tolerates values that are not errors', () => {
     // It takes `unknown`, because a `catch` binding can hold anything.
     expect(isCancelled(undefined)).toBe(false);

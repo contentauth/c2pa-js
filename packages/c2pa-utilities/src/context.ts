@@ -34,14 +34,14 @@ export class Context {
   }
 
   /**
-   * `AbortSignal` cancelling operations created from this `Context`, if any.
-   * {@link ContextOptions.signal} holds the cancellation signal.
+   * The `AbortSignal` that cancels operations created from this `Context`, if any.
+   * See {@link ContextOptions.signal} for what cancellation does and does not guarantee.
    */
   get signal(): AbortSignal | undefined {
     return this._signal;
   }
 
-  /** Progress callback attached to the `Context` instance, if any. */
+  /** Progress callback attached to this `Context`, if any. */
   get onProgress(): ((event: ProgressReportEvent) => void) | undefined {
     return this._onProgress;
   }

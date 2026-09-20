@@ -36,11 +36,11 @@ export interface ProgressReportEvent {
   step: number;
 
   /**
-   * `0`: indeterminate, total unknown.
-   * `1`: single-shot.
-   * `> 1`: `step / total` is the completion fraction.
+   * `null` when unknown,
+   * `1` for single-shot,
+   * `> 1` when `step / total` is the completion fraction.
    */
-  total: number;
+  total: number | null;
 }
 
 /** Optional behavior attached to a `Context`. */
@@ -57,18 +57,19 @@ export interface ContextOptions {
    * Aborting before the call starts rejects with the signal's reason.
    * Aborting during the call rejects with an `Error` reporting `C2pa(OperationCancelled)`.
    *
-   * A cancellation during processing is checked at progress checkpoints,
-   * and therefore cancellation can only happen at a progress checkpoint.
+   * The engine observes the request at its next progress checkpoint. An asset that
+   * completes before the first checkpoint is never cancelled.
    */
   signal?: AbortSignal;
 }
 
-/** Marker that the operation was cancelled. */
-const CANCELLED_MARKER = 'OperationCancelled';
+/** The engine's cancellation error, as its Rust `Debug` rendering reaches JS. */
+const CANCELLED_MARKER = 'C2pa(OperationCancelled)';
 
 /**
- * Depending on where/how somethings is cancelled, the error is different.
- * This is to detect relevant cancellation events.
+ * Whether an error represents a cancellation:
+ * a `DOMException` named `AbortError` before the operation started,
+ * or the library's `C2pa(OperationCancelled)` during processing.
  *
  * Not reported as cancelled: `AbortSignal.timeout()`
  * (reason is `TimeoutError`, not `AbortError`),

@@ -67,12 +67,11 @@ function appendProgress(event: ProgressReportEvent) {
 
   const count = document.createElement('span');
   count.className = 'progress-row-count';
-  // `total === 0` means the count is not known ahead of time.
   count.textContent =
-    event.total > 1
-      ? `${event.step}/${event.total}`
-      : event.total === 0
-        ? `step ${event.step}`
+    event.total === null
+      ? `step ${event.step}`
+      : event.total > 1
+        ? `${event.step}/${event.total}`
         : '';
 
   row.append(phase, count);

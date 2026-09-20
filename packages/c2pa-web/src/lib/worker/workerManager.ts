@@ -24,7 +24,7 @@ export interface WorkerManager {
   ) => number;
   /**
    * Registers a progress handler and returns the id identifying this operation.
-   * Must be unregistered once th eoperation has settles.
+   * Must be unregistered once the operation has settled.
    */
   registerProgressReceiver: (
     onProgress: (event: ProgressReportEvent) => void
@@ -32,6 +32,14 @@ export interface WorkerManager {
     operationId: number;
     unregister: () => void;
   };
+  /**
+   * Registers a progress handler against an operation id reserved earlier.
+   * Returns the function that unregisters it.
+   */
+  registerProgressHandler: (
+    operationId: number,
+    onProgress: (event: ProgressReportEvent) => void
+  ) => () => void;
   /**
    * Reserves an operation id without registering a progress handler.
    * Only operations with ids can be cancelled.
@@ -111,7 +119,7 @@ export async function createWorkerManager(
       handler({
         phase: message.phase as ProgressPhase,
         step: message.step,
-        total: message.total
+        total: message.total === 0 ? null : message.total
       });
     } catch (e) {
       // Reporting is advisory: a caller's broken handler must not fail their read.
@@ -164,14 +172,23 @@ export async function createWorkerManager(
     return progressOperationId++;
   }
 
+  function registerProgressHandler(
+    operationId: number,
+    onProgress: (event: ProgressReportEvent) => void
+  ) {
+    progressHandlers.set(operationId, onProgress);
+    return () => {
+      progressHandlers.delete(operationId);
+    };
+  }
+
   function registerProgressReceiver(
     onProgress: (event: ProgressReportEvent) => void
   ) {
     const operationId = nextOperationId();
-    progressHandlers.set(operationId, onProgress);
     return {
       operationId,
-      unregister: () => progressHandlers.delete(operationId)
+      unregister: registerProgressHandler(operationId, onProgress)
     };
   }
 
@@ -182,6 +199,7 @@ export async function createWorkerManager(
     registerSignReceiver,
     registerCredentialHolderReceiver,
     registerProgressReceiver,
+    registerProgressHandler,
     nextOperationId,
     terminate: () => worker.terminate()
   };

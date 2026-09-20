@@ -21,7 +21,7 @@ pub(crate) fn context_from_json(context_json: Option<String>) -> Result<Context,
 
 
 /// Maps a `ProgressPhase` to the camelCase name JS callers receive.
-// `ProgressPhase` is non-exhaustive, anything unknown goes through the default match arm.
+// `ProgressPhase` is non-exhaustive, so anything unknown goes through the default match arm.
 fn phase_name(phase: ProgressPhase) -> &'static str {
     match phase {
         ProgressPhase::Reading => "reading",
@@ -42,8 +42,8 @@ fn phase_name(phase: ProgressPhase) -> &'static str {
     }
 }
 
-/// Per-operation options for the `*WithOptions` entry points.
-/// THis is msotly to add functional behavior to the context (function callbacks).
+/// Per-operation options for the `*WithOptions` entry points, adding callback behavior
+/// to a context.
 #[derive(Default)]
 pub(crate) struct OperationOptions {
     /// Called as `(phase: string, step: number, total: number)`.
@@ -51,10 +51,7 @@ pub(crate) struct OperationOptions {
 }
 
 impl OperationOptions {
-    /// Reads operation options.
-    /// Returning `false` from the progress callback fails the next checkpoint with
-    /// `Error::OperationCancelled`. A throw or a non-boolean return continues, so a
-    /// broken progress handler cannot cancel a valid read.
+    /// Reads the options out of a JS value, ignoring anything it does not recognize.
     pub(crate) fn from_js(value: &JsValue) -> Self {
         if value.is_undefined() || value.is_null() {
             return Self::default();
@@ -67,8 +64,12 @@ impl OperationOptions {
         }
     }
 
-    /// Builds the `Context` for an operation from its mandatory settings
-    // and additional behavioral operation options.
+    /// Builds an operation's `Context` from settings and options.
+    ///
+    /// Returning `false` from the progress callback fails the next checkpoint with
+    /// `Error::OperationCancelled`.
+    /// A throw or a non-boolean return continues, so a broken progress handler
+    /// can't cancel a valid read.
     pub(crate) fn build_context(self, context_json: &str) -> Result<Context, WasmError> {
         let mut context = Context::new().with_settings(context_json)?;
 

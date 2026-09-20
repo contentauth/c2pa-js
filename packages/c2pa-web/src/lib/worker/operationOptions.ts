@@ -30,18 +30,22 @@ function mergeOperationOptions(
  * the plain worker method, and a `release` the caller must call exactly
  * once when the operation can no longer report or be cancelled.
  *
+ * `deferredWork` returns options even when neither applies, for an operation whose
+ * work happens in a later call and so must stay cancellable until then.
+ *
  * @throws the signal's reason if it has already been aborted.
  */
 export function registerOperation(
   worker: WorkerManager,
   context: Context,
-  callOptions?: ContextOptions
+  callOptions?: ContextOptions,
+  deferredWork = false
 ): { options: OperationOptions | undefined; release: () => void } {
   const { onProgress, signal } = mergeOperationOptions(context, callOptions);
 
   signal?.throwIfAborted();
 
-  if (!onProgress && !signal) {
+  if (!onProgress && !signal && !deferredWork) {
     return { options: undefined, release: () => undefined };
   }
 
@@ -57,7 +61,6 @@ export function registerOperation(
   }
 
   if (signal) {
-    // Cancellation will be observed at next checkpoint.
     const onAbort = () => worker.tx.operation_cancel(operationId);
     signal.addEventListener('abort', onAbort, { once: true });
     releases.push(() => signal.removeEventListener('abort', onAbort));
@@ -67,10 +70,40 @@ export function registerOperation(
     options: {
       operationId,
       reportsProgress: Boolean(onProgress),
-      cancellable: Boolean(signal)
+      cancellable: Boolean(signal) || deferredWork
     },
     release: () => releases.forEach((release) => release())
   };
+}
+
+/**
+ * Attaches a call's progress handler and abort listener to a reserved operation id.
+ *
+ * @throws the signal's reason if it has already been aborted.
+ */
+export function attachToOperation(
+  worker: WorkerManager,
+  operationId: number,
+  context: Context,
+  callOptions?: ContextOptions
+): () => void {
+  const { onProgress, signal } = mergeOperationOptions(context, callOptions);
+
+  signal?.throwIfAborted();
+
+  const releases: (() => void)[] = [];
+
+  if (onProgress) {
+    releases.push(worker.registerProgressHandler(operationId, onProgress));
+  }
+
+  if (signal) {
+    const onAbort = () => worker.tx.operation_cancel(operationId);
+    signal.addEventListener('abort', onAbort, { once: true });
+    releases.push(() => signal.removeEventListener('abort', onAbort));
+  }
+
+  return () => releases.forEach((release) => release());
 }
 
 /**

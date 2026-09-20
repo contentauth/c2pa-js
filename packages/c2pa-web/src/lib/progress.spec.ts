@@ -62,7 +62,9 @@ describe('progress', () => {
     for (const event of events) {
       expect(KNOWN_PHASES).toContain(event.phase);
       expect(event.step).toBeGreaterThanOrEqual(1);
-      expect(event.total).toBeGreaterThanOrEqual(0);
+      if (event.total !== null) {
+        expect(event.total).toBeGreaterThanOrEqual(1);
+      }
     }
 
     await reader?.free();
@@ -180,6 +182,80 @@ describe('progress', () => {
 
     expect(caught).toBeDefined();
     expect(isCancelled(caught)).toBe(true);
+
+    await builder.free();
+  });
+
+  test('cancels a builder built without options, using a signal given to sign', async ({
+    c2pa
+  }) => {
+    const controller = new AbortController();
+    const builder = await Builder.new(c2pa, new Context(settings));
+    await builder.setIntent('edit');
+
+    const blob = await getBlobForAsset(C);
+    const signer = await createTestSigner();
+
+    let caught: unknown;
+    try {
+      await builder.sign(signer, 'image/jpeg', blob, undefined, {
+        onProgress: () => controller.abort(),
+        signal: controller.signal
+      });
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBeDefined();
+    expect(isCancelled(caught)).toBe(true);
+
+    await builder.free();
+  });
+
+  test("sign's contextOptions override the Context per field", async ({
+    c2pa
+  }) => {
+    const fromContext: ProgressReportEvent[] = [];
+    const fromCall: ProgressReportEvent[] = [];
+
+    const builder = await Builder.new(
+      c2pa,
+      new Context(settings, { onProgress: (event) => fromContext.push(event) })
+    );
+    await builder.setIntent('edit');
+
+    const blob = await getBlobForAsset(C);
+    const signer = await createTestSigner();
+    await builder.sign(signer, 'image/jpeg', blob, undefined, {
+      onProgress: (event) => fromCall.push(event)
+    });
+
+    expect(fromCall.length).toBeGreaterThan(0);
+    expect(fromContext).toHaveLength(0);
+
+    await builder.free();
+  });
+
+  test('a builder cancelled during signing is spent', async ({ c2pa }) => {
+    const controller = new AbortController();
+    const builder = await Builder.new(c2pa, new Context(settings), {
+      onProgress: () => controller.abort(),
+      signal: controller.signal
+    });
+    await builder.setIntent('edit');
+
+    const blob = await getBlobForAsset(C);
+    const signer = await createTestSigner();
+
+    await expect(
+      builder.sign(signer, 'image/jpeg', blob)
+    ).rejects.toThrow();
+
+    // Documented behavior: the cancellation entry lives until `free()`, so a retry on
+    // the same builder is refused rather than silently starting new work.
+    await expect(
+      builder.sign(signer, 'image/jpeg', blob)
+    ).rejects.toThrow();
 
     await builder.free();
   });
