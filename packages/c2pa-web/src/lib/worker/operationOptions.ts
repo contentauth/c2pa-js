@@ -23,6 +23,17 @@ function mergeOperationOptions(
   };
 }
 
+/** Cancels the operation when the signal aborts. Returns the detaching function. */
+function cancelOnAbort(
+  worker: WorkerManager,
+  operationId: number,
+  signal: AbortSignal
+): () => void {
+  const onAbort = () => worker.tx.operation_cancel(operationId);
+  signal.addEventListener('abort', onAbort, { once: true });
+  return () => signal.removeEventListener('abort', onAbort);
+}
+
 /**
  * Registers a progress handler, an abort listener, or both, per {@link
  * mergeOperationOptions}.
@@ -61,9 +72,7 @@ export function registerOperation(
   }
 
   if (signal) {
-    const onAbort = () => worker.tx.operation_cancel(operationId);
-    signal.addEventListener('abort', onAbort, { once: true });
-    releases.push(() => signal.removeEventListener('abort', onAbort));
+    releases.push(cancelOnAbort(worker, operationId, signal));
   }
 
   return {
@@ -104,9 +113,7 @@ export function attachToOperation(
   }
 
   if (signal) {
-    const onAbort = () => worker.tx.operation_cancel(operationId);
-    signal.addEventListener('abort', onAbort, { once: true });
-    releases.push(() => signal.removeEventListener('abort', onAbort));
+    releases.push(cancelOnAbort(worker, operationId, signal));
   }
 
   return () => releases.forEach((release) => release());
