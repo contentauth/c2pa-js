@@ -11,7 +11,13 @@ import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
 import type { C2pa } from './c2pa.js';
 import type { WorkerManager } from './worker/workerManager.js';
 import { withOperationOptions } from './worker/operationOptions.js';
-import { Context, Settings, mergeSettings, validateAssetSize } from '@contentauth/c2pa-utilities';
+import {
+  Context,
+  Settings,
+  mergeSettings,
+  validateAssetSize,
+  type ContextOptions
+} from '@contentauth/c2pa-utilities';
 
 // 1 GB
 export const MAX_SIZE_IN_BYTES = 10 ** 9;
@@ -49,6 +55,9 @@ export class Reader {
    * @param format Asset format.
    * @param blob Blob of asset bytes.
    * @param context Optional `Context` configuring this reader's behavior.
+   * @param options Optional per-read `onProgress`/`signal`, each overriding the same
+   * value on `context`. Lets one resolved `Context` serve several reads that report and
+   * cancel independently.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
    * @throws If the asset is too large.
    */
@@ -56,7 +65,8 @@ export class Reader {
     c2pa: C2pa,
     format: string,
     blob: Blob,
-    context: Context = new Context()
+    context: Context = new Context(),
+    options?: ContextOptions
   ): Promise<Reader | null> {
     validateAssetSize(blob.size, MAX_SIZE_IN_BYTES);
 
@@ -64,15 +74,19 @@ export class Reader {
       const settingsJson = await context.toJson();
       const { worker } = c2pa;
 
-      const readerId = await withOperationOptions(worker, context, (options) =>
-        options === undefined
-          ? worker.tx.reader_fromBlob(format, blob, settingsJson)
-          : worker.tx.reader_fromBlobWithOptions(
-              format,
-              blob,
-              settingsJson,
-              options
-            )
+      const readerId = await withOperationOptions(
+        worker,
+        context,
+        (operationOptions) =>
+          operationOptions === undefined
+            ? worker.tx.reader_fromBlob(format, blob, settingsJson)
+            : worker.tx.reader_fromBlobWithOptions(
+                format,
+                blob,
+                settingsJson,
+                operationOptions
+              ),
+        options
       );
 
       const reader = new Reader(worker, readerId);
@@ -92,6 +106,8 @@ export class Reader {
    * @param init Blob of initial fragment bytes.
    * @param fragment Blob of fragment bytes.
    * @param context Optional `Context` configuring this reader's behavior.
+   * @param options Optional per-read `onProgress`/`signal`, each overriding the same
+   * value on `context`.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
    * @throws If the asset is too large.
    */
@@ -100,7 +116,8 @@ export class Reader {
     format: string,
     init: Blob,
     fragment: Blob,
-    context: Context = new Context()
+    context: Context = new Context(),
+    options?: ContextOptions
   ): Promise<Reader | null> {
     validateAssetSize(init.size, MAX_SIZE_IN_BYTES);
     validateAssetSize(fragment.size, MAX_SIZE_IN_BYTES);
@@ -109,21 +126,25 @@ export class Reader {
       const settingsJson = await context.toJson();
       const { worker } = c2pa;
 
-      const readerId = await withOperationOptions(worker, context, (options) =>
-        options === undefined
-          ? worker.tx.reader_fromBlobFragment(
-              format,
-              init,
-              fragment,
-              settingsJson
-            )
-          : worker.tx.reader_fromBlobFragmentWithOptions(
-              format,
-              init,
-              fragment,
-              settingsJson,
-              options
-            )
+      const readerId = await withOperationOptions(
+        worker,
+        context,
+        (operationOptions) =>
+          operationOptions === undefined
+            ? worker.tx.reader_fromBlobFragment(
+                format,
+                init,
+                fragment,
+                settingsJson
+              )
+            : worker.tx.reader_fromBlobFragmentWithOptions(
+                format,
+                init,
+                fragment,
+                settingsJson,
+                operationOptions
+              ),
+        options
       );
 
       const reader = new Reader(worker, readerId);

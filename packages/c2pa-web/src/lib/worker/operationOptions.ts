@@ -7,13 +7,39 @@
  * it.
  */
 
-import type { Context } from '@contentauth/c2pa-utilities';
+import type { Context, ContextOptions } from '@contentauth/c2pa-utilities';
 import type { OperationOptions } from './rpc.js';
 import type { WorkerManager } from './workerManager.js';
 
 /**
- * Registers whatever the `Context` asks for on the main thread for one operation: a
- * progress handler, an abort listener, or both.
+ * Merges a `Context`'s progress and cancellation settings with any options passed to a
+ * single call, giving what that one operation should do.
+ *
+ * Precedence is per field, most specialized first: a value passed to the call wins over
+ * the same value on the `Context`. Overriding one field leaves the others alone, so
+ * cancelling a single read differently does not also silence its progress reporting.
+ *
+ * An explicit `undefined` means "not specified" and falls through to the `Context`.
+ * There is therefore no way to opt one call out of a context's signal; construct a
+ * `Context` without one for that.
+ *
+ * The single place this rule is applied: `registerOperation` is the only caller, and
+ * every entry point goes through it, so none of them can disagree about precedence.
+ */
+export function mergeOperationOptions(
+  context: Context,
+  callOptions?: ContextOptions
+): Pick<ContextOptions, 'onProgress' | 'signal'> {
+  return {
+    onProgress: callOptions?.onProgress ?? context.onProgress,
+    signal: callOptions?.signal ?? context.signal
+  };
+}
+
+/**
+ * Registers whatever an operation asks for on the main thread: a progress handler, an
+ * abort listener, or both, taken from the `Context` and any per-call `callOptions` per
+ * {@link mergeOperationOptions}.
  *
  * Returns the options describing it — `undefined` when the context wants nothing beyond
  * settings, so the caller uses the plain worker method unchanged — and a `release` that
@@ -23,12 +49,21 @@ import type { WorkerManager } from './workerManager.js';
  *
  * Progress and cancellation share one `operationId`: the worker keys reports by it and
  * names the operation to cancel with it.
+ *
+ * @throws the signal's reason if the merged signal has already been aborted, so a
+ * caller that cancelled before starting never reaches the worker.
  */
 export function registerOperation(
   worker: WorkerManager,
-  context: Context
+  context: Context,
+  callOptions?: ContextOptions
 ): { options: OperationOptions | undefined; release: () => void } {
-  const { onProgress, signal } = context;
+  const { onProgress, signal } = mergeOperationOptions(context, callOptions);
+
+  // Rejects an operation whose signal already fired, before any worker call is made.
+  // Here rather than at each caller, so every entry point guards identically and none
+  // can accidentally test the `Context`'s signal instead of the merged one.
+  signal?.throwIfAborted();
 
   if (!onProgress && !signal) {
     return { options: undefined, release: () => undefined };
@@ -78,11 +113,10 @@ export function registerOperation(
 export async function withOperationOptions<T>(
   worker: WorkerManager,
   context: Context,
-  run: (options: OperationOptions | undefined) => Promise<T>
+  run: (options: OperationOptions | undefined) => Promise<T>,
+  callOptions?: ContextOptions
 ): Promise<T> {
-  context.signal?.throwIfAborted();
-
-  const { options, release } = registerOperation(worker, context);
+  const { options, release } = registerOperation(worker, context, callOptions);
   try {
     return await run(options);
   } finally {

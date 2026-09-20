@@ -10,7 +10,12 @@
 import { test, describe, expect } from 'test/methods.js';
 import { Reader } from './reader.js';
 import { Builder } from './builder.js';
-import { Context, type ProgressEvent, type ProgressPhase } from '@contentauth/c2pa-utilities';
+import {
+  Context,
+  isCancelled,
+  type ProgressEvent,
+  type ProgressPhase
+} from '@contentauth/c2pa-utilities';
 import { getBlobForAsset, createTestSigner } from 'test/utils.js';
 
 import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';
@@ -293,6 +298,161 @@ describe('progress', () => {
     );
     expect(reader).not.toBeNull();
     await reader?.free();
+  });
+
+  test('one Context serves reads that cancel independently', async ({
+    c2pa
+  }) => {
+    // The capability this override exists for: settings resolved once, but each read
+    // cancellable on its own. Without it this needs one Context per read, and each of
+    // those re-resolves its settings.
+    const context = new Context(settings);
+    const controllers = [
+      new AbortController(),
+      new AbortController(),
+      new AbortController()
+    ];
+
+    const blob = await getBlobForAsset(PirateShip_cloud);
+    const reads = controllers.map((controller, index) =>
+      Reader.fromBlob(c2pa, 'image/jpeg', blob, context, {
+        // Abort only the first read, from inside its own progress reports.
+        onProgress: () => {
+          if (index === 0) {
+            controller.abort();
+          }
+        },
+        signal: controller.signal
+      })
+    );
+
+    const [cancelled, ...survivors] = await Promise.allSettled(reads);
+
+    expect(cancelled.status).toBe('rejected');
+    for (const survivor of survivors) {
+      expect(survivor.status).toBe('fulfilled');
+      if (survivor.status === 'fulfilled') {
+        await survivor.value?.free();
+      }
+    }
+  });
+
+  test('a call-level signal overrides the Context signal', async ({ c2pa }) => {
+    const contextController = new AbortController();
+    const context = new Context(settings, {
+      signal: contextController.signal
+    });
+
+    // Aborting the context's controller must not reach a read that brought its own.
+    contextController.abort();
+
+    const blob = await getBlobForAsset(PirateShip_cloud);
+    const reader = await Reader.fromBlob(c2pa, 'image/jpeg', blob, context, {
+      signal: new AbortController().signal
+    });
+
+    expect(reader).not.toBeNull();
+    await reader?.free();
+  });
+
+  test('a call-level onProgress overrides the Context callback', async ({
+    c2pa
+  }) => {
+    let fromContext = 0;
+    let fromCall = 0;
+
+    const context = new Context(settings, {
+      onProgress: () => fromContext++
+    });
+
+    const blob = await getBlobForAsset(PirateShip_cloud);
+    const reader = await Reader.fromBlob(c2pa, 'image/jpeg', blob, context, {
+      onProgress: () => fromCall++
+    });
+
+    expect(fromCall).toBeGreaterThan(0);
+    expect(fromContext).toBe(0);
+
+    await reader?.free();
+  });
+
+  test('overriding one field leaves the other from the Context', async ({
+    c2pa
+  }) => {
+    // Per-field precedence: overriding `signal` must not silence the Context's
+    // progress reporting. The rule most likely to regress without being noticed.
+    let events = 0;
+    const context = new Context(settings, {
+      onProgress: () => events++,
+      signal: new AbortController().signal
+    });
+
+    const blob = await getBlobForAsset(PirateShip_cloud);
+    const reader = await Reader.fromBlob(c2pa, 'image/jpeg', blob, context, {
+      signal: new AbortController().signal
+    });
+
+    expect(events).toBeGreaterThan(0);
+    expect(reader).not.toBeNull();
+    await reader?.free();
+  });
+
+  test('an explicit undefined override falls through to the Context', async ({
+    c2pa
+  }) => {
+    // `undefined` means "not specified", so the Context's signal still applies and
+    // still cancels. There is deliberately no way to opt out of it per call.
+    const controller = new AbortController();
+    const context = new Context(settings, {
+      onProgress: () => controller.abort(),
+      signal: controller.signal
+    });
+
+    const blob = await getBlobForAsset(PirateShip_cloud);
+    await expect(
+      Reader.fromBlob(c2pa, 'image/jpeg', blob, context, { signal: undefined })
+    ).rejects.toThrow();
+  });
+
+  test('a Builder honours a call-level signal', async ({ c2pa }) => {
+    const controller = new AbortController();
+    controller.abort();
+
+    // The pre-abort guard must consult the merged signal, not the Context's.
+    await expect(
+      Builder.new(c2pa, new Context(settings), { signal: controller.signal })
+    ).rejects.toThrow();
+  });
+
+  test('isCancelled recognizes both cancellation paths', async ({ c2pa }) => {
+    const blob = await getBlobForAsset(PirateShip_cloud);
+
+    // Mid-read: the engine reports it.
+    const during = new AbortController();
+    let midRead: unknown;
+    try {
+      await Reader.fromBlob(c2pa, 'image/jpeg', blob, new Context(settings), {
+        onProgress: () => during.abort(),
+        signal: during.signal
+      });
+    } catch (e: unknown) {
+      midRead = e;
+    }
+
+    // Pre-call: the signal's own reason, a different error type entirely.
+    const before = new AbortController();
+    before.abort();
+    let preAbort: unknown;
+    try {
+      await Reader.fromBlob(c2pa, 'image/jpeg', blob, new Context(settings), {
+        signal: before.signal
+      });
+    } catch (e: unknown) {
+      preAbort = e;
+    }
+
+    expect(isCancelled(midRead)).toBe(true);
+    expect(isCancelled(preAbort)).toBe(true);
   });
 
   test('a throwing onProgress does not fail the read', async ({ c2pa }) => {

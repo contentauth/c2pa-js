@@ -95,3 +95,54 @@ export interface ContextOptions {
    */
   signal?: AbortSignal;
 }
+
+/**
+ * Marker the underlying engine puts in the message of a cancelled operation.
+ *
+ * Matched as a substring because the surrounding text is a Rust `Debug` rendering
+ * (`C2pa(OperationCancelled)`) rather than a stable contract. Kept here so exactly one
+ * place in the codebase depends on that shape.
+ */
+const CANCELLED_MARKER = 'OperationCancelled';
+
+/**
+ * Whether `error` reports that an operation was cancelled.
+ *
+ * Cancelling rejects with one of two different error types, depending on when the
+ * {@link ContextOptions.signal} fired, so a single `instanceof` or message check misses
+ * half the cases:
+ *
+ * - Aborted **before** the call reached the engine: the signal's own reason, normally a
+ *   `DOMException` named `AbortError`.
+ * - Aborted **during** the operation: an `Error` reporting `OperationCancelled`, raised
+ *   by the engine at its next checkpoint.
+ *
+ * This recognizes both, leaving the original error untouched for callers who want the
+ * reason they attached.
+ *
+ * ```ts
+ * try {
+ *   await Reader.fromBlob(c2pa, file.type, file, context);
+ * } catch (e) {
+ *   if (isCancelled(e)) return;
+ *   throw e;
+ * }
+ * ```
+ *
+ * Two cases it deliberately does **not** report as cancelled:
+ *
+ * - `AbortSignal.timeout()`, whose reason is a `TimeoutError`. A deadline elapsing is
+ *   not the same event as someone cancelling, and the two usually want different
+ *   handling.
+ * - An abort with a custom reason, such as `controller.abort(new Error('navigated'))`.
+ *   Nothing marks that error as a cancellation, so it cannot be told apart from any
+ *   other failure. Callers who need a custom reason recognized should check for it
+ *   themselves, or abort with no reason.
+ */
+export function isCancelled(error: unknown): boolean {
+  if (typeof DOMException !== 'undefined' && error instanceof DOMException) {
+    return error.name === 'AbortError';
+  }
+
+  return error instanceof Error && error.message.includes(CANCELLED_MARKER);
+}

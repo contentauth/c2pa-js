@@ -8,7 +8,11 @@
  */
 
 import { createC2pa, Reader } from '@contentauth/c2pa-web';
-import { Context, type ProgressEvent } from '@contentauth/c2pa-utilities';
+import {
+  Context,
+  isCancelled,
+  type ProgressEvent
+} from '@contentauth/c2pa-utilities';
 import wasmSrc from '@contentauth/c2pa-wasm/assets/c2pa_bg.wasm?url';
 
 const c2pa = await createC2pa({ wasmSrc });
@@ -140,8 +144,7 @@ dropzone?.addEventListener('drop', (e) => {
 
           await reader?.free();
         } catch (e) {
-          const message = e instanceof Error ? e.message : String(e);
-          if (message.includes('OperationCancelled')) {
+          if (isCancelled(e)) {
             finishProgress('cancelled', 'cancelled');
           } else {
             console.log('caught error', e);
