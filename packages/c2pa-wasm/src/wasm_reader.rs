@@ -258,7 +258,7 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    async fn progress_is_reported_and_a_throwing_callback_cannot_fail_the_read() {
+    async fn a_throwing_progress_callback_does_not_fail_the_read() {
         // Counts calls and throws on every one. c2pa-rs treats a `false` return from the
         // progress callback as a cancellation request, so a callback that blows up must
         // not be allowed to turn a valid asset into a failed or cancelled read.
