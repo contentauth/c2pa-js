@@ -53,9 +53,15 @@ function buildWasmIdentityAssertions(
   }));
 }
 
-/** Turns the `operationId` received over RPC into the WASM progress callback,
+/**
+ * Turns the `operationId` received over RPC into the WASM progress callback,
  * posted raw rather than over the RPC channel since the worker cannot await a
- * reply while blocked inside the operation these events fire from. */
+ * reply while blocked inside the operation these events fire from.
+ *
+ * The return value is the only way to cancel in a blocking run:
+ * this callback runs on the worker's own stack during the read,
+ * while a queued message waits until the read returns.
+ */
 function toWasmOptions(options: OperationOptions) {
   const { operationId, reportsProgress, cancellable } = options;
 

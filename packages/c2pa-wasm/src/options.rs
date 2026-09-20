@@ -70,6 +70,9 @@ impl OperationOptions {
     /// `Error::OperationCancelled`.
     /// A throw or a non-boolean return continues, so a broken progress handler
     /// can't cancel a valid read.
+    ///
+    /// `Context::cancel()` sets the same flag without a callback,
+    /// but no JS runs during a read on this target, so nothing can call it in time.
     pub(crate) fn build_context(self, context_json: &str) -> Result<Context, WasmError> {
         let mut context = Context::new().with_settings(context_json)?;
 
