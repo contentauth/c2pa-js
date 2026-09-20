@@ -68,7 +68,7 @@ impl NeonReader {
 
                 // Create reader with or without context
                 let reader = if let Some(context) = context_opt {
-                    Reader::from_context(context)
+                    Reader::from_shared_context(&context.into_shared())
                         .with_stream_async(&format, stream)
                         .await?
                 } else {
@@ -128,7 +128,7 @@ impl NeonReader {
                 let stream = asset.into_read_stream()?;
 
                 let reader = if let Some(context) = context_opt {
-                    Reader::from_context(context)
+                    Reader::from_shared_context(&context.into_shared())
                         .with_manifest_data_and_stream_async(&c2pa_data, &format, stream)
                         .await?
                 } else {

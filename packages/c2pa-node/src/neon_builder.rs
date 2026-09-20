@@ -44,7 +44,7 @@ impl NeonBuilder {
             parse_settings(&mut cx, 0, "Builder").or_else(|err| cx.throw_error(err.to_string()))?;
 
         let builder = if let Some(context) = context_opt {
-            Builder::from_context(context)
+            Builder::from_shared_context(&context.into_shared())
         } else {
             Builder::default()
         };
@@ -62,7 +62,7 @@ impl NeonBuilder {
             parse_settings(&mut cx, 1, "Builder").or_else(|err| cx.throw_error(err.to_string()))?;
 
         let builder = if let Some(context) = context_opt {
-            Builder::from_context(context)
+            Builder::from_shared_context(&context.into_shared())
                 .with_definition(json.as_str())
                 .or_else(|err| cx.throw_error(err.to_string()))?
         } else {
@@ -330,7 +330,7 @@ impl NeonBuilder {
             .task(move || {
                 let source_stream = source.into_read_stream()?;
                 let builder = if let Some(context) = context_opt {
-                    Builder::from_context(context).with_archive(source_stream)?
+                    Builder::from_shared_context(&context.into_shared()).with_archive(source_stream)?
                 } else {
                     Builder::default().with_archive(source_stream)?
                 };
