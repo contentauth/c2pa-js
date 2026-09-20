@@ -11,15 +11,8 @@ import type { Context, ContextOptions } from '@contentauth/c2pa-utilities';
 import type { OperationOptions } from './rpc.js';
 import type { WorkerManager } from './workerManager.js';
 
-/**
- * Merges a `Context`'s progress and cancellation settings with any options passed to a
- * single call, per field: a value on the call wins over the same value on the
- * `Context`, so overriding the signal alone does not silence progress reporting.
- *
- * An explicit `undefined` means "not specified" and falls through to the `Context`.
- * There is therefore no way to opt one call out of a context's signal; construct a
- * `Context` without one for that.
- */
+/** Merges a `Context`'s progress and cancellation settings with a call's, per field: a
+ * value on the call wins, and an explicit `undefined` falls through to the `Context`. */
 function mergeOperationOptions(
   context: Context,
   callOptions?: ContextOptions
@@ -31,21 +24,12 @@ function mergeOperationOptions(
 }
 
 /**
- * Registers whatever an operation asks for on the main thread: a progress handler, an
- * abort listener, or both, taken from the `Context` and any per-call `callOptions` per
- * {@link mergeOperationOptions}.
+ * Registers a progress handler, an abort listener, or both, per {@link
+ * mergeOperationOptions}. Returns `undefined` options when neither applies, so the
+ * caller uses the plain worker method, plus a `release` the caller must call exactly
+ * once when the operation can no longer report or be cancelled.
  *
- * Returns the options describing it — `undefined` when the context wants nothing beyond
- * settings, so the caller uses the plain worker method unchanged — and a `release` that
- * unregisters everything. Callers must invoke `release` exactly once, when the operation
- * can no longer report or be cancelled: at the end of the call for a reader, and when
- * the builder is freed for a builder.
- *
- * Progress and cancellation share one `operationId`: the worker keys reports by it and
- * names the operation to cancel with it.
- *
- * @throws the signal's reason if the merged signal has already been aborted, so a
- * caller that cancelled before starting never reaches the worker.
+ * @throws the signal's reason if it has already been aborted.
  */
 export function registerOperation(
   worker: WorkerManager,
@@ -54,9 +38,7 @@ export function registerOperation(
 ): { options: OperationOptions | undefined; release: () => void } {
   const { onProgress, signal } = mergeOperationOptions(context, callOptions);
 
-  // Rejects an operation whose signal already fired, before any worker call is made.
-  // Here rather than at each caller, so every entry point guards identically and none
-  // can accidentally test the `Context`'s signal instead of the merged one.
+  // Guards the merged signal here, once, so every entry point rejects identically.
   signal?.throwIfAborted();
 
   if (!onProgress && !signal) {
@@ -75,15 +57,12 @@ export function registerOperation(
   }
 
   if (signal) {
-    const onAbort = () => {
-      // One-way: the worker records the request and its progress closure observes it at
-      // the engine's next checkpoint. A worker blocked in a synchronous read cannot act
-      // on this until that read yields.
-      worker.tx.operation_cancel(operationId);
-    };
+    // The worker observes this at its next checkpoint; it cannot act on it sooner if
+    // blocked in a synchronous read.
+    const onAbort = () => worker.tx.operation_cancel(operationId);
     signal.addEventListener('abort', onAbort, { once: true });
-    // An AbortSignal holds a strong reference to its listeners, so a long-lived signal
-    // would otherwise retain this closure for every operation it ever configured.
+    // A long-lived signal holds a strong reference to its listeners, so this must be
+    // removed or it retains one closure per operation it ever configured.
     releases.push(() => signal.removeEventListener('abort', onAbort));
   }
 
@@ -97,13 +76,9 @@ export function registerOperation(
   };
 }
 
-/**
- * Runs a worker call with the options the `Context` asks for, releasing them afterwards.
- *
- * Suits an operation whose work ends when the call resolves, such as creating a reader.
- * A builder outlives its constructor, so it reserves and releases around its own
- * lifetime instead.
- */
+/** Runs a worker call with the `Context`'s options, releasing them afterwards. Suits an
+ * operation whose work ends when the call resolves; a builder outlives its constructor,
+ * so it reserves and releases around its own lifetime instead. */
 export async function withOperationOptions<T>(
   worker: WorkerManager,
   context: Context,

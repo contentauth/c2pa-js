@@ -53,17 +53,12 @@ function buildWasmIdentityAssertions(
   }));
 }
 
-/**
- * Turns the `operationId` received over RPC into the callback the WASM entry points
- * call, posting progress raw rather than over the RPC channel — a channel call would
- * leave a pending promise with no reader, since the worker cannot await anything while
- * blocked inside the operation these events fire from.
- */
+/** Turns the `operationId` received over RPC into the WASM progress callback,
+ * posted raw rather than over the RPC channel since the worker cannot await a
+ * reply while blocked inside the operation these events fire from. */
 function toWasmOptions(options: OperationOptions) {
   const { operationId, reportsProgress, cancellable } = options;
 
-  // With neither progress nor cancellation there is nothing for a callback to do, so
-  // none is installed and the engine runs without per-checkpoint overhead.
   if (operationId === undefined || (!reportsProgress && !cancellable)) {
     return {};
   }
@@ -81,29 +76,18 @@ function toWasmOptions(options: OperationOptions) {
         self.postMessage(message);
       }
 
-      // Returning false asks the engine to stop here. This closure is the only place a
-      // cancellation can be observed: it runs on the worker's own stack inside the
-      // otherwise-blocking operation, where no inbound message could be delivered.
+      // The only point cancellation can be observed: this runs on the worker's own
+      // stack inside the blocking operation, where no message could otherwise arrive.
       return !cancelledOperations.has(operationId);
     }
   };
 }
 
-/**
- * Operations the main thread has asked to cancel.
- *
- * An id is added by `operation_cancel` and removed once the operation settles, so the
- * set only ever holds in-flight requests.
- */
+/** Operation ids the main thread has asked to cancel; only ever holds in-flight ones. */
 const cancelledOperations = new Set<number>();
 
-/**
- * The operation id backing each builder, so freeing one clears its cancellation entry.
- *
- * A reader's operation ends when its constructor resolves, but a builder's spans its
- * whole life: the progress closure installed at construction is what reports and
- * cancels during `sign`. Its id therefore lives until the builder is freed.
- */
+/** A builder's operation id, kept until `free()` since its progress closure spans
+ * signing rather than just construction. */
 const builderOperations = new Map<number, number>();
 
 /** Records a builder's operation id, if the operation has one. */
@@ -114,15 +98,9 @@ function trackBuilder(builderId: number, operationId: number | undefined): numbe
   return builderId;
 }
 
-/**
- * Runs a read that the main thread can cancel, releasing its cancellation entry once
- * the read settles.
- *
- * Constructing a reader **is** the read: `WasmReader.fromBlob` does the parsing,
- * hashing and verifying, so this call is the entire window in which it can be
- * cancelled. The opposite of {@link trackBuilder}, whose entry outlives construction
- * because a builder's work happens later, during signing.
- */
+/** Runs a read, releasing its cancellation entry once it settles. Constructing a
+ * reader **is** the read, unlike {@link trackBuilder}'s entry, which outlives
+ * construction because a builder's work happens later, during signing. */
 async function cancellableRead<T>(
   operationId: number | undefined,
   run: () => Promise<T>

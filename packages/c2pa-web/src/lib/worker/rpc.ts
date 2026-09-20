@@ -18,38 +18,23 @@ import type {
 import { channel } from 'highgain';
 
 /**
- * Per-operation options for the `*WithOptions` constructors, shared by readers and
- * builders.
- *
- * The context travels as its own mandatory parameter beside this object, never inside
- * it: options configure an operation that a `Context` already defines, so a signature
- * that could carry options without one would describe a state that cannot exist.
- *
- * A later capability is added as another optional field, and both threads keep
- * compiling: the worker consults whichever of those fields are present. Must stay
- * structured-cloneable — no functions. A callback is represented by the id the main
- * thread registered it under, not by the callback itself.
+ * Per-operation options for the `*WithOptions` constructors. Excludes the context,
+ * which travels as its own mandatory parameter: options configure an operation a
+ * `Context` already defines, so a signature carrying options without one would
+ * describe a state that cannot exist. Must stay structured-cloneable — a callback is
+ * represented by the id the main thread registered it under, not the callback itself.
  */
 export interface OperationOptions {
-  /**
-   * Identifies this operation on the main thread, and in the worker's cancellation set.
-   *
-   * Present when the caller supplied `onProgress`, a `signal`, or both: progress reports
-   * are keyed by it, and `operation_cancel` names the operation to stop with it.
-   */
+  /** Identifies this operation on the main thread and in the worker's cancellation
+   * set. Present when the caller supplied `onProgress`, a `signal`, or both. */
   operationId?: number;
 
-  /**
-   * Whether the caller supplied an `onProgress` callback. When false, the worker still
-   * installs a progress closure if the operation is cancellable, but posts no events.
-   */
+  /** Whether the caller supplied `onProgress`. When false, the worker still installs
+   * a progress closure for a cancellable operation, but posts no events. */
   reportsProgress?: boolean;
 
-  /**
-   * Whether the caller supplied an `AbortSignal`. The worker installs a progress
-   * closure for a cancellable operation even with no `onProgress`, because that
-   * closure is the only place cancellation can be observed.
-   */
+  /** Whether the caller supplied an `AbortSignal`. That closure is the only place
+   * cancellation can be observed, so it is installed even with no `onProgress`. */
   cancellable?: boolean;
 }
 
@@ -70,10 +55,9 @@ const { createTx, rx } = channel<{
     contextJson?: string
   ) => Promise<number>;
 
-  // Options-carrying counterparts of the two constructors above. They are separate
-  // methods rather than extra parameters so the originals keep their exact contract,
-  // and they take an options object rather than positional flags so later features
-  // extend `OperationOptions` instead of adding another method pair.
+  // Separate methods, not extra parameters, so the originals keep their exact
+  // contract; an options object rather than positional flags so a later capability
+  // extends OperationOptions instead of adding another method pair.
   reader_fromBlobWithOptions: (
     format: string,
     blob: Blob,
@@ -88,11 +72,8 @@ const { createTx, rx } = channel<{
     options: OperationOptions
   ) => Promise<number>;
 
-  // Requests cancellation of an in-flight operation by its `operationId`.
-  //
-  // The worker records the request; the operation's progress closure observes it at the
-  // engine's next checkpoint and stops there. A worker blocked inside a synchronous read
-  // cannot process this until that read yields, so cancellation is never immediate.
+  // Requests cancellation of an in-flight operation. The progress closure observes
+  // it at the engine's next checkpoint, so cancellation is never immediate.
   operation_cancel: (operationId: number) => void;
 
   // Reader methods
@@ -112,8 +93,7 @@ const { createTx, rx } = channel<{
   builder_fromJson: (json: string, contextJson?: string) => number;
   builder_fromArchive: (archive: Blob, contextJson?: string) => number;
 
-  // Options-carrying counterparts of the three constructors above, mirroring the
-  // reader pair. A builder reports progress during signing.
+  // Mirrors the reader pair. A builder reports progress during signing.
   builder_newWithOptions: (
     contextJson: string,
     options: OperationOptions
@@ -203,14 +183,9 @@ const { createTx: createWorkerTx, rx: workerRx } = channel<{
   ) => Promise<Uint8Array<ArrayBuffer>>;
 }>('worker');
 
-/**
- * Discriminator for progress messages, which bypass the RPC channels above.
- *
- * highgain allocates a pending `{resolve, reject}` pair for every call and always
- * replies, which is the wrong shape for a one-way stream of many events. Progress is
- * therefore posted as a raw message; highgain ignores it because it carries no
- * matching `channelName`.
- */
+/** Discriminator for progress messages, posted raw rather than through highgain's RPC
+ * channels since highgain allocates a `{resolve, reject}` pair per call — the wrong
+ * shape for a one-way stream of many events. */
 export const PROGRESS_MESSAGE_TYPE = 'c2pa:progress';
 
 /** A single progress report travelling worker -> main thread. */
