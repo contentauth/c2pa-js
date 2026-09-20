@@ -12,11 +12,11 @@ import type { ContextOptions, ProgressReportEvent } from './progress.js';
 import { resolveSettings, type Settings } from './settings.js';
 
 /**
- * A `Context` configures the behavior of a `Reader`/`Builder`. 
- * 
+ * A `Context` configures the behavior of a `Reader`/`Builder`.
+ *
  * It is provided at creation time (e.g. `Reader.fromBlob(c2pa, format, blob, context)`),
  * configuring that instance's behavior independently of other instances.
- * 
+ *
  * A `Context` is snapshotted when used to create a `Reader`/`Builder`. Changes to
  * the context do not propagate afterwards, and therefore can be used to create
  * multiple `Reader`/`Builder` instances.
@@ -34,21 +34,21 @@ export class Context {
   }
 
   /**
-   * The `AbortSignal` that cancels operations created from this `Context`, if any. See
-   * {@link ContextOptions.signal} for what cancellation does and does not guarantee.
+   * `AbortSignal` cancelling operations created from this `Context`, if any.
+   * {@link ContextOptions.signal} holds the cancellation signal.
    */
   get signal(): AbortSignal | undefined {
     return this._signal;
   }
 
-  /** The progress callback attached to this `Context`, if any. */
+  /** Progress callback attached to the `Context` instance, if any. */
   get onProgress(): ((event: ProgressReportEvent) => void) | undefined {
     return this._onProgress;
   }
 
   /**
    * The settings currently attached to this `Context`, if any.
-   * 
+   *
    * To derive a new `Context` with different settings, construct one with `new Context(settings)`.
    * To combine this `Context`'s settings with more settings, merge them with {@link mergeSettings}
    * first and pass the single, merged result to the constructor.

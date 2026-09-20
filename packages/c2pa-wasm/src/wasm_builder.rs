@@ -66,8 +66,8 @@ impl WasmBuilder {
         Ok(WasmBuilder::from_builder(builder))
     }
 
-    /// Same as [`WasmBuilder::new`], taking a mandatory context and an
-    /// [`OperationOptions`].
+    /// Same as [`WasmBuilder::new`], with a mandatory context,
+    /// since behavioral functional options need a context.
     #[wasm_bindgen(js_name = newWithOptions)]
     pub fn new_with_options(context_json: String, options: JsValue) -> Result<WasmBuilder, JsString> {
         let context = OperationOptions::from_js(&options)
@@ -104,9 +104,8 @@ impl WasmBuilder {
         Ok(WasmBuilder::from_builder(builder))
     }
 
-    /// Same as [`WasmBuilder::from_json`], taking a mandatory context and an options object.
-    ///
-    /// See [`WasmBuilder::new_with_options`] for the accepted fields.
+    /// Same as [`WasmBuilder::from_json`], with a mandatory context,
+    /// since behavioral functional options need a context.
     #[wasm_bindgen(js_name = fromJsonWithOptions)]
     pub fn from_json_with_options(
         json: &str,
@@ -147,9 +146,8 @@ impl WasmBuilder {
         Ok(WasmBuilder::from_builder(builder))
     }
 
-    /// Same as [`WasmBuilder::from_archive`], taking a mandatory context and an options object.
-    ///
-    /// See [`WasmBuilder::new_with_options`] for the accepted fields.
+    /// Same as [`WasmBuilder::from_archive`], with a mandatory context,
+    /// since behavioral functional options need a context.
     #[wasm_bindgen(js_name = fromArchiveWithOptions)]
     pub fn from_archive_with_options(
         archive: &Blob,

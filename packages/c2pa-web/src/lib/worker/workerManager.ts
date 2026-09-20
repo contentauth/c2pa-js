@@ -24,8 +24,7 @@ export interface WorkerManager {
   ) => number;
   /**
    * Registers a progress handler and returns the id identifying this operation.
-   * Nothing removes it automatically; call the returned `unregister` once the
-   * operation settles.
+   * Must be unregistered once th eoperation has settles.
    */
   registerProgressReceiver: (
     onProgress: (event: ProgressReportEvent) => void
@@ -35,9 +34,7 @@ export interface WorkerManager {
   };
   /**
    * Reserves an operation id without registering a progress handler.
-   *
-   * For an operation that is cancellable but reports no progress: it still needs an id
-   * to be named by `operation_cancel`.
+   * Only operations with ids can be cancelled.
    */
   nextOperationId: () => number;
   terminate: () => void;
@@ -89,16 +86,15 @@ export async function createWorkerManager(
   const signingRequestMap = new Map<number, Signer['sign']>();
   const credentialHolderRequestMap = new Map<number, CredentialHolder['sign']>();
 
-  // Kept separate from the signer maps: those are single-use and delete on first
-  // invocation, whereas a progress handler must survive every event of its operation.
+  // A progress handler must stick around for multiple operations, so gets own map.
   let progressOperationId = 0;
   const progressHandlers = new Map<
     number,
     (event: ProgressReportEvent) => void
   >();
 
-  // Progress arrives as a raw message rather than over the RPC channel (see
-  // PROGRESS_MESSAGE_TYPE), so it needs its own listener.
+  // Progress arrives as a raw message rather than over the RPC channel
+  // (see PROGRESS_MESSAGE_TYPE), so it needs its own listener.
   worker.addEventListener('message', (event: MessageEvent) => {
     const message = event.data;
     if (!isProgressMessage(message)) {
@@ -106,7 +102,7 @@ export async function createWorkerManager(
     }
 
     const handler = progressHandlers.get(message.operationId);
-    // A late event for a settled operation has no handler; dropping it is intended.
+    // A late event for a settled operation has no handler: dropping it is intended.
     if (!handler) {
       return;
     }

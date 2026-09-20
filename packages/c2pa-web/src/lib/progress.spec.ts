@@ -18,6 +18,7 @@ import {
 } from '@contentauth/c2pa-utilities';
 import { getBlobForAsset, createTestSigner } from 'test/utils.js';
 
+import C from 'test/assets/C.jpg';
 import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';
 import dashinit from 'test/assets/dashinit.mp4';
 import dash1 from 'test/assets/dash1.m4s?url';
@@ -50,7 +51,7 @@ describe('progress', () => {
       onProgress: (event) => events.push(event)
     });
 
-    const blob = await getBlobForAsset(PirateShip_cloud);
+    const blob = await getBlobForAsset(C);
     const reader = await Reader.fromBlob(c2pa, 'image/jpeg', blob, context);
 
     expect(reader).not.toBeNull();
@@ -97,7 +98,7 @@ describe('progress', () => {
     const context = new Context(settings);
     expect(context.onProgress).toBeUndefined();
 
-    const blob = await getBlobForAsset(PirateShip_cloud);
+    const blob = await getBlobForAsset(C);
     const reader = await Reader.fromBlob(c2pa, 'image/jpeg', blob, context);
 
     expect(reader).not.toBeNull();
@@ -113,7 +114,7 @@ describe('progress', () => {
       onProgress: (event) => events.push(event)
     });
 
-    const blob = await getBlobForAsset(PirateShip_cloud);
+    const blob = await getBlobForAsset(C);
     const readers = await Promise.all([
       Reader.fromBlob(c2pa, 'image/jpeg', blob, context),
       Reader.fromBlob(c2pa, 'image/jpeg', blob, context),
@@ -139,7 +140,7 @@ describe('progress', () => {
     const builder = await Builder.new(c2pa, context);
     await builder.setIntent('edit');
 
-    const blob = await getBlobForAsset(PirateShip_cloud);
+    const blob = await getBlobForAsset(C);
     const signer = await createTestSigner();
     const signedBytes = await builder.sign(signer, 'image/jpeg', blob);
 
@@ -167,7 +168,7 @@ describe('progress', () => {
     });
     await builder.setIntent('edit');
 
-    const blob = await getBlobForAsset(PirateShip_cloud);
+    const blob = await getBlobForAsset(C);
     const signer = await createTestSigner();
 
     let caught: unknown;
@@ -195,7 +196,7 @@ describe('progress', () => {
       signal: controller.signal
     });
 
-    const blob = await getBlobForAsset(PirateShip_cloud);
+    const blob = await getBlobForAsset(C);
     await expect(
       Reader.fromBlob(c2pa, 'image/jpeg', blob, context)
     ).rejects.toThrow();
@@ -237,7 +238,7 @@ describe('progress', () => {
     const context = new Context(settings, { onProgress: () => undefined });
     expect(context.signal).toBeUndefined();
 
-    const blob = await getBlobForAsset(PirateShip_cloud);
+    const blob = await getBlobForAsset(C);
     const reader = await Reader.fromBlob(c2pa, 'image/jpeg', blob, context);
 
     expect(reader).not.toBeNull();
@@ -375,7 +376,7 @@ describe('progress', () => {
     // Aborting the context's controller must not reach a read that brought its own.
     contextController.abort();
 
-    const blob = await getBlobForAsset(PirateShip_cloud);
+    const blob = await getBlobForAsset(C);
     const reader = await Reader.fromBlob(c2pa, 'image/jpeg', blob, context, {
       signal: new AbortController().signal
     });
@@ -394,7 +395,7 @@ describe('progress', () => {
       onProgress: () => fromContext++
     });
 
-    const blob = await getBlobForAsset(PirateShip_cloud);
+    const blob = await getBlobForAsset(C);
     const reader = await Reader.fromBlob(c2pa, 'image/jpeg', blob, context, {
       onProgress: () => fromCall++
     });
@@ -416,7 +417,7 @@ describe('progress', () => {
       signal: new AbortController().signal
     });
 
-    const blob = await getBlobForAsset(PirateShip_cloud);
+    const blob = await getBlobForAsset(C);
     const reader = await Reader.fromBlob(c2pa, 'image/jpeg', blob, context, {
       signal: new AbortController().signal
     });
@@ -493,7 +494,7 @@ describe('progress', () => {
       }
     });
 
-    const blob = await getBlobForAsset(PirateShip_cloud);
+    const blob = await getBlobForAsset(C);
     const reader = await Reader.fromBlob(c2pa, 'image/jpeg', blob, context);
 
     expect(calls).toBeGreaterThan(0);

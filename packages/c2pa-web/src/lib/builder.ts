@@ -108,10 +108,7 @@ const registry = new FinalizationRegistry<{
   id: number;
   releaseOperation: () => void;
 }>(({ worker, id, releaseOperation }) => {
-  // Unlike a reader's, a builder's progress handler and abort listener outlive its
-  // constructor: reports arrive during signing, and a cancellation must still reach it.
-  // They are released alongside the builder, so one dropped without `free()` cannot
-  // strand either.
+  // Context behavioral options need to be released with the Builder.
   releaseOperation();
   worker.tx.builder_free(id);
 });
@@ -135,8 +132,7 @@ export class Builder {
     this.#releaseOperation = releaseOperation;
   }
 
-  /** Wraps a worker-side builder id and arranges for both it and the progress
-   * handler to be released, whether by `free()` or by garbage collection. */
+  /** Wraps a worker-side builder id and makes sure both get eventually freed. */
   static #adopt(
     worker: WorkerManager,
     id: number,

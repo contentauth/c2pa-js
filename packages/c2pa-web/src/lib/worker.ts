@@ -76,18 +76,16 @@ function toWasmOptions(options: OperationOptions) {
         self.postMessage(message);
       }
 
-      // The only point cancellation can be observed: this runs on the worker's own
-      // stack inside the blocking operation, where no message could otherwise arrive.
+      // Cancellation observation point.
       return !cancelledOperations.has(operationId);
     }
   };
 }
 
-/** Operation ids the main thread has asked to cancel; only ever holds in-flight ones. */
+/** Operation ids the main thread has asked to cancel (holds only in-flight ids). */
 const cancelledOperations = new Set<number>();
 
-/** A builder's operation id, kept until `free()` since its progress closure spans
- * signing rather than just construction. */
+/** A builder's operation id, kept until `free()` */
 const builderOperations = new Map<number, number>();
 
 /** Records a builder's operation id, if the operation has one. */
@@ -98,9 +96,7 @@ function trackBuilder(builderId: number, operationId: number | undefined): numbe
   return builderId;
 }
 
-/** Runs a read, releasing its cancellation entry once it settles. Constructing a
- * reader **is** the read, unlike {@link trackBuilder}'s entry, which outlives
- * construction because a builder's work happens later, during signing. */
+/** Runs a read, releasing its cancellation entry once it settles. */
 async function cancellableRead<T>(
   operationId: number | undefined,
   run: () => Promise<T>
