@@ -18,23 +18,19 @@ import type {
 import { channel } from 'highgain';
 
 /**
- * Per-operation options for the `*WithOptions` constructors. Excludes the context,
- * which travels as its own mandatory parameter: options configure an operation a
- * `Context` already defines, so a signature carrying options without one would
- * describe a state that cannot exist. Must stay structured-cloneable — a callback is
- * represented by the id the main thread registered it under, not the callback itself.
+ * Per-operation options for the `*WithOptions` constructors.
+ * Usually used in calls with a Context.
  */
 export interface OperationOptions {
-  /** Identifies this operation on the main thread and in the worker's cancellation
-   * set. Present when the caller supplied `onProgress`, a `signal`, or both. */
+  /** Identifies this operation on the main thread and in the worker's cancellation set.
+   * Present when the caller supplied `onProgress`, a `signal`, or both. */
   operationId?: number;
 
-  /** Whether the caller supplied `onProgress`. When false, the worker still installs
-   * a progress closure for a cancellable operation, but posts no events. */
+  /** Whether the caller supplied `onProgress`.
+   * When false, the worker still installs a progress closure for a cancellable operation, but posts no events. */
   reportsProgress?: boolean;
 
-  /** Whether the caller supplied an `AbortSignal`. That closure is the only place
-   * cancellation can be observed, so it is installed even with no `onProgress`. */
+  /** Whether the caller supplied an `AbortSignal`. */
   cancellable?: boolean;
 }
 
@@ -55,9 +51,8 @@ const { createTx, rx } = channel<{
     contextJson?: string
   ) => Promise<number>;
 
-  // Separate methods, not extra parameters, so the originals keep their exact
-  // contract; an options object rather than positional flags so a later capability
-  // extends OperationOptions instead of adding another method pair.
+  // When additional behavioral functional options must be configured,
+  // context becomes a mandatory parameter.
   reader_fromBlobWithOptions: (
     format: string,
     blob: Blob,
@@ -72,8 +67,7 @@ const { createTx, rx } = channel<{
     options: OperationOptions
   ) => Promise<number>;
 
-  // Requests cancellation of an in-flight operation. The progress closure observes
-  // it at the engine's next checkpoint, so cancellation is never immediate.
+  // Requests cancellation of an in-flight operation.
   operation_cancel: (operationId: number) => void;
 
   // Reader methods
@@ -183,12 +177,10 @@ const { createTx: createWorkerTx, rx: workerRx } = channel<{
   ) => Promise<Uint8Array<ArrayBuffer>>;
 }>('worker');
 
-/** Discriminator for progress messages, posted raw rather than through highgain's RPC
- * channels since highgain allocates a `{resolve, reject}` pair per call — the wrong
- * shape for a one-way stream of many events. */
+/** Discriminator for progress messages, to identify c2pa-related progress. */
 export const PROGRESS_MESSAGE_TYPE = 'c2pa:progress';
 
-/** A single progress report travelling worker -> main thread. */
+/** A single progress report travelling from worker to main thread. */
 export interface ProgressMessage {
   type: typeof PROGRESS_MESSAGE_TYPE;
   operationId: number;
