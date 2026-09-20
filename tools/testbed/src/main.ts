@@ -11,18 +11,18 @@ import { createC2pa, Reader } from '@contentauth/c2pa-web';
 import {
   Context,
   isCancelled,
-  type ProgressEvent
+  type ProgressReportEvent
 } from '@contentauth/c2pa-utilities';
 import wasmSrc from '@contentauth/c2pa-wasm/assets/c2pa_bg.wasm?url';
 
 const c2pa = await createC2pa({ wasmSrc });
 
-// Settings ride on the Context alongside the progress callback, so one object carries
-// everything an individual read needs.
-const settings = {
+// One Context for every read, with settings configured and resolved once.
+// Progress and cancellation are per call instead, as each read is independent.
+const context = new Context({
   verify: { verifyTrust: false },
   cawgTrust: { verifyTrustList: false }
-};
+});
 
 const dropzone = document.getElementById('drop-zone');
 const panel = document.getElementById('progress-panel');
@@ -30,7 +30,7 @@ const status = document.getElementById('progress-status');
 const cancelButton = document.getElementById('progress-cancel');
 const log = document.getElementById('progress-log');
 
-// Set while a read is in flight, so the Cancel button knows what to abort.
+// Cancel controller for the cancel button.
 let inFlight: AbortController | undefined;
 
 function startProgress(controller: AbortController) {
@@ -52,7 +52,7 @@ function setStatus(text: string, state: 'busy' | 'done' | 'cancelled' | 'error')
   }
 }
 
-function appendProgress(event: ProgressEvent) {
+function appendProgress(event: ProgressReportEvent) {
   setStatus(event.phase, 'busy');
 
   if (!log) {
@@ -68,8 +68,7 @@ function appendProgress(event: ProgressEvent) {
 
   const count = document.createElement('span');
   count.className = 'progress-row-count';
-  // `total === 0` means the count is not known ahead of time, so a fraction would be
-  // misleading; `total === 1` is a single-shot phase and needs no count at all.
+  // `total === 0` means the count is not known ahead of time.
   count.textContent =
     event.total > 1
       ? `${event.step}/${event.total}`
@@ -95,7 +94,7 @@ function finishProgress(
 
 cancelButton?.addEventListener('click', () => {
   inFlight?.abort();
-  // The engine only stops at its next checkpoint, so the read is still running here.
+  // A cancellation only cancels at the next cancellation checkpoint.
   setStatus('cancelling…', 'busy');
 });
 
@@ -129,11 +128,10 @@ dropzone?.addEventListener('drop', (e) => {
         try {
           const start = performance.now();
 
-          const context = new Context(settings, {
+          const reader = await Reader.fromBlob(c2pa, file.type, file, context, {
             onProgress: appendProgress,
             signal: controller.signal
           });
-          const reader = await Reader.fromBlob(c2pa, file.type, file, context);
           const manifestStore = await reader?.manifestStore();
 
           const elapsed = Math.round(performance.now() - start);

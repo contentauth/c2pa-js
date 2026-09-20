@@ -152,19 +152,19 @@ export class Builder {
    *
    * @param c2pa The `C2pa` instance (from {@link createC2pa}) to create this builder on.
    * @param context Optional `Context` configuring this builder's behavior.
-   * @param options Optional per-operation `onProgress`/`signal`, each overriding the
-   * same value on `context`.
+   * @param contextOptions Optional per-operation `onProgress`/`signal`, each overriding
+   * the same value on `context`.
    * @returns A {@link Builder} object.
    */
   static async new(
     c2pa: C2pa,
     context: Context = new Context(),
-    options?: ContextOptions
+    contextOptions?: ContextOptions
   ): Promise<Builder> {
     const settingsJson = await context.toJson();
     const { worker } = c2pa;
 
-    const operation = registerOperation(worker, context, options);
+    const operation = registerOperation(worker, context, contextOptions);
     try {
       const builderId =
         operation.options === undefined
@@ -187,21 +187,21 @@ export class Builder {
    * @param c2pa The `C2pa` instance (from {@link createC2pa}) to create this builder on.
    * @param definition The {@link ManifestDefinition} to be used as the builder's initial state.
    * @param context Optional `Context` configuring this builder's behavior.
-   * @param options Optional per-operation `onProgress`/`signal`, each overriding the
-   * same value on `context`.
+   * @param contextOptions Optional per-operation `onProgress`/`signal`, each overriding
+   * the same value on `context`.
    * @returns A {@link Builder} object.
    */
   static async fromDefinition(
     c2pa: C2pa,
     definition: ManifestDefinition,
     context: Context = new Context(),
-    options?: ContextOptions
+    contextOptions?: ContextOptions
   ): Promise<Builder> {
     const json = JSON.stringify(definition);
     const settingsJson = await context.toJson();
     const { worker } = c2pa;
 
-    const operation = registerOperation(worker, context, options);
+    const operation = registerOperation(worker, context, contextOptions);
     try {
       const builderId =
         operation.options === undefined
@@ -225,20 +225,20 @@ export class Builder {
    * @param c2pa The `C2pa` instance (from {@link createC2pa}) to create this builder on.
    * @param archive Builder archive as a blob.
    * @param context Optional `Context` configuring this builder's behavior.
-   * @param options Optional per-operation `onProgress`/`signal`, each overriding the
-   * same value on `context`.
+   * @param contextOptions Optional per-operation `onProgress`/`signal`, each overriding
+   * the same value on `context`.
    * @returns A {@link Builder} object.
    */
   static async fromArchive(
     c2pa: C2pa,
     archive: Blob,
     context: Context = new Context(),
-    options?: ContextOptions
+    contextOptions?: ContextOptions
   ): Promise<Builder> {
     const settingsJson = await context.toJson();
     const { worker } = c2pa;
 
-    const operation = registerOperation(worker, context, options);
+    const operation = registerOperation(worker, context, contextOptions);
     try {
       const builderId =
         operation.options === undefined

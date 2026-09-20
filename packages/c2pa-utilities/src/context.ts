@@ -8,7 +8,7 @@
  */
 
 import type { FetchWithRetryOptions } from './fetchWithRetry.js';
-import type { ContextOptions, ProgressEvent } from './progress.js';
+import type { ContextOptions, ProgressReportEvent } from './progress.js';
 import { resolveSettings, type Settings } from './settings.js';
 
 /**
@@ -23,7 +23,7 @@ import { resolveSettings, type Settings } from './settings.js';
  */
 export class Context {
   private readonly _settings?: Settings;
-  private readonly _onProgress?: (event: ProgressEvent) => void;
+  private readonly _onProgress?: (event: ProgressReportEvent) => void;
   private readonly _signal?: AbortSignal;
   private _jsonPromise?: Promise<string>;
 
@@ -52,7 +52,7 @@ export class Context {
    * is created, so one `Context` can drive several operations and each reports
    * independently.
    */
-  get onProgress(): ((event: ProgressEvent) => void) | undefined {
+  get onProgress(): ((event: ProgressReportEvent) => void) | undefined {
     return this._onProgress;
   }
 

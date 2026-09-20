@@ -7,7 +7,10 @@
  * it.
  */
 
-import type { ProgressEvent, ProgressPhase } from '@contentauth/c2pa-utilities';
+import type {
+  ProgressReportEvent,
+  ProgressPhase
+} from '@contentauth/c2pa-utilities';
 import { CredentialHolder, Signer } from '../signer.js';
 import { createTx, workerRx, isProgressMessage } from './rpc.js';
 import InlineWorker from '../worker?worker&inline';
@@ -26,7 +29,9 @@ export interface WorkerManager {
    * caller must release it with the returned `unregister` once the operation settles
    * — nothing removes it automatically.
    */
-  registerProgressReceiver: (onProgress: (event: ProgressEvent) => void) => {
+  registerProgressReceiver: (
+    onProgress: (event: ProgressReportEvent) => void
+  ) => {
     operationId: number;
     unregister: () => void;
   };
@@ -89,7 +94,10 @@ export async function createWorkerManager(
   // Kept separate from the signer maps: those are single-use and delete on first
   // invocation, whereas a progress handler must survive every event of its operation.
   let progressOperationId = 0;
-  const progressHandlers = new Map<number, (event: ProgressEvent) => void>();
+  const progressHandlers = new Map<
+    number,
+    (event: ProgressReportEvent) => void
+  >();
 
   // Progress arrives as a raw message rather than over the RPC channel (see
   // PROGRESS_MESSAGE_TYPE), so it needs its own listener.
@@ -162,7 +170,9 @@ export async function createWorkerManager(
     return progressOperationId++;
   }
 
-  function registerProgressReceiver(onProgress: (event: ProgressEvent) => void) {
+  function registerProgressReceiver(
+    onProgress: (event: ProgressReportEvent) => void
+  ) {
     const operationId = nextOperationId();
     progressHandlers.set(operationId, onProgress);
     return {

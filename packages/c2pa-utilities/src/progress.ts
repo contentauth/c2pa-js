@@ -35,8 +35,15 @@ export type ProgressPhase =
   | 'fetchingTimestamp'
   | 'unknown';
 
-/** A single progress report. */
-export interface ProgressEvent {
+/**
+ * A single progress report.
+ *
+ * Named `ProgressReportEvent` rather than `ProgressEvent` to stay clear of the DOM's
+ * own `ProgressEvent` (the one `XMLHttpRequest` and `FileReader` dispatch). The two are
+ * unrelated, and sharing the name made a handler that forgot to import this one
+ * silently typecheck against the DOM type instead.
+ */
+export interface ProgressReportEvent {
   /** What the SDK is doing. Derive any user-visible text from this. */
   phase: ProgressPhase;
 
@@ -48,7 +55,7 @@ export interface ProgressEvent {
   step: number;
 
   /**
-   * How to interpret {@link ProgressEvent.step}:
+   * How to interpret {@link ProgressReportEvent.step}:
    *
    * - `0` — indeterminate. The total is not known ahead of time; show a spinner
    *   and treat a rising `step` as a sign of life.
@@ -68,7 +75,7 @@ export interface ContextOptions {
    * than failing the read. Events are delivered asynchronously, so a final event
    * may be dropped if it would arrive after the operation resolves.
    */
-  onProgress?: (event: ProgressEvent) => void;
+  onProgress?: (event: ProgressReportEvent) => void;
 
   /**
    * Requests cancellation of the operations this `Context` configures.

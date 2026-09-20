@@ -55,9 +55,9 @@ export class Reader {
    * @param format Asset format.
    * @param blob Blob of asset bytes.
    * @param context Optional `Context` configuring this reader's behavior.
-   * @param options Optional per-read `onProgress`/`signal`, each overriding the same
-   * value on `context`. Lets one resolved `Context` serve several reads that report and
-   * cancel independently.
+   * @param contextOptions Optional per-read `onProgress`/`signal`, each overriding the
+   * same value on `context`. Lets one resolved `Context` serve several reads that report
+   * and cancel independently.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
    * @throws If the asset is too large.
    */
@@ -66,7 +66,7 @@ export class Reader {
     format: string,
     blob: Blob,
     context: Context = new Context(),
-    options?: ContextOptions
+    contextOptions?: ContextOptions
   ): Promise<Reader | null> {
     validateAssetSize(blob.size, MAX_SIZE_IN_BYTES);
 
@@ -86,7 +86,7 @@ export class Reader {
                 settingsJson,
                 operationOptions
               ),
-        options
+        contextOptions
       );
 
       const reader = new Reader(worker, readerId);
@@ -106,8 +106,8 @@ export class Reader {
    * @param init Blob of initial fragment bytes.
    * @param fragment Blob of fragment bytes.
    * @param context Optional `Context` configuring this reader's behavior.
-   * @param options Optional per-read `onProgress`/`signal`, each overriding the same
-   * value on `context`.
+   * @param contextOptions Optional per-read `onProgress`/`signal`, each overriding the
+   * same value on `context`.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
    * @throws If the asset is too large.
    */
@@ -117,7 +117,7 @@ export class Reader {
     init: Blob,
     fragment: Blob,
     context: Context = new Context(),
-    options?: ContextOptions
+    contextOptions?: ContextOptions
   ): Promise<Reader | null> {
     validateAssetSize(init.size, MAX_SIZE_IN_BYTES);
     validateAssetSize(fragment.size, MAX_SIZE_IN_BYTES);
@@ -144,7 +144,7 @@ export class Reader {
                 settingsJson,
                 operationOptions
               ),
-        options
+        contextOptions
       );
 
       const reader = new Reader(worker, readerId);

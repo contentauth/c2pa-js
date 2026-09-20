@@ -26,7 +26,7 @@ import type { WorkerManager } from './workerManager.js';
  * The single place this rule is applied: `registerOperation` is the only caller, and
  * every entry point goes through it, so none of them can disagree about precedence.
  */
-export function mergeOperationOptions(
+function mergeOperationOptions(
   context: Context,
   callOptions?: ContextOptions
 ): Pick<ContextOptions, 'onProgress' | 'signal'> {

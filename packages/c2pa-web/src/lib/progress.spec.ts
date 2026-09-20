@@ -13,7 +13,7 @@ import { Builder } from './builder.js';
 import {
   Context,
   isCancelled,
-  type ProgressEvent,
+  type ProgressReportEvent,
   type ProgressPhase
 } from '@contentauth/c2pa-utilities';
 import { getBlobForAsset, createTestSigner } from 'test/utils.js';
@@ -47,7 +47,7 @@ const settings = { verify: { verifyTrust: false } };
 
 describe('progress', () => {
   test('reports progress while reading a blob', async ({ c2pa }) => {
-    const events: ProgressEvent[] = [];
+    const events: ProgressReportEvent[] = [];
     const context = new Context(settings, {
       onProgress: (event) => events.push(event)
     });
@@ -70,7 +70,7 @@ describe('progress', () => {
   });
 
   test('reports progress while reading a fragment', async ({ c2pa }) => {
-    const events: ProgressEvent[] = [];
+    const events: ProgressReportEvent[] = [];
     const context = new Context(settings, {
       onProgress: (event) => events.push(event)
     });
@@ -110,7 +110,7 @@ describe('progress', () => {
 
   test('keeps concurrent reads on one Context separate', async ({ c2pa }) => {
     // One Context drives several operations; each report must reach the right reader.
-    const events: ProgressEvent[] = [];
+    const events: ProgressReportEvent[] = [];
     const context = new Context(settings, {
       onProgress: (event) => events.push(event)
     });
@@ -133,7 +133,7 @@ describe('progress', () => {
   test('reports progress while a builder signs', async ({ c2pa }) => {
     // A builder's reports arrive during signing, not construction, so its handler has
     // to outlive the constructor call that registered it.
-    const events: ProgressEvent[] = [];
+    const events: ProgressReportEvent[] = [];
     const context = new Context(settings, {
       onProgress: (event) => events.push(event)
     });
@@ -150,6 +150,37 @@ describe('progress', () => {
     for (const event of events) {
       expect(KNOWN_PHASES).toContain(event.phase);
     }
+
+    await builder.free();
+  });
+
+  test('cancels a builder during signing', async ({ c2pa }) => {
+    // Signing is the only long operation this API can cancel: a reader's work is over
+    // when its constructor resolves, but a builder's runs here, inside `sign`. The
+    // progress closure registered at construction is what observes the cancellation,
+    // so this also pins that the closure is still consulted during signing.
+    const controller = new AbortController();
+
+    const builder = await Builder.new(c2pa, new Context(settings), {
+      // Abort at the first report. The engine stops at its next checkpoint, so some
+      // further work runs before `sign` rejects.
+      onProgress: () => controller.abort(),
+      signal: controller.signal
+    });
+    await builder.setIntent('edit');
+
+    const blob = await getBlobForAsset(PirateShip_cloud);
+    const signer = await createTestSigner();
+
+    let caught: unknown;
+    try {
+      await builder.sign(signer, 'image/jpeg', blob);
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBeDefined();
+    expect(isCancelled(caught)).toBe(true);
 
     await builder.free();
   });
