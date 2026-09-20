@@ -13,18 +13,12 @@ import type { WorkerManager } from './workerManager.js';
 
 /**
  * Merges a `Context`'s progress and cancellation settings with any options passed to a
- * single call, giving what that one operation should do.
- *
- * Precedence is per field, most specialized first: a value passed to the call wins over
- * the same value on the `Context`. Overriding one field leaves the others alone, so
- * cancelling a single read differently does not also silence its progress reporting.
+ * single call, per field: a value on the call wins over the same value on the
+ * `Context`, so overriding the signal alone does not silence progress reporting.
  *
  * An explicit `undefined` means "not specified" and falls through to the `Context`.
  * There is therefore no way to opt one call out of a context's signal; construct a
  * `Context` without one for that.
- *
- * The single place this rule is applied: `registerOperation` is the only caller, and
- * every entry point goes through it, so none of them can disagree about precedence.
  */
 function mergeOperationOptions(
   context: Context,

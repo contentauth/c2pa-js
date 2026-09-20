@@ -34,24 +34,14 @@ export class Context {
   }
 
   /**
-   * The `AbortSignal` that cancels operations created from this `Context`, if any.
-   *
-   * See {@link ContextOptions.signal} for what cancellation does and does not
-   * guarantee. Like {@link Context.settings}, it is read when a `Reader`/`Builder` is
-   * created; one signal can cancel every operation the `Context` configures.
+   * The `AbortSignal` that cancels operations created from this `Context`, if any. See
+   * {@link ContextOptions.signal} for what cancellation does and does not guarantee.
    */
   get signal(): AbortSignal | undefined {
     return this._signal;
   }
 
-  /**
-   * The progress callback attached to this `Context`, if any.
-   *
-   * Only consulted by entry points that support progress reporting; elsewhere it is
-   * ignored. Like {@link Context.settings}, it is snapshotted when a `Reader`/`Builder`
-   * is created, so one `Context` can drive several operations and each reports
-   * independently.
-   */
+  /** The progress callback attached to this `Context`, if any. */
   get onProgress(): ((event: ProgressReportEvent) => void) | undefined {
     return this._onProgress;
   }

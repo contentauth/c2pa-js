@@ -7,17 +7,7 @@
  * it.
  */
 
-/**
- * A phase of work reported while reading or signing an asset.
- *
- * `'unknown'` covers phases added by a future version of the underlying SDK: the
- * Rust enum is non-exhaustive, so a newer engine can report a phase this version
- * cannot name. Treat it as "work is happening", not as an error.
- *
- * `'fetchingTimestamp'` is declared by the underlying SDK but never reported by
- * the version this package builds against — a timestamp fetch is counted as part
- * of `'signing'`. Do not wait for it.
- */
+/** A phase of C2PA-related work reported while reading or signing an asset. */
 export type ProgressPhase =
   | 'reading'
   | 'verifyingManifest'
@@ -81,21 +71,13 @@ export interface ContextOptions {
    * Requests cancellation of the operations this `Context` configures.
    *
    * Aborting before the call starts rejects it immediately, with the signal's reason.
-   * Aborting during the call makes it reject with an `Error` whose message is
-   * `C2pa(OperationCancelled)`, since the cancellation is reported by the underlying
-   * engine rather than by the signal.
+   * Aborting during the call rejects with an `Error` whose message is
+   * `C2pa(OperationCancelled)`, reported by the engine rather than the signal.
    *
-   * **Cancellation is cooperative and coarse.** The underlying engine only observes it
-   * at its own checkpoints, and hashing reports one checkpoint per 256 MiB of asset.
-   * An asset below that size therefore hashes in a single uninterruptible step, so an
-   * abort arriving during it cannot stop that work — it takes effect at the next
-   * checkpoint, if any remain. Treat this as "stop as soon as it is safe to", not as a
-   * guarantee that work halts promptly.
-   *
+   * The engine only checks for cancellation at its own checkpoints, one per 256 MiB
+   * of asset hashed, so an asset under that size hashes in one uninterruptible step.
    * Measured on a 479 KB JPEG: aborting at the first `reading` report still ran
-   * `fetchingRemoteManifest` and `verifyingManifest` before stopping. Expect work to
-   * continue for one or more phases after `abort()`, and note that a network phase in
-   * that window still completes.
+   * `fetchingRemoteManifest` and `verifyingManifest` before stopping.
    *
    * The same signal may drive several operations, and aborting it cancels all of them.
    * Use a separate `AbortController` per operation to cancel them independently.
@@ -123,9 +105,6 @@ const CANCELLED_MARKER = 'OperationCancelled';
  *   `DOMException` named `AbortError`.
  * - Aborted **during** the operation: an `Error` reporting `OperationCancelled`, raised
  *   by the engine at its next checkpoint.
- *
- * This recognizes both, leaving the original error untouched for callers who want the
- * reason they attached.
  *
  * ```ts
  * try {

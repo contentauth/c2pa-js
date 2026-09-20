@@ -30,7 +30,6 @@ const status = document.getElementById('progress-status');
 const cancelButton = document.getElementById('progress-cancel');
 const log = document.getElementById('progress-log');
 
-// Cancel controller for the cancel button.
 let inFlight: AbortController | undefined;
 
 function startProgress(controller: AbortController) {
@@ -94,7 +93,6 @@ function finishProgress(
 
 cancelButton?.addEventListener('click', () => {
   inFlight?.abort();
-  // A cancellation only cancels at the next cancellation checkpoint.
   setStatus('cancelling…', 'busy');
 });
 

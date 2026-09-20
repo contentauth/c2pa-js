@@ -24,10 +24,8 @@ export interface WorkerManager {
   ) => number;
   /**
    * Registers a progress handler and returns the id identifying this operation.
-   *
-   * Unlike the signer receivers, a progress handler is invoked many times, so the
-   * caller must release it with the returned `unregister` once the operation settles
-   * — nothing removes it automatically.
+   * Nothing removes it automatically; call the returned `unregister` once the
+   * operation settles.
    */
   registerProgressReceiver: (
     onProgress: (event: ProgressReportEvent) => void

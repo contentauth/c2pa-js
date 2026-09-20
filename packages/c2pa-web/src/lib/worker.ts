@@ -54,17 +54,10 @@ function buildWasmIdentityAssertions(
 }
 
 /**
- * Turns the options received over RPC into the object the WASM entry points read.
- *
- * The wire form carries an `operationId` rather than a callback, because a function
- * cannot be cloned across `postMessage`; here that id becomes a real callback that
- * posts one message per report and reports cancellation back to the engine. Posted raw
- * rather than over the RPC channel: the worker is blocked inside a synchronous
- * operation while these fire, so nothing can be awaited, and a channel call would
- * retain a pending promise per event for a reply no one reads.
- *
- * The settings JSON is not part of this: it travels as its own mandatory argument to
- * each entry point, so a context is always present wherever options are.
+ * Turns the `operationId` received over RPC into the callback the WASM entry points
+ * call, posting progress raw rather than over the RPC channel — a channel call would
+ * leave a pending promise with no reader, since the worker cannot await anything while
+ * blocked inside the operation these events fire from.
  */
 function toWasmOptions(options: OperationOptions) {
   const { operationId, reportsProgress, cancellable } = options;
@@ -125,14 +118,10 @@ function trackBuilder(builderId: number, operationId: number | undefined): numbe
  * Runs a read that the main thread can cancel, releasing its cancellation entry once
  * the read settles.
  *
- * Constructing a reader **is** the read: `WasmReader.fromBlob` parses, hashes and
- * verifies the asset before it returns, and the reader's other methods only serialize
- * what is already in memory. This call is therefore the entire window in which a read
- * can be cancelled, and the entry is useless afterwards.
- *
- * The opposite of {@link trackBuilder}, which keeps its entry past construction because
- * a builder does its work later, during signing. Without the release here the set would
- * keep an entry for every cancelled read for the life of the worker.
+ * Constructing a reader **is** the read: `WasmReader.fromBlob` does the parsing,
+ * hashing and verifying, so this call is the entire window in which it can be
+ * cancelled. The opposite of {@link trackBuilder}, whose entry outlives construction
+ * because a builder's work happens later, during signing.
  */
 async function cancellableRead<T>(
   operationId: number | undefined,

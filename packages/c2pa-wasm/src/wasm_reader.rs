@@ -301,8 +301,8 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn a_false_progress_return_cancels_the_read() {
-        // The cancellation transport: c2pa-rs turns a `false` return into
-        // Error::OperationCancelled at the next checkpoint (context.rs:790).
+        // c2pa-rs turns a `false` return into Error::OperationCancelled at the next
+        // checkpoint (context.rs:790).
         let callback = Closure::<dyn FnMut(JsValue, JsValue, JsValue) -> JsValue>::new(
             move |_phase, _step, _total| -> JsValue { JsValue::FALSE },
         );
