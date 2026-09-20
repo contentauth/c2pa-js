@@ -26,31 +26,19 @@ export type ProgressPhase =
   | 'unknown';
 
 /**
- * A single progress report.
- *
- * Named `ProgressReportEvent` rather than `ProgressEvent` to stay clear of the DOM's
- * own `ProgressEvent` (the one `XMLHttpRequest` and `FileReader` dispatch). The two are
- * unrelated, and sharing the name made a handler that forgot to import this one
- * silently typecheck against the DOM type instead.
+ * A single progress report. Named `ProgressReportEvent`, not `ProgressEvent`, to avoid
+ * the DOM's unrelated `ProgressEvent` (`XMLHttpRequest`, `FileReader`).
  */
 export interface ProgressReportEvent {
   /** What the SDK is doing. Derive any user-visible text from this. */
   phase: ProgressPhase;
 
-  /**
-   * Counter within the current phase, starting at 1 and resetting when the phase
-   * changes. The unit is phase-specific and otherwise opaque; a rising value means
-   * work is still progressing.
-   */
+  /** Counter within the current phase, starting at 1 and resetting on phase change. */
   step: number;
 
   /**
-   * How to interpret {@link ProgressReportEvent.step}:
-   *
-   * - `0` — indeterminate. The total is not known ahead of time; show a spinner
-   *   and treat a rising `step` as a sign of life.
-   * - `1` — single-shot. The event itself is the notification.
-   * - `> 1` — determinate. `step / total` is a completion fraction.
+   * `0`: indeterminate, total unknown. `1`: single-shot. `> 1`: `step / total` is the
+   * completion fraction.
    */
   total: number;
 }
@@ -58,53 +46,40 @@ export interface ProgressReportEvent {
 /** Optional behavior attached to a `Context`. */
 export interface ContextOptions {
   /**
-   * Called as the operation progresses.
-   *
-   * Reporting is advisory: the callback cannot influence the operation, and an
-   * exception thrown here is reported to the console and otherwise ignored rather
-   * than failing the read. Events are delivered asynchronously, so a final event
-   * may be dropped if it would arrive after the operation resolves.
+   * Called as the operation progresses. Advisory: a thrown exception is logged and
+   * ignored, and a final event may be dropped if it arrives after the operation
+   * resolves.
    */
   onProgress?: (event: ProgressReportEvent) => void;
 
   /**
-   * Requests cancellation of the operations this `Context` configures.
+   * Requests cancellation of the operations this `Context` configures. Aborting before
+   * the call starts rejects with the signal's reason; aborting during the call rejects
+   * with an `Error` reporting `C2pa(OperationCancelled)`.
    *
-   * Aborting before the call starts rejects it immediately, with the signal's reason.
-   * Aborting during the call rejects with an `Error` whose message is
-   * `C2pa(OperationCancelled)`, reported by the engine rather than the signal.
+   * The engine checks for cancellation only at its own checkpoints, one per 256 MiB of
+   * asset hashed. Measured on a 479 KB JPEG: aborting at the first `reading` report
+   * still ran `fetchingRemoteManifest` and `verifyingManifest` before stopping.
    *
-   * The engine only checks for cancellation at its own checkpoints, one per 256 MiB
-   * of asset hashed, so an asset under that size hashes in one uninterruptible step.
-   * Measured on a 479 KB JPEG: aborting at the first `reading` report still ran
-   * `fetchingRemoteManifest` and `verifyingManifest` before stopping.
-   *
-   * The same signal may drive several operations, and aborting it cancels all of them.
-   * Use a separate `AbortController` per operation to cancel them independently.
+   * One signal cancels every operation it is passed to; use a separate
+   * `AbortController` per operation to cancel them independently.
    */
   signal?: AbortSignal;
 }
 
-/**
- * Marker the underlying engine puts in the message of a cancelled operation.
- *
- * Matched as a substring because the surrounding text is a Rust `Debug` rendering
- * (`C2pa(OperationCancelled)`) rather than a stable contract. Kept here so exactly one
- * place in the codebase depends on that shape.
- */
+/** Marker in a cancelled operation's error message; matched as a substring since the
+ * surrounding `C2pa(OperationCancelled)` text is a Rust `Debug` rendering, not a
+ * stable contract. */
 const CANCELLED_MARKER = 'OperationCancelled';
 
 /**
- * Whether `error` reports that an operation was cancelled.
+ * Whether `error` reports that an operation was cancelled. Cancelling rejects with a
+ * different error type depending on when {@link ContextOptions.signal} fired, so a
+ * single `instanceof` or message check misses half the cases:
  *
- * Cancelling rejects with one of two different error types, depending on when the
- * {@link ContextOptions.signal} fired, so a single `instanceof` or message check misses
- * half the cases:
- *
- * - Aborted **before** the call reached the engine: the signal's own reason, normally a
+ * - Aborted **before** reaching the engine: the signal's reason, normally a
  *   `DOMException` named `AbortError`.
- * - Aborted **during** the operation: an `Error` reporting `OperationCancelled`, raised
- *   by the engine at its next checkpoint.
+ * - Aborted **during** the operation: an `Error` reporting `OperationCancelled`.
  *
  * ```ts
  * try {
@@ -115,15 +90,9 @@ const CANCELLED_MARKER = 'OperationCancelled';
  * }
  * ```
  *
- * Two cases it deliberately does **not** report as cancelled:
- *
- * - `AbortSignal.timeout()`, whose reason is a `TimeoutError`. A deadline elapsing is
- *   not the same event as someone cancelling, and the two usually want different
- *   handling.
- * - An abort with a custom reason, such as `controller.abort(new Error('navigated'))`.
- *   Nothing marks that error as a cancellation, so it cannot be told apart from any
- *   other failure. Callers who need a custom reason recognized should check for it
- *   themselves, or abort with no reason.
+ * Not reported as cancelled: `AbortSignal.timeout()` (reason is `TimeoutError`, not
+ * `AbortError`), and an abort with a custom reason such as
+ * `controller.abort(new Error('navigated'))`, which nothing marks as a cancellation.
  */
 export function isCancelled(error: unknown): boolean {
   if (typeof DOMException !== 'undefined' && error instanceof DOMException) {

@@ -50,12 +50,8 @@ impl WasmReader {
         WasmReader::from_stream(format, stream, context).await
     }
 
-    /// Same as [`WasmReader::from_blob`], taking a mandatory context and an options object.
-    ///
-    /// `options` accepts `progress`, called as
-    /// `(phase: string, step: number, total: number)`. Returning `false` cancels the
-    /// read at that checkpoint, failing it with `OperationCancelled`; any other return
-    /// value, including a thrown error, continues.
+    /// Same as [`WasmReader::from_blob`], taking a mandatory context and an
+    /// [`OperationOptions`].
     #[wasm_bindgen(js_name = fromBlobWithOptions)]
     pub async fn from_blob_with_options(
         format: &str,

@@ -22,9 +22,7 @@ import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.j
 import dashinit from 'test/assets/dashinit.mp4';
 import dash1 from 'test/assets/dash1.m4s?url';
 
-// Every phase name the bindings can produce. Kept as data so a phase added on the Rust
-// side without a matching TypeScript member shows up as a failure here rather than
-// silently widening the union.
+// Known phases.
 const KNOWN_PHASES: ProgressPhase[] = [
   'reading',
   'verifyingManifest',

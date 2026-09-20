@@ -66,12 +66,8 @@ impl WasmBuilder {
         Ok(WasmBuilder::from_builder(builder))
     }
 
-    /// Same as [`WasmBuilder::new`], taking a mandatory context and an options object.
-    ///
-    /// `options` accepts `progress`, called as
-    /// `(phase: string, step: number, total: number)`. Returning `false` cancels the
-    /// operation at that checkpoint, failing it with `OperationCancelled`; any other
-    /// return value, including a thrown error, continues.
+    /// Same as [`WasmBuilder::new`], taking a mandatory context and an
+    /// [`OperationOptions`].
     #[wasm_bindgen(js_name = newWithOptions)]
     pub fn new_with_options(context_json: String, options: JsValue) -> Result<WasmBuilder, JsString> {
         let context = OperationOptions::from_js(&options)

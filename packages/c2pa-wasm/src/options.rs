@@ -20,11 +20,9 @@ pub(crate) fn context_from_json(context_json: Option<String>) -> Result<Context,
 }
 
 
-/// Maps a `ProgressPhase` to the camelCase name JS callers receive.
-///
-/// `ProgressPhase` is non-exhaustive, so a future c2pa-rs release can add a variant
-/// this build cannot name; those arrive as `"unknown"` rather than breaking the build
-/// or being dropped.
+/// Maps a `ProgressPhase` to the camelCase name JS callers receive. `ProgressPhase` is
+/// non-exhaustive, so a variant added by a future c2pa-rs release falls through to
+/// `"unknown"` here rather than failing to build.
 fn phase_name(phase: ProgressPhase) -> &'static str {
     match phase {
         ProgressPhase::Reading => "reading",
@@ -45,15 +43,9 @@ fn phase_name(phase: ProgressPhase) -> &'static str {
     }
 }
 
-/// Per-operation options for the `*WithOptions` entry points.
-///
-/// A JS object rather than positional parameters, so a later capability is added as
-/// another optional field and existing callers keep working unchanged.
-///
-/// The context is **not** part of this object: every `*WithOptions` entry point takes a
-/// mandatory `context_json` parameter beside it. Options configure an operation that a
-/// `Context` already defines, so a signature able to carry options without one would
-/// describe a state that cannot exist.
+/// Per-operation options for the `*WithOptions` entry points. Excludes the context:
+/// each entry point takes `context_json` as its own mandatory parameter, so options
+/// can never exist without one.
 #[derive(Default)]
 pub(crate) struct OperationOptions {
     /// Called as `(phase: string, step: number, total: number)`.
@@ -77,12 +69,9 @@ impl OperationOptions {
 
     /// Builds the `Context` for an operation from its mandatory settings and these options.
     ///
-    /// The callback's return value is how cancellation reaches c2pa-rs: returning `false`
-    /// makes the next checkpoint fail with `Error::OperationCancelled`. Anything that is
-    /// not an explicit `false` continues, so a callback that throws — or returns a
-    /// non-boolean — cannot turn a valid asset into a cancelled read. That matters
-    /// because the same callback carries ordinary progress reports, and a broken
-    /// progress handler must not look like a cancellation request.
+    /// Returning `false` from the callback fails the next checkpoint with
+    /// `Error::OperationCancelled`; a throw or a non-boolean return continues, so a
+    /// broken progress handler cannot cancel a valid read.
     pub(crate) fn build_context(self, context_json: &str) -> Result<Context, WasmError> {
         let mut context = Context::new().with_settings(context_json)?;
 
