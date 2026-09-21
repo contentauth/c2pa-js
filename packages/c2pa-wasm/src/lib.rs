@@ -33,7 +33,7 @@ pub mod wasm_credential_holder;
 pub mod wasm_identity_assertion;
 
 /// Per-operation options shared by the `*WithOptions` entry points.
-pub(crate) mod options;
+pub(crate) mod wasm_context_operation_options;
 
 /// Internal utility functions
 pub(crate) mod utils;

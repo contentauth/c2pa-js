@@ -16,7 +16,7 @@ use web_sys::Blob;
 
 use crate::{
     error::WasmError,
-    options::{OperationOptions, context_from_json},
+    wasm_context_operation_options::{OperationOptions, context_from_json},
     stream::BlobStream,
     utils::cursor_to_u8array,
 };

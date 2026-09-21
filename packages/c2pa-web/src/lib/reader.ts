@@ -10,7 +10,7 @@
 import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
 import type { C2pa } from './c2pa.js';
 import type { WorkerManager } from './worker/workerManager.js';
-import { withOperationOptions } from './worker/operationOptions.js';
+import { withOperationOptions } from './worker/contextOperationOptions.js';
 import {
   Context,
   Settings,

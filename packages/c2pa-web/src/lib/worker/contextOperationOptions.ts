@@ -31,7 +31,7 @@ function cancelOnAbort(
 ): () => void {
   const onAbort = () => worker.tx.operation_cancel(operationId);
   // An `abort` listener added after the signal aborted never fires,
-  // hence we must check it here explicitly.
+  // so the signal must be checked explicitly here.
   if (signal.aborted) {
     onAbort();
     return () => undefined;

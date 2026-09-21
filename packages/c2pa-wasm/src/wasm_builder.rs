@@ -19,7 +19,7 @@ use web_sys::Blob;
 
 use crate::{
     error::WasmError,
-    options::OperationOptions,
+    wasm_context_operation_options::OperationOptions,
     stream::BlobStream,
     utils::cursor_to_u8array,
     wasm_identity_assertion::{WasmIdentityAssertionSigner, parse_identity_assertions},
