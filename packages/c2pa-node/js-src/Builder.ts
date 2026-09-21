@@ -109,13 +109,16 @@ export class Builder implements BuilderInterface {
     context: Context = new Context(),
     contextOptions?: ContextOptions,
   ): Promise<Builder> {
+    const signal = resolveSignal(context, contextOptions);
+    signal?.throwIfAborted();
+
     const settingsStr = resolveSettingsForNeon(context);
     const options = operationOptionsForNeon(context, contextOptions);
     const builder: NeonBuilderHandle = getNeonBinary().builderNew(
       settingsStr,
       options,
     );
-    return new Builder(builder, resolveSignal(context, contextOptions));
+    return new Builder(builder, signal);
   }
 
   /**
@@ -149,6 +152,9 @@ export class Builder implements BuilderInterface {
     context: Context = new Context(),
     contextOptions?: ContextOptions,
   ): Promise<Builder> {
+    const signal = resolveSignal(context, contextOptions);
+    signal?.throwIfAborted();
+
     const jsonString = stringifyManifestDefinition(json);
     const settingsStr = resolveSettingsForNeon(context);
     const options = operationOptionsForNeon(context, contextOptions);
@@ -157,7 +163,7 @@ export class Builder implements BuilderInterface {
       settingsStr,
       options,
     );
-    return new Builder(builder, resolveSignal(context, contextOptions));
+    return new Builder(builder, signal);
   }
 
   setIntent(intent: BuilderIntent): void {

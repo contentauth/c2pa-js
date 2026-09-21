@@ -1149,6 +1149,112 @@ describe("Builder", () => {
         expect(isCancelled(error)).toBe(true);
       }
     });
+
+    it("verifies a cancelled Builder stays cancelled", async () => {
+      const controller = new AbortController();
+      const context = new Context(
+        { verify: { verifyTrust: false } },
+        { onProgress: () => controller.abort(), signal: controller.signal },
+      );
+
+      const builder = await Builder.withJsonAsync(manifestDefinition, context);
+      await builder.addIngredient(parent_json, source);
+      await builder.addResource("thumbnail.jpg", {
+        mimeType: "jpeg",
+        buffer: testThumbnail,
+      });
+      await builder.addResource("ingredient-thumb.jpg", {
+        mimeType: "jpeg",
+        buffer: testThumbnail,
+      });
+
+      const signerConfig: JsCallbackSignerConfig = {
+        alg: "es256",
+        certs: [publicKey],
+        reserveSize: 10000,
+        tsaUrl: undefined,
+        directCoseHandling: false,
+      };
+      const signer = new TestSigner(privateKey);
+
+      await expect(
+        builder.signConfigAsync(signer.sign, signerConfig, source, {
+          path: path.join(tempDir, "context_reuse_first.jpg"),
+        }),
+      ).rejects.toThrow();
+
+      await expect(
+        builder.signConfigAsync(signer.sign, signerConfig, source, {
+          path: path.join(tempDir, "context_reuse_second.jpg"),
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("reuses a Context for a new builder after a per-call signal aborted", async () => {
+      // A context without abort controller on it can be reused.
+      const context = new Context({ verify: { verifyTrust: false } });
+
+      const signerConfig: JsCallbackSignerConfig = {
+        alg: "es256",
+        certs: [publicKey],
+        reserveSize: 10000,
+        tsaUrl: undefined,
+        directCoseHandling: false,
+      };
+      const signer = new TestSigner(privateKey);
+
+      const addResources = async (builder: Builder) => {
+        await builder.addIngredient(parent_json, source);
+        await builder.addResource("thumbnail.jpg", {
+          mimeType: "jpeg",
+          buffer: testThumbnail,
+        });
+        await builder.addResource("ingredient-thumb.jpg", {
+          mimeType: "jpeg",
+          buffer: testThumbnail,
+        });
+      };
+
+      const controller = new AbortController();
+      // Progress and abort controller here is a call override, not on shared context.
+      const aborted = await Builder.withJsonAsync(manifestDefinition, context, {
+        onProgress: () => controller.abort(),
+        signal: controller.signal,
+      });
+      await addResources(aborted);
+      await expect(
+        aborted.signConfigAsync(signer.sign, signerConfig, source, {
+          path: path.join(tempDir, "context_recovery_aborted.jpg"),
+        }),
+      ).rejects.toThrow();
+      expect(controller.signal.aborted).toBe(true);
+
+      // After a per-call cancellation, the shared context without abort controller on it
+      // can still be used.
+      const recovered = await Builder.withJsonAsync(manifestDefinition, context);
+      await addResources(recovered);
+      const bytes = await recovered.signConfigAsync(
+        signer.sign,
+        signerConfig,
+        source,
+        { path: path.join(tempDir, "context_recovery_new.jpg") },
+      );
+
+      expect(bytes.length).toBeGreaterThan(0);
+    });
+
+    it("refuses to build from a Context whose signal already aborted", async () => {
+      const controller = new AbortController();
+      controller.abort();
+      const context = new Context(
+        { verify: { verifyTrust: false } },
+        { signal: controller.signal },
+      );
+
+      await expect(
+        Builder.withJsonAsync(manifestDefinition, context),
+      ).rejects.toThrow();
+    });
   });
 
   describe("Filter actions and ingredients", () => {

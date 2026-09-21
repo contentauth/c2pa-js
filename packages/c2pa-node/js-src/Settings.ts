@@ -102,6 +102,10 @@ export function cancelOnAbort(
     return () => undefined;
   }
   const onAbort = () => getNeonBinary().operationCancel.call(handle);
+  if (signal.aborted) {
+    onAbort();
+    return () => undefined;
+  }
   signal.addEventListener("abort", onAbort, { once: true });
   return () => signal.removeEventListener("abort", onAbort);
 }
