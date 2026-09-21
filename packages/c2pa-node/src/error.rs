@@ -89,9 +89,22 @@ unsafe impl Sync for Error {}
 #[allow(dead_code)]
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// The message a JS caller sees. `Error::C2pa` is transparent, so `Display` alone reads
+/// "operation cancelled" for a cancelled operation — but `isCancelled` in `c2pa-utilities`
+/// matches the `Debug` form, `C2pa(OperationCancelled)`, which is what `c2pa-wasm` sends.
+/// Prefixing it here keeps that shared check working without losing the readable message.
+fn js_error_message(err: &Error) -> String {
+    match err {
+        Error::C2pa(c2pa::Error::OperationCancelled) => {
+            format!("{err:?}: {err}")
+        }
+        _ => err.to_string(),
+    }
+}
+
 pub fn as_js_error<'a>(cx: &mut TaskContext<'a>, err: Error) -> JsResult<'a, JsError> {
     cx.execute_scoped(|mut cx| {
-        let js_err = cx.error(err.to_string())?;
+        let js_err = cx.error(js_error_message(&err))?;
         let js_err_name = cx.string(format!("{err:?}"));
         js_err.set(&mut cx, "name", js_err_name)?;
 
@@ -100,7 +113,7 @@ pub fn as_js_error<'a>(cx: &mut TaskContext<'a>, err: Error) -> JsResult<'a, JsE
 }
 
 pub fn as_js_error_fn<'a>(cx: &mut FunctionContext<'a>, err: Error) -> JsResult<'a, JsError> {
-    let js_err = cx.error(err.to_string())?;
+    let js_err = cx.error(js_error_message(&err))?;
     let js_err_name = cx.string(format!("{err:?}"));
     js_err.set(cx, "name", js_err_name)?;
     Ok(js_err)

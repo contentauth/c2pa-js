@@ -32,14 +32,40 @@ import type {
   NeonIdentityAssertionBuilderHandle,
   NeonCallbackCredentialHolderHandle,
   NeonTrustmarkHandle,
+  NeonOperationHandle,
 } from "./types.d.ts";
 
 // These functions are not exposed directly, but are called by the Builder, Reader, and Signer, etc. classes
 
 declare module "index.node" {
+  /** Per-operation options. `progress` is called with `total === null` when indeterminate. */
+  interface NeonOperationOptions {
+    progress?: (
+      phase: string,
+      step: number,
+      total: number | null,
+    ) => void;
+  }
+
+  /** A read in flight: `operation` cancels it, `reader` resolves when it finishes. */
+  interface NeonReadResult {
+    operation: NeonOperationHandle;
+    reader: Promise<NeonReaderHandle | null>;
+  }
+
+  export function operationCancel(): void;
+
   // Builder methods
-  export function builderNew(): NeonBuilderHandle;
-  export function builderWithJson(json: string): NeonBuilderHandle;
+  export function builderNew(
+    settings?: string,
+    options?: NeonOperationOptions,
+  ): NeonBuilderHandle;
+  export function builderWithJson(
+    json: string,
+    settings?: string,
+    options?: NeonOperationOptions,
+  ): NeonBuilderHandle;
+  export function builderOperationHandle(): NeonOperationHandle;
   export function builderSetIntent(intent: string): void;
   export function builderSetNoEmbed(noEmbed: boolean): void;
   export function builderSetRemoteUrl(url: string): void;
@@ -91,11 +117,15 @@ declare module "index.node" {
   // Reader methods
   export function readerFromAsset(
     asset: SourceAsset,
-  ): Promise<NeonReaderHandle>;
+    settings?: string,
+    options?: NeonOperationOptions,
+  ): NeonReadResult;
   export function readerFromManifestDataAndAsset(
     manifestData: Buffer,
     asset: SourceAsset,
-  ): Promise<NeonReaderHandle>;
+    settings?: string,
+    options?: NeonOperationOptions,
+  ): NeonReadResult;
   export function readerJson(): string;
   export function readerRemoteUrl(): string;
   export function readerIsEmbedded(): boolean;

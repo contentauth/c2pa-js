@@ -19,6 +19,7 @@ mod runtime;
 mod utils;
 
 pub mod neon_builder;
+pub mod neon_context_operation_options;
 pub mod neon_credential_holder;
 pub mod neon_identity_assertion_builder;
 pub mod neon_identity_assertion_signer;
@@ -31,6 +32,10 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     // Builder
     cx.export_function("builderNew", neon_builder::NeonBuilder::new)?;
     cx.export_function("builderWithJson", neon_builder::NeonBuilder::with_json)?;
+    cx.export_function(
+        "builderOperationHandle",
+        neon_builder::NeonBuilder::operation_handle,
+    )?;
     cx.export_function("builderSetIntent", neon_builder::NeonBuilder::set_intent)?;
     cx.export_function("builderSetNoEmbed", neon_builder::NeonBuilder::set_no_embed)?;
     cx.export_function(
@@ -119,6 +124,12 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function(
         "readerResourceToAsset",
         neon_reader::NeonReader::resource_to_asset,
+    )?;
+
+    // Operations
+    cx.export_function(
+        "operationCancel",
+        neon_context_operation_options::OperationHandle::cancel,
     )?;
 
     // Signers

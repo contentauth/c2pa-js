@@ -16,7 +16,13 @@
 import type { ManifestStore } from "@contentauth/c2pa-types";
 import path from "path";
 import fs from "fs-extra";
-import { AssetTooLargeError, Context } from "@contentauth/c2pa-utilities";
+import {
+  AssetTooLargeError,
+  Context,
+  isCancelled,
+  PROGRESS_PHASES,
+  type ProgressReportEvent,
+} from "@contentauth/c2pa-utilities";
 
 import { Reader } from "./Reader.js";
 import { MAX_SIZE_IN_BYTES } from "./assetSize.js";
@@ -349,5 +355,104 @@ describe("Reader", () => {
 
     const reader = await Reader.fromAsset(asset);
     expect(reader).toBeNull();
+  });
+
+  describe("Progress events", () => {
+    const source = { path: "./tests/fixtures/CA.jpg" };
+    const settings = { verify: { verifyTrust: false } };
+
+    /** Check ProgressEvent structure **/
+    function expectProgressEvent(events: ProgressReportEvent[]) {
+      expect(events.length).toBeGreaterThan(0);
+      for (const event of events) {
+        expect(PROGRESS_PHASES).toContain(event.phase);
+        expect(event.step).toBeGreaterThanOrEqual(1);
+        if (event.total !== null) {
+          expect(event.total).toBeGreaterThanOrEqual(1);
+        }
+      }
+    }
+
+    it("reports progress during reading", async () => {
+      const events: ProgressReportEvent[] = [];
+      const context = new Context(settings, {
+        onProgress: (event) => events.push(event),
+      });
+
+      const reader = await Reader.fromAsset(source, context);
+
+      expect(reader).not.toBeNull();
+      expectProgressEvent(events);
+    });
+
+    it("reads without a progress callback", async () => {
+      // This makes sure we don't have side-effects with/without progress events.
+      const context = new Context(settings);
+      expect(context.onProgress).toBeUndefined();
+
+      const reader = await Reader.fromAsset(source, context);
+
+      expect(reader).not.toBeNull();
+      expect(reader!.json().active_manifest).not.toBeUndefined();
+    });
+
+    it("cancels a read flight", async () => {
+      // The context is set up to abort on first progress report.
+      const controller = new AbortController();
+      const context = new Context(settings, {
+        onProgress: () => controller.abort(),
+        signal: controller.signal,
+      });
+
+      try {
+        await Reader.fromAsset(source, context);
+        throw new Error("expected the read to reject");
+      } catch (error) {
+        expect(isCancelled(error)).toBe(true);
+      }
+    });
+
+    it("rejects with the signal's reason when aborted before the call", async () => {
+      const controller = new AbortController();
+      controller.abort();
+      const context = new Context(settings, { signal: controller.signal });
+
+      await expect(Reader.fromAsset(source, context)).rejects.toThrow();
+    });
+
+    it("can cancel event if progress events aren't listened to", async () => {
+      // Allow to cancel even if no progress events are configured.
+      const controller = new AbortController();
+      const cancelled = new Context(settings, { signal: controller.signal });
+      expect(cancelled.onProgress).toBeUndefined();
+
+      const trigger = new Context(settings, {
+        onProgress: () => controller.abort(),
+      });
+
+      const [triggerResult, cancelledResult] = await Promise.allSettled([
+        Reader.fromAsset(source, trigger),
+        Reader.fromAsset(source, cancelled),
+      ]);
+
+      expect(triggerResult.status).toBe("fulfilled");
+      expect(cancelledResult.status).toBe("rejected");
+      if (cancelledResult.status === "rejected") {
+        expect(isCancelled(cancelledResult.reason)).toBe(true);
+      }
+    });
+
+    it("does not cancel a read when onProgress throws", async () => {
+      const context = new Context(settings, {
+        onProgress: () => {
+          throw new Error("handler is broken");
+        },
+      });
+
+      const reader = await Reader.fromAsset(source, context);
+
+      expect(reader).not.toBeNull();
+      expect(reader!.json().active_manifest).not.toBeUndefined();
+    });
   });
 });

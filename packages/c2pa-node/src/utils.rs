@@ -11,10 +11,14 @@
 // specific language governing permissions and limitations under
 // each license.
 
+use std::sync::Arc;
+
 use c2pa::Context;
+use neon::context::Context as NeonContext;
 use neon::prelude::*;
 
 use crate::error::{Error, Result};
+use crate::neon_context_operation_options::{install, OperationOptions};
 
 #[allow(dead_code)]
 // Used in debugging
@@ -69,4 +73,19 @@ pub fn parse_settings(
         }
         None => Ok(None),
     }
+}
+
+/// Parses the settings and per-operation options a Reader/Builder entry point accepts, and
+/// builds the `Context` they configure. Unlike [`parse_settings`], this always returns a
+/// `Context` — a caller may supply progress or cancellation with no settings at all.
+pub fn parse_context(
+    cx: &mut FunctionContext,
+    settings_index: usize,
+    options_index: usize,
+    error_prefix: &str,
+) -> Result<Arc<Context>> {
+    let context = parse_settings(cx, settings_index, error_prefix)?.unwrap_or_default();
+    let options = OperationOptions::from_js(cx, options_index)
+        .map_err(|_| Error::Signing(format!("{error_prefix}: Invalid operation options")))?;
+    Ok(install(context, options, cx.channel()))
 }

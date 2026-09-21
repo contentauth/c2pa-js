@@ -27,53 +27,56 @@ use tokio::sync::Mutex;
 
 use crate::asset::parse_asset;
 use crate::error::{as_js_error, Error};
+use crate::neon_context_operation_options::OperationHandle;
 use crate::neon_identity_assertion_signer::NeonIdentityAssertionSigner;
 use crate::neon_reader::NeonReader;
 use crate::neon_signer::{CallbackSignerConfig, NeonCallbackSigner, NeonLocalSigner};
 use crate::runtime::runtime;
-use crate::utils::parse_settings;
+use crate::utils::{parse_context, parse_settings};
 
 pub struct NeonBuilder {
     builder: Arc<Mutex<Builder>>,
+    /// The `Context` this builder signs with, kept so cancellation stays reachable after
+    /// construction: its progress callback and cancel flag are consulted during `sign`, not here.
+    /// `None` for a builder created from an archive, which takes no operation options.
+    context: Option<Arc<c2pa::Context>>,
 }
 
 impl NeonBuilder {
     pub fn new(mut cx: FunctionContext) -> JsResult<JsBox<Self>> {
-        // Parse optional settings parameter (argument 0)
-        let context_opt =
-            parse_settings(&mut cx, 0, "Builder").or_else(|err| cx.throw_error(err.to_string()))?;
-
-        let builder = if let Some(context) = context_opt {
-            Builder::from_shared_context(&context.into_shared())
-        } else {
-            Builder::default()
-        };
+        let context = parse_context(&mut cx, 0, 1, "Builder")
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+        let builder = Builder::from_shared_context(&context);
 
         Ok(cx.boxed(Self {
             builder: Arc::new(Mutex::new(builder)),
+            context: Some(context),
         }))
     }
 
     pub fn with_json(mut cx: FunctionContext) -> JsResult<JsBox<Self>> {
         let json = cx.argument::<JsString>(0)?.value(&mut cx);
 
-        // Parse optional settings parameter (argument 1)
-        let context_opt =
-            parse_settings(&mut cx, 1, "Builder").or_else(|err| cx.throw_error(err.to_string()))?;
-
-        let builder = if let Some(context) = context_opt {
-            Builder::from_shared_context(&context.into_shared())
-                .with_definition(json.as_str())
-                .or_else(|err| cx.throw_error(err.to_string()))?
-        } else {
-            Builder::default()
-                .with_definition(&json)
-                .or_else(|err| cx.throw_error(err.to_string()))?
-        };
+        let context = parse_context(&mut cx, 1, 2, "Builder")
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+        let builder = Builder::from_shared_context(&context)
+            .with_definition(json.as_str())
+            .or_else(|err| cx.throw_error(err.to_string()))?;
 
         Ok(cx.boxed(Self {
             builder: Arc::new(Mutex::new(builder)),
+            context: Some(context),
         }))
+    }
+
+    /// The handle that cancels operations on this builder, for wiring to an `AbortSignal`.
+    /// Throws for a builder created from an archive, which takes no operation options.
+    pub fn operation_handle(mut cx: FunctionContext) -> JsResult<JsBox<OperationHandle>> {
+        let this = cx.this::<JsBox<Self>>()?;
+        match &this.context {
+            Some(context) => Ok(cx.boxed(OperationHandle::new(Arc::clone(context)))),
+            None => cx.throw_error("Builder was not created with a Context"),
+        }
     }
 
     pub fn set_intent(mut cx: FunctionContext) -> JsResult<JsUndefined> {
@@ -330,7 +333,8 @@ impl NeonBuilder {
             .task(move || {
                 let source_stream = source.into_read_stream()?;
                 let builder = if let Some(context) = context_opt {
-                    Builder::from_shared_context(&context.into_shared()).with_archive(source_stream)?
+                    Builder::from_shared_context(&context.into_shared())
+                        .with_archive(source_stream)?
                 } else {
                     Builder::default().with_archive(source_stream)?
                 };
@@ -340,6 +344,7 @@ impl NeonBuilder {
                 move |mut cx, result: crate::error::Result<Builder>| match result {
                     Ok(builder) => Ok(cx.boxed(Self {
                         builder: Arc::new(Mutex::new(builder)),
+                        context: None,
                     })),
                     Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
                 },
@@ -461,7 +466,9 @@ impl NeonBuilder {
                         Ok(result_buffer.upcast::<JsValue>())
                     }
                 }
-                Err(err) => cx.throw_error(err.to_string()),
+                Err(err) => {
+                    as_js_error(&mut cx, Error::from(err)).and_then(|err| cx.throw(err))
+                }
             });
         });
         Ok(promise)
@@ -532,7 +539,9 @@ impl NeonBuilder {
                         Ok(result_buffer.upcast::<JsValue>())
                     }
                 }
-                Err(err) => cx.throw_error(err.to_string()),
+                Err(err) => {
+                    as_js_error(&mut cx, Error::from(err)).and_then(|err| cx.throw(err))
+                }
             });
         });
         Ok(promise)
@@ -604,7 +613,9 @@ impl NeonBuilder {
                         Ok(result_buffer.upcast::<JsValue>())
                     }
                 }
-                Err(err) => cx.throw_error(err.to_string()),
+                Err(err) => {
+                    as_js_error(&mut cx, Error::from(err)).and_then(|err| cx.throw(err))
+                }
             });
         });
         Ok(promise)

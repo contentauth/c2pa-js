@@ -14,7 +14,12 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import type { Manifest, ResourceRef } from "@contentauth/c2pa-types";
-import { Context } from "@contentauth/c2pa-utilities";
+import {
+  Context,
+  isCancelled,
+  PROGRESS_PHASES,
+  type ProgressReportEvent,
+} from "@contentauth/c2pa-utilities";
 import fs from "fs-extra";
 import path from "path";
 import * as crypto from "crypto";
@@ -1055,6 +1060,94 @@ describe("Builder", () => {
       expect(restoredBuilder.getManifestDefinition().title).toBe(
         manifestDefinition.title,
       );
+    });
+
+    /** Check ProgressEvent structure **/
+    function expectProgressEvent(events: ProgressReportEvent[]) {
+      expect(events.length).toBeGreaterThan(0);
+      for (const event of events) {
+        expect(PROGRESS_PHASES).toContain(event.phase);
+        expect(event.step).toBeGreaterThanOrEqual(1);
+        if (event.total !== null) {
+          expect(event.total).toBeGreaterThanOrEqual(1);
+        }
+      }
+    }
+
+    it("reports progress during signing", async () => {
+      const events: ProgressReportEvent[] = [];
+      const context = new Context(
+        { verify: { verifyTrust: false } },
+        { onProgress: (event) => events.push(event) },
+      );
+
+      const builder = await Builder.withJsonAsync(manifestDefinition, context);
+      await builder.addIngredient(parent_json, source);
+      await builder.addResource("thumbnail.jpg", {
+        mimeType: "jpeg",
+        buffer: testThumbnail,
+      });
+      await builder.addResource("ingredient-thumb.jpg", {
+        mimeType: "jpeg",
+        buffer: testThumbnail,
+      });
+
+      const signerConfig: JsCallbackSignerConfig = {
+        alg: "es256",
+        certs: [publicKey],
+        reserveSize: 10000,
+        tsaUrl: undefined,
+        directCoseHandling: false,
+      };
+      const signer = new TestSigner(privateKey);
+      const dest = { path: path.join(tempDir, "context_progress_signed.jpg") };
+
+      const bytes = await builder.signConfigAsync(
+        signer.sign,
+        signerConfig,
+        source,
+        dest,
+      );
+
+      expect(bytes.length).toBeGreaterThan(0);
+      expectProgressEvent(events);
+    });
+
+    it("cancels a signing flow through the builder's Context", async () => {
+      const controller = new AbortController();
+      // This COntext is set up to abort on first progress report.
+      const context = new Context(
+        { verify: { verifyTrust: false } },
+        { onProgress: () => controller.abort(), signal: controller.signal },
+      );
+
+      const builder = await Builder.withJsonAsync(manifestDefinition, context);
+      await builder.addIngredient(parent_json, source);
+      await builder.addResource("thumbnail.jpg", {
+        mimeType: "jpeg",
+        buffer: testThumbnail,
+      });
+      await builder.addResource("ingredient-thumb.jpg", {
+        mimeType: "jpeg",
+        buffer: testThumbnail,
+      });
+
+      const signerConfig: JsCallbackSignerConfig = {
+        alg: "es256",
+        certs: [publicKey],
+        reserveSize: 10000,
+        tsaUrl: undefined,
+        directCoseHandling: false,
+      };
+      const signer = new TestSigner(privateKey);
+      const dest = { path: path.join(tempDir, "context_progress_cancelled.jpg") };
+
+      try {
+        await builder.signConfigAsync(signer.sign, signerConfig, source, dest);
+        throw new Error("expected the sign to reject");
+      } catch (error) {
+        expect(isCancelled(error)).toBe(true);
+      }
     });
   });
 

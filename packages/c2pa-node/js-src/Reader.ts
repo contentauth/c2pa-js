@@ -12,11 +12,16 @@
 // each license.
 
 import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
-import type { Context } from "@contentauth/c2pa-utilities";
+import type { Context, ContextOptions } from "@contentauth/c2pa-utilities";
 
 import { getNeonBinary } from "./binary.js";
 import { validateSourceAssetSize } from "./assetSize.js";
-import { resolveSettingsForNeon } from "./Settings.js";
+import {
+  cancelOnAbort,
+  operationOptionsForNeon,
+  resolveSettingsForNeon,
+  resolveSignal,
+} from "./Settings.js";
 import type {
   C2paSettings,
   DestinationAsset,
@@ -24,6 +29,7 @@ import type {
   ResourceAsset,
   SourceAsset,
   NeonReaderHandle,
+  NeonOperationHandle,
 } from "./types.d.ts";
 
 export class Reader implements ReaderInterface {
@@ -53,11 +59,15 @@ export class Reader implements ReaderInterface {
   static async fromAsset(
     asset: SourceAsset,
     settingsOrContext?: C2paSettings | Context | null,
+    contextOptions?: ContextOptions,
   ): Promise<Reader | null> {
     await validateSourceAssetSize(asset);
-    const settingsStr = resolveSettingsForNeon(settingsOrContext);
-    const reader: NeonReaderHandle | null =
-      await getNeonBinary().readerFromAsset(asset, settingsStr);
+    const reader = await runRead(
+      settingsOrContext,
+      contextOptions,
+      (settingsStr, options) =>
+        getNeonBinary().readerFromAsset(asset, settingsStr, options),
+    );
     return reader ? new Reader(reader) : null;
   }
 
@@ -70,12 +80,21 @@ export class Reader implements ReaderInterface {
     manifestData: Buffer,
     asset: SourceAsset,
     settingsOrContext?: C2paSettings | Context | null,
+    contextOptions?: ContextOptions,
   ): Promise<Reader> {
     await validateSourceAssetSize(asset);
-    const settingsStr = resolveSettingsForNeon(settingsOrContext);
-    const reader: NeonReaderHandle =
-      await getNeonBinary().readerFromManifestDataAndAsset(manifestData, asset, settingsStr);
-    return new Reader(reader);
+    const reader = await runRead(
+      settingsOrContext,
+      contextOptions,
+      (settingsStr, options) =>
+        getNeonBinary().readerFromManifestDataAndAsset(
+          manifestData,
+          asset,
+          settingsStr,
+          options,
+        ),
+    );
+    return new Reader(reader as NeonReaderHandle);
   }
 
   // Non-neon methods, copied from c2pa-js
@@ -98,5 +117,35 @@ export class Reader implements ReaderInterface {
 
   getHandle(): NeonReaderHandle {
     return this.reader;
+  }
+}
+
+/**
+ * Runs a neon read, attaching the operation handle to `AbortSignal` before the read is
+ * awaited. A read that finishes before the engine's next progress checkpoint is not
+ * cancelled, per `ContextOptions.signal`.
+ *
+ * @throws the signal's reason when it has already been aborted.
+ */
+async function runRead(
+  settingsOrContext: C2paSettings | Context | null | undefined,
+  contextOptions: ContextOptions | undefined,
+  start: (
+    settingsStr: string | undefined,
+    options: ReturnType<typeof operationOptionsForNeon>,
+  ) => { operation: NeonOperationHandle; reader: Promise<NeonReaderHandle | null> },
+): Promise<NeonReaderHandle | null> {
+  const signal = resolveSignal(settingsOrContext, contextOptions);
+  signal?.throwIfAborted();
+
+  const settingsStr = resolveSettingsForNeon(settingsOrContext);
+  const options = operationOptionsForNeon(settingsOrContext, contextOptions);
+  const { operation, reader } = start(settingsStr, options);
+
+  const detach = cancelOnAbort(operation, signal);
+  try {
+    return await reader;
+  } finally {
+    detach();
   }
 }

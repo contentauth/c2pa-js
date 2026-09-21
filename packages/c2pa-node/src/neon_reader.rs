@@ -21,8 +21,9 @@ use tokio::sync::Mutex;
 
 use crate::asset::parse_asset;
 use crate::error::{as_js_error, Error, Result};
+use crate::neon_context_operation_options::OperationHandle;
 use crate::runtime::runtime;
-use crate::utils::parse_settings;
+use crate::utils::parse_context;
 
 #[derive(Debug)]
 pub struct NeonReader {
@@ -43,16 +44,19 @@ impl NeonReader {
         Arc::clone(&self.reader)
     }
 
-    pub fn from_stream(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    /// Resolves to `{ operation, reader }`: the handle is available synchronously so an
+    /// `AbortSignal` can cancel the read while it is still running, which awaiting the reader
+    /// promise first would not allow.
+    pub fn from_stream(mut cx: FunctionContext) -> JsResult<JsObject> {
         let rt = runtime();
         let channel = cx.channel();
         let source = cx
             .argument::<JsObject>(0)
             .and_then(|obj| parse_asset(&mut cx, obj))?;
 
-        // Parse optional settings parameter (argument 1)
-        let context_opt =
-            parse_settings(&mut cx, 1, "Reader").or_else(|err| cx.throw_error(err.to_string()))?;
+        let context = parse_context(&mut cx, 1, 2, "Reader")
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+        let operation = cx.boxed(OperationHandle::new(Arc::clone(&context)));
 
         let (deferred, promise) = cx.promise();
         rt.spawn(async move {
@@ -66,14 +70,9 @@ impl NeonReader {
 
                 let stream = source.into_read_stream()?;
 
-                // Create reader with or without context
-                let reader = if let Some(context) = context_opt {
-                    Reader::from_shared_context(&context.into_shared())
-                        .with_stream_async(&format, stream)
-                        .await?
-                } else {
-                    Reader::default().with_stream_async(&format, stream).await?
-                };
+                let reader = Reader::from_shared_context(&context)
+                    .with_stream_async(&format, stream)
+                    .await?;
 
                 Ok(reader)
             }
@@ -99,10 +98,15 @@ impl NeonReader {
                 }
             });
         });
-        Ok(promise)
+
+        let result = cx.empty_object();
+        result.set(&mut cx, "operation", operation)?;
+        result.set(&mut cx, "reader", promise)?;
+        Ok(result)
     }
 
-    pub fn from_manifest_data_and_asset(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    /// Resolves to `{ operation, reader }`, as [`Self::from_stream`] does.
+    pub fn from_manifest_data_and_asset(mut cx: FunctionContext) -> JsResult<JsObject> {
         let rt = runtime();
         let channel = cx.channel();
         let manifest_data = cx.argument::<JsBuffer>(0)?;
@@ -110,10 +114,9 @@ impl NeonReader {
             .argument::<JsObject>(1)
             .and_then(|obj| parse_asset(&mut cx, obj))?;
 
-        // Parse optional settings parameter (argument 2) - note: settings are not currently used
-        // for from_manifest_data_and_asset as the c2pa-rs API doesn't support context for this method yet
-        let context_opt =
-            parse_settings(&mut cx, 2, "Reader").or_else(|err| cx.throw_error(err.to_string()))?;
+        let context = parse_context(&mut cx, 2, 3, "Reader")
+            .or_else(|err| cx.throw_error(err.to_string()))?;
+        let operation = cx.boxed(OperationHandle::new(Arc::clone(&context)));
 
         let c2pa_data = manifest_data.as_slice(&cx).to_vec();
         let (deferred, promise) = cx.promise();
@@ -127,15 +130,9 @@ impl NeonReader {
                     .to_owned();
                 let stream = asset.into_read_stream()?;
 
-                let reader = if let Some(context) = context_opt {
-                    Reader::from_shared_context(&context.into_shared())
-                        .with_manifest_data_and_stream_async(&c2pa_data, &format, stream)
-                        .await?
-                } else {
-                    Reader::default()
-                        .with_manifest_data_and_stream_async(&c2pa_data, &format, stream)
-                        .await?
-                };
+                let reader = Reader::from_shared_context(&context)
+                    .with_manifest_data_and_stream_async(&c2pa_data, &format, stream)
+                    .await?;
 
                 Ok(reader)
             }
@@ -151,7 +148,11 @@ impl NeonReader {
                 Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
             });
         });
-        Ok(promise)
+
+        let result = cx.empty_object();
+        result.set(&mut cx, "operation", operation)?;
+        result.set(&mut cx, "reader", promise)?;
+        Ok(result)
     }
 
     pub fn json(mut cx: FunctionContext) -> JsResult<JsValue> {

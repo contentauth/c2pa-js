@@ -20,9 +20,15 @@ import type {
   ManifestStore,
 } from "@contentauth/c2pa-types";
 import { Context } from "@contentauth/c2pa-utilities";
+import type { ContextOptions } from "@contentauth/c2pa-utilities";
 
 import { getNeonBinary } from "./binary.js";
-import { resolveSettingsForNeon } from "./Settings.js";
+import {
+  cancelOnAbort,
+  operationOptionsForNeon,
+  resolveSettingsForNeon,
+  resolveSignal,
+} from "./Settings.js";
 import type {
   BuilderInterface,
   C2paSettings,
@@ -57,7 +63,26 @@ function stringifyManifestDefinition(json: Manifest): string {
 }
 
 export class Builder implements BuilderInterface {
-  constructor(private builder: NeonBuilderHandle) {}
+  private detachAbort: () => void = () => undefined;
+
+  constructor(
+    private builder: NeonBuilderHandle,
+    signal?: AbortSignal,
+  ) {
+    if (signal) {
+      // This is the cancellation signal, if any.
+      const operation = getNeonBinary().builderOperationHandle.call(
+        this.builder,
+      );
+      this.detachAbort = cancelOnAbort(operation, signal);
+    }
+  }
+
+  /** Detaches the abort listener registered in the constructor, if any. Optional to call. */
+  free(): void {
+    this.detachAbort();
+    this.detachAbort = () => undefined;
+  }
 
   /**
    * @deprecated Use {@link Builder.newAsync} instead, passing a `Context`. Will be removed in a
@@ -80,10 +105,17 @@ export class Builder implements BuilderInterface {
    * @param context A `Context` object containing configuration settings for this Builder.
    * Defaults to an empty `Context` using default settings if one is not provided.
    */
-  static async newAsync(context: Context = new Context()): Promise<Builder> {
+  static async newAsync(
+    context: Context = new Context(),
+    contextOptions?: ContextOptions,
+  ): Promise<Builder> {
     const settingsStr = resolveSettingsForNeon(context);
-    const builder: NeonBuilderHandle = getNeonBinary().builderNew(settingsStr);
-    return new Builder(builder);
+    const options = operationOptionsForNeon(context, contextOptions);
+    const builder: NeonBuilderHandle = getNeonBinary().builderNew(
+      settingsStr,
+      options,
+    );
+    return new Builder(builder, resolveSignal(context, contextOptions));
   }
 
   /**
@@ -115,14 +147,17 @@ export class Builder implements BuilderInterface {
   static async withJsonAsync(
     json: Manifest,
     context: Context = new Context(),
+    contextOptions?: ContextOptions,
   ): Promise<Builder> {
     const jsonString = stringifyManifestDefinition(json);
     const settingsStr = resolveSettingsForNeon(context);
+    const options = operationOptionsForNeon(context, contextOptions);
     const builder: NeonBuilderHandle = getNeonBinary().builderWithJson(
       jsonString,
       settingsStr,
+      options,
     );
-    return new Builder(builder);
+    return new Builder(builder, resolveSignal(context, contextOptions));
   }
 
   setIntent(intent: BuilderIntent): void {

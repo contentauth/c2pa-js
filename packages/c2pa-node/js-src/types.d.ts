@@ -146,6 +146,8 @@ export type NeonCallbackCredentialHolderHandle = unknown;
 export type NeonLocalSignerHandle = unknown;
 export type NeonBuilderHandle = unknown;
 export type NeonReaderHandle = unknown;
+/** Cancels the Reader/Builder operation it was issued for. */
+export type NeonOperationHandle = unknown;
 export type NeonIdentityAssertionSignerHandle = unknown;
 export type NeonIdentityAssertionBuilderHandle = unknown;
 export type NeonTrustmarkHandle = unknown;
@@ -413,6 +415,9 @@ export interface BuilderInterface {
   /**
    * Get the internal handle for use with Neon bindings
    */
+  /** Releases this builder's abort listener, if a `Context` supplied an `AbortSignal`. */
+  free(): void;
+
   getHandle(): NeonBuilderHandle;
 }
 
