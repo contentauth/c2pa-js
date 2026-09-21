@@ -11,7 +11,7 @@ import type { WorkerManager } from './worker/workerManager.js';
 import {
   attachToOperation,
   registerOperation
-} from './worker/operationOptions.js';
+} from './worker/contextOperationOptions.js';
 import {
   getSerializablePayload,
   getSerializableIdentityAssertion,
