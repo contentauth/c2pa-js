@@ -230,7 +230,7 @@ const PAD2_CBOR_OVERHEAD: usize = 6;
 
 /// Size of a padding field that brings the encoded assertion up to
 /// `assertion_size`.
-/// Returns a`BadParam` error when the caller's reserved size
+/// Returns a `BadParam` error when the caller's reserved size
 /// cannot fit in the CBOR framing.
 fn pad_len(assertion_size: usize, encoded_len: usize, overhead: usize) -> c2pa::Result<usize> {
     assertion_size
