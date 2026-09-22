@@ -192,7 +192,7 @@ fn finalize_identity_assertion(
             return Err(c2pa::Error::BadParam(format!("Serialized assertion is {len} bytes, which exceeds the planned size of {assertion_size} bytes", len = assertion_cbor.len())));
         }
 
-        ia.pad1 = vec![0u8; assertion_size - assertion_cbor.len() - 15];
+        ia.pad1 = vec![0u8; pad_len(assertion_size, assertion_cbor.len(), PAD1_CBOR_OVERHEAD)?];
 
         assertion_cbor.clear();
         c2pa_cbor::to_writer(&mut assertion_cbor, &ia)
@@ -200,14 +200,46 @@ fn finalize_identity_assertion(
 
         ia.pad2 = Some(ByteBuf::from(vec![
             0u8;
-            assertion_size - assertion_cbor.len() - 6
+            pad_len(
+                assertion_size,
+                assertion_cbor.len(),
+                PAD2_CBOR_OVERHEAD
+            )?
         ]));
 
         assertion_cbor.clear();
         c2pa_cbor::to_writer(&mut assertion_cbor, &ia)
             .map_err(|e| c2pa::Error::BadParam(e.to_string()))?;
-        assert_eq!(assertion_size, assertion_cbor.len());
+
+        if assertion_size != assertion_cbor.len() {
+            return Err(c2pa::Error::BadParam(format!(
+                "Padded assertion is {len} bytes, different from expected {assertion_size} bytes",
+                len = assertion_cbor.len()
+            )));
+        }
     }
 
     Ok(DynamicAssertionContent::Cbor(assertion_cbor))
+}
+
+/// CBOR framing cost of writing the `pad1` byte string into the assertion.
+const PAD1_CBOR_OVERHEAD: usize = 15;
+
+/// CBOR framing cost of writing the `pad2` byte string into the assertion.
+const PAD2_CBOR_OVERHEAD: usize = 6;
+
+/// Size of a padding field that brings the encoded assertion up to
+/// `assertion_size`.
+/// Returns a`BadParam` error when the caller's reserved size
+/// cannot fit in the CBOR framing.
+fn pad_len(assertion_size: usize, encoded_len: usize, overhead: usize) -> c2pa::Result<usize> {
+    assertion_size
+        .checked_sub(encoded_len)
+        .and_then(|remaining| remaining.checked_sub(overhead))
+        .ok_or_else(|| {
+            c2pa::Error::BadParam(format!(
+                "Identity assertion reserveSize {assertion_size} bytes needs at least {min} bytes",
+                min = encoded_len + overhead
+            ))
+        })
 }
