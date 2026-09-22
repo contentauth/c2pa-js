@@ -1195,6 +1195,46 @@ describe('builder', () => {
 
         expect(assertionLabels).toContain('cawg.identity');
       });
+
+      test('rejects a reserveSize too small for the id assertion (does not poison the worker)', async ({
+        c2pa
+      }) => {
+        const blob = await getBlobForAsset(SAMPLE1_JXL);
+        const jxlMimetype = 'image/jxl';
+
+        const builder = await Builder.new(c2pa);
+        const signer = await createTestSigner();
+
+        const credentialHolder: CredentialHolder = {
+          sigType: 'cawg.test-signature',
+          reserveSize: 240,
+          sign: async () => new Uint8Array(64).fill(7)
+        };
+
+        await expect(
+          builder.sign(signer, jxlMimetype, blob, {
+            identityAssertions: [{ credentialHolder }]
+          })
+        ).rejects.toThrow(/reserveSize/i);
+
+        // The worker should still work.
+        const recoveryBuilder = await Builder.new(c2pa);
+        const recoverySigner = await createTestSigner();
+        const recoveryHolder: CredentialHolder = {
+          sigType: 'cawg.test-signature',
+          reserveSize: 10000,
+          sign: async () => new Uint8Array(64).fill(7)
+        };
+
+        const signedBytes = await recoveryBuilder.sign(
+          recoverySigner,
+          jxlMimetype,
+          await getBlobForAsset(SAMPLE1_JXL),
+          { identityAssertions: [{ credentialHolder: recoveryHolder }] }
+        );
+
+        expect(signedBytes.byteLength).toBeGreaterThan(0);
+      });
     });
   });
 
