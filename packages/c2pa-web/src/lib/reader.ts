@@ -56,7 +56,8 @@ export class Reader {
     blob: Blob,
     context: Context = new Context()
   ): Promise<Reader | null> {
-    validateAssetSize(blob.size, MAX_SIZE_IN_BYTES);
+    const maxSizeInBytes = context.options?.maxSizeInBytes ?? MAX_SIZE_IN_BYTES;
+    validateAssetSize(blob.size, maxSizeInBytes);
 
     try {
       const settingsJson = await context.toJson();
@@ -91,8 +92,9 @@ export class Reader {
     fragment: Blob,
     context: Context = new Context()
   ): Promise<Reader | null> {
-    validateAssetSize(init.size, MAX_SIZE_IN_BYTES);
-    validateAssetSize(fragment.size, MAX_SIZE_IN_BYTES);
+    const maxSizeInBytes = context.options?.maxSizeInBytes ?? MAX_SIZE_IN_BYTES;
+    validateAssetSize(init.size, maxSizeInBytes);
+    validateAssetSize(fragment.size, maxSizeInBytes);
 
     try {
       const settingsJson = await context.toJson();

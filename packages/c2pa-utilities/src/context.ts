@@ -11,6 +11,23 @@ import type { FetchWithRetryOptions } from './fetchWithRetry.js';
 import { resolveSettings, type Settings } from './settings.js';
 
 /**
+ * SDK-side options for a {@link Context}.
+ *
+ * Unlike {@link Settings}, which configure the underlying library, these configure the
+ * JavaScript SDK itself. Only the settings are serialized and sent across the
+ * WASM/native boundary whereas options never leave the SDK.
+ */
+export interface ContextOptions {
+  /**
+   * Maximum size, in bytes, of an asset that a `Reader` accepts. Must be a positive number.
+   *
+   * Each SDK applies its own limit when unset since what is acceptable depends on the
+   * platform: 1 GB in `c2pa-web` and 10 GB in `c2pa-node`.
+   */
+  maxSizeInBytes?: number;
+}
+
+/**
  * A `Context` configures the behavior of a `Reader`/`Builder`. 
  * 
  * It is provided at creation time (e.g. `Reader.fromBlob(c2pa, format, blob, context)`),
@@ -22,10 +39,22 @@ import { resolveSettings, type Settings } from './settings.js';
  */
 export class Context {
   private readonly _settings?: Settings;
+  private readonly _options?: ContextOptions;
   private _jsonPromise?: Promise<string>;
 
-  constructor(settings?: Settings) {
+  constructor(settings?: Settings, options?: ContextOptions) {
     this._settings = settings;
+    this._options = options;
+  }
+
+  /**
+   * The SDK-side options currently attached to this `Context`, if any.
+   *
+   * To derive a new `Context` with different options, construct one with
+   * `new Context(settings, options)`.
+   */
+  get options(): ContextOptions | undefined {
+    return this._options;
   }
 
   /**
