@@ -62,8 +62,11 @@ export type TrustmarkVariant =
 export interface SourceBufferAsset {
   // A buffer containing the asset data
   buffer: Buffer;
-  // The MIME type of the asset, for instance `image/jpeg`
-  mimeType: string;
+  // The MIME type of the asset, for instance `image/jpeg`.
+  // Reader operations accept an omitted MIME type; the native library will attempt to detect
+  // the format from the asset's bytes. 
+  // Builder operations (e.g. signing) still require it.
+  mimeType?: string;
 }
 
 /**
@@ -82,6 +85,9 @@ export interface FileAsset {
   path: string;
   // The optional MIME type of the asset, for instance `image/jpeg`.
   // If not supplied, the MIME type will be inferred from the file extension, if available.
+  // For Reader operations, if it still can't be determined, the native library will attempt to
+  // detect the format from the asset's bytes. 
+  // Builder operations (e.g. signing) still require it.
   mimeType?: string;
 }
 

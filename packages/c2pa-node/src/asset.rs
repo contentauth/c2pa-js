@@ -31,19 +31,24 @@ impl NeonWriteStreamTrait for Cursor<Vec<u8>> {}
 impl NeonWriteStreamTrait for File {}
 
 pub enum Asset {
-    SourceBuffer(Vec<u8>, String),
+    SourceBuffer(Vec<u8>, Option<String>),
     File(String, Option<String>),
     DestinationBuffer(Vec<u8>),
 }
 
 impl Asset {
+    /// The asset's MIME type, if known.
+    ///
+    /// For a `File`, an omitted MIME type falls back to a guess from the path's extension.
+    /// Returns `None` when the MIME type isn't supplied and can't be inferred; callers reading
+    /// an asset (as opposed to signing one) can fall back to an empty format string and let the
+    /// native library detect the format from the asset's bytes.
     pub fn mime_type(&self) -> Option<String> {
         match self {
-            Asset::SourceBuffer(_, mime_type) => Some(mime_type.to_string()),
-            Asset::File(path, mime_type) => match mime_type {
-                Some(mime_type) => Some(mime_type.to_string()),
-                None => format_from_path(Path::new(&path)),
-            },
+            Asset::SourceBuffer(_, mime_type) => mime_type.clone(),
+            Asset::File(path, mime_type) => mime_type
+                .clone()
+                .or_else(|| format_from_path(Path::new(&path))),
             _ => None,
         }
     }
@@ -105,12 +110,9 @@ pub fn parse_asset(cx: &mut FunctionContext, obj: Handle<JsObject>) -> NeonResul
         None
     };
 
-    match (buffer, mime_type.clone(), path) {
-        (Some(buffer), Some(mime_type), _) => Ok(Asset::SourceBuffer(buffer, mime_type)),
-        (None, _, Some(path)) => Ok(Asset::File(path, mime_type)),
-        (None, _, None) => Ok(Asset::DestinationBuffer(Vec::new())),
-        _ => cx.throw_error(
-            "Invalid asset data passed. Must contain either a buffer and mimeType or a path.",
-        ),
+    match (buffer, path) {
+        (Some(buffer), _) => Ok(Asset::SourceBuffer(buffer, mime_type)),
+        (None, Some(path)) => Ok(Asset::File(path, mime_type)),
+        (None, None) => Ok(Asset::DestinationBuffer(Vec::new())),
     }
 }

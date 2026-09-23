@@ -74,6 +74,20 @@ describe('reader', () => {
         );
       });
 
+      test('should detect the format from the blob bytes when format is omitted', async ({
+        c2pa
+      }) => {
+        const blob = await getBlobForAsset(C_with_CAWG_data);
+
+        const reader = await Reader.fromBlob(c2pa, undefined, blob);
+
+        expect(reader).not.toBeNull();
+
+        const manifestStore = await reader!.manifestStore();
+
+        expect(manifestStore).toEqual(C_with_CAWG_data_untrusted_ManifestStore);
+      });
+
       test('should apply the given Context', async () => {
         const settings: Settings = {
           trust: {
