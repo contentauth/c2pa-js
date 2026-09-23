@@ -44,8 +44,10 @@ export class Reader {
    * Create a {@link Reader} from an asset's format and a blob of its bytes.
    *
    * @param c2pa The `C2pa` instance (from {@link createC2pa}) to create this reader on.
-   * @param format Asset format (MIME type or extension). If omitted or empty, the native
-   * library will attempt to detect the format from the asset's bytes.
+   * @param format Asset format (MIME type or extension), typically `blob.type`. If omitted
+   * or empty, the native library will attempt to detect the format from the asset's bytes instead.
+   * Always provide the format if known, and only omit this when the caller has no way to determine
+   * the asset's format otherwise.
    * @param blob Blob of asset bytes.
    * @param context Optional `Context` configuring this reader's behavior.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.

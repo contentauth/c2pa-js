@@ -136,6 +136,9 @@ await reader.free();
 
 `Reader.fromBlob` rejects assets larger than 1 GB, throwing `AssetTooLargeError`. `Reader.fromBlobFragment` reject assets where any fragment is larger than 1 GB, also throwing `AssetTooLargeError`.
 
+> [!WARNING]
+> `Reader.fromBlob`'s `format` argument (typically `blob.type`) is optional. If it's omitted or empty, the native library falls back to detecting the format from the asset's bytes. **This is not a feature to lean on.** Always supply `format` when it's known, as byte-based detection is slower than a direct lookup and can be unreliable, which could surface as more confusing errors later on. Only omit it when the caller has no way to determine the asset's format. `Reader.fromBlobFragment` and the `Builder` API always require an explicit format.
+
 ### Building C2PA manifests with ingredients
 
 Use the `Builder` API to create C2PA manifests and add ingredients (source assets) to document the provenance chain.

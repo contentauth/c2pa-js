@@ -97,6 +97,9 @@ const remoteUrl = reader.remoteUrl();
 
 `Reader.fromAsset` and `Reader.fromManifestDataAndAsset` reject assets larger than 10 GB, throwing `AssetTooLargeError` (exported from `@contentauth/c2pa-node`). Note that for a `SourceBufferAsset`, this only rejects after the buffer is already fully allocated in memory. Pass a `FileAsset` instead for large or untrusted assets so oversized files are rejected before being read into memory.
 
+> [!WARNING]
+> `mimeType` is optional on the input asset for `Reader.fromAsset`/`Reader.fromManifestDataAndAsset`. If it's omitted and cannot be inferred from the file extension, the native library falls back to detecting the format from the asset's bytes. **This is not a feature to lean on.** Always supply `mimeType` when it's known, as byte-based detection is slower than a direct lookup and can be unreliable, which could surface as more confusing errors later on. Only omit it when the caller has no way to determine the asset's format. `Builder` methods always require a `mimeType` to be provided.
+
 ### Builder
 
 The `Builder` class is the main component for creating and signing C2PA manifests. It provides methods to add assertions, resources, and ingredients to manifests, and handles the signing process. Use the `Signer` class to sign the manifests. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
