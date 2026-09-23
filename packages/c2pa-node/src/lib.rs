@@ -186,6 +186,18 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         "newCallbackCredentialHolder",
         neon_credential_holder::NeonCallbackCredentialHolder::from_js,
     )?;
+    cx.export_function(
+        "callbackCredentialHolderSignPayload",
+        neon_credential_holder::NeonCallbackCredentialHolder::sign_payload,
+    )?;
+    cx.export_function(
+        "callbackCredentialHolderReserveSize",
+        neon_credential_holder::NeonCallbackCredentialHolder::reserve_size_js,
+    )?;
+    cx.export_function(
+        "callbackCredentialHolderSigType",
+        neon_credential_holder::NeonCallbackCredentialHolder::sig_type_js,
+    )?;
 
     // Trustmark
     cx.export_function(

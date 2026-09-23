@@ -57,12 +57,9 @@ impl NeonReader {
         let (deferred, promise) = cx.promise();
         rt.spawn(async move {
             let result: Result<Reader> = async {
-                let format = source
-                    .mime_type()
-                    .ok_or_else(|| {
-                        Error::Reading("Source asset must have a mime type".to_string())
-                    })?
-                    .to_owned();
+                // An empty format asks the native library to detect the asset's format from its
+                // bytes, so a source with no known MIME type can still be read.
+                let format = source.mime_type().unwrap_or_default();
 
                 let stream = source.into_read_stream()?;
 
@@ -119,12 +116,9 @@ impl NeonReader {
         let (deferred, promise) = cx.promise();
         rt.spawn(async move {
             let result = async {
-                let format = asset
-                    .mime_type()
-                    .ok_or_else(|| {
-                        Error::Reading("Source asset must have a mime type".to_string())
-                    })?
-                    .to_owned();
+                // An empty format asks the native library to detect the asset's format from its
+                // bytes, so an asset with no known MIME type can still be read.
+                let format = asset.mime_type().unwrap_or_default();
                 let stream = asset.into_read_stream()?;
 
                 let reader = if let Some(context) = context_opt {

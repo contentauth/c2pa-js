@@ -187,3 +187,144 @@ describe("IdentityAssertionBuilder", () => {
     });
   });
 });
+
+describe("CallbackCredentialHolder accessors", () => {
+  it("returns reserveSize and sigType set on the constructor", async () => {
+    const { CallbackCredentialHolder } = await import("./IdentityAssertion");
+
+    const holder = CallbackCredentialHolder.newCallbackCredentialHolder(
+      10000,
+      "cawg.x509.cose",
+      async () => Buffer.alloc(0),
+    );
+
+    expect(holder.reserveSize()).toBe(10000);
+    expect(holder.sigType()).toBe("cawg.x509.cose");
+  });
+
+  it("signs a payload through the callback set", async () => {
+    const { CallbackCredentialHolder } = await import("./IdentityAssertion");
+
+    const seen: SignerPayload[] = [];
+    const holder = CallbackCredentialHolder.newCallbackCredentialHolder(
+      10000,
+      "cawg.x509.cose",
+      async (payload) => {
+        seen.push(payload);
+        return Buffer.from([1, 2, 3]);
+      },
+    );
+
+    const signature = await holder.sign({
+      referencedAssertions: [
+        {
+          url: "self#jumbf=c2pa.assertions/cawg.training-mining",
+          hash: new Uint8Array([9, 8, 7]),
+          alg: "sha256",
+        },
+      ],
+      sigType: "cawg.x509.cose",
+      roles: ["cawg.creator"],
+    });
+
+    expect(signature).toEqual(Buffer.from([1, 2, 3]));
+    expect(seen).toHaveLength(1);
+
+    const payload = seen[0]!;
+    expect(payload.sigType).toBe("cawg.x509.cose");
+    expect(payload.roles).toEqual(["cawg.creator"]);
+    expect(payload.referencedAssertions).toHaveLength(1);
+    expect(payload.referencedAssertions[0]!.url).toBe(
+      "self#jumbf=c2pa.assertions/cawg.training-mining",
+    );
+    expect(Buffer.from(payload.referencedAssertions[0]!.hash)).toEqual(
+      Buffer.from([9, 8, 7]),
+    );
+  });
+});
+
+describe("handles reserveSize", () => {
+  async function signWithReserveSize(reserveSize: number) {
+    const { CallbackSigner } = await import("./Signer");
+    const { Builder } = await import("./Builder");
+    const {
+      IdentityAssertionBuilder,
+      IdentityAssertionSigner,
+      CallbackCredentialHolder,
+    } = await import("./IdentityAssertion");
+
+    const c2paPrivateKey = await fs.readFile(
+      "./tests/fixtures/certs/es256.pem",
+    );
+    const c2paPublicKey = await fs.readFile("./tests/fixtures/certs/es256.pub");
+
+    const c2paTestSigner = new TestSigner(c2paPrivateKey);
+    const c2paSigner = CallbackSigner.newSigner(
+      {
+        alg: "es256" as SigningAlg,
+        certs: [c2paPublicKey],
+        reserveSize: 10000,
+        tsaUrl: undefined,
+        tsaHeaders: undefined,
+        tsaBody: undefined,
+        directCoseHandling: true,
+      },
+      c2paTestSigner.sign,
+    );
+
+    const cawgTestSigner = new TestCawgSigner(c2paTestSigner);
+    const cawgSigner = CallbackCredentialHolder.newCallbackCredentialHolder(
+      reserveSize,
+      "cawg.x509.cose",
+      cawgTestSigner.sign,
+    );
+
+    const builder = Builder.withJson({
+      claim_generator_info: [{ name: "c2pa_test", version: "2.0.0" }],
+      title: "Test_Manifest",
+      format: "image/jpeg",
+      instance_id: "1234",
+      assertions: [
+        {
+          label: "cawg.training-mining",
+          data: {
+            metadata: {
+              "cawg.ai_inference": { use: "notAllowed" },
+            },
+          },
+        },
+      ],
+    } as Manifest);
+
+    const iaSigner = IdentityAssertionSigner.new(c2paSigner.getHandle());
+    const iab =
+      await IdentityAssertionBuilder.identityBuilderForCredentialHolder(
+        cawgSigner,
+      );
+    iab.addReferencedAssertions(["cawg.training-mining"]);
+    iaSigner.addIdentityAssertion(iab);
+
+    return builder.signAsync(
+      iaSigner,
+      {
+        buffer: await fs.readFile("./tests/fixtures/CA.jpg"),
+        mimeType: "image/jpeg",
+      },
+      { buffer: null } as DestinationBufferAsset,
+    );
+  }
+
+  it("rejects a reserveSize too small for the identity assertion", async () => {
+    await expect(signWithReserveSize(10)).rejects.toThrow(
+      /exceeds the planned size/i,
+    );
+  });
+
+  it("rejects a reserveSize overflowing into padding", async () => {
+    await expect(signWithReserveSize(340)).rejects.toThrow(/reserveSize/i);
+  });
+
+  it("signs with a large reserveSize", async () => {
+    await expect(signWithReserveSize(10000)).resolves.toBeDefined();
+  });
+});

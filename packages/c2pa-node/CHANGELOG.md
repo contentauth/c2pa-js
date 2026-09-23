@@ -1,5 +1,12 @@
 # @contentauth/c2pa-node
 
+## 0.9.7
+
+### Patch Changes
+
+- c0aa55c: Add credential holder for CAWG to c2pa-web.
+  Swap c2pa_cbor for ciborium in c2pa-node.
+
 ## 0.9.6
 
 ### Patch Changes
