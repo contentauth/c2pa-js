@@ -44,7 +44,10 @@ export class Reader {
    * Create a {@link Reader} from an asset's format and a blob of its bytes.
    *
    * @param c2pa The `C2pa` instance (from {@link createC2pa}) to create this reader on.
-   * @param format Asset format.
+   * @param format Asset format (MIME type or extension), typically `blob.type`. If omitted
+   * or empty, the native library will attempt to detect the format from the asset's bytes instead.
+   * Always provide the format if known, and only omit this when the caller has no way to determine
+   * the asset's format otherwise.
    * @param blob Blob of asset bytes.
    * @param context Optional `Context` configuring this reader's behavior.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
@@ -52,7 +55,7 @@ export class Reader {
    */
   static async fromBlob(
     c2pa: C2pa,
-    format: string,
+    format: string | undefined,
     blob: Blob,
     context: Context = new Context()
   ): Promise<Reader | null> {
@@ -62,7 +65,7 @@ export class Reader {
       const settingsJson = await context.toJson();
       const { worker } = c2pa;
 
-      const readerId = await worker.tx.reader_fromBlob(format, blob, settingsJson);
+      const readerId = await worker.tx.reader_fromBlob(format ?? '', blob, settingsJson);
 
       const reader = new Reader(worker, readerId);
       registry.register(reader, { worker, id: readerId }, reader);
@@ -77,7 +80,8 @@ export class Reader {
    * Create a {@link Reader} from an initial fragment and a subsequent fragment.
    *
    * @param c2pa The `C2pa` instance (from {@link createC2pa}) to create this reader on.
-   * @param format Asset format.
+   * @param format Asset format (MIME type or extension). Unlike {@link fromBlob}, fragmented
+   * assets cannot be auto-detected from their bytes, so a format must be supplied.
    * @param init Blob of initial fragment bytes.
    * @param fragment Blob of fragment bytes.
    * @param context Optional `Context` configuring this reader's behavior.
