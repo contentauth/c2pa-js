@@ -1214,7 +1214,10 @@ describe('builder', () => {
         const blob = await getBlobForAsset(SAMPLE1_JXL);
         const jxlMimetype = 'image/jxl';
 
-        const builder = await Builder.new(c2pa);
+        // createTestSigner() returns placeholder bytes that can't be locally
+        // re-verified, so skip the SDK's post-sign verification.
+        const context = new Context({ verify: { verifyAfterSign: false } });
+        const builder = await Builder.new(c2pa, context);
         const signer = await createTestSigner();
 
         const credentialHolder: CredentialHolder = {
@@ -1230,7 +1233,7 @@ describe('builder', () => {
         ).rejects.toThrow(/reserveSize/i);
 
         // The worker should still work.
-        const recoveryBuilder = await Builder.new(c2pa);
+        const recoveryBuilder = await Builder.new(c2pa, context);
         const recoverySigner = await createTestSigner();
         const recoveryHolder: CredentialHolder = {
           sigType: 'cawg.test-signature',

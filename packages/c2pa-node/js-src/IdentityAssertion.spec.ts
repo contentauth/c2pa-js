@@ -286,6 +286,19 @@ describe("handles reserveSize", () => {
       instance_id: "1234",
       assertions: [
         {
+          label: "c2pa.actions.v2",
+          data: {
+            actions: [
+              {
+                action: "c2pa.created",
+                digitalSourceType:
+                  "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+              },
+            ],
+          } as any,
+          kind: "Json",
+        },
+        {
           label: "cawg.training-mining",
           data: {
             metadata: {
