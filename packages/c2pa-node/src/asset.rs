@@ -44,8 +44,8 @@ impl Asset {
     /// an asset (as opposed to signing one) can fall back to an empty format string and let the
     /// native library detect the format from the asset's bytes.
     ///
-    /// This fallback is not a feature to lean on. Callers should supply the real MIME type whenever
-    /// it's known and only omit it when the caller has no way to determine it.
+    /// Callers should supply the real MIME type whenever it's known and only omit it when there
+    /// is no way to determine it.
     pub fn mime_type(&self) -> Option<String> {
         match self {
             Asset::SourceBuffer(_, mime_type) => mime_type.clone(),
