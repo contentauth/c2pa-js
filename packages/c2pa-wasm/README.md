@@ -28,7 +28,7 @@ Then, install all of the following prerequisites:
 
 #### Rust
 
-The minimum supported Rust version is **1.88.0**.
+The minimum supported Rust version is **1.96.0**.
 
 To install Rust via [rustup](https://rustup.rs/):
 

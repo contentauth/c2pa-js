@@ -224,11 +224,10 @@ describe("Builder", () => {
     });
 
     it("should add a CBOR assertion, sign, and verify it in the signed manifest", async () => {
-      // Add the c2pa.watermarked action as a CBOR assertion
       const actionsAssertion = {
         actions: [
           {
-            action: "c2pa.watermarked",
+            action: "c2pa.edited",
           },
         ],
       };
@@ -249,7 +248,7 @@ describe("Builder", () => {
       expect(cborAssertion).toBeDefined();
       if (isActionsAssertion(cborAssertion)) {
         const actions = cborAssertion.data.actions.map((a: any) => a.action);
-        expect(actions).toContain("c2pa.watermarked");
+        expect(actions).toContain("c2pa.edited");
       } else {
         throw new Error("CBOR assertion does not have the expected structure");
       }
@@ -996,6 +995,15 @@ describe("Builder", () => {
       const context = new Context({ verify: { verifyTrust: false } });
       const builder = await Builder.newAsync(context);
       builder.updateManifestProperty("claim_version", 2);
+      // c2pa-rs requires the first action assertion to be c2pa.created/c2pa.opened,
+      // and c2pa.created requires a digitalSourceType.
+      builder.addAction(
+        JSON.stringify({
+          action: "c2pa.created",
+          digitalSourceType:
+            "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+        }),
+      );
       await builder.addIngredient(parent_json, source);
       builder.sign(signer, source, dest);
 
@@ -1013,6 +1021,15 @@ describe("Builder", () => {
       // Trust verification disabled via Context.
       const context = new Context({ verify: { verifyTrust: false } });
       const builder = await Builder.withJsonAsync(manifestDefinition, context);
+      // c2pa-rs requires the first action assertion to be c2pa.created/c2pa.opened,
+      // and c2pa.created requires a digitalSourceType.
+      builder.addAction(
+        JSON.stringify({
+          action: "c2pa.created",
+          digitalSourceType:
+            "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+        }),
+      );
       await builder.addIngredient(parent_json, source);
       await builder.addResource("thumbnail.jpg", {
         mimeType: "jpeg",
