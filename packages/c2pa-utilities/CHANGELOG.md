@@ -1,5 +1,13 @@
 # @contentauth/c2pa-utilities
 
+## 0.3.1
+
+### Patch Changes
+
+- e454a78: Update to c2pa-rs v0.91.0.
+- Updated dependencies [e454a78]
+  - @contentauth/c2pa-types@0.7.5
+
 ## 0.3.0
 
 ### Minor Changes

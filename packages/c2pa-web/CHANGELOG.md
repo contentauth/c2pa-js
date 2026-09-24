@@ -1,5 +1,18 @@
 # @contentauth/c2pa-web
 
+## 0.15.2
+
+### Patch Changes
+
+- e454a78: Update to c2pa-rs v0.91.0.
+- abe6b75: Support optional (empty) mime types for Readers. Prefer supplying the mime type explicitly whenever it's known — omitting it falls back to slower, less reliable byte-based format detection in the native library.
+- f5141d9: Fix typings errors and avoid potential udnerflow
+- Updated dependencies [e454a78]
+- Updated dependencies [f5141d9]
+  - @contentauth/c2pa-utilities@0.3.1
+  - @contentauth/c2pa-types@0.7.5
+  - @contentauth/c2pa-wasm@0.13.1
+
 ## 0.15.1
 
 ### Patch Changes
