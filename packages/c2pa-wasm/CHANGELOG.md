@@ -1,5 +1,12 @@
 # @contentauth/c2pa-wasm
 
+## 0.13.1
+
+### Patch Changes
+
+- e454a78: Update to c2pa-rs v0.91.0.
+- f5141d9: Fix typings errors and avoid potential udnerflow
+
 ## 0.13.0
 
 ### Minor Changes
