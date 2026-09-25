@@ -111,6 +111,7 @@ declare module "index.node" {
     pkey: Buffer,
     signingAlg: SigningAlg,
     tsaUrl?: string,
+    ocspResponses?: Buffer[],
   ): NeonLocalSignerHandle;
   export function localSignerSign(data: Buffer): Buffer;
   export function localSignerAlg(): SigningAlg;
