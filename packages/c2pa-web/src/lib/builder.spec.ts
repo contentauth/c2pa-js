@@ -694,6 +694,78 @@ describe('builder', () => {
       });
     });
 
+    describe('updateAssertion', () => {
+      test('updates each exact label match without changing its metadata or order', async ({
+        c2pa
+      }) => {
+        const builder = await Builder.fromDefinition(c2pa, {
+          format: 'image/jpeg',
+          instance_id: 'update-assertion',
+          ingredients: [],
+          assertions: [
+            { label: 'org.test.note', data: { value: 1 }, kind: 'Cbor' },
+            { label: 'org.test.note.extra', data: { value: 9 } },
+            { label: 'org.test.note', data: { value: 2 }, kind: 'Cbor' }
+          ]
+        } as ManifestDefinition);
+        const seen: number[] = [];
+
+        await builder.updateAssertion('org.test.note', (data) => {
+          const value = (data as { value: number }).value;
+          seen.push(value);
+          return { value: value + 10 };
+        });
+
+        expect(seen).toEqual([1, 2]);
+        expect((await builder.getDefinition()).assertions).toEqual([
+          { label: 'org.test.note', data: { value: 11 }, kind: 'Cbor' },
+          { label: 'org.test.note.extra', data: { value: 9 } },
+          { label: 'org.test.note', data: { value: 12 }, kind: 'Cbor' }
+        ]);
+      });
+
+      test('leaves the builder unchanged if a later transform throws', async ({
+        c2pa
+      }) => {
+        const builder = await Builder.new(c2pa);
+        await builder.addAssertion('org.test.note', { value: 1 });
+        await builder.addAssertion('org.test.note', { value: 2 });
+        const before = await builder.getDefinition();
+
+        await expect(
+          builder.updateAssertion('org.test.note', (data) => {
+            if ((data as { value: number }).value === 2) {
+              throw new Error('transform failed');
+            }
+            return { value: 10 };
+          })
+        ).rejects.toThrow('transform failed');
+        expect(await builder.getDefinition()).toEqual(before);
+
+        await expect(
+          builder.updateAssertion('org.test.note', (data) =>
+            (data as { value: number }).value === 2
+              ? () => undefined
+              : { value: 10 }
+          )
+        ).rejects.toThrow();
+        expect(await builder.getDefinition()).toEqual(before);
+      });
+
+      test('does not invoke the callback for a missing label', async ({
+        c2pa
+      }) => {
+        const builder = await Builder.new(c2pa);
+        let calls = 0;
+        await builder.updateAssertion('org.test.missing', () => {
+          calls++;
+          return {};
+        });
+        expect(calls).toBe(0);
+        expect((await builder.getDefinition()).assertions).toEqual([]);
+      });
+    });
+
     describe('updateActions', () => {
       test('patches a parameter on an existing action, preserving every actions assertion', async ({
         c2pa

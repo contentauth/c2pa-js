@@ -148,6 +148,41 @@ impl WasmBuilder {
         Ok(())
     }
 
+    /// Replaces the data of every assertion with an exact matching label, in positional order.
+    /// The label, kind, created flag, and assertion position remain unchanged.
+    #[wasm_bindgen(js_name = updateAssertionsAt)]
+    pub fn update_assertions_at(&mut self, label: String, data: JsValue) -> Result<(), JsString> {
+        let replacements: Vec<serde_json::Value> =
+            serde_wasm_bindgen::from_value(data).map_err(WasmError::from)?;
+        let positions: Vec<usize> = self
+            .builder
+            .definition
+            .assertions
+            .iter()
+            .enumerate()
+            .filter(|(_, assertion)| assertion.label == label)
+            .map(|(index, _)| index)
+            .collect();
+
+        if replacements.len() != positions.len() {
+            return Err(JsString::from(format!(
+                "updateAssertionsAt: expected {} replacement(s) for {label}, got {}",
+                positions.len(),
+                replacements.len()
+            )));
+        }
+
+        let replacements = replacements
+            .into_iter()
+            .map(|value| serde_json::from_value(value).map_err(WasmError::other))
+            .collect::<Result<Vec<_>, _>>()?;
+        for (position, replacement) in positions.into_iter().zip(replacements) {
+            self.builder.definition.assertions[position].data = replacement;
+        }
+
+        Ok(())
+    }
+
     /// Add a redaction for a JUMBF URI with the given reason.
     ///
     /// Adds the URI to the builder's redaction list and appends a `c2pa.redacted` action

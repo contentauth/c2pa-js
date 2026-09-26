@@ -214,6 +214,26 @@ export class Builder {
   }
 
   /**
+   * Replaces the data of every assertion with an exact matching label.
+   * `transform` runs once per matching assertion in manifest order. Other assertion
+   * fields and positions are preserved. A missing label is a no-op.
+   * The replacement data must be JSON-serializable and may fail validation at signing time.
+   *
+   * @param label The exact assertion label to update.
+   * @param transform Receives the current data and returns its replacement.
+   */
+  async updateAssertion(
+    label: string,
+    transform: (data: unknown) => unknown
+  ): Promise<void> {
+    const definition = await this.getDefinition();
+    const data = (definition.assertions ?? [])
+      .filter((assertion) => assertion.label === label)
+      .map((assertion) => transform(assertion.data));
+    await this.#worker.tx.builder_updateAssertionsAt(this.#id, label, data);
+  }
+
+  /**
    * Redact an assertion from an ingredient manifest.
    *
    * Adds the URI to the builder's redaction list and appends a `c2pa.redacted` action
