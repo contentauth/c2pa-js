@@ -675,6 +675,46 @@ impl NeonBuilder {
         Ok(cx.undefined())
     }
 
+    /// Replaces the data of every assertion with an exact matching label.
+    /// The builder is left unchanged if any transform throws or returns invalid data.
+    /// The callback must not call back into this builder while its lock is held.
+    pub fn update_assertion(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<Self>>()?;
+        let label = cx.argument::<JsString>(0)?.value(&mut cx);
+        let transform = cx.argument::<JsFunction>(1)?;
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+
+        let positions: Vec<usize> = builder
+            .definition
+            .assertions
+            .iter()
+            .enumerate()
+            .filter(|(_, assertion)| assertion.label == label)
+            .map(|(index, _)| index)
+            .collect();
+
+        let mut replacements = Vec::with_capacity(positions.len());
+        for &position in &positions {
+            let data = serde_json::to_value(&builder.definition.assertions[position].data)
+                .or_else(|err| cx.throw_error(err.to_string()))?;
+            let js_data = neon_serde4::to_value(&mut cx, &data)
+                .or_else(|err| cx.throw_error(err.to_string()))?;
+            let undefined = cx.undefined();
+            let result = transform.call(&mut cx, undefined, [js_data])?;
+            let replacement: serde_json::Value = neon_serde4::from_value(&mut cx, result)
+                .or_else(|err| cx.throw_error(err.to_string()))?;
+            let replacement = serde_json::from_value(replacement)
+                .or_else(|err| cx.throw_error(err.to_string()))?;
+            replacements.push(replacement);
+        }
+
+        for (position, replacement) in positions.into_iter().zip(replacements) {
+            builder.definition.assertions[position].data = replacement;
+        }
+        Ok(cx.undefined())
+    }
+
     /// Replaces the actions in the `c2pa.actions`/`c2pa.actions.v2` assertions.
     /// `softwareAgents`/`allActionsIncluded`/`templates`/`metadata` are preserved as-is.
     ///

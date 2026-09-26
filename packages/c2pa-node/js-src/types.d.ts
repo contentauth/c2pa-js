@@ -422,6 +422,18 @@ export interface BuilderInterface {
   updateActions(transform: (actions: Action[]) => Action[]): void;
 
   /**
+   * Replaces the data of every assertion with an exact matching label.
+   * `transform` runs once per matching assertion in manifest order. Other assertion
+   * fields and positions are preserved. A missing label is a no-op.
+   * The replacement data must be JSON-serializable and may fail validation at signing time.
+   * The callback must not call back into this builder.
+   *
+   * @param label The exact assertion label to update.
+   * @param transform Receives the current data and returns its replacement.
+   */
+  updateAssertion(label: string, transform: (data: unknown) => unknown): void;
+
+  /**
    * Get the internal handle for use with Neon bindings
    */
   getHandle(): NeonBuilderHandle;

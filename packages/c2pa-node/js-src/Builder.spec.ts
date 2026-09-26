@@ -1305,6 +1305,64 @@ describe("Builder", () => {
       ).toThrow("action predicate boom");
     });
 
+    it("updateAssertion updates exact label matches in order and preserves metadata", () => {
+      const builder = Builder.withJson({
+        ...actionsManifest(),
+        assertions: [
+          { label: "org.test.note", data: { value: 1 }, kind: "Cbor" },
+          { label: "org.test.note.extra", data: { value: 9 } },
+          { label: "org.test.note", data: { value: 2 }, kind: "Cbor" },
+        ],
+      } as Manifest);
+      const seen: number[] = [];
+      builder.updateAssertion("org.test.note", (data) => {
+        const value = (data as { value: number }).value;
+        seen.push(value);
+        return { value: value + 10 };
+      });
+
+      expect(seen).toEqual([1, 2]);
+      expect(builder.getManifestDefinition().assertions).toEqual([
+        { label: "org.test.note", data: { value: 11 }, kind: "Cbor" },
+        { label: "org.test.note.extra", data: { value: 9 } },
+        { label: "org.test.note", data: { value: 12 }, kind: "Cbor" },
+      ]);
+    });
+
+    it("updateAssertion is atomic on callback failure and ignores missing labels", () => {
+      const builder = Builder.withJson({
+        ...actionsManifest(),
+        assertions: [
+          { label: "org.test.note", data: { value: 1 } },
+          { label: "org.test.note", data: { value: 2 } },
+        ],
+      });
+      const before = builder.getManifestDefinition();
+      expect(() =>
+        builder.updateAssertion("org.test.note", (data) => {
+          if ((data as { value: number }).value === 2) {
+            throw new Error("transform failed");
+          }
+          return { value: 10 };
+        }),
+      ).toThrow("transform failed");
+      expect(builder.getManifestDefinition()).toEqual(before);
+      expect(() =>
+        builder.updateAssertion("org.test.note", (data) =>
+          (data as { value: number }).value === 2
+            ? () => undefined
+            : { value: 10 },
+        ),
+      ).toThrow();
+      expect(builder.getManifestDefinition()).toEqual(before);
+      let calls = 0;
+      builder.updateAssertion("org.test.missing", () => {
+        calls++;
+        return {};
+      });
+      expect(calls).toBe(0);
+    });
+
     it("updateActions patches a parameter on an existing action", () => {
       const builder = Builder.withJson(actionsManifest());
 
