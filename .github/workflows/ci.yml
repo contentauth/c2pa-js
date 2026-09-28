@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - agents/test-trustmark-rc12-c2pa-node
   pull_request:
 
 permissions:
