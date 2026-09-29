@@ -771,7 +771,8 @@ describe("Builder", () => {
               actions: [
                 {
                   action: "c2pa.created",
-                  digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
+                  digitalSourceType:
+                    "http://c2pa.org/digitalsourcetype/empty",
                 },
               ],
             },
@@ -1153,8 +1154,7 @@ describe("Builder", () => {
               actions: [
                 {
                   action: "c2pa.created",
-                  digitalSourceType:
-                    "http://c2pa.org/digitalsourcetype/empty",
+                  digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
                 },
               ],
             },
@@ -1327,6 +1327,62 @@ describe("Builder", () => {
         { label: "org.test.note.extra", data: { value: 9 } },
         { label: "org.test.note", data: { value: 12 }, kind: "Cbor" },
       ]);
+    });
+
+    it("updateAssertion preserves JSON and CBOR kinds when signing", async () => {
+      const builder = Builder.withJson({
+        ...actionsManifest(),
+        assertions: [
+          ...actionsManifest().assertions,
+          { label: "org.test.json", data: { value: 1 }, kind: "Json" },
+          { label: "org.test.cbor", data: { value: 2 }, kind: "Cbor" },
+        ],
+      } as Manifest);
+      builder.updateAssertion("org.test.json", () => ({ value: 11 }));
+      builder.updateAssertion("org.test.cbor", () => ({ value: 22 }));
+      expect(builder.getManifestDefinition().assertions).toEqual(
+        expect.arrayContaining([
+          { label: "org.test.json", data: { value: 11 }, kind: "Json" },
+          { label: "org.test.cbor", data: { value: 22 }, kind: "Cbor" },
+        ]),
+      );
+
+      const dest = { path: path.join(tempDir, "updated_assertion_kinds.jpg") };
+      const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
+      builder.sign(signer, source, dest);
+      const reader = await Reader.fromAsset(dest);
+      expect(reader).not.toBeNull();
+      const assertions = reader!.getActive()!.assertions!;
+      expect(assertions).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: "org.test.json",
+            data: { value: 11 },
+          }),
+          expect.objectContaining({
+            label: "org.test.cbor",
+            data: { value: 22 },
+          }),
+        ]),
+      );
+    });
+
+    it("updateAssertion skips null and undefined results without dropping other updates", () => {
+      const builder = Builder.withJson({
+        ...actionsManifest(),
+        assertions: [
+          { label: "org.test.note", data: { value: 1 }, kind: "Json" },
+          { label: "org.test.note", data: { value: 2 }, kind: "Json" },
+          { label: "org.test.note", data: { value: 3 }, kind: "Json" },
+        ],
+      } as Manifest);
+      builder.updateAssertion("org.test.note", (data) => {
+        const value = (data as { value: number }).value;
+        return value === 1 ? null : value === 2 ? undefined : { value: 33 };
+      });
+      expect(
+        builder.getManifestDefinition().assertions!.map((a) => a.data),
+      ).toEqual([{ value: 1 }, { value: 2 }, { value: 33 }]);
     });
 
     it("updateAssertion is atomic on callback failure and ignores missing labels", () => {

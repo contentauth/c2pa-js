@@ -764,6 +764,77 @@ describe('builder', () => {
         expect(calls).toBe(0);
         expect((await builder.getDefinition()).assertions).toEqual([]);
       });
+
+      test('skips null and undefined results while applying other updates', async ({
+        c2pa
+      }) => {
+        const builder = await Builder.fromDefinition(c2pa, {
+          format: 'image/jpeg',
+          instance_id: 'skip-update',
+          ingredients: [],
+          assertions: [
+            { label: 'org.test.note', data: { value: 1 }, kind: 'Json' },
+            { label: 'org.test.note', data: { value: 2 }, kind: 'Json' },
+            { label: 'org.test.note', data: { value: 3 }, kind: 'Json' }
+          ]
+        } as ManifestDefinition);
+        await builder.updateAssertion('org.test.note', (data) => {
+          const value = (data as { value: number }).value;
+          return value === 1 ? null : value === 2 ? undefined : { value: 33 };
+        });
+        expect(
+          (await builder.getDefinition()).assertions?.map((a) => a.data)
+        ).toEqual([{ value: 1 }, { value: 2 }, { value: 33 }]);
+      });
+
+      test('preserves JSON and CBOR kinds when signing updated assertions', async ({
+        c2pa
+      }) => {
+        const context = new Context({ verify: { verifyAfterSign: false } });
+        const builder = await Builder.fromDefinition(
+          c2pa,
+          {
+            format: 'image/jpeg',
+            instance_id: 'signed-updates',
+            ingredients: [],
+            assertions: [
+              { label: 'org.test.json', data: { value: 1 }, kind: 'Json' },
+              { label: 'org.test.cbor', data: { value: 2 }, kind: 'Cbor' }
+            ]
+          } as ManifestDefinition,
+          context
+        );
+        await builder.updateAssertion('org.test.json', () => ({ value: 11 }));
+        await builder.updateAssertion('org.test.cbor', () => ({ value: 22 }));
+        expect((await builder.getDefinition()).assertions).toEqual([
+          { label: 'org.test.json', data: { value: 11 }, kind: 'Json' },
+          { label: 'org.test.cbor', data: { value: 22 }, kind: 'Cbor' }
+        ]);
+
+        const blob = await getBlobForAsset(C_JPG);
+        const signer = await createTestSigner();
+        const signedBytes = await builder.sign(signer, 'image/jpeg', blob);
+        const reader = await Reader.fromBlob(
+          c2pa,
+          'image/jpeg',
+          new Blob([signedBytes], { type: 'image/jpeg' }),
+          new Context({ verify: { verifyAfterReading: false } })
+        );
+        expect(reader).not.toBeNull();
+        const assertions = (await reader!.activeManifest()).assertions;
+        expect(assertions).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              label: 'org.test.json',
+              data: { value: 11 }
+            }),
+            expect.objectContaining({
+              label: 'org.test.cbor',
+              data: { value: 22 }
+            })
+          ])
+        );
+      });
     });
 
     describe('updateActions', () => {

@@ -676,6 +676,7 @@ impl NeonBuilder {
     }
 
     /// Replaces the data of every assertion with an exact matching label.
+    /// A null or undefined result leaves that assertion unchanged.
     /// The builder is left unchanged if any transform throws or returns invalid data.
     /// The callback must not call back into this builder while its lock is held.
     pub fn update_assertion(mut cx: FunctionContext) -> JsResult<JsUndefined> {
@@ -702,15 +703,21 @@ impl NeonBuilder {
                 .or_else(|err| cx.throw_error(err.to_string()))?;
             let undefined = cx.undefined();
             let result = transform.call(&mut cx, undefined, [js_data])?;
+            if result.is_a::<JsNull, _>(&mut cx) || result.is_a::<JsUndefined, _>(&mut cx) {
+                replacements.push(None);
+                continue;
+            }
             let replacement: serde_json::Value = neon_serde4::from_value(&mut cx, result)
                 .or_else(|err| cx.throw_error(err.to_string()))?;
             let replacement = serde_json::from_value(replacement)
                 .or_else(|err| cx.throw_error(err.to_string()))?;
-            replacements.push(replacement);
+            replacements.push(Some(replacement));
         }
 
         for (position, replacement) in positions.into_iter().zip(replacements) {
-            builder.definition.assertions[position].data = replacement;
+            if let Some(replacement) = replacement {
+                builder.definition.assertions[position].data = replacement;
+            }
         }
         Ok(cx.undefined())
     }

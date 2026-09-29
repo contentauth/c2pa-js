@@ -425,6 +425,7 @@ export interface BuilderInterface {
    * Replaces the data of every assertion with an exact matching label.
    * `transform` runs once per matching assertion in manifest order. Other assertion
    * fields and positions are preserved. A missing label is a no-op.
+   * Returning null or undefined leaves that assertion unchanged.
    * The replacement data must be JSON-serializable and may fail validation at signing time.
    * The callback must not call back into this builder.
    *
