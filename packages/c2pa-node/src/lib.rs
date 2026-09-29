@@ -101,6 +101,10 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         "builderUpdateActions",
         neon_builder::NeonBuilder::update_actions,
     )?;
+    cx.export_function(
+        "builderUpdateAssertion",
+        neon_builder::NeonBuilder::update_assertion,
+    )?;
 
     // Reader
     cx.export_function("readerNew", neon_reader::NeonReader::new)?;
