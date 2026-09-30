@@ -1,5 +1,13 @@
 # @contentauth/c2pa-node
 
+## 0.9.9
+
+### Patch Changes
+
+- e29811b: Add ability to modify assertions
+- a0057f8: Update to Trustmark version 0.4.0.
+- b862120: Bump Trustmark crate dependency to v0.3.0 for c2pa-node.
+
 ## 0.9.8
 
 ### Patch Changes
