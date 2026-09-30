@@ -38,29 +38,10 @@ pub struct CallbackSignerConfig {
     pub tsa_headers: Option<Vec<(String, String)>>,
     pub tsa_body: Option<Vec<u8>>,
     pub direct_cose_handling: bool,
+    pub ocsp_responses: Vec<Vec<u8>>,
 }
 
 impl CallbackSignerConfig {
-    pub fn new(
-        alg: SigningAlg,
-        certs: Vec<u8>,
-        reserve_size: usize,
-        tsa_url: Option<String>,
-        tsa_headers: Option<Vec<(String, String)>>,
-        tsa_body: Option<Vec<u8>>,
-        direct_cose_handling: bool,
-    ) -> Self {
-        Self {
-            alg,
-            certs,
-            reserve_size,
-            tsa_url,
-            tsa_headers,
-            tsa_body,
-            direct_cose_handling,
-        }
-    }
-
     pub fn from_js_config<'a>(
         cx: &mut FunctionContext<'a>,
         js_config: Handle<JsObject>,
@@ -118,8 +99,12 @@ impl CallbackSignerConfig {
         let tsa_body = js_config
             .get_opt::<JsBuffer, _, _>(cx, "tsaBody")?
             .map(|js_buffer| js_buffer.as_slice(cx).to_vec());
+        let ocsp_responses = match js_config.get_opt::<JsArray, _, _>(cx, "ocspResponses")? {
+            Some(js_array) => ocsp_responses_from_js_array(cx, js_array)?,
+            None => Vec::new(),
+        };
 
-        Ok(cx.boxed(Self::new(
+        Ok(cx.boxed(Self {
             alg,
             certs,
             reserve_size,
@@ -127,8 +112,27 @@ impl CallbackSignerConfig {
             tsa_headers,
             tsa_body,
             direct_cose_handling,
-        )))
+            ocsp_responses,
+        }))
     }
+}
+
+fn ocsp_responses_from_js_array<'a>(
+    cx: &mut impl Context<'a>,
+    js_array: Handle<JsArray>,
+) -> NeonResult<Vec<Vec<u8>>> {
+    let mut ocsp_responses = Vec::new();
+    for js_value in js_array.to_vec(cx)? {
+        let ocsp_response = js_value
+            .downcast_or_throw::<JsBuffer, _>(cx)?
+            .as_slice(cx)
+            .to_vec();
+        if ocsp_response.is_empty() {
+            return cx.throw_range_error("OCSP responses must not be empty");
+        }
+        ocsp_responses.push(ocsp_response);
+    }
+    Ok(ocsp_responses)
 }
 
 // Add a new function to convert a JavaScript object to a JsBox<CallbackSignerConfig>
@@ -319,6 +323,14 @@ impl AsyncSigner for NeonCallbackSigner {
         self.config.reserve_size
     }
 
+    async fn ocsp_val(&self) -> Option<Vec<u8>> {
+        self.config.ocsp_responses.first().cloned()
+    }
+
+    async fn ocsp_vals(&self) -> Vec<Vec<u8>> {
+        self.config.ocsp_responses.clone()
+    }
+
     fn direct_cose_handling(&self) -> bool {
         self.config.direct_cose_handling
     }
@@ -358,8 +370,16 @@ impl NeonLocalSigner {
                 .ok()
                 .map(|js_string| js_string.value(&mut cx))
         });
+        let ocsp_responses = match cx.argument_opt(4) {
+            Some(value) if !value.is_a::<JsUndefined, _>(&mut cx) => {
+                let array = value.downcast_or_throw::<JsArray, _>(&mut cx)?;
+                ocsp_responses_from_js_array(&mut cx, array)?
+            }
+            _ => Vec::new(),
+        };
         let signer = create_signer::from_keys(&signcert, &pkey, alg, tsa_url)
             .or_else(|err| cx.throw_error(format!("Failed to create signer from keys: {err}")))?;
+        let signer = create_signer::with_ocsp_responses(signer, ocsp_responses);
         Ok(cx.boxed(Self { signer }))
     }
 

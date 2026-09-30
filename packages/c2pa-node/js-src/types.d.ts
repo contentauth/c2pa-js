@@ -175,6 +175,9 @@ export interface JsCallbackSignerConfig {
   // When true, the callback function should return fully-formed COSE data.
   // When false, the callback function should return raw signature data and the c2pa SDK will handle COSE wrapping.
   directCoseHandling: boolean;
+  // DER-encoded OCSP responses stapled into the signature, in chain order with the signing
+  // certificate first. Include their lengths in reserveSize. Ignored when directCoseHandling is true.
+  ocspResponses?: Buffer[];
 }
 
 export interface SignerPayload {
