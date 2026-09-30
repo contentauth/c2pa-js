@@ -2,4 +2,4 @@
 '@contentauth/c2pa-node': patch
 ---
 
-Switch trustmark version
+Update to Trustmark version 0.4.0.
