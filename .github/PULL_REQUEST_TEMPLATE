@@ -8,7 +8,7 @@
 <!-- How did you test the changes? What new tests were added? What tests were changed? -->
 
 ## Cross-package drift check
-If this PR touches Settings/Context, Reader/Builder input validation, signer/HTTP logic, or AI compliance logic in one package:
+If this PR touches Settings/Context, Reader/Builder input validation, or signer/HTTP logic in one package:
 
 <!-- Put an 'x' in the box to indicate completion -->
 
