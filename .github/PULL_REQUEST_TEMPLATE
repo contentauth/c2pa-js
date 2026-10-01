@@ -1,0 +1,17 @@
+## Overview
+<!-- Include a high-level description of the changes, along with any required context. -->
+
+## Changes
+<!-- What changed? -->
+
+## Testing
+<!-- How did you test the changes? What new tests were added? What tests were changed? -->
+
+## Cross-package drift check
+If this PR touches Settings/Context, Reader/Builder input validation, or signer/HTTP logic in one package:
+
+<!-- Put an 'x' in the box to indicate completion -->
+
+[ ] Checked whether `c2pa-utilities` already owns this logic, and changed it there instead of adding a package-local copy.
+[ ] If this package's behavior must differ from its sibling, explained why in a comment.
+[ ] If a duplicate was unavoidable for now, add comments explaining why and how it should be reconciled in the future.
