@@ -14,8 +14,13 @@ import {
   mergeSettings,
   settingsToJson,
 } from "@contentauth/c2pa-utilities";
+import { vi } from "vitest";
 
-import { loadSettingsFromFile, resolveSettingsForNeon } from "./Settings.js";
+import {
+  loadSettingsFromFile,
+  resolveRawSettingsForNeon,
+  resolveSettingsForNeon,
+} from "./Settings.js";
 
 describe("Settings", () => {
   describe("loadSettingsFromFile", () => {
@@ -65,45 +70,77 @@ verify_after_sign = false`;
     });
   });
 
-  describe("resolveSettingsForNeon", () => {
+  describe("resolveRawSettingsForNeon", () => {
     it("returns undefined when omitted", () => {
-      expect(resolveSettingsForNeon(undefined)).toBeUndefined();
+      expect(resolveRawSettingsForNeon(undefined)).toBeUndefined();
     });
 
     it("returns undefined when null is passed in", () => {
       // A plain-JS caller can pass `null` explicitly.
       // It must not fall through to JSON.stringify(null), which would send the
       // native library the literal string "null" instead of "no settings".
-      expect(resolveSettingsForNeon(null)).toBeUndefined();
+      expect(resolveRawSettingsForNeon(null)).toBeUndefined();
     });
 
-    it("applies defaults for an empty Context", () => {
-      const result = resolveSettingsForNeon(new Context());
+    it("passes raw settings through unchanged", () => {
+      const rawSettings = { verify: { verify_trust: false } };
+      const result = resolveRawSettingsForNeon(rawSettings);
+      expect(JSON.parse(result!)).toEqual(rawSettings);
+    });
+
+    it("passes raw settings JSON through unchanged", () => {
+      const json = JSON.stringify({ verify: { verify_trust: false } });
+      expect(resolveRawSettingsForNeon(json)).toBe(json);
+    });
+  });
+
+  describe("resolveSettingsForNeon", () => {
+    it("returns undefined when omitted", async () => {
+      expect(await resolveSettingsForNeon(undefined)).toBeUndefined();
+    });
+
+    it("returns undefined when null is passed in", async () => {
+      expect(await resolveSettingsForNeon(null)).toBeUndefined();
+    });
+
+    it("applies defaults for an empty Context", async () => {
+      const result = await resolveSettingsForNeon(new Context());
       expect(JSON.parse(result!)).toEqual(
         JSON.parse(settingsToJson(DEFAULT_SETTINGS)),
       );
     });
 
-    it("merges a Context's settings with defaults", () => {
+    it("merges a Context's settings with defaults", async () => {
       const settings = { verify: { verifyTrust: false } };
-      const result = resolveSettingsForNeon(new Context(settings));
+      const result = await resolveSettingsForNeon(new Context(settings));
       expect(JSON.parse(result!)).toEqual(
         JSON.parse(settingsToJson(mergeSettings(DEFAULT_SETTINGS, settings))),
       );
     });
 
-    it("passes a raw settings object through as-is, without applying defaults", () => {
-      // The deprecated raw-settings path preserves this package's pre-Context behavior exactly:
-      // no defaults are merged in, unlike the Context path above.
-      const result = resolveSettingsForNeon({
-        verify: { verify_trust: false },
-      });
-      expect(JSON.parse(result!)).toEqual({ verify: { verify_trust: false } });
+    it("fetches trust-anchor URLs before returning Context settings", async () => {
+      const pem = "-----BEGIN CERTIFICATE-----\nanchor\n-----END CERTIFICATE-----";
+      const fetch = vi.fn(async () => new Response(pem));
+      vi.stubGlobal("fetch", fetch);
+
+      try {
+        const result = await resolveSettingsForNeon(
+          new Context({
+            trust: { trustAnchors: "https://example.com/anchors.pem" },
+          }),
+        );
+
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(JSON.parse(result!).trust.anchors[0].trust_anchors).toBe(pem);
+      } finally {
+        vi.unstubAllGlobals();
+      }
     });
 
-    it("passes a raw settings JSON string through unchanged", () => {
-      const json = JSON.stringify({ verify: { verify_trust: false } });
-      expect(resolveSettingsForNeon(json)).toBe(json);
+    it("keeps deprecated raw settings unchanged", async () => {
+      const rawSettings = { verify: { verify_trust: false } };
+      const result = await resolveSettingsForNeon(rawSettings);
+      expect(JSON.parse(result!)).toEqual(rawSettings);
     });
   });
 });
