@@ -1258,6 +1258,8 @@ describe('builder', () => {
         // re-verified, so skip the SDK's post-sign verification.
         const context = new Context({ verify: { verifyAfterSign: false } });
         const builder = await Builder.new(c2pa, context);
+        const label = 'urn:c2pa:00000000-0000-4000-8000-000000000000';
+        await builder.updateManifestProperty('label', label);
         const signer = await createTestSigner();
         const signedBytes = await builder.sign(signer, jxlMimetype, blob);
 
@@ -1274,6 +1276,7 @@ describe('builder', () => {
         );
 
         expect(reader).not.toBeNull();
+        expect(await reader!.activeLabel()).toBe(label);
 
         const manifestStore = await reader!.manifestStore();
         expect(manifestStore).toBeDefined();
