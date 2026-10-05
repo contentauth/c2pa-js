@@ -564,7 +564,7 @@ const builder3 = await Builder.fromArchive(archiveAsset, context);
 ```
 
 > [!NOTE]
-> Unlike `c2pa-web`, `c2pa-node` doesn't fetch trust-anchor URLs embedded in a `Context`'s settings yet — a trust anchor value must be inline PEM content or a local file path, not a URL, until that support lands here too.
+> As in `c2pa-web`, URLs in a `Context`'s trust-anchor settings are fetched and resolved before the Reader or Builder is created. The deprecated raw-settings API does not resolve URLs; use a `Context` for URL-based trust anchors.
 
 #### Per-instance settings (deprecated)
 
