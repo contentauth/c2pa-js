@@ -56,6 +56,26 @@ This generates HTML documentation in the `docs/` directory at the repo root. It 
 
 ## Components
 
+### Supported formats and timestamps
+
+Discover formats supported by the compiled SDK without opening an asset:
+
+```typescript
+import { Builder, Reader } from '@contentauth/c2pa-node';
+
+const readableFormats = Reader.supportedMimeTypes();
+const writableFormats = Builder.supportedMimeTypes();
+
+const builder = await Builder.newAsync();
+builder.addTimestamp('urn:c2pa:fa479510-2a7d-c165-7b26-488a267f4c6a');
+```
+
+`addTimestamp` queues a matching ingredient manifest label for timestamping during signing.
+It does not fetch a timestamp immediately. Repeated labels are deduplicated, existing timestamps
+are preserved, and signing requires a signer with a timestamp authority URL to fulfill the request.
+Supported formats depend on the SDK's compiled features; reading and writing lists can differ.
+Lists include MIME types and extension aliases. For example, this SDK can read PDF but cannot write it.
+
 ### Reader
 
 The `Reader` class is used to read and validate C2PA manifests from media files. It can parse embedded manifests or fetch remote manifests. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.

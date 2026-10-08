@@ -32,6 +32,12 @@ pub struct WasmReader {
 
 #[wasm_bindgen]
 impl WasmReader {
+    /// Returns the MIME types this SDK build can read.
+    #[wasm_bindgen(js_name = supportedMimeTypes)]
+    pub fn supported_mime_types() -> Vec<String> {
+        Reader::supported_mime_types()
+    }
+
     /// Attempts to create a new `WasmReader` from an asset format and `Blob` of the asset's bytes.
     /// Optionally accepts a context JSON string to configure the reader.
     #[wasm_bindgen(js_name = fromBlob)]
@@ -182,6 +188,14 @@ mod tests {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
+
+    #[wasm_bindgen_test]
+    fn supported_mime_types_match_upstream() {
+        assert_eq!(
+            WasmReader::supported_mime_types(),
+            Reader::supported_mime_types()
+        );
+    }
 
     // A JPEG with a real embedded C2PA manifest (Adobe/CAI test asset).
     const SIGNED_JPEG: &[u8] = include_bytes!("../tests/fixtures/C.jpg");

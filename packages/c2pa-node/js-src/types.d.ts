@@ -196,6 +196,13 @@ export interface HashedUri {
 export type C2paSettings = string | object;
 
 export interface BuilderInterface {
+  /**
+   * Requests a timestamp for a matching ingredient manifest during signing.
+   * Requires a signer with a timestamp authority URL. Existing timestamps are preserved.
+   * Repeated labels are deduplicated; no timestamp is fetched immediately.
+   */
+  addTimestamp(manifestLabel: string): void;
+
   /** 
    * An intent lets the API know what kind of manifest to create.
    * 

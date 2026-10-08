@@ -38,6 +38,8 @@ import type {
 
 declare module "index.node" {
   // Builder methods
+  export function builderSupportedMimeTypes(): string[];
+  export function builderAddTimestamp(manifestLabel: string): void;
   export function builderNew(): NeonBuilderHandle;
   export function builderWithJson(json: string): NeonBuilderHandle;
   export function builderSetIntent(intent: string): void;
@@ -89,6 +91,7 @@ declare module "index.node" {
   export function builderAddRedaction(uri: string, reason: C2paReason): void;
 
   // Reader methods
+  export function readerSupportedMimeTypes(): string[];
   export function readerFromAsset(
     asset: SourceAsset,
   ): Promise<NeonReaderHandle>;

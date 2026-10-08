@@ -32,6 +32,11 @@ const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>
  * ```
  */
 export class Reader {
+  /** Returns the MIME types this SDK build can read. */
+  static async supportedMimeTypes(c2pa: C2pa): Promise<string[]> {
+    return c2pa.worker.tx.reader_supportedMimeTypes();
+  }
+
   #worker: WorkerManager;
   #id: number;
 
