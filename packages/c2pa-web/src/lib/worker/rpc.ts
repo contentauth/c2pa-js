@@ -35,6 +35,7 @@ const { createTx, rx } = channel<{
   ) => Promise<number>;
 
   // Reader methods
+  reader_supportedMimeTypes: () => string[];
   reader_activeLabel: (readerId: number) => string | null;
   reader_manifestStore: (readerId: number) => any;
   reader_activeManifest: (readerId: number) => any;
@@ -52,6 +53,8 @@ const { createTx, rx } = channel<{
   builder_fromArchive: (archive: Blob, contextJson?: string) => number;
 
   // Builder methods
+  builder_supportedMimeTypes: () => string[];
+  builder_addTimestamp: (builderId: number, manifestLabel: string) => void;
   builder_setIntent: (builderId: number, intent: BuilderIntent) => void;
   builder_addAction: (builderId: number, action: Action) => void;
   builder_addAssertion: (

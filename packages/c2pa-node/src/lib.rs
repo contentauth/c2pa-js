@@ -29,6 +29,14 @@ pub mod neon_trustmark;
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
     // Builder
+    cx.export_function(
+        "builderSupportedMimeTypes",
+        neon_builder::NeonBuilder::supported_mime_types,
+    )?;
+    cx.export_function(
+        "builderAddTimestamp",
+        neon_builder::NeonBuilder::add_timestamp,
+    )?;
     cx.export_function("builderNew", neon_builder::NeonBuilder::new)?;
     cx.export_function("builderWithJson", neon_builder::NeonBuilder::with_json)?;
     cx.export_function("builderSetIntent", neon_builder::NeonBuilder::set_intent)?;
@@ -107,6 +115,10 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     )?;
 
     // Reader
+    cx.export_function(
+        "readerSupportedMimeTypes",
+        neon_reader::NeonReader::supported_mime_types,
+    )?;
     cx.export_function("readerNew", neon_reader::NeonReader::new)?;
     cx.export_function("readerFromAsset", neon_reader::NeonReader::from_stream)?;
     cx.export_function(

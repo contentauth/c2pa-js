@@ -57,6 +57,33 @@ import { createC2pa } from '@contentauth/c2pa-web/inline';
 const c2pa = await createC2pa();
 ```
 
+## Supported formats and timestamps
+
+Use the initialized `C2pa` instance to discover formats without opening an asset:
+
+```typescript
+import { createC2pa } from '@contentauth/c2pa-web/inline';
+import { Builder, Reader } from '@contentauth/c2pa-web';
+
+const c2pa = await createC2pa();
+try {
+  const readableFormats = await Reader.supportedMimeTypes(c2pa);
+  const writableFormats = await Builder.supportedMimeTypes(c2pa);
+  const builder = await Builder.new(c2pa);
+  await builder.addTimestamp('urn:c2pa:fa479510-2a7d-c165-7b26-488a267f4c6a');
+  await builder.free();
+} finally {
+  c2pa.dispose();
+}
+```
+
+`addTimestamp` queues a matching ingredient manifest label for timestamping during signing.
+It does not fetch a timestamp immediately. Repeated labels are deduplicated and existing timestamps
+are preserved. Fulfilling the request requires a signer with a timestamp authority URL; the current
+Web signer does not expose that option. This binding queues the request but does not add a timestamp transport.
+Supported formats depend on compiled features; reading and writing lists can differ.
+Lists include MIME types and extension aliases. For example, this SDK can read PDF but cannot write it.
+
 ## Configuring behavior with `Context`
 
 `createC2pa` sets up the worker and Wasm binary; `Reader` and `Builder`'s creation methods each accept an optional `Context` (see [`c2pa-utilities`'s README](../c2pa-utilities/README.md#context-and-settings) for the full API) directly, so the same running worker can create as many `Reader`s/`Builder`s as needed, each configured independently:

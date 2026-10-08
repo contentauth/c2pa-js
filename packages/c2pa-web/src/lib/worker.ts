@@ -71,6 +71,16 @@ rx(
       const reader = readerMap.get(readerId);
       return reader.activeLabel() ?? null;
     },
+    reader_supportedMimeTypes() {
+      return WasmReader.supportedMimeTypes();
+    },
+    builder_supportedMimeTypes() {
+      return WasmBuilder.supportedMimeTypes();
+    },
+    builder_addTimestamp(builderId, manifestLabel) {
+      const builder = builderMap.get(builderId);
+      builder.addTimestamp(manifestLabel);
+    },
     reader_manifestStore(readerId) {
       const reader = readerMap.get(readerId);
       return sanitizeManifestStore(reader.manifestStore());

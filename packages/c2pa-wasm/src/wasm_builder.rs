@@ -50,6 +50,19 @@ struct AssetAndManifestBytes {
 
 #[wasm_bindgen]
 impl WasmBuilder {
+    /// Returns the MIME types this SDK build can write.
+    #[wasm_bindgen(js_name = supportedMimeTypes)]
+    pub fn supported_mime_types() -> Vec<String> {
+        Builder::supported_mime_types()
+    }
+
+    /// Requests a timestamp for a matching ingredient manifest during signing.
+    /// Requires a signer with a timestamp authority URL; existing timestamps are preserved.
+    #[wasm_bindgen(js_name = addTimestamp)]
+    pub fn add_timestamp(&mut self, manifest_label: String) {
+        self.builder.add_timestamp(manifest_label);
+    }
+
     /// Creates a new `WasmBuilder` with a minimal manifest definition.
     /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = new)]
@@ -572,5 +585,45 @@ impl WasmBuilder {
         };
 
         Ok(manifest)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    #[wasm_bindgen_test]
+    fn supported_mime_types_match_upstream() {
+        assert_eq!(
+            WasmBuilder::supported_mime_types(),
+            Builder::supported_mime_types()
+        );
+    }
+
+    #[wasm_bindgen_test]
+    fn add_timestamp_records_distinct_labels_without_changing_definition() {
+        let mut builder = WasmBuilder::from_builder(Builder::default());
+        let before = serde_json::to_value(&builder.builder.definition).unwrap();
+        builder.add_timestamp("urn:c2pa:first".to_string());
+        builder.add_timestamp("urn:c2pa:first".to_string());
+        builder.add_timestamp("urn:c2pa:second".to_string());
+        assert_eq!(builder.builder.timestamp_manifest_labels.len(), 2);
+        assert!(
+            builder
+                .builder
+                .timestamp_manifest_labels
+                .contains("urn:c2pa:first")
+        );
+        assert!(
+            builder
+                .builder
+                .timestamp_manifest_labels
+                .contains("urn:c2pa:second")
+        );
+        assert_eq!(
+            serde_json::to_value(&builder.builder.definition).unwrap(),
+            before
+        );
     }
 }
