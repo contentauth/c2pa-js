@@ -1,5 +1,13 @@
 # @contentauth/c2pa-web
 
+## 0.15.3
+
+### Patch Changes
+
+- e29811b: Add ability to modify assertions
+- Updated dependencies [e29811b]
+  - @contentauth/c2pa-wasm@0.13.2
+
 ## 0.15.2
 
 ### Patch Changes
