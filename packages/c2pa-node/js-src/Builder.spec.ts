@@ -242,16 +242,12 @@ describe("Builder", () => {
       const reader = await Reader.fromAsset(dest);
       expect(reader).not.toBeNull();
       const activeManifest = reader!.getActive();
-      const cborAssertion = activeManifest?.assertions?.find(
-        (a: any) => a.label === "c2pa.actions.v2",
+      const actionsAssertions = activeManifest?.assertions?.filter(
+        isActionsAssertion,
       );
-      expect(cborAssertion).toBeDefined();
-      if (isActionsAssertion(cborAssertion)) {
-        const actions = cborAssertion.data.actions.map((a: any) => a.action);
-        expect(actions).toContain("c2pa.edited");
-      } else {
-        throw new Error("CBOR assertion does not have the expected structure");
-      }
+      expect(actionsAssertions?.length).toBeGreaterThan(0);
+      const actions = actionsAssertions?.flatMap((a) => a.data.actions);
+      expect(actions?.map((a) => a.action)).toContain("c2pa.edited");
     });
 
     it("should archive and construct from archive", async () => {
@@ -861,22 +857,14 @@ describe("Builder", () => {
       const reader = await Reader.fromAsset(dest);
       expect(reader).not.toBeNull();
       const activeManifest = reader!.getActive();
-      const actionsAssertion = activeManifest?.assertions?.find(
-        (a: any) => a.label === "c2pa.actions.v2",
+      const actionsAssertions = activeManifest?.assertions?.filter(
+        isActionsAssertion,
       );
-      expect(actionsAssertion).toBeDefined();
-      if (isActionsAssertion(actionsAssertion)) {
-        const actions = actionsAssertion.data.actions;
-        const editedAction = actions.find(
-          (a: any) => a.action === "c2pa.edited",
-        );
-        expect(editedAction).toBeDefined();
-        expect(editedAction?.action).toBe("c2pa.edited");
-      } else {
-        throw new Error(
-          "Actions assertion does not have the expected structure",
-        );
-      }
+      expect(actionsAssertions?.length).toBeGreaterThan(0);
+      const actions = actionsAssertions?.flatMap((a) => a.data.actions);
+      const editedAction = actions?.find((a) => a.action === "c2pa.edited");
+      expect(editedAction).toBeDefined();
+      expect(editedAction?.action).toBe("c2pa.edited");
     });
 
     it("should add ingredient using addIngredient method", async () => {
