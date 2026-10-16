@@ -2,6 +2,9 @@
 
 Exports TypeScript types used by c2pa-web that are auto-generated from [c2pa-rs](https://github.com/contentauth/c2pa-rs) structs.
 
+When testing against c2pa-rs 0.92-dev, `RegionOfInterest.role` and the `Role` type
+are no longer available, matching their removal upstream.
+
 ## Prerequisites
 
 Ensure the repo-wide prerequisites are installed:
