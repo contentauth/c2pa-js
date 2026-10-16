@@ -123,6 +123,11 @@ impl AsyncSigner for NeonIdentityAssertionSigner {
         c2pa::AsyncSigner::ocsp_val(&signer).await
     }
 
+    async fn ocsp_vals(&self) -> Vec<Vec<u8>> {
+        let signer = self.signer.read().unwrap().clone();
+        c2pa::AsyncSigner::ocsp_vals(&signer).await
+    }
+
     fn time_authority_url(&self) -> Option<String> {
         c2pa::AsyncSigner::time_authority_url(&*self.signer.read().unwrap())
     }

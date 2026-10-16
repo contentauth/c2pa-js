@@ -446,6 +446,42 @@ describe("Builder", () => {
       expect(activeManifest?.title).toBe("Test_Manifest");
     });
 
+    const ocspResponses = [Buffer.alloc(1024, 1), Buffer.alloc(1024, 2)];
+
+    it("should staple OCSP responses in order with callback signer", async () => {
+      const signerConfig: JsCallbackSignerConfig = {
+        alg: "es256",
+        certs: [publicKey],
+        reserveSize: 10000 + ocspResponses[0].length + ocspResponses[1].length,
+        directCoseHandling: false,
+        ocspResponses,
+      };
+      const testSigner = new TestSigner(privateKey);
+      const signer = CallbackSigner.newSigner(signerConfig, testSigner.sign);
+
+      const bytes = await builder.signAsync(signer, source, { buffer: null });
+      expect(bytes.indexOf(ocspResponses[0])).toBeGreaterThan(-1);
+      expect(bytes.indexOf(ocspResponses[1])).toBeGreaterThan(
+        bytes.indexOf(ocspResponses[0]),
+      );
+    });
+
+    it("should staple OCSP responses in order with local signer", () => {
+      const signer = LocalSigner.newSigner(
+        publicKey,
+        privateKey,
+        "es256",
+        undefined,
+        ocspResponses,
+      );
+
+      const bytes = builder.sign(signer, source, { buffer: null });
+      expect(bytes.indexOf(ocspResponses[0])).toBeGreaterThan(-1);
+      expect(bytes.indexOf(ocspResponses[1])).toBeGreaterThan(
+        bytes.indexOf(ocspResponses[0]),
+      );
+    });
+
     it("should preserve JSON assertion characters without escaping", async () => {
       const fingerprintAssertion = JSON.stringify({
         alg: "sha256",
