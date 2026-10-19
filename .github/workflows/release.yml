@@ -1,6 +1,7 @@
 name: Release
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -10,6 +11,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
   release:
     name: Release
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -258,7 +260,10 @@ jobs:
 
   publish-docs:
     needs: [release]
-    if: ${{ needs.release.outputs.published == 'true' }}
+    if: ${{ always() && (needs.release.outputs.published == 'true' || github.event_name == 'workflow_dispatch') }}
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
     permissions:
       contents: read
       pages: write
