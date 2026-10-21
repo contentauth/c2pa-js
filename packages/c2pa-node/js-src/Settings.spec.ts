@@ -17,7 +17,7 @@ import {
 
 import {
   loadSettingsFromFile,
-  resolveOptions,
+  resolveSdkConfig,
   resolveSettingsForNeon,
 } from "./Settings.js";
 
@@ -88,7 +88,7 @@ verify_after_sign = false`;
       );
     });
 
-    it("does not serialize a Context's options", () => {
+    it("does not serialize a Context's SDK config", () => {
       const result = resolveSettingsForNeon(
         new Context(undefined, { maxSizeInBytes: 42 }),
       );
@@ -120,21 +120,21 @@ verify_after_sign = false`;
     });
   });
 
-  describe("resolveOptions", () => {
-    it("returns a Context's options", () => {
-      const options = { maxSizeInBytes: 42 };
-      expect(resolveOptions(new Context(undefined, options))).toEqual(options);
+  describe("resolveSdkConfig", () => {
+    it("returns a Context's SDK config", () => {
+      const sdkConfig = { maxSizeInBytes: 42 };
+      expect(resolveSdkConfig(new Context(undefined, sdkConfig))).toEqual(sdkConfig);
     });
 
-    it("returns undefined when a Context carries no options", () => {
-      expect(resolveOptions(new Context())).toBeUndefined();
+    it("returns undefined when a Context carries no SDK config", () => {
+      expect(resolveSdkConfig(new Context())).toBeUndefined();
     });
 
     it("returns undefined for the deprecated raw settings forms", () => {
-      expect(resolveOptions(undefined)).toBeUndefined();
-      expect(resolveOptions(null)).toBeUndefined();
-      expect(resolveOptions({ verify: { verifyTrust: false } })).toBeUndefined();
-      expect(resolveOptions('{"verify":{"verify_trust":false}}')).toBeUndefined();
+      expect(resolveSdkConfig(undefined)).toBeUndefined();
+      expect(resolveSdkConfig(null)).toBeUndefined();
+      expect(resolveSdkConfig({ verify: { verifyTrust: false } })).toBeUndefined();
+      expect(resolveSdkConfig('{"verify":{"verify_trust":false}}')).toBeUndefined();
     });
   });
 });

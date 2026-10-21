@@ -117,6 +117,17 @@ describe('reader', () => {
         ).resolves.not.toBeNull();
       });
 
+      test('should reject an invalid max size from the given Context', async ({
+        c2pa
+      }) => {
+        const blob = await getBlobForAsset(C_with_CAWG_data);
+        const context = new Context(undefined, { maxSizeInBytes: 0 });
+
+        await expect(
+          Reader.fromBlob(c2pa, blob.type, blob, context)
+        ).rejects.toThrow(RangeError);
+      });
+
       test('should apply the given Context', async () => {
         const settings: Settings = {
           trust: {

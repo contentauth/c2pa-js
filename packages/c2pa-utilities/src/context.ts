@@ -11,18 +11,18 @@ import type { FetchWithRetryOptions } from './fetchWithRetry.js';
 import { resolveSettings, type Settings } from './settings.js';
 
 /**
- * SDK-side options for a {@link Context}.
+ * SDK-side configuration for a {@link Context}.
  *
- * Unlike {@link Settings}, which configure the underlying library, these configure the
+ * Unlike {@link Settings}, which configure the underlying library, this configures the
  * JavaScript SDK itself. Only the settings are serialized and sent across the
- * WASM/native boundary whereas options never leave the SDK.
+ * WASM/native boundary whereas the SDK config never leaves the SDK.
  */
-export interface ContextOptions {
+export interface SdkConfig {
   /**
    * Maximum size, in bytes, of an asset that a `Reader` accepts. Must be a positive number.
    *
    * Each SDK applies its own limit when unset since what is acceptable depends on the
-   * platform: 1 GB in `c2pa-web` and 10 GB in `c2pa-node`.
+   * platform.
    */
   maxSizeInBytes?: number;
 }
@@ -39,22 +39,22 @@ export interface ContextOptions {
  */
 export class Context {
   private readonly _settings?: Settings;
-  private readonly _options?: ContextOptions;
+  private readonly _sdkConfig?: SdkConfig;
   private _jsonPromise?: Promise<string>;
 
-  constructor(settings?: Settings, options?: ContextOptions) {
+  constructor(settings?: Settings, sdkConfig?: SdkConfig) {
     this._settings = settings;
-    this._options = options;
+    this._sdkConfig = sdkConfig;
   }
 
   /**
-   * The SDK-side options currently attached to this `Context`, if any.
+   * The SDK config currently attached to this `Context`, if any.
    *
-   * To derive a new `Context` with different options, construct one with
-   * `new Context(settings, options)`.
+   * To derive a new `Context` with a different SDK config, construct one with
+   * `new Context(settings, sdkConfig)`.
    */
-  get options(): ContextOptions | undefined {
-    return this._options;
+  get sdkConfig(): SdkConfig | undefined {
+    return this._sdkConfig;
   }
 
   /**

@@ -16,7 +16,7 @@ import {
   Context,
   settingsToJson,
   withDefaultSettings,
-  type ContextOptions,
+  type SdkConfig,
 } from "@contentauth/c2pa-utilities";
 import type { C2paSettings } from "./types.d.ts";
 
@@ -38,19 +38,19 @@ export async function loadSettingsFromFile(filePath: string): Promise<string> {
 }
 
 /**
- * Reads the SDK-side options out of a settings argument.
+ * Reads the SDK config out of a settings argument.
  *
- * Only a `Context` carries options so the deprecated raw `C2paSettings` forms always
+ * Only a `Context` carries an SDK config so the deprecated raw `C2paSettings` forms always
  * resolve to `undefined`, leaving this package's defaults in place.
  *
  * @param settingsOrContext A `Context`, or (@deprecated) a raw `C2paSettings` string/object.
- * @returns The `Context`'s options, or `undefined` if there are none.
+ * @returns The `Context`'s SDK config, or `undefined` if there is none.
  */
-export function resolveOptions(
+export function resolveSdkConfig(
   settingsOrContext: C2paSettings | Context | null | undefined,
-): ContextOptions | undefined {
+): SdkConfig | undefined {
   return settingsOrContext instanceof Context
-    ? settingsOrContext.options
+    ? settingsOrContext.sdkConfig
     : undefined;
 }
 

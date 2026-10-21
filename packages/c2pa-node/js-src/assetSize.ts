@@ -13,8 +13,9 @@
 
 import fs from "fs-extra";
 import {
+  resolveConfiguredMaxSizeInBytes,
   validateAssetSize,
-  type ContextOptions,
+  type SdkConfig,
 } from "@contentauth/c2pa-utilities";
 import type { SourceAsset } from "./types.d.ts";
 
@@ -31,17 +32,21 @@ export const MAX_SIZE_IN_BYTES = 10 * 10 ** 9; // 10 GB
  * for large or untrusted assets.
  * 
  * @param asset The asset to validate.
- * @param options SDK-side options from a `Context`. A missing `maxSizeInBytes` falls back
+ * @param sdkConfig SDK config from a `Context`. A missing `maxSizeInBytes` falls back
  * to {@link MAX_SIZE_IN_BYTES}.
  *
+ * @throws {RangeError} If `maxSizeInBytes` isn't a finite, positive number.
  * @throws Error if reading the `FileAsset` fails.
  * @throws {AssetTooLargeError} If `sizeInBytes` exceeds the resolved limit.
  */
 export async function validateSourceAssetSize(
   asset: SourceAsset,
-  options?: ContextOptions,
+  sdkConfig?: SdkConfig,
 ): Promise<void> {
-  const maxSizeInBytes = options?.maxSizeInBytes ?? MAX_SIZE_IN_BYTES;
+  const maxSizeInBytes = resolveConfiguredMaxSizeInBytes(
+    sdkConfig,
+    MAX_SIZE_IN_BYTES,
+  );
 
   if ("buffer" in asset) {
     validateAssetSize(asset.buffer.length, maxSizeInBytes);

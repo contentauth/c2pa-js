@@ -10,7 +10,13 @@
 import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
 import type { C2pa } from './c2pa.js';
 import type { WorkerManager } from './worker/workerManager.js';
-import { Context, Settings, mergeSettings, validateAssetSize } from '@contentauth/c2pa-utilities';
+import {
+  Context,
+  Settings,
+  mergeSettings,
+  resolveConfiguredMaxSizeInBytes,
+  validateAssetSize
+} from '@contentauth/c2pa-utilities';
 
 // 1 GB
 export const MAX_SIZE_IN_BYTES = 10 ** 9;
@@ -51,7 +57,7 @@ export class Reader {
    * @param blob Blob of asset bytes.
    * @param context Optional `Context` configuring this reader's behavior.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
-   * @throws If the asset is too large.
+   * @throws If the asset is too large, or if the `Context` sets an invalid `maxSizeInBytes`.
    */
   static async fromBlob(
     c2pa: C2pa,
@@ -59,8 +65,10 @@ export class Reader {
     blob: Blob,
     context: Context = new Context()
   ): Promise<Reader | null> {
-    const maxSizeInBytes = context.options?.maxSizeInBytes ?? MAX_SIZE_IN_BYTES;
-    validateAssetSize(blob.size, maxSizeInBytes);
+    validateAssetSize(
+      blob.size,
+      resolveConfiguredMaxSizeInBytes(context.sdkConfig, MAX_SIZE_IN_BYTES)
+    );
 
     try {
       const settingsJson = await context.toJson();
@@ -87,7 +95,7 @@ export class Reader {
    * @param fragment Blob of fragment bytes.
    * @param context Optional `Context` configuring this reader's behavior.
    * @returns A {@link Reader} object or null if no C2PA metadata was found.
-   * @throws If the asset is too large.
+   * @throws If the asset is too large, or if the `Context` sets an invalid `maxSizeInBytes`.
    */
   static async fromBlobFragment(
     c2pa: C2pa,
@@ -96,7 +104,10 @@ export class Reader {
     fragment: Blob,
     context: Context = new Context()
   ): Promise<Reader | null> {
-    const maxSizeInBytes = context.options?.maxSizeInBytes ?? MAX_SIZE_IN_BYTES;
+    const maxSizeInBytes = resolveConfiguredMaxSizeInBytes(
+      context.sdkConfig,
+      MAX_SIZE_IN_BYTES
+    );
     validateAssetSize(init.size, maxSizeInBytes);
     validateAssetSize(fragment.size, maxSizeInBytes);
 

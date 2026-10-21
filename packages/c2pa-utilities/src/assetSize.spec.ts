@@ -11,8 +11,31 @@ import { describe, expect, test } from 'vitest';
 import {
   AssetTooLargeError,
   DEFAULT_MAX_SIZE_IN_BYTES,
+  resolveConfiguredMaxSizeInBytes,
   validateAssetSize
 } from './assetSize.js';
+
+describe('resolveConfiguredMaxSizeInBytes', () => {
+  test('falls back to the given default when there is no configured limit', () => {
+    expect(resolveConfiguredMaxSizeInBytes(undefined, 1000)).toBe(1000);
+    expect(resolveConfiguredMaxSizeInBytes({}, 1000)).toBe(1000);
+  });
+
+  test('returns the configured limit when one is given', () => {
+    expect(
+      resolveConfiguredMaxSizeInBytes({ maxSizeInBytes: 42 }, 1000)
+    ).toBe(42);
+  });
+
+  test.each([0, NaN, Infinity, -Infinity, -1])(
+    'throws RangeError for a configured maxSizeInBytes of %s',
+    (maxSizeInBytes) => {
+      expect(() =>
+        resolveConfiguredMaxSizeInBytes({ maxSizeInBytes }, 1000)
+      ).toThrow(RangeError);
+    }
+  );
+});
 
 describe('validateAssetSize', () => {
   test('does not throw when the size is within the max', () => {
