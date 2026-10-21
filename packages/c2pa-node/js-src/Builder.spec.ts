@@ -65,6 +65,27 @@ describe("TestSigner", () => {
 });
 
 describe("Builder", () => {
+  it("supportedMimeTypes returns writable formats without creating a builder", () => {
+    const formats = Builder.supportedMimeTypes();
+    expect(formats).toEqual(
+      expect.arrayContaining(["image/jpeg", "image/png"]),
+    );
+    expect(formats.every((format) => typeof format === "string")).toBe(true);
+    expect(new Set(formats).size).toBe(formats.length);
+    formats.length = 0;
+    expect(Builder.supportedMimeTypes()).toContain("image/jpeg");
+  });
+
+  it("addTimestamp queues labels without changing the manifest definition", async () => {
+    const builder: BuilderInterface = await Builder.newAsync();
+    const definition = builder.getManifestDefinition();
+    const label = "urn:c2pa:fa479510-2a7d-c165-7b26-488a267f4c6a";
+    expect(builder.addTimestamp(label)).toBeUndefined();
+    builder.addTimestamp(label);
+    builder.addTimestamp("urn:c2pa:another-manifest");
+    expect(builder.getManifestDefinition()).toEqual(definition);
+  });
+
   const parent_json = `{
             "title": "c2pa-bindings Test",
             "format": "image/jpeg",

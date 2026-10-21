@@ -24,6 +24,17 @@ import { MAX_SIZE_IN_BYTES } from "./assetSize.js";
 const tempDir = path.join(__dirname, "tmp");
 
 describe("Reader", () => {
+  it("supportedMimeTypes returns readable formats without creating a reader", () => {
+    const formats = Reader.supportedMimeTypes();
+    expect(formats).toEqual(
+      expect.arrayContaining(["image/jpeg", "image/png", "application/pdf"]),
+    );
+    expect(formats.every((format) => typeof format === "string")).toBe(true);
+    expect(new Set(formats).size).toBe(formats.length);
+    formats.length = 0;
+    expect(Reader.supportedMimeTypes()).toContain("image/jpeg");
+  });
+
   const manifestStore: ManifestStore = JSON.parse(`{
   "active_manifest": "contentauth:urn:uuid:c2677d4b-0a93-4444-876f-ed2f2d40b8cf",
   "manifests": {

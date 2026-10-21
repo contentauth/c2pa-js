@@ -107,6 +107,21 @@ const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>
  * The `Builder` class supports building C2PA manifests and signing assets.
  */
 export class Builder {
+  /** Returns the MIME types this SDK build can write. */
+  static async supportedMimeTypes(c2pa: C2pa): Promise<string[]> {
+    return c2pa.worker.tx.builder_supportedMimeTypes();
+  }
+
+  /**
+   * Requests a timestamp for a matching ingredient manifest during signing.
+   * Requires a signer with a timestamp authority URL. Existing timestamps are preserved.
+   * Repeated labels are deduplicated; this does not fetch a timestamp immediately.
+   * The current Web signer has no timestamp authority URL option, so this only queues the request.
+   */
+  async addTimestamp(manifestLabel: string): Promise<void> {
+    await this.#worker.tx.builder_addTimestamp(this.#id, manifestLabel);
+  }
+
   #worker: WorkerManager;
   #id: number;
 
