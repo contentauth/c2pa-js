@@ -58,6 +58,18 @@ function getActionGroupsFromDefinition(
     });
 }
 
+/** A property {@link Builder.updateManifestProperty} can set. */
+export type ManifestProperty =
+  | 'vendor'
+  | 'title'
+  | 'format'
+  | 'instance_id'
+  | 'label'
+  | 'claim_version';
+
+/** A claim version. */
+export type ClaimVersion = 1 | 2;
+
 export interface ManifestAndAssetBytes {
   manifest: Uint8Array<ArrayBuffer>;
   asset: Uint8Array<ArrayBuffer>;
@@ -264,6 +276,18 @@ export class Builder {
    */
   async setNoEmbed(noEmbed: boolean): Promise<void> {
     await this.#worker.tx.builder_setNoEmbed(this.#id, noEmbed);
+  }
+
+  /**
+   * Updates a (known) property in the manifest definition.
+   * Rejects an unsupported property or value type,
+   * or while a sign on this builder is pending.
+   */
+  async updateManifestProperty(
+    property: ManifestProperty,
+    value: string | ClaimVersion
+  ): Promise<void> {
+    await this.#worker.tx.builder_updateManifestProperty(this.#id, property, value);
   }
 
   /**

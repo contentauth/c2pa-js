@@ -398,6 +398,29 @@ impl WasmBuilder {
         self.builder.set_no_embed(no_embed);
     }
 
+    /// Updates a (known) property in the manifest definition.
+    #[wasm_bindgen(js_name = updateManifestProperty)]
+    pub fn update_manifest_property(
+        &mut self,
+        property: &str,
+        value: JsValue,
+    ) -> Result<(), JsString> {
+        let definition = &mut self.builder.definition;
+        match property {
+            "vendor" => definition.vendor = Some(property_string(property, &value)?),
+            "title" => definition.title = Some(property_string(property, &value)?),
+            "format" => definition.format = property_string(property, &value)?,
+            "instance_id" => definition.instance_id = property_string(property, &value)?,
+            "label" => definition.label = Some(property_string(property, &value)?),
+            "claim_version" => {
+                definition.claim_version = Some(property_claim_version(property, &value)?)
+            }
+            _ => return Err(invalid_property(property)),
+        }
+
+        Ok(())
+    }
+
     /// Sets a thumbnail from a [`Blob`] to be included in the manifest. The thumbnail should represent the asset being signed.
     #[wasm_bindgen(js_name = setThumbnailFromBlob)]
     pub fn set_thumbnail_from_blob(&mut self, format: &str, blob: &Blob) -> Result<(), JsString> {
@@ -572,5 +595,22 @@ impl WasmBuilder {
         };
 
         Ok(manifest)
+    }
+}
+
+fn invalid_property(property: &str) -> JsString {
+    JsString::from(format!(
+        "Property '{property}' not found or not a valid type"
+    ))
+}
+
+fn property_string(property: &str, value: &JsValue) -> Result<String, JsString> {
+    value.as_string().ok_or_else(|| invalid_property(property))
+}
+
+fn property_claim_version(property: &str, value: &JsValue) -> Result<u8, JsString> {
+    match value.as_f64() {
+        Some(version) => Ok(version as u8),
+        None => Err(invalid_property(property)),
     }
 }

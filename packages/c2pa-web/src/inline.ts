@@ -37,7 +37,11 @@ export async function createC2pa(config?: InlineConfig) {
 }
 
 export { Reader } from './lib/reader.js';
-export { Builder } from './lib/builder.js';
+export {
+  Builder,
+  type ClaimVersion,
+  type ManifestProperty
+} from './lib/builder.js';
 export * from './common.js';
 
 function dataUrlToArrayBuffer(dataUrl: string) {

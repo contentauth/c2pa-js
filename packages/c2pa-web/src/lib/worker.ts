@@ -163,6 +163,10 @@ rx(
       const builder = builderMap.get(builderId);
       builder.setNoEmbed(noEmbed);
     },
+    builder_updateManifestProperty(builderId, property, value) {
+      const builder = builderMap.get(builderId);
+      builder.updateManifestProperty(property, value);
+    },
     builder_setThumbnailFromBlob(builderId, format, blob) {
       const builder = builderMap.get(builderId);
       builder.setThumbnailFromBlob(format, blob);
