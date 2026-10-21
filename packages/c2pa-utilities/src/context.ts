@@ -11,6 +11,23 @@ import type { FetchWithRetryOptions } from './fetchWithRetry.js';
 import { resolveSettings, type Settings } from './settings.js';
 
 /**
+ * SDK-side configuration for a {@link Context}.
+ *
+ * Unlike {@link Settings}, which configure the underlying library, this configures the
+ * JavaScript SDK itself. Only the settings are serialized and sent across the
+ * WASM/native boundary whereas the SDK config never leaves the SDK.
+ */
+export interface SdkConfig {
+  /**
+   * Maximum size, in bytes, of an asset that a `Reader` accepts. Must be a positive number.
+   *
+   * Each SDK applies its own limit when unset since what is acceptable depends on the
+   * platform.
+   */
+  maxSizeInBytes?: number;
+}
+
+/**
  * A `Context` configures the behavior of a `Reader`/`Builder`. 
  * 
  * It is provided at creation time (e.g. `Reader.fromBlob(c2pa, format, blob, context)`),
@@ -22,10 +39,22 @@ import { resolveSettings, type Settings } from './settings.js';
  */
 export class Context {
   private readonly _settings?: Settings;
+  private readonly _sdkConfig?: SdkConfig;
   private _jsonPromise?: Promise<string>;
 
-  constructor(settings?: Settings) {
+  constructor(settings?: Settings, sdkConfig?: SdkConfig) {
     this._settings = settings;
+    this._sdkConfig = sdkConfig;
+  }
+
+  /**
+   * The SDK config currently attached to this `Context`, if any.
+   *
+   * To derive a new `Context` with a different SDK config, construct one with
+   * `new Context(settings, sdkConfig)`.
+   */
+  get sdkConfig(): SdkConfig | undefined {
+    return this._sdkConfig;
   }
 
   /**

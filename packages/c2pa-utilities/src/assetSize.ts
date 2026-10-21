@@ -11,6 +11,8 @@
  * This file implements the shared Reader asset size check.
  */
 
+import type { SdkConfig } from './context.js';
+
 /**
  * Default maximum asset size, in bytes.
  */
@@ -25,6 +27,32 @@ function resolveMaxSizeInBytes(maxSizeInBytes: number): number {
   return Number.isFinite(maxSizeInBytes) && maxSizeInBytes > 0
     ? maxSizeInBytes
     : DEFAULT_MAX_SIZE_IN_BYTES;
+}
+
+/**
+ * Resolves the max asset size for a `Reader` from a `Context`'s SDK config.
+ *
+ * Unlike {@link validateAssetSize}, an explicit `0` is rejected instead of falling back to
+ * {@link DEFAULT_MAX_SIZE_IN_BYTES}, since the caller asked for a specific limit.
+ *
+ * @param sdkConfig SDK config from a `Context`, if any.
+ * @param defaultMaxSizeInBytes The platform's limit, used when `maxSizeInBytes` is unset.
+ * @returns The limit to pass to {@link validateAssetSize}.
+ * @throws {RangeError} If the configured `maxSizeInBytes` isn't a finite, positive number.
+ */
+export function resolveConfiguredMaxSizeInBytes(
+  sdkConfig: SdkConfig | undefined,
+  defaultMaxSizeInBytes: number
+): number {
+  const maxSizeInBytes = sdkConfig?.maxSizeInBytes ?? defaultMaxSizeInBytes;
+
+  if (!Number.isFinite(maxSizeInBytes) || maxSizeInBytes <= 0) {
+    throw new RangeError(
+      `maxSizeInBytes must be a finite, positive number. Received: ${maxSizeInBytes}.`
+    );
+  }
+
+  return maxSizeInBytes;
 }
 
 /**
