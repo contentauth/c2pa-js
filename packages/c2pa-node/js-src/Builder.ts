@@ -345,6 +345,10 @@ export class Builder implements BuilderInterface {
     getNeonBinary().builderUpdateActions.call(this.builder, transform);
   }
 
+  updateAssertion(label: string, transform: (data: unknown) => unknown): void {
+    getNeonBinary().builderUpdateAssertion.call(this.builder, label, transform);
+  }
+
   getHandle(): NeonBuilderHandle {
     return this.builder;
   }

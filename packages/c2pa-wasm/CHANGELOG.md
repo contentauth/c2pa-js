@@ -1,5 +1,41 @@
 # @contentauth/c2pa-wasm
 
+## 0.13.3
+
+### Patch Changes
+
+- 29520c7: Update to c2pa-rs v0.91.3.
+
+## 0.13.2
+
+### Patch Changes
+
+- e29811b: Add ability to modify assertions
+
+## 0.13.1
+
+### Patch Changes
+
+- e454a78: Update to c2pa-rs v0.91.0.
+- f5141d9: Fix typings errors and avoid potential udnerflow
+
+## 0.13.0
+
+### Minor Changes
+
+- c0aa55c: Add credential holder for CAWG to c2pa-web.
+  Swap c2pa_cbor for ciborium in c2pa-node.
+
+### Patch Changes
+
+- a13fbb0: Add `WasmReader.fromBytes(format, bytes, settings?)`. Unlike `fromBlob`, this entry point reads the asset from an in-memory buffer and does not use any browser-only Web APIs (`Blob`, `FileReaderSync`), so C2PA verification can run in non-browser JavaScript runtimes such as Node.js, Deno, Bun, and Cloudflare Workers (workerd).
+
+## 0.12.0
+
+### Minor Changes
+
+- 1f04ad3: Use Context as the new way to construct and configure Reader and Builder objects. Deprecate thread-local Settings paths and the old Reader and Builder factory pattern.
+
 ## 0.11.6
 
 ### Patch Changes

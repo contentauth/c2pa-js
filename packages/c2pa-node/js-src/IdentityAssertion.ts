@@ -102,7 +102,7 @@ export class CallbackCredentialHolder
   }
 
   async sign(payload: SignerPayload): Promise<Buffer> {
-    return getNeonBinary().callbackSignerSignPayload.call(
+    return getNeonBinary().callbackCredentialHolderSignPayload.call(
       this.callbackCredentialHolder,
       payload,
     );

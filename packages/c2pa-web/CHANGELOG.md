@@ -1,5 +1,60 @@
 # @contentauth/c2pa-web
 
+## 0.15.4
+
+### Patch Changes
+
+- 29520c7: Update to c2pa-rs v0.91.3.
+- Updated dependencies [29520c7]
+  - @contentauth/c2pa-utilities@0.3.2
+  - @contentauth/c2pa-types@0.7.6
+  - @contentauth/c2pa-wasm@0.13.3
+
+## 0.15.3
+
+### Patch Changes
+
+- e29811b: Add ability to modify assertions
+- Updated dependencies [e29811b]
+  - @contentauth/c2pa-wasm@0.13.2
+
+## 0.15.2
+
+### Patch Changes
+
+- e454a78: Update to c2pa-rs v0.91.0.
+- abe6b75: Support optional (empty) mime types for Readers. Prefer supplying the mime type explicitly whenever it's known — omitting it falls back to slower, less reliable byte-based format detection in the native library.
+- f5141d9: Fix typings errors and avoid potential udnerflow
+- Updated dependencies [e454a78]
+- Updated dependencies [f5141d9]
+  - @contentauth/c2pa-utilities@0.3.1
+  - @contentauth/c2pa-types@0.7.5
+  - @contentauth/c2pa-wasm@0.13.1
+
+## 0.15.1
+
+### Patch Changes
+
+- c0aa55c: Add credential holder for CAWG to c2pa-web.
+  Swap c2pa_cbor for ciborium in c2pa-node.
+- Updated dependencies [a13fbb0]
+- Updated dependencies [c0aa55c]
+  - @contentauth/c2pa-wasm@0.13.0
+
+## 0.15.0
+
+### Minor Changes
+
+- 1f04ad3: Use Context as the new way to construct and configure Reader and Builder objects. Deprecate thread-local Settings paths and the old Reader and Builder factory pattern.
+
+### Patch Changes
+
+- 92a1619: Introduce Context class as a wrapper around Settings for configuring Readers and Builders. Add temporary shim in c2pa-web.
+- Updated dependencies [92a1619]
+- Updated dependencies [1f04ad3]
+  - @contentauth/c2pa-utilities@0.3.0
+  - @contentauth/c2pa-wasm@0.12.0
+
 ## 0.14.6
 
 ### Patch Changes

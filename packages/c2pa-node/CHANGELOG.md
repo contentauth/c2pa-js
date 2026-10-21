@@ -1,5 +1,48 @@
 # @contentauth/c2pa-node
 
+## 0.9.10
+
+### Patch Changes
+
+- 29520c7: Update to c2pa-rs v0.91.3.
+- Updated dependencies [29520c7]
+  - @contentauth/c2pa-utilities@0.3.2
+  - @contentauth/c2pa-types@0.7.6
+
+## 0.9.9
+
+### Patch Changes
+
+- e29811b: Add ability to modify assertions
+- a0057f8: Update to Trustmark version 0.4.0.
+- b862120: Bump Trustmark crate dependency to v0.3.0 for c2pa-node.
+
+## 0.9.8
+
+### Patch Changes
+
+- e454a78: Update to c2pa-rs v0.91.0.
+- abe6b75: Support optional (empty) mime types for Readers. Prefer supplying the mime type explicitly whenever it's known — omitting it falls back to slower, less reliable byte-based format detection in the native library.
+- f5141d9: Fix typings errors and avoid potential udnerflow
+- Updated dependencies [e454a78]
+  - @contentauth/c2pa-utilities@0.3.1
+  - @contentauth/c2pa-types@0.7.5
+
+## 0.9.7
+
+### Patch Changes
+
+- c0aa55c: Add credential holder for CAWG to c2pa-web.
+  Swap c2pa_cbor for ciborium in c2pa-node.
+
+## 0.9.6
+
+### Patch Changes
+
+- 4aa0a07: Use Context as the new way to construct and configure Reader and Builder objects. Deprecate Settings-based workflows.
+- Updated dependencies [92a1619]
+  - @contentauth/c2pa-utilities@0.3.0
+
 ## 0.9.5
 
 ### Patch Changes

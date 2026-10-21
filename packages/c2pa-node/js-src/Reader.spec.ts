@@ -132,11 +132,33 @@ describe("Reader", () => {
     expect(json.active_manifest).toEqual(manifestStore.active_manifest);
   });
 
+  it("should read from an ArrayBuffer with no mimeType by detecting the format from its bytes", async () => {
+    const buffer = await fs.readFile("./tests/fixtures/CA.jpg");
+    const reader = await Reader.fromAsset({ buffer });
+    expect(reader).not.toBeNull();
+
+    const json = reader!.json();
+    expect(json.manifests).toEqual(manifestStore.manifests);
+    expect(json.active_manifest).toEqual(manifestStore.active_manifest);
+  });
+
   it("should read from a file", async () => {
     const reader = await Reader.fromAsset({
       path: "./tests/fixtures/CA.jpg",
     });
     expect(reader).not.toBeNull();
+    const json = reader!.json();
+    expect(json.manifests).toEqual(manifestStore.manifests);
+    expect(json.active_manifest).toEqual(manifestStore.active_manifest);
+  });
+
+  it("should read from a file with an unrecognized extension by detecting the format from its bytes", async () => {
+    const extensionlessPath = path.join(tempDir, "no-extension");
+    await fs.copyFile("./tests/fixtures/CA.jpg", extensionlessPath);
+
+    const reader = await Reader.fromAsset({ path: extensionlessPath });
+    expect(reader).not.toBeNull();
+
     const json = reader!.json();
     expect(json.manifests).toEqual(manifestStore.manifests);
     expect(json.active_manifest).toEqual(manifestStore.active_manifest);

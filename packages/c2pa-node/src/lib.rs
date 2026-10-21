@@ -101,6 +101,10 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         "builderUpdateActions",
         neon_builder::NeonBuilder::update_actions,
     )?;
+    cx.export_function(
+        "builderUpdateAssertion",
+        neon_builder::NeonBuilder::update_assertion,
+    )?;
 
     // Reader
     cx.export_function("readerNew", neon_reader::NeonReader::new)?;
@@ -185,6 +189,18 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function(
         "newCallbackCredentialHolder",
         neon_credential_holder::NeonCallbackCredentialHolder::from_js,
+    )?;
+    cx.export_function(
+        "callbackCredentialHolderSignPayload",
+        neon_credential_holder::NeonCallbackCredentialHolder::sign_payload,
+    )?;
+    cx.export_function(
+        "callbackCredentialHolderReserveSize",
+        neon_credential_holder::NeonCallbackCredentialHolder::reserve_size_js,
+    )?;
+    cx.export_function(
+        "callbackCredentialHolderSigType",
+        neon_credential_holder::NeonCallbackCredentialHolder::sig_type_js,
     )?;
 
     // Trustmark

@@ -44,15 +44,41 @@ This command will download precompiled binaries for the following systems:
 
 ## Documentation
 
-Complete API documentation is generated from TypeScript source using [TypeDoc](https://typedoc.org/) and published to GitHub Pages at [https://contentauth.github.io/c2pa-js/](https://contentauth.github.io/c2pa-js/).
+The [Node.js API documentation](https://contentauth.github.io/c2pa-js/node/) is
+generated with [TypeDoc](https://typedoc.org/) from the declarations in published
+versions of `@contentauth/c2pa-node`. Use the version selector to switch releases.
+The [multi-package documentation](https://contentauth.github.io/c2pa-js/) remains
+available at the existing root URL.
 
-To generate documentation locally, run the following from the monorepo root:
+To build only the versioned Node docs, run this from the monorepo root after
+installing workspace dependencies:
 
 ```bash
-pnpm ci:docs
+pnpm ci:docs:node
 ```
 
-This generates HTML documentation in the `docs/` directory at the repo root. It is not checked into version control and is automatically published to GitHub Pages whenever a new release is published.
+This requires npm and network access to the public npm registry, but no Rust build,
+native binaries, or GitHub authentication. Packages are installed in isolated
+temporary directories with lifecycle scripts disabled, and only their TypeScript
+declarations are parsed. Temporary installs are removed after the build.
+
+The first version in [node-versions.json](../../api-docs/node-versions.json) is
+served at `docs/node/index.html`. Each selected release is also available at
+`docs/node/versions/<version>/index.html`, published at
+`https://contentauth.github.io/c2pa-js/node/versions/<version>/`.
+Versions must be exact npm releases, not tags such as `latest` or version ranges.
+Adding a release does not automatically change the default: put the desired
+default first in the list.
+
+Run `pnpm ci:docs:releases` to build the versioned Node and web docs, or
+`pnpm ci:docs` to build the existing multi-package site and both versioned sites.
+Node and web have independent version lists, and rebuilding one does not remove
+the other. Generated HTML under `docs/` is not checked into version control.
+The release workflow publishes the complete site after a new package release;
+run that workflow manually to rebuild documentation without publishing packages.
+Publishing a package does not automatically add it to the configured docs versions.
+
+Run `pnpm test:docs` for the documentation tooling tests.
 
 ## Components
 
@@ -96,6 +122,9 @@ const remoteUrl = reader.remoteUrl();
 > `Reader.fromAsset`/`Reader.fromManifestDataAndAsset` also accept a raw settings object in place of a `Context` (e.g. `Reader.fromAsset(inputAsset, { verify: { verify_trust: true } })`), but this is deprecated — see [Per-instance settings (deprecated)](#per-instance-settings-deprecated).
 
 `Reader.fromAsset` and `Reader.fromManifestDataAndAsset` reject assets larger than 10 GB, throwing `AssetTooLargeError` (exported from `@contentauth/c2pa-node`). Note that for a `SourceBufferAsset`, this only rejects after the buffer is already fully allocated in memory. Pass a `FileAsset` instead for large or untrusted assets so oversized files are rejected before being read into memory.
+
+> [!WARNING]
+> `mimeType` is optional on the input asset for `Reader.fromAsset`/`Reader.fromManifestDataAndAsset`. If it's omitted and cannot be inferred from the file extension, the native library falls back to detecting the format from the asset's bytes. **This is not a feature to lean on.** Always supply `mimeType` when it's known, as byte-based detection is slower than a direct lookup and can be unreliable, which could surface as more confusing errors later on. Only omit it when the caller has no way to determine the asset's format. `Builder` methods always require a `mimeType` to be provided.
 
 ### Builder
 

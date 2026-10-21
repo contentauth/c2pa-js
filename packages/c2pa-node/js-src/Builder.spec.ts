@@ -224,11 +224,10 @@ describe("Builder", () => {
     });
 
     it("should add a CBOR assertion, sign, and verify it in the signed manifest", async () => {
-      // Add the c2pa.watermarked action as a CBOR assertion
       const actionsAssertion = {
         actions: [
           {
-            action: "c2pa.watermarked",
+            action: "c2pa.edited",
           },
         ],
       };
@@ -249,7 +248,7 @@ describe("Builder", () => {
       expect(cborAssertion).toBeDefined();
       if (isActionsAssertion(cborAssertion)) {
         const actions = cborAssertion.data.actions.map((a: any) => a.action);
-        expect(actions).toContain("c2pa.watermarked");
+        expect(actions).toContain("c2pa.edited");
       } else {
         throw new Error("CBOR assertion does not have the expected structure");
       }
@@ -772,7 +771,8 @@ describe("Builder", () => {
               actions: [
                 {
                   action: "c2pa.created",
-                  digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
+                  digitalSourceType:
+                    "http://c2pa.org/digitalsourcetype/empty",
                 },
               ],
             },
@@ -996,6 +996,15 @@ describe("Builder", () => {
       const context = new Context({ verify: { verifyTrust: false } });
       const builder = await Builder.newAsync(context);
       builder.updateManifestProperty("claim_version", 2);
+      // c2pa-rs requires the first action assertion to be c2pa.created/c2pa.opened,
+      // and c2pa.created requires a digitalSourceType.
+      builder.addAction(
+        JSON.stringify({
+          action: "c2pa.created",
+          digitalSourceType:
+            "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+        }),
+      );
       await builder.addIngredient(parent_json, source);
       builder.sign(signer, source, dest);
 
@@ -1013,6 +1022,15 @@ describe("Builder", () => {
       // Trust verification disabled via Context.
       const context = new Context({ verify: { verifyTrust: false } });
       const builder = await Builder.withJsonAsync(manifestDefinition, context);
+      // c2pa-rs requires the first action assertion to be c2pa.created/c2pa.opened,
+      // and c2pa.created requires a digitalSourceType.
+      builder.addAction(
+        JSON.stringify({
+          action: "c2pa.created",
+          digitalSourceType:
+            "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+        }),
+      );
       await builder.addIngredient(parent_json, source);
       await builder.addResource("thumbnail.jpg", {
         mimeType: "jpeg",
@@ -1136,8 +1154,7 @@ describe("Builder", () => {
               actions: [
                 {
                   action: "c2pa.created",
-                  digitalSourceType:
-                    "http://c2pa.org/digitalsourcetype/empty",
+                  digitalSourceType: "http://c2pa.org/digitalsourcetype/empty",
                 },
               ],
             },
@@ -1286,6 +1303,120 @@ describe("Builder", () => {
           () => false,
         ),
       ).toThrow("action predicate boom");
+    });
+
+    it("updateAssertion updates exact label matches in order and preserves metadata", () => {
+      const builder = Builder.withJson({
+        ...actionsManifest(),
+        assertions: [
+          { label: "org.test.note", data: { value: 1 }, kind: "Cbor" },
+          { label: "org.test.note.extra", data: { value: 9 } },
+          { label: "org.test.note", data: { value: 2 }, kind: "Cbor" },
+        ],
+      } as Manifest);
+      const seen: number[] = [];
+      builder.updateAssertion("org.test.note", (data) => {
+        const value = (data as { value: number }).value;
+        seen.push(value);
+        return { value: value + 10 };
+      });
+
+      expect(seen).toEqual([1, 2]);
+      expect(builder.getManifestDefinition().assertions).toEqual([
+        { label: "org.test.note", data: { value: 11 }, kind: "Cbor" },
+        { label: "org.test.note.extra", data: { value: 9 } },
+        { label: "org.test.note", data: { value: 12 }, kind: "Cbor" },
+      ]);
+    });
+
+    it("updateAssertion preserves JSON and CBOR kinds when signing", async () => {
+      const builder = Builder.withJson({
+        ...actionsManifest(),
+        assertions: [
+          ...actionsManifest().assertions,
+          { label: "org.test.json", data: { value: 1 }, kind: "Json" },
+          { label: "org.test.cbor", data: { value: 2 }, kind: "Cbor" },
+        ],
+      } as Manifest);
+      builder.updateAssertion("org.test.json", () => ({ value: 11 }));
+      builder.updateAssertion("org.test.cbor", () => ({ value: 22 }));
+      expect(builder.getManifestDefinition().assertions).toEqual(
+        expect.arrayContaining([
+          { label: "org.test.json", data: { value: 11 }, kind: "Json" },
+          { label: "org.test.cbor", data: { value: 22 }, kind: "Cbor" },
+        ]),
+      );
+
+      const dest = { path: path.join(tempDir, "updated_assertion_kinds.jpg") };
+      const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
+      builder.sign(signer, source, dest);
+      const reader = await Reader.fromAsset(dest);
+      expect(reader).not.toBeNull();
+      const assertions = reader!.getActive()!.assertions!;
+      expect(assertions).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: "org.test.json",
+            data: { value: 11 },
+          }),
+          expect.objectContaining({
+            label: "org.test.cbor",
+            data: { value: 22 },
+          }),
+        ]),
+      );
+    });
+
+    it("updateAssertion skips null and undefined results without dropping other updates", () => {
+      const builder = Builder.withJson({
+        ...actionsManifest(),
+        assertions: [
+          { label: "org.test.note", data: { value: 1 }, kind: "Json" },
+          { label: "org.test.note", data: { value: 2 }, kind: "Json" },
+          { label: "org.test.note", data: { value: 3 }, kind: "Json" },
+        ],
+      } as Manifest);
+      builder.updateAssertion("org.test.note", (data) => {
+        const value = (data as { value: number }).value;
+        return value === 1 ? null : value === 2 ? undefined : { value: 33 };
+      });
+      expect(
+        builder.getManifestDefinition().assertions!.map((a) => a.data),
+      ).toEqual([{ value: 1 }, { value: 2 }, { value: 33 }]);
+    });
+
+    it("updateAssertion is atomic on callback failure and ignores missing labels", () => {
+      const builder = Builder.withJson({
+        ...actionsManifest(),
+        assertions: [
+          { label: "org.test.note", data: { value: 1 } },
+          { label: "org.test.note", data: { value: 2 } },
+        ],
+      });
+      const before = builder.getManifestDefinition();
+      expect(() =>
+        builder.updateAssertion("org.test.note", (data) => {
+          if ((data as { value: number }).value === 2) {
+            throw new Error("transform failed");
+          }
+          return { value: 10 };
+        }),
+      ).toThrow("transform failed");
+      expect(builder.getManifestDefinition()).toEqual(before);
+      expect(() =>
+        builder.updateAssertion("org.test.note", (data) =>
+          (data as { value: number }).value === 2
+            ? () => undefined
+            : { value: 10 },
+        ),
+      ).toThrow();
+      expect(builder.getManifestDefinition()).toEqual(before);
+      let calls = 0;
+      builder.updateAssertion("org.test.missing", () => {
+        calls++;
+        return {};
+      });
+      expect(calls).toBe(0);
     });
 
     it("updateActions patches a parameter on an existing action", () => {

@@ -76,7 +76,13 @@ export default {
           url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.signature'
         }
       ],
-      informational: [],
+      informational: [
+        {
+          code: 'signingCredential.ocsp.skipped',
+          explanation: 'OCSP fetching skipped',
+          url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.signature'
+        }
+      ],
       success: [
         {
           code: 'claimSignature.insideValidity',
@@ -100,7 +106,8 @@ export default {
           url: 'self#jumbf=/c2pa/contoso:urn:uuid:FA0E000D-FA0E-000D-FA0E-000DFA0E000D/c2pa.assertions/c2pa.hash.bmff.v2'
         }
       ]
-    }
+    },
+    specVersion: '2.4.0'
   },
   validation_state: 'Valid',
   validation_status: [

@@ -7,6 +7,17 @@ The c2pa-js repository is a monorepo containing JavaScript libraries and tools f
 - [**c2pa-web**](packages/c2pa-web/README.md): Library for C2PA metadata in the browser. Import and use this package in browser client JavaScript code.
 - [**c2pa-node**](packages/c2pa-node/README.md): Node.js library that can read and validate C2PA manifest data that is attached to media assets and add signed manifests to media assets.
 
+Versioned API documentation for published releases is available for
+[Node.js](https://contentauth.github.io/c2pa-js/node/) and
+[web](https://contentauth.github.io/c2pa-js/web/). See the
+[Node.js](packages/c2pa-node/README.md#documentation) and
+[web](packages/c2pa-web/README.md#documentation) documentation build instructions
+to select releases or generate the sites locally.
+
+Run `pnpm ci:docs:releases` to build both versioned sites without building the
+workspace libraries. Run `pnpm ci:docs` to build the existing multi-package
+source docs and both versioned sites together.
+
 Additionally, the repo contains these intermediate and internal libraries:
 
 - [**c2pa-wasm**](packages/c2pa-wasm/README.md): WebAssembly bindings for [c2pa-rs](https://github.com/contentauth/c2pa-rs) that power c2pa-web, built with [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen). Most applications should use c2pa-web instead of calling the bindings directly.

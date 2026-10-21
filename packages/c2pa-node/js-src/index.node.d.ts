@@ -150,6 +150,9 @@ declare module "index.node" {
     sigType: string,
     callback: (signerPayload: SignerPayload) => Promise<Buffer>,
   ): NeonCallbackCredentialHolderHandle;
+  export function callbackCredentialHolderSignPayload(
+    payload: SignerPayload,
+  ): Promise<Buffer>;
   export function callbackCredentialHolderReserveSize(): number;
   export function callbackCredentialHolderSigType(): string;
 

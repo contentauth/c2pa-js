@@ -14,6 +14,7 @@ import { Context } from '@contentauth/c2pa-utilities';
 import { Builder } from './builder.js';
 import { Reader } from './reader.js';
 import { createC2pa } from './c2pa.js';
+import type { CredentialHolder, SignerPayload } from './signer.js';
 
 import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 
@@ -383,7 +384,10 @@ describe('builder', () => {
 
         const thumbnailUri = `self#jumbf=/c2pa/${parentLabel}/c2pa.assertions/c2pa.thumbnail.claim`;
 
-        const builder = await Builder.new(c2pa);
+        // createTestSigner() returns placeholder bytes that can't be locally
+        // re-verified, so skip the SDK's post-sign verification.
+        const context = new Context({ verify: { verifyAfterSign: false } });
+        const builder = await Builder.new(c2pa, context);
         await builder.setIntent('edit');
         await builder.addRedaction(thumbnailUri, 'c2pa.PII.present');
 
@@ -424,7 +428,10 @@ describe('builder', () => {
         // Construct JUMBF URI for the assertion to redact
         const redactionUri = `self#jumbf=/c2pa/${parentLabel}/c2pa.assertions/cawg.training-mining`;
 
-        const builder = await Builder.new(c2pa);
+        // createTestSigner() returns placeholder bytes that can't be locally
+        // re-verified, so skip the SDK's post-sign verification.
+        const context = new Context({ verify: { verifyAfterSign: false } });
+        const builder = await Builder.new(c2pa, context);
         await builder.setIntent('edit');
         await builder.addRedaction(redactionUri, 'c2pa.PII.present');
 
@@ -684,6 +691,149 @@ describe('builder', () => {
             throw new Error('boom from predicate');
           })
         ).rejects.toThrow('boom from predicate');
+      });
+    });
+
+    describe('updateAssertion', () => {
+      test('updates each exact label match without changing its metadata or order', async ({
+        c2pa
+      }) => {
+        const builder = await Builder.fromDefinition(c2pa, {
+          format: 'image/jpeg',
+          instance_id: 'update-assertion',
+          ingredients: [],
+          assertions: [
+            { label: 'org.test.note', data: { value: 1 }, kind: 'Cbor' },
+            { label: 'org.test.note.extra', data: { value: 9 } },
+            { label: 'org.test.note', data: { value: 2 }, kind: 'Cbor' }
+          ]
+        } as ManifestDefinition);
+        const seen: number[] = [];
+
+        await builder.updateAssertion('org.test.note', (data) => {
+          const value = (data as { value: number }).value;
+          seen.push(value);
+          return { value: value + 10 };
+        });
+
+        expect(seen).toEqual([1, 2]);
+        expect((await builder.getDefinition()).assertions).toEqual([
+          { label: 'org.test.note', data: { value: 11 }, kind: 'Cbor' },
+          { label: 'org.test.note.extra', data: { value: 9 } },
+          { label: 'org.test.note', data: { value: 12 }, kind: 'Cbor' }
+        ]);
+      });
+
+      test('leaves the builder unchanged if a later transform throws', async ({
+        c2pa
+      }) => {
+        const builder = await Builder.new(c2pa);
+        await builder.addAssertion('org.test.note', { value: 1 });
+        await builder.addAssertion('org.test.note', { value: 2 });
+        const before = await builder.getDefinition();
+
+        await expect(
+          builder.updateAssertion('org.test.note', (data) => {
+            if ((data as { value: number }).value === 2) {
+              throw new Error('transform failed');
+            }
+            return { value: 10 };
+          })
+        ).rejects.toThrow('transform failed');
+        expect(await builder.getDefinition()).toEqual(before);
+
+        await expect(
+          builder.updateAssertion('org.test.note', (data) =>
+            (data as { value: number }).value === 2
+              ? () => undefined
+              : { value: 10 }
+          )
+        ).rejects.toThrow();
+        expect(await builder.getDefinition()).toEqual(before);
+      });
+
+      test('does not invoke the callback for a missing label', async ({
+        c2pa
+      }) => {
+        const builder = await Builder.new(c2pa);
+        let calls = 0;
+        await builder.updateAssertion('org.test.missing', () => {
+          calls++;
+          return {};
+        });
+        expect(calls).toBe(0);
+        expect((await builder.getDefinition()).assertions).toEqual([]);
+      });
+
+      test('skips null and undefined results while applying other updates', async ({
+        c2pa
+      }) => {
+        const builder = await Builder.fromDefinition(c2pa, {
+          format: 'image/jpeg',
+          instance_id: 'skip-update',
+          ingredients: [],
+          assertions: [
+            { label: 'org.test.note', data: { value: 1 }, kind: 'Json' },
+            { label: 'org.test.note', data: { value: 2 }, kind: 'Json' },
+            { label: 'org.test.note', data: { value: 3 }, kind: 'Json' }
+          ]
+        } as ManifestDefinition);
+        await builder.updateAssertion('org.test.note', (data) => {
+          const value = (data as { value: number }).value;
+          return value === 1 ? null : value === 2 ? undefined : { value: 33 };
+        });
+        expect(
+          (await builder.getDefinition()).assertions?.map((a) => a.data)
+        ).toEqual([{ value: 1 }, { value: 2 }, { value: 33 }]);
+      });
+
+      test('preserves JSON and CBOR kinds when signing updated assertions', async ({
+        c2pa
+      }) => {
+        const context = new Context({ verify: { verifyAfterSign: false } });
+        const builder = await Builder.fromDefinition(
+          c2pa,
+          {
+            format: 'image/jpeg',
+            instance_id: 'signed-updates',
+            ingredients: [],
+            assertions: [
+              { label: 'org.test.json', data: { value: 1 }, kind: 'Json' },
+              { label: 'org.test.cbor', data: { value: 2 }, kind: 'Cbor' }
+            ]
+          } as ManifestDefinition,
+          context
+        );
+        await builder.updateAssertion('org.test.json', () => ({ value: 11 }));
+        await builder.updateAssertion('org.test.cbor', () => ({ value: 22 }));
+        expect((await builder.getDefinition()).assertions).toEqual([
+          { label: 'org.test.json', data: { value: 11 }, kind: 'Json' },
+          { label: 'org.test.cbor', data: { value: 22 }, kind: 'Cbor' }
+        ]);
+
+        const blob = await getBlobForAsset(C_JPG);
+        const signer = await createTestSigner();
+        const signedBytes = await builder.sign(signer, 'image/jpeg', blob);
+        const reader = await Reader.fromBlob(
+          c2pa,
+          'image/jpeg',
+          new Blob([signedBytes], { type: 'image/jpeg' }),
+          new Context({ verify: { verifyAfterReading: false } })
+        );
+        expect(reader).not.toBeNull();
+        const assertions = (await reader!.activeManifest()).assertions;
+        expect(assertions).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              label: 'org.test.json',
+              data: { value: 11 }
+            }),
+            expect.objectContaining({
+              label: 'org.test.cbor',
+              data: { value: 22 }
+            })
+          ])
+        );
       });
     });
 
@@ -1104,7 +1254,10 @@ describe('builder', () => {
 
         const jxlMimetype = 'image/jxl';
 
-        const builder = await Builder.new(c2pa);
+        // createTestSigner() returns placeholder bytes that can't be locally
+        // re-verified, so skip the SDK's post-sign verification.
+        const context = new Context({ verify: { verifyAfterSign: false } });
+        const builder = await Builder.new(c2pa, context);
         const signer = await createTestSigner();
         const signedBytes = await builder.sign(signer, jxlMimetype, blob);
 
@@ -1126,6 +1279,119 @@ describe('builder', () => {
         expect(manifestStore).toBeDefined();
         expect(manifestStore.manifests).toBeDefined();
         expect(manifestStore.active_manifest).toBeDefined();
+      });
+    });
+
+    describe('sign with a CAWG identity assertion', () => {
+      test('invokes the credential holder sign with the expected SignerPayload shape, signs successfully, and embeds a cawg.identity assertion', async ({
+        c2pa
+      }) => {
+        const blob = await getBlobForAsset(SAMPLE1_JXL);
+        const jxlMimetype = 'image/jxl';
+
+        // createTestSigner() returns placeholder bytes that can't be locally
+        // re-verified, so skip the SDK's post-sign verification.
+        const context = new Context({ verify: { verifyAfterSign: false } });
+        const builder = await Builder.new(c2pa, context);
+        const signer = await createTestSigner();
+
+        const FIXED_SIGNATURE = new Uint8Array(64).fill(7);
+        const receivedPayloads: SignerPayload[] = [];
+
+        const credentialHolder: CredentialHolder = {
+          sigType: 'cawg.test-signature',
+          reserveSize: 10000,
+          sign: async (payload) => {
+            receivedPayloads.push(payload);
+            return FIXED_SIGNATURE;
+          }
+        };
+
+        const signedBytes = await builder.sign(signer, jxlMimetype, blob, {
+          identityAssertions: [{ credentialHolder }]
+        });
+
+        expect(signedBytes).toBeDefined();
+        expect(signedBytes.byteLength).toBeGreaterThan(0);
+
+        // The credential holder's `sign` should have been invoked exactly
+        // once, with a SignerPayload of the expected (camelCase) shape.
+        expect(receivedPayloads).toHaveLength(1);
+        const [payload] = receivedPayloads;
+        expect(payload.sigType).toBe('cawg.test-signature');
+        expect(payload.roles).toEqual([]);
+        expect(Array.isArray(payload.referencedAssertions)).toBe(true);
+        expect(payload.referencedAssertions.length).toBeGreaterThan(0);
+        for (const referencedAssertion of payload.referencedAssertions) {
+          expect(typeof referencedAssertion.url).toBe('string');
+          expect(referencedAssertion.hash).toBeInstanceOf(Uint8Array);
+        }
+
+        // Read the signed asset back and confirm a cawg.identity assertion
+        // was embedded in the manifest.
+        const readerSettings = new Context({
+          verify: { verifyAfterReading: false }
+        });
+        const reader = await Reader.fromBlob(
+          c2pa,
+          jxlMimetype,
+          new Blob([signedBytes], { type: jxlMimetype }),
+          readerSettings
+        );
+
+        expect(reader).not.toBeNull();
+
+        const activeLabel = await reader!.activeLabel();
+        const manifestStore = await reader!.manifestStore();
+        const activeManifest = manifestStore.manifests![activeLabel!];
+        const assertionLabels = activeManifest.assertions!.map(
+          (a) => a.label
+        );
+
+        expect(assertionLabels).toContain('cawg.identity');
+      });
+
+      test('rejects a reserveSize too small for the id assertion (does not poison the worker)', async ({
+        c2pa
+      }) => {
+        const blob = await getBlobForAsset(SAMPLE1_JXL);
+        const jxlMimetype = 'image/jxl';
+
+        // createTestSigner() returns placeholder bytes that can't be locally
+        // re-verified, so skip the SDK's post-sign verification.
+        const context = new Context({ verify: { verifyAfterSign: false } });
+        const builder = await Builder.new(c2pa, context);
+        const signer = await createTestSigner();
+
+        const credentialHolder: CredentialHolder = {
+          sigType: 'cawg.test-signature',
+          reserveSize: 240,
+          sign: async () => new Uint8Array(64).fill(7)
+        };
+
+        await expect(
+          builder.sign(signer, jxlMimetype, blob, {
+            identityAssertions: [{ credentialHolder }]
+          })
+        ).rejects.toThrow(/reserveSize/i);
+
+        // The worker should still work.
+        const recoveryBuilder = await Builder.new(c2pa, context);
+        const recoverySigner = await createTestSigner();
+        const recoveryHolder: CredentialHolder = {
+          sigType: 'cawg.test-signature',
+          reserveSize: 10000,
+          sign: async () => new Uint8Array(64).fill(7)
+        };
+
+        const signedBytes = await recoveryBuilder.sign(
+          recoverySigner,
+          jxlMimetype,
+          await getBlobForAsset(SAMPLE1_JXL),
+          { identityAssertions: [{ credentialHolder: recoveryHolder }] }
+        );
+
+        expect(signedBytes.byteLength).toBeGreaterThan(0);
       });
     });
   });

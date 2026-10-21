@@ -48,6 +48,7 @@ export default {
               alg: 'Ed25519',
               cert_serial_number:
                 '638838410810235485828984295321338730070538954823',
+              common_name: 'C2PA Signer',
               issuer: 'C2PA Test Signing Cert',
               revocation_status: true
             },
@@ -98,6 +99,11 @@ export default {
       failure: [],
       informational: [
         {
+          code: 'signingCredential.ocsp.skipped',
+          explanation: 'OCSP fetching skipped',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature'
+        },
+        {
           code: 'timeStamp.untrusted',
           explanation:
             'timestamp cert untrusted: DigiCert SHA256 RSA4096 Timestamp Responder 2025 1',
@@ -114,7 +120,7 @@ export default {
         {
           code: 'signingCredential.trusted',
           explanation:
-            'signing certificate trusted, found in System trust anchors',
+            'signing certificate trusted, found in [manifest_system_anchors] trust anchors',
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.signature'
         },
         {
@@ -163,9 +169,14 @@ export default {
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.hash.data'
         },
         {
-          code: 'signingCredential.trusted',
+          code: 'cawg.x509.credential.trusted',
           explanation:
-            'signing certificate trusted, found in System trust anchors',
+            'signing certificate trusted, found in [cawg_system_anchors] trust anchors',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
+        },
+        {
+          code: 'cawg.x509.signature.validated',
+          explanation: 'X.509 identity assertion signature validated',
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
         },
         {
@@ -174,7 +185,9 @@ export default {
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
         }
       ]
-    }
+    },
+    specVersion: '2.4.0',
+    trustListUri: 'manifest_system_anchors'
   },
   validation_state: 'Trusted'
 } satisfies ManifestStore;

@@ -11,15 +11,71 @@
 // specific language governing permissions and limitations under
 // each license.
 
+use std::ops::Deref;
 use std::sync::Arc;
 
 use async_trait::async_trait;
 use c2pa::identity::builder::{AsyncCredentialHolder, IdentityBuilderError};
 use c2pa::identity::SignerPayload;
+use c2pa::HashedUri;
 use neon::prelude::*;
 use neon::types::buffer::TypedArray;
 use neon_serde4;
+use serde::{Deserialize, Serialize};
 use tokio::sync::oneshot;
+
+use crate::runtime::runtime;
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct JsSignerPayload {
+    referenced_assertions: Vec<JsHashedUri>,
+    sig_type: String,
+    #[serde(default)]
+    roles: Vec<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct JsHashedUri {
+    url: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    alg: Option<String>,
+    #[serde(with = "serde_bytes")]
+    hash: Vec<u8>,
+}
+
+impl From<&SignerPayload> for JsSignerPayload {
+    fn from(payload: &SignerPayload) -> Self {
+        JsSignerPayload {
+            referenced_assertions: payload
+                .referenced_assertions
+                .iter()
+                .map(|uri| JsHashedUri {
+                    url: uri.url(),
+                    alg: uri.alg(),
+                    hash: uri.hash(),
+                })
+                .collect(),
+            sig_type: payload.sig_type.clone(),
+            roles: payload.roles.clone(),
+        }
+    }
+}
+
+impl From<JsSignerPayload> for SignerPayload {
+    fn from(payload: JsSignerPayload) -> Self {
+        SignerPayload {
+            referenced_assertions: payload
+                .referenced_assertions
+                .into_iter()
+                .map(|uri| HashedUri::new(uri.url, uri.alg, &uri.hash))
+                .collect(),
+            sig_type: payload.sig_type,
+            roles: payload.roles,
+        }
+    }
+}
 
 /// NeonCallbackCredentialHolder allows JS to asynchronously sign a SignerPayload.
 #[derive(Clone)]
@@ -57,6 +113,49 @@ impl NeonCallbackCredentialHolder {
             reserve_size,
             sig_type,
         )))
+    }
+
+    /// JS accessor for the reserve size of this holder instance.
+    pub fn reserve_size_js(mut cx: FunctionContext) -> JsResult<JsNumber> {
+        let this = cx.this::<JsBox<Self>>()?;
+        let reserve_size = this.reserve_size as f64;
+        Ok(cx.number(reserve_size))
+    }
+
+    /// JS accessor for the signature type  of this holder instance.
+    pub fn sig_type_js(mut cx: FunctionContext) -> JsResult<JsString> {
+        let this = cx.this::<JsBox<Self>>()?;
+        let sig_type = this.sig_type.clone();
+        Ok(cx.string(sig_type))
+    }
+
+    /// Sign a `SignerPayload` supplied from JS,
+    /// resolving to the signature bytes.
+    pub fn sign_payload(mut cx: FunctionContext) -> JsResult<JsPromise> {
+        let payload_arg = cx.argument::<JsValue>(0)?;
+        let js_payload: JsSignerPayload = match neon_serde4::from_value(&mut cx, payload_arg) {
+            Ok(payload) => payload,
+            Err(err) => return cx.throw_error(err.to_string()),
+        };
+        let signer_payload: SignerPayload = js_payload.into();
+
+        let holder_handle = cx.this::<JsBox<Self>>()?;
+        let holder_ref: &Self = holder_handle.deref();
+        let holder = holder_ref.clone();
+        let channel = cx.channel();
+        let (deferred, promise) = cx.promise();
+        let rt = runtime();
+
+        // The credential holder's `sign` awaits a JS callback.
+        rt.spawn(async move {
+            let result = holder.sign(&signer_payload).await;
+            deferred.settle_with(&channel, move |mut cx| match result {
+                Ok(bytes) => Ok(JsBuffer::from_slice(&mut cx, &bytes)?),
+                Err(err) => cx.throw_error(err.to_string()),
+            });
+        });
+
+        Ok(promise)
     }
 }
 
@@ -102,12 +201,10 @@ impl AsyncCredentialHolder for NeonCallbackCredentialHolder {
         let callback = self.callback.clone();
         let channel = self.channel.clone();
 
-        // Instead of CBOR, convert SignerPayload to a JS object
-        let payload = signer_payload.clone();
+        let payload = JsSignerPayload::from(signer_payload);
 
         channel
             .try_send(move |mut cx| {
-                // Convert Rust SignerPayload to JS object
                 let js_payload = match neon_serde4::to_value(&mut cx, &payload) {
                     Ok(val) => val,
                     Err(err) => return cx.throw_error(err.to_string()),

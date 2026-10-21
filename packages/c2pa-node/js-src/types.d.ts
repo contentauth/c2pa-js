@@ -62,8 +62,14 @@ export type TrustmarkVariant =
 export interface SourceBufferAsset {
   // A buffer containing the asset data
   buffer: Buffer;
-  // The MIME type of the asset, for instance `image/jpeg`
-  mimeType: string;
+  // The MIME type of the asset, for instance `image/jpeg`.
+  //
+  // Always supply this when it's known. It's only optional for Reader operations, which fall
+  // back to detecting the format from the asset's bytes when it's omitted. Only rely on this
+  // when the MIME type is truly unknown.
+  //
+  // Builder operations (e.g. signing) require it and will throw if it's omitted.
+  mimeType?: string;
 }
 
 /**
@@ -80,8 +86,13 @@ export interface DestinationBufferAsset {
 export interface FileAsset {
   // The path to the asset
   path: string;
-  // The optional MIME type of the asset, for instance `image/jpeg`.
-  // If not supplied, the MIME type will be inferred from the file extension, if available.
+  // The MIME type of the asset, for instance `image/jpeg`.
+  //
+  // Always supply this when it's known. It's only optional for Reader operations, which fall
+  // back to detecting the format from the asset's bytes when it's omitted. Only rely on this
+  // when the MIME type is truly unknown.
+  //
+  // Builder operations (e.g. signing) require it and will throw if it's omitted.
   mimeType?: string;
 }
 
@@ -409,6 +420,19 @@ export interface BuilderInterface {
    * @param transform Receives one assertion's actions and returns its full replacement list.
    */
   updateActions(transform: (actions: Action[]) => Action[]): void;
+
+  /**
+   * Replaces the data of every assertion with an exact matching label.
+   * `transform` runs once per matching assertion in manifest order. Other assertion
+   * fields and positions are preserved. A missing label is a no-op.
+   * Returning null or undefined leaves that assertion unchanged.
+   * The replacement data must be JSON-serializable and may fail validation at signing time.
+   * The callback must not call back into this builder.
+   *
+   * @param label The exact assertion label to update.
+   * @param transform Receives the current data and returns its replacement.
+   */
+  updateAssertion(label: string, transform: (data: unknown) => unknown): void;
 
   /**
    * Get the internal handle for use with Neon bindings
