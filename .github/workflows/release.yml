@@ -18,6 +18,10 @@ on:
           - aarch64-apple-darwin
           - x86_64-apple-darwin
           - x86_64-pc-windows-msvc
+      dry-run:
+        description: 'Build and package binaries without uploading release assets (requires version)'
+        type: boolean
+        default: false
   push:
     branches:
       - main
@@ -248,6 +252,7 @@ jobs:
           exit 1
 
       - name: Upload release asset
+        if: ${{ !inputs.dry-run }}
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

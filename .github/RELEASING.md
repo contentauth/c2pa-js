@@ -23,3 +23,10 @@ For `0.9.10`, select `x86_64-unknown-linux-gnu` to recover Linux x64 and
 before starting the next.
 
 Leaving the version empty preserves the manual documentation-only workflow.
+
+To verify a rebuild before uploading release assets, enter a version and enable
+**dry-run**. The workflow still checks out the release tag, verifies npm
+availability, builds and packages the binary, and looks up the existing GitHub
+release, but skips the upload step. Dry runs do not modify release assets.
+Before merging workflow changes, select the feature branch instead of **main**;
+the binary source still comes from the specified release tag.
