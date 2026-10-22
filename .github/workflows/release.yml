@@ -2,6 +2,22 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'c2pa-node version to rebuild (e.g. 0.9.10); leave empty to publish docs only'
+        type: string
+        required: false
+      target:
+        description: 'Native binary target to rebuild'
+        type: choice
+        default: all
+        options:
+          - all
+          - aarch64-unknown-linux-gnu
+          - x86_64-unknown-linux-gnu
+          - aarch64-apple-darwin
+          - x86_64-apple-darwin
+          - x86_64-pc-windows-msvc
   push:
     branches:
       - main
@@ -42,44 +58,72 @@ jobs:
   release-node-binaries:
     needs: release
     if: |
-      needs.release.outputs.published == 'true' &&
-      contains(needs.release.outputs.publishedPackages, '@contentauth/c2pa-node')
+      always() && !cancelled() && (
+        (github.event_name == 'workflow_dispatch' && inputs.version != '') ||
+        (needs.release.result == 'success' &&
+         needs.release.outputs.published == 'true' &&
+         contains(needs.release.outputs.publishedPackages, '@contentauth/c2pa-node'))
+      )
     name: Build native binary for ${{ matrix.target }}
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ contains(matrix.target, 'apple-darwin') && 'macos-latest' || contains(matrix.target, 'windows') && 'windows-latest' || 'ubuntu-latest' }}
+    permissions:
+      contents: write
     timeout-minutes: 60
     env:
       COREPACK_ENABLE_STRICT: 0
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - target: aarch64-unknown-linux-gnu
-            runner: ubuntu-latest
-          - target: x86_64-unknown-linux-gnu
-            runner: ubuntu-latest
-          - target: aarch64-apple-darwin
-            runner: macos-latest
-          - target: x86_64-apple-darwin
-            runner: macos-latest
-          - target: x86_64-pc-windows-msvc
-            runner: windows-latest
+        target: >-
+          ${{ fromJSON('{
+            "all": ["aarch64-unknown-linux-gnu","x86_64-unknown-linux-gnu","aarch64-apple-darwin","x86_64-apple-darwin","x86_64-pc-windows-msvc"],
+            "aarch64-unknown-linux-gnu": ["aarch64-unknown-linux-gnu"],
+            "x86_64-unknown-linux-gnu": ["x86_64-unknown-linux-gnu"],
+            "aarch64-apple-darwin": ["aarch64-apple-darwin"],
+            "x86_64-apple-darwin": ["x86_64-apple-darwin"],
+            "x86_64-pc-windows-msvc": ["x86_64-pc-windows-msvc"]
+          }')[inputs.target || 'all'] }}
     steps:
-      - name: Show published packages
-        run: |
-          echo '${{ needs.release.outputs.publishedPackages }}'
-
       - name: Resolve published c2pa-node version
         shell: bash
+        env:
+          MANUAL_VERSION: ${{ inputs.version }}
+          PUBLISHED_PACKAGES: ${{ needs.release.outputs.publishedPackages }}
         run: |
-          # changesets publishes multiple packages per run, so we must select
-          # the c2pa-node entry explicitly rather than assume it is index 0.
-          version=$(echo '${{ needs.release.outputs.publishedPackages }}' \
-            | jq -r '.[] | select(.name == "@contentauth/c2pa-node") | .version')
-          if [ -z "$version" ]; then
-            echo "::error::Could not find @contentauth/c2pa-node in publishedPackages" >&2
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            version="$MANUAL_VERSION"
+          else
+            version=$(echo "$PUBLISHED_PACKAGES" \
+              | jq -r '.[] | select(.name == "@contentauth/c2pa-node") | .version')
+          fi
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Expected a c2pa-node version such as 0.9.10" >&2
             exit 1
           fi
 
+          echo "PUBLISHED_VERSION=$version" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/@contentauth/c2pa-node@{0}', env.PUBLISHED_VERSION) || github.sha }}
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Verify published c2pa-node version
+        shell: bash
+        run: |
+          version="$PUBLISHED_VERSION"
           # publishedPackages reflects what changesets/action *attempted*, not
           # what actually landed on the registry, so verify directly against npm
           # before releasing artifacts. The registry can take a few seconds to
@@ -90,7 +134,7 @@ jobs:
           attempt=1
           total_attempts=$(( ${#delays[@]} + 1 ))
           while true; do
-            if npm view "@contentauth/c2pa-node@${version}" version >/dev/null 2>&1; then
+            if npm view "@contentauth/c2pa-node@${version}" version --registry=https://registry.npmjs.org; then
               found=true
               break
             fi
@@ -108,13 +152,6 @@ jobs:
             exit 1
           fi
 
-          echo "PUBLISHED_VERSION=$version" >> "$GITHUB_ENV"
-
-      - uses: actions/checkout@v4
-        with:
-          filter: tree:0
-          fetch-depth: 0
-
       - name: Install system deps (aarch64-unknown-linux-gnu)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
@@ -127,17 +164,6 @@ jobs:
           toolchain: 1.96.0
           components: llvm-tools-preview
           target: ${{ matrix.target }}
-
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
-        with:
-          run_install: false
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -222,7 +248,6 @@ jobs:
           exit 1
 
       - name: Upload release asset
-        if: needs.release.outputs.published == 'true'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -240,6 +265,10 @@ jobs:
             | jq -r --arg name "$ASSET_NAME" '.[] | select(.name == $name) | .id')
 
           if [ -n "$existing_asset_id" ]; then
+            if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+              echo "Asset ${ASSET_NAME} already exists; leaving it unchanged."
+              exit 0
+            fi
             echo "Asset ${ASSET_NAME} already exists on release ${RELEASE_ID}; replacing it."
             curl -sSL --fail \
               -X DELETE \
@@ -260,7 +289,7 @@ jobs:
 
   publish-docs:
     needs: [release]
-    if: ${{ always() && (needs.release.outputs.published == 'true' || github.event_name == 'workflow_dispatch') }}
+    if: ${{ always() && (needs.release.outputs.published == 'true' || (github.event_name == 'workflow_dispatch' && inputs.version == '')) }}
     concurrency:
       group: github-pages
       cancel-in-progress: false
