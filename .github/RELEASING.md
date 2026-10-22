@@ -18,12 +18,9 @@ existing GitHub release. It does not publish npm packages or documentation.
 Existing release assets are left unchanged; selecting **all** still builds those
 targets but skips their uploads.
 
-For `0.9.10`, select `x86_64-unknown-linux-gnu` to recover Linux x64 and
-`x86_64-pc-windows-msvc` to recover Windows x64. Wait for one workflow run to finish
-before starting the next.
-
 Leaving the version empty preserves the manual documentation-only workflow.
 
+## Dry runs (verification without upload)
 To verify a rebuild before uploading release assets, enter a version and enable
 **dry-run**. The workflow still checks out the release tag, verifies npm
 availability, builds and packages the binary, and looks up the existing GitHub
