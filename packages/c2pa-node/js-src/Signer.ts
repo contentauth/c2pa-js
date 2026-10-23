@@ -24,17 +24,21 @@ import type {
 export class LocalSigner implements LocalSignerInterface {
   constructor(private localSigner: NeonLocalSignerHandle) {}
 
+  /** Staple fresh DER OCSP responses in chain order, leaf first.
+   * The caller refreshes responses; reserve size is adjusted automatically. */
   static newSigner(
     certificate: Buffer,
     privateKey: Buffer,
     algorithm: SigningAlg,
     tsaUrl?: string,
+    ocspResponses?: Buffer[],
   ) {
     const signer = getNeonBinary().localSignerNew(
       certificate,
       privateKey,
       algorithm,
       tsaUrl,
+      ocspResponses,
     );
     return new LocalSigner(signer);
   }
