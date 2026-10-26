@@ -38,6 +38,20 @@ pub struct NeonBuilder {
 }
 
 impl NeonBuilder {
+    pub fn supported_mime_types(mut cx: FunctionContext) -> JsResult<JsValue> {
+        neon_serde4::to_value(&mut cx, &Builder::supported_mime_types())
+            .or_else(|err| cx.throw_error(err.to_string()))
+    }
+
+    pub fn add_timestamp(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let rt = runtime();
+        let this = cx.this::<JsBox<Self>>()?;
+        let manifest_label = cx.argument::<JsString>(0)?.value(&mut cx);
+        let mut builder = rt.block_on(async { this.builder.lock().await });
+        builder.add_timestamp(manifest_label);
+        Ok(cx.undefined())
+    }
+
     pub fn new(mut cx: FunctionContext) -> JsResult<JsBox<Self>> {
         // Parse optional settings parameter (argument 0)
         let context_opt =

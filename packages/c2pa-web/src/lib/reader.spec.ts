@@ -35,6 +35,20 @@ import anchor_incorrect from 'test/trust/anchor-incorrect.pem?raw';
 import { ManifestStore } from '@contentauth/c2pa-types';
 
 describe('reader', () => {
+  test(
+    'supportedMimeTypes returns readable formats without creating a reader',
+    async ({ c2pa }) => {
+      const formats = await Reader.supportedMimeTypes(c2pa);
+      expect(formats).toEqual(
+        expect.arrayContaining(['image/jpeg', 'image/png', 'application/pdf'])
+      );
+      expect(formats.every((format) => typeof format === 'string')).toBe(true);
+      expect(new Set(formats).size).toBe(formats.length);
+      formats.length = 0;
+      expect(await Reader.supportedMimeTypes(c2pa)).toContain('image/jpeg');
+    }
+  );
+
   describe('creation', () => {
     describe('fromBlob', () => {
       test('should return c2pa data when created from a blob', async ({

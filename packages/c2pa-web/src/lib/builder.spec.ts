@@ -24,6 +24,36 @@ import C_with_CAWG_data from 'test/assets/C_with_CAWG_data.jpg';
 import SAMPLE1_JXL from 'test/assets/sample1.jxl';
 
 describe('builder', () => {
+  test(
+    'supportedMimeTypes returns writable formats without creating a builder',
+    async ({ c2pa }) => {
+      const formats = await Builder.supportedMimeTypes(c2pa);
+      expect(formats).toEqual(expect.arrayContaining(['image/jpeg', 'image/png']));
+      expect(formats.every((format) => typeof format === 'string')).toBe(true);
+      expect(new Set(formats).size).toBe(formats.length);
+      formats.length = 0;
+      expect(await Builder.supportedMimeTypes(c2pa)).toContain('image/jpeg');
+    }
+  );
+
+  test(
+    'addTimestamp queues labels without changing the manifest definition',
+    async ({ c2pa }) => {
+      const builder = await Builder.new(c2pa);
+      try {
+        const definition = await builder.getDefinition();
+        const label = 'urn:c2pa:fa479510-2a7d-c165-7b26-488a267f4c6a';
+        await expect(builder.addTimestamp(label)).resolves.toBeUndefined();
+        await builder.addTimestamp(label);
+        await builder.addTimestamp('urn:c2pa:another-manifest');
+        expect(await builder.getDefinition()).toEqual(definition);
+      } finally {
+        await builder.free();
+      }
+      await expect(builder.addTimestamp('urn:c2pa:freed-builder')).rejects.toThrow();
+    }
+  );
+
   describe('creation', () => {
     describe('new', () => {
       test('should create a builder with a default manifest', async ({

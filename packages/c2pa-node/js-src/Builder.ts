@@ -59,6 +59,20 @@ function stringifyManifestDefinition(json: Manifest): string {
 export class Builder implements BuilderInterface {
   constructor(private builder: NeonBuilderHandle) {}
 
+  /** Returns the MIME types this SDK build can write. */
+  static supportedMimeTypes(): string[] {
+    return getNeonBinary().builderSupportedMimeTypes();
+  }
+
+  /**
+   * Requests a timestamp for a matching ingredient manifest during signing.
+   * Requires a signer with a timestamp authority URL. Existing timestamps are preserved.
+   * Repeated labels are deduplicated; this does not fetch a timestamp immediately.
+   */
+  addTimestamp(manifestLabel: string): void {
+    getNeonBinary().builderAddTimestamp.call(this.builder, manifestLabel);
+  }
+
   /**
    * @deprecated Use {@link Builder.newAsync} instead, passing a `Context`. Will be removed in a
    * future major version.
