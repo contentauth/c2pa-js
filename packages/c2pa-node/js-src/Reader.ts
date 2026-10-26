@@ -55,7 +55,7 @@ export class Reader implements ReaderInterface {
     settingsOrContext?: C2paSettings | Context | null,
   ): Promise<Reader | null> {
     await validateSourceAssetSize(asset);
-    const settingsStr = resolveSettingsForNeon(settingsOrContext);
+    const settingsStr = await resolveSettingsForNeon(settingsOrContext);
     const reader: NeonReaderHandle | null =
       await getNeonBinary().readerFromAsset(asset, settingsStr);
     return reader ? new Reader(reader) : null;
@@ -72,7 +72,7 @@ export class Reader implements ReaderInterface {
     settingsOrContext?: C2paSettings | Context | null,
   ): Promise<Reader> {
     await validateSourceAssetSize(asset);
-    const settingsStr = resolveSettingsForNeon(settingsOrContext);
+    const settingsStr = await resolveSettingsForNeon(settingsOrContext);
     const reader: NeonReaderHandle =
       await getNeonBinary().readerFromManifestDataAndAsset(manifestData, asset, settingsStr);
     return new Reader(reader);

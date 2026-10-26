@@ -18,6 +18,7 @@ import { Context } from "@contentauth/c2pa-utilities";
 import fs from "fs-extra";
 import path from "path";
 import * as crypto from "crypto";
+import { vi } from "vitest";
 
 import type {
   BuilderInterface,
@@ -1013,6 +1014,24 @@ describe("Builder", () => {
       expect(manifestStore.validation_status ?? []).not.toContainEqual(
         expect.objectContaining({ code: "signingCredential.untrusted" }),
       );
+    });
+
+    it("newAsync(context) fetches trust-anchor URLs before creating the Builder", async () => {
+      const pem = "-----BEGIN CERTIFICATE-----\nanchor\n-----END CERTIFICATE-----";
+      const fetch = vi.fn(async () => new Response(pem));
+      vi.stubGlobal("fetch", fetch);
+
+      try {
+        await Builder.newAsync(
+          new Context({
+            trust: { trustAnchors: "https://example.com/anchors.pem" },
+          }),
+        );
+
+        expect(fetch).toHaveBeenCalledOnce();
+      } finally {
+        vi.unstubAllGlobals();
+      }
     });
 
     it("withJsonAsync(json, context) applies the Context's settings", async () => {
