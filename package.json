@@ -7,7 +7,11 @@
     "ci:release": "pnpm ci:prepublish && pnpm ci:publish",
     "ci:prepublish": "pnpm exec nx run-many -t build --projects=tag:lib",
     "ci:publish": "changeset publish",
-    "ci:docs": "typedoc"
+    "ci:docs": "typedoc && pnpm ci:docs:releases",
+    "ci:docs:releases": "pnpm ci:docs:node && pnpm ci:docs:web",
+    "ci:docs:node": "node scripts/generate-api-docs.mjs node",
+    "ci:docs:web": "node scripts/generate-api-docs.mjs web",
+    "test:docs": "node --test scripts/api-docs.test.mjs"
   },
   "private": true,
   "devDependencies": {

@@ -1,5 +1,15 @@
 # @contentauth/c2pa-web
 
+## 0.15.4
+
+### Patch Changes
+
+- 29520c7: Update to c2pa-rs v0.91.3.
+- Updated dependencies [29520c7]
+  - @contentauth/c2pa-utilities@0.3.2
+  - @contentauth/c2pa-types@0.7.6
+  - @contentauth/c2pa-wasm@0.13.3
+
 ## 0.15.3
 
 ### Patch Changes
