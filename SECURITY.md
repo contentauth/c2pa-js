@@ -8,6 +8,6 @@ For more details on security vulnerabilities, see [SECURITY.md in the c2pa-rs re
 
 Please do not create a public GitHub issue for any suspected security vulnerabilities. Details on how to report security vulnerabilities are available on [Adobe's bug bounty program page](https://www.adobe.com/trust/security/bug-bounty.html).
 
-## C2PA Vulnerabilities
+## C2PA vulnerabilities
 
 This library is not meant to address any potential vulnerabilities within the C2PA specification itself. It is only an implementation of the spec as written. Report suspected vulnerabilities within the spec in the [C2PA specification repository](https://github.com/c2pa-org/specifications/issues).
