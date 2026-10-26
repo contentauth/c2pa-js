@@ -7,7 +7,7 @@
 
 ## Prerequisites
 
-To use the c2pa-node library, you need Node.js 22 or later. If you need to manage multiple versions of Node on your machine, use a tool such as [nvm](https://github.com/nvm-sh/nvm).
+To use the c2pa-node library, you need Node.js 22 or later. Use a patched release: v22.23.4+ on v22, v24.22.1+ on v24, or v26.12.1+ on v26. The binary installer and JavaScript fetch paths use Node's TLS stack independently of the Rust SDK; see [TLS trust stores](../../README.md#tls-trust-stores). If you need to manage multiple versions of Node on your machine, use a tool such as [nvm](https://github.com/nvm-sh/nvm).
 
 To build from source, you also need [Rust](https://www.rust-lang.org/tools/install). This is not required when installing the package normally: precompiled binaries are downloaded automatically during installation.
 

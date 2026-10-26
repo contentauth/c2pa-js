@@ -483,9 +483,9 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
 name = "c2pa"
-version = "0.91.6"
+version = "0.91.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f95896dabbc80df88a9cca3e967e95c78b3b0906e7e0bea1ea13b87bade7af88"
+checksum = "f258d5bfe6465d1a5c570d32b70a261f35e4e45a753e7122a88d3ba0472999b0"
 dependencies = [
  "asn1-rs",
  "async-generic",
@@ -539,6 +539,8 @@ dependencies = [
  "regex",
  "reqwest",
  "riff",
+ "rustls",
+ "rustls-webpki",
  "schemars 1.2.2",
  "serde",
  "serde-transcode",
@@ -560,6 +562,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "web-time",
+ "webpki-roots",
  "x509-parser",
  "zeroize",
  "zip",
@@ -3734,9 +3737,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.103.15"
+version = "0.103.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3c3cf1d8b1e7d4927e2d154c3fcb02979afb9939629c62cd9048d4f07b60ac2"
+checksum = "4443b1b6d39d7c663139942cc4558262562d2c84123bb6282ef177009ca8b281"
 dependencies = [
  "ring",
  "rustls-pki-types",
@@ -4997,9 +5000,9 @@ dependencies = [
 
 [[package]]
 name = "webpki-roots"
-version = "1.0.9"
+version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dcd9d09a39985f5344844e66b0c530a33843579125f23e21e9f0f220850f22a"
+checksum = "f5f280bbb2b287bc8e7de7e3852945a0ff50d1bbcb5ed42b6c7a568c546df171"
 dependencies = [
  "rustls-pki-types",
 ]
