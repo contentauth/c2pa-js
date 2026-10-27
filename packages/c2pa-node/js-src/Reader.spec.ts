@@ -181,6 +181,14 @@ describe("Reader", () => {
     ).rejects.toThrow(AssetTooLargeError);
   });
 
+  it("should honor a lower max size from a Context", async () => {
+    const context = new Context(undefined, { maxSizeInBytes: 1 });
+
+    await expect(
+      Reader.fromAsset({ path: "./tests/fixtures/A.jpg" }, context),
+    ).rejects.toThrow(AssetTooLargeError);
+  });
+
   it("should read from manifest data and buffer", async () => {
     const manifestData = await fs.readFile(
       "./tests/fixtures/CA/manifest_data.c2pa",

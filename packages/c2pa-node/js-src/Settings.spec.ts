@@ -15,7 +15,11 @@ import {
   settingsToJson,
 } from "@contentauth/c2pa-utilities";
 
-import { loadSettingsFromFile, resolveSettingsForNeon } from "./Settings.js";
+import {
+  loadSettingsFromFile,
+  resolveSdkConfig,
+  resolveSettingsForNeon,
+} from "./Settings.js";
 
 describe("Settings", () => {
   describe("loadSettingsFromFile", () => {
@@ -84,6 +88,15 @@ verify_after_sign = false`;
       );
     });
 
+    it("does not serialize a Context's SDK config", () => {
+      const result = resolveSettingsForNeon(
+        new Context(undefined, { maxSizeInBytes: 42 }),
+      );
+      expect(JSON.parse(result!)).toEqual(
+        JSON.parse(settingsToJson(DEFAULT_SETTINGS)),
+      );
+    });
+
     it("merges a Context's settings with defaults", () => {
       const settings = { verify: { verifyTrust: false } };
       const result = resolveSettingsForNeon(new Context(settings));
@@ -104,6 +117,24 @@ verify_after_sign = false`;
     it("passes a raw settings JSON string through unchanged", () => {
       const json = JSON.stringify({ verify: { verify_trust: false } });
       expect(resolveSettingsForNeon(json)).toBe(json);
+    });
+  });
+
+  describe("resolveSdkConfig", () => {
+    it("returns a Context's SDK config", () => {
+      const sdkConfig = { maxSizeInBytes: 42 };
+      expect(resolveSdkConfig(new Context(undefined, sdkConfig))).toEqual(sdkConfig);
+    });
+
+    it("returns undefined when a Context carries no SDK config", () => {
+      expect(resolveSdkConfig(new Context())).toBeUndefined();
+    });
+
+    it("returns undefined for the deprecated raw settings forms", () => {
+      expect(resolveSdkConfig(undefined)).toBeUndefined();
+      expect(resolveSdkConfig(null)).toBeUndefined();
+      expect(resolveSdkConfig({ verify: { verifyTrust: false } })).toBeUndefined();
+      expect(resolveSdkConfig('{"verify":{"verify_trust":false}}')).toBeUndefined();
     });
   });
 });
