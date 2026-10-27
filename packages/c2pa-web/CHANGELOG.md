@@ -1,5 +1,15 @@
 # @contentauth/c2pa-web
 
+## 0.15.5
+
+### Patch Changes
+
+- f0ceda3: Update to c2pa-rs 0.91.7, including patched native TLS certificate verification and roots for the eMudhra incident. JavaScript HTTPS paths still require a patched Node.js runtime or browser independently of the Rust SDK.
+- Updated dependencies [f0ceda3]
+  - @contentauth/c2pa-wasm@0.13.4
+  - @contentauth/c2pa-types@0.7.7
+  - @contentauth/c2pa-utilities@0.3.3
+
 ## 0.15.4
 
 ### Patch Changes
