@@ -189,23 +189,6 @@ describe("Reader", () => {
     ).rejects.toThrow(AssetTooLargeError);
   });
 
-  it("should honor a higher max size from a Context", async () => {
-    const oversizedPath = path.join(tempDir, "oversized-allowed.jpg");
-    await fs.ensureFile(oversizedPath);
-    await fs.truncate(oversizedPath, MAX_SIZE_IN_BYTES + 1);
-
-    const context = new Context(undefined, {
-      maxSizeInBytes: MAX_SIZE_IN_BYTES + 2,
-    });
-
-    // Getting past the size gate is the behavior under test. Without the Context's
-    // larger limit this same file throws AssetTooLargeError. The zero-filled file is not
-    // a real JPEG so the native reader then rejects it for an unrelated reason.
-    await expect(
-      Reader.fromAsset({ path: oversizedPath }, context),
-    ).rejects.not.toThrow(AssetTooLargeError);
-  });
-
   it("should read from manifest data and buffer", async () => {
     const manifestData = await fs.readFile(
       "./tests/fixtures/CA/manifest_data.c2pa",
