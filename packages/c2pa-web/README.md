@@ -390,7 +390,7 @@ For the full list, see the [API reference](https://contentauth.github.io/c2pa-js
 
 Ensure the repo-wide prerequisites are installed:
 
-- [Node.js](https://nodejs.org/) v22.22+
+- A patched [Node.js](https://nodejs.org/) release; see [TLS trust stores](../../README.md#tls-trust-stores).
 - [Nx](https://nx.dev/getting-started/intro)
 - [pnpm](https://pnpm.io/)
 
