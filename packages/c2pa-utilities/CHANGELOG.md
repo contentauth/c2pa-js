@@ -1,5 +1,11 @@
 # @contentauth/c2pa-utilities
 
+## 0.4.0
+
+### Minor Changes
+
+- 61f9345: Add SdkConfig, a second Context constructor argument for SDK-side configuration, starting with maxSizeInBytes. Each SDK keeps its existing asset size limit as the default, so behavior is unchanged.
+
 ## 0.3.3
 
 ### Patch Changes
