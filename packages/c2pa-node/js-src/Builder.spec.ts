@@ -752,6 +752,13 @@ describe("Builder", () => {
       expect(definition.redactions).toEqual([uri1, uri2]);
     });
 
+    it("should set a label", () => {
+      const label = "urn:c2pa:00000000-0000-4000-8000-000000000000";
+      const builder = Builder.new();
+      builder.updateManifestProperty("label", label);
+      expect(builder.getManifestDefinition().label).toBe(label);
+    });
+
     it("should test builder remote url", async () => {
       // This test mirrors the Rust test_builder_remote_url test
 
