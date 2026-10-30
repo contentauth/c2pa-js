@@ -319,6 +319,17 @@ impl AsyncSigner for NeonCallbackSigner {
         self.config.reserve_size
     }
 
+    // Since c2pa-rs 0.91, async signing reaches the TSA only through these
+    // `AsyncSigner` methods; without them the defaults return `None` and
+    // `tsaUrl` / `tsaHeaders` are silently ignored.
+    fn time_authority_url(&self) -> Option<String> {
+        self.config.tsa_url.clone()
+    }
+
+    fn timestamp_request_headers(&self) -> Option<Vec<(String, String)>> {
+        self.config.tsa_headers.clone()
+    }
+
     fn direct_cose_handling(&self) -> bool {
         self.config.direct_cose_handling
     }
