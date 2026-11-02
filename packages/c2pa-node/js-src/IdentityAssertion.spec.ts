@@ -16,6 +16,7 @@
 import type { Manifest } from "@contentauth/c2pa-types";
 import fs from "fs-extra";
 import * as crypto from "crypto";
+import { spawnSync } from "child_process";
 import { encode } from "cbor2";
 
 import type {
@@ -240,6 +241,42 @@ describe("CallbackCredentialHolder accessors", () => {
     expect(Buffer.from(payload.referencedAssertions[0]!.hash)).toEqual(
       Buffer.from([9, 8, 7]),
     );
+  });
+
+  it("releases main loop when idle", () => {
+    // Note: Runs in a child process, since tests a potential hang.
+
+    const entry = new URL("../dist/index.js", import.meta.url).href;
+    const script = `
+      import {
+        CallbackCredentialHolder,
+        CallbackSigner,
+        IdentityAssertionSigner,
+      } from ${JSON.stringify(entry)};
+      const signer = CallbackSigner.newSigner(
+        { alg: "es256", certs: [Buffer.alloc(1)], reserveSize: 1000, directCoseHandling: false },
+        async () => Buffer.alloc(64),
+      );
+      globalThis.kept = [
+        signer,
+        IdentityAssertionSigner.new(signer.getHandle()),
+        CallbackCredentialHolder.newCallbackCredentialHolder(
+          1000,
+          "cawg.x509.cose",
+          async () => Buffer.alloc(1),
+        ),
+      ];
+    `;
+
+    const result = spawnSync(
+      process.execPath,
+      ["--input-type=module", "-e", script],
+      { timeout: 5_000, encoding: "utf8" },
+    );
+
+    expect(result.stderr).not.toMatch(/Error/);
+    expect(result.signal).toBeNull();
+    expect(result.status).toBe(0);
   });
 });
 
