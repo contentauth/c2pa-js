@@ -10,7 +10,7 @@ Ensure the repo-wide prerequisites are installed:
 - [Nx](https://nx.dev/getting-started/intro)
 - [pnpm](https://pnpm.io/)
 
-See the [c2pa-js README](../../README.md#prerequisites) for details.
+See the [contributor prerequisites](https://github.com/contentauth/c2pa-js/blob/main/docs/project-contributions.md#prerequisites) for details.
 
 ## Building
 

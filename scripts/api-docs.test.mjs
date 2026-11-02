@@ -8,6 +8,7 @@
  */
 
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import {
   mkdir,
   mkdtemp,
@@ -21,6 +22,7 @@ import path from 'node:path';
 import test from 'node:test';
 import vm from 'node:vm';
 import { JSDOM } from 'jsdom';
+import { Application, TSConfigReader } from 'typedoc';
 import {
   ROOT,
   PACKAGES,
@@ -47,6 +49,95 @@ async function fixture(t) {
   }
   return root;
 }
+
+test('generated docs are ignored while docs and API source files remain trackable', () => {
+  const generated = [
+    'api-docs/index.html',
+    'api-docs/.nojekyll',
+    'api-docs/assets/main.js',
+    'api-docs/node/index.html',
+    'api-docs/web/versions/0.15.4/index.html',
+    'packages/c2pa-web/api-docs/index.html'
+  ];
+  const sources = [
+    'docs/guide.md',
+    'packages/c2pa-web/docs/guide.md',
+    'api-docs/node-versions.json',
+    'api-docs/web-versions.json',
+    'api-docs/version-selector.js',
+    'api-docs/version-selector.css'
+  ];
+  const ignored = execFileSync(
+    'git',
+    ['check-ignore', '--no-index', '--stdin'],
+    {
+      cwd: ROOT,
+      input: [...generated, ...sources].join('\n') + '\n',
+      encoding: 'utf8'
+    }
+  );
+  assert.deepEqual(ignored.trim().split('\n'), generated);
+});
+
+test('multi-package TypeDoc output preserves API sources and other docs', async (t) => {
+  const root = await fixture(t);
+  const options = JSON.parse(
+    await readFile(path.join(ROOT, 'typedoc.json'), 'utf8')
+  );
+  assert.equal(options.out, 'api-docs');
+  assert.equal(options.cleanOutputDir, false);
+  const output = path.join(root, options.out);
+  const sources = ['node-versions.json', 'web-versions.json'];
+  for (const filename of ['version-selector.js', 'version-selector.css']) {
+    await writeFile(path.join(output, filename), '/* Source asset */');
+    sources.push(filename);
+  }
+  await mkdir(path.join(output, 'node'));
+  await writeFile(path.join(output, 'node/index.html'), 'Versioned site');
+  sources.push('node/index.html');
+  const before = await Promise.all(
+    sources.map((filename) => readFile(path.join(output, filename), 'utf8'))
+  );
+  await mkdir(path.join(root, 'docs'));
+  await writeFile(path.join(root, 'docs/guide.md'), 'Handwritten guide');
+  const entryPoint = path.join(root, 'index.d.ts');
+  await writeFile(entryPoint, 'export declare function read(): string;');
+  const tsconfig = path.join(root, 'tsconfig.json');
+  await writeFile(
+    tsconfig,
+    JSON.stringify({
+      compilerOptions: { skipLibCheck: true },
+      files: [entryPoint]
+    })
+  );
+  const app = await Application.bootstrap(
+    {
+      ...options,
+      entryPoints: [entryPoint],
+      entryPointStrategy: 'resolve',
+      tsconfig,
+      readme: 'none',
+      out: output
+    },
+    [new TSConfigReader()]
+  );
+  const project = await app.convert();
+  assert.ok(project);
+  assert.equal(app.logger.hasErrors(), false);
+  await app.generateDocs(project, output);
+  assert.equal(app.logger.hasErrors(), false);
+  assert.match(await readFile(path.join(output, 'index.html'), 'utf8'), /read/);
+  for (const [index, filename] of sources.entries()) {
+    assert.equal(
+      await readFile(path.join(output, filename), 'utf8'),
+      before[index]
+    );
+  }
+  assert.equal(
+    await readFile(path.join(root, 'docs/guide.md'), 'utf8'),
+    'Handwritten guide'
+  );
+});
 
 test('versions preserve each configured default and order', async (t) => {
   const root = await fixture(t);
@@ -152,11 +243,20 @@ for (const [key, packageInfo] of Object.entries(PACKAGES)) {
   test(`${key}: builds preserve other sites and publish the first version at the package root`, async (t) => {
     const root = await fixture(t);
     const other = key === 'web' ? 'node' : 'web';
-    await mkdir(path.join(root, 'docs', other), { recursive: true });
-    await writeFile(path.join(root, 'docs/index.html'), 'Multi-package site');
+    await mkdir(path.join(root, 'api-docs', other), { recursive: true });
     await writeFile(
-      path.join(root, 'docs', other, 'index.html'),
+      path.join(root, 'api-docs/index.html'),
+      'Multi-package site'
+    );
+    await writeFile(
+      path.join(root, 'api-docs', other, 'index.html'),
       'Other release site'
+    );
+    await mkdir(path.join(root, 'docs'));
+    await writeFile(path.join(root, 'docs/guide.md'), 'Handwritten guide');
+    await writeFile(
+      path.join(root, 'api-docs/version-selector.js'),
+      '// Source'
     );
     const installed = [];
     const generated = [];
@@ -180,7 +280,7 @@ for (const [key, packageInfo] of Object.entries(PACKAGES)) {
       await writeFile(path.join(output, 'index.html'), `${version}:${prefix}`);
     };
     const site = await buildSite(key, root, install, generate);
-    assert.equal(site, path.join(root, 'docs', key));
+    assert.equal(site, path.join(root, 'api-docs', key));
     assert.deepEqual(installed, versions);
     assert.equal(generated.length, 3);
     assert.equal(
@@ -197,20 +297,36 @@ for (const [key, packageInfo] of Object.entries(PACKAGES)) {
       );
     }
     assert.equal(
-      await readFile(path.join(root, 'docs/index.html'), 'utf8'),
+      await readFile(path.join(root, 'api-docs/index.html'), 'utf8'),
       'Multi-package site'
     );
     assert.equal(
-      await readFile(path.join(root, 'docs', other, 'index.html'), 'utf8'),
+      await readFile(path.join(root, 'api-docs', other, 'index.html'), 'utf8'),
       'Other release site'
     );
-    assert.equal(await readFile(path.join(root, 'docs/.nojekyll'), 'utf8'), '');
+    assert.equal(
+      await readFile(path.join(root, 'api-docs/.nojekyll'), 'utf8'),
+      ''
+    );
+    assert.deepEqual(
+      await loadVersions(path.join(root, `api-docs/${key}-versions.json`)),
+      versions
+    );
+    assert.equal(
+      await readFile(path.join(root, 'api-docs/version-selector.js'), 'utf8'),
+      '// Source'
+    );
+    assert.equal(
+      await readFile(path.join(root, 'docs/guide.md'), 'utf8'),
+      'Handwritten guide'
+    );
+    assert.deepEqual(await readdir(path.join(root, 'docs')), ['guide.md']);
     assert.deepEqual(await readdir(path.join(root, 'tmp')), []);
   });
 
   test(`${key}: failed builds preserve output and clean temporary installs`, async (t) => {
     const root = await fixture(t);
-    const output = path.join(root, 'docs', key);
+    const output = path.join(root, 'api-docs', key);
     await mkdir(output, { recursive: true });
     await writeFile(path.join(output, 'index.html'), 'Previous build');
     await assert.rejects(
@@ -343,7 +459,7 @@ for (const [key, packageInfo] of Object.entries(PACKAGES)) {
   const versions = VERSIONS[key];
   for (const base of [
     `https://contentauth.github.io/c2pa-js/${key}/`,
-    `file:///tmp/docs/${key}/`
+    `file:///tmp/api-docs/${key}/`
   ]) {
     for (const prefix of [
       '',

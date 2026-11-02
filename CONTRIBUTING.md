@@ -1,0 +1,89 @@
+# Contributing
+
+We welcome contributions to this project!
+
+Before you start, we ask that you understand the following guidelines.
+
+## Code of conduct
+
+This project adheres to the Adobe [code of conduct](CODE_OF_CONDUCT.md). By participating,
+you are expected to uphold this code. Please report unacceptable behavior to
+[Grp-opensourceoffice@adobe.com](mailto:Grp-opensourceoffice@adobe.com).
+
+## Have a question?
+
+Start by filing an issue. The existing committers on this project work to reach
+consensus around project direction and issue solutions within issue threads
+(when appropriate).
+
+## Contributor license agreement
+
+All third-party contributions to this project must be accompanied by a signed contributor license agreement. This gives Adobe permission to redistribute your contributions as part of the project. [Sign our CLA](https://opensource.adobe.com/cla.html). You only need to submit an Adobe CLA one time, so if you have submitted one previously, you are good to go!
+
+Please note that the Adobe CLA is tied to each _individual_ contributor. We do not currently have a mechanism to allow the CLA to be signed on behalf of an entire organization.
+
+### Code reviews
+
+All submissions should come in the form of pull requests and need to be reviewed
+by project committers. Read [GitHub's pull request documentation](https://help.github.com/articles/about-pull-requests/) for more information on sending pull requests.
+
+Code submissions will need to pass all automated tests in place at the time of submission.
+These include such things as Rust code format, Clippy/lint checks, and unit test coverage.
+
+### Code formatting
+
+Set multi-line code blocks apart from adjacent statements and sibling blocks with a blank
+line wherever rustfmt permits. This includes loops, conditionals, matches, and multi-line
+expressions; keep related continuations such as `else` attached to their block.
+
+We encourage you to raise an issue in GitHub before starting work on a major addition to the crate.
+This will give us an opportunity to discuss API design and avoid duplicate efforts.
+
+### Which branch to target
+
+Open your pull request against **`main`**. We follow an _upstream-first_ rule: every change lands on `main` first, and release-line branches (`stable`, `v0.x`) only ever receive changes by cherry-pick — nothing originates on them. This keeps `main` the superset of all releases so nothing is lost across a version bump.
+
+* If your change is **additive** (a new API, a bug fix), it can ship fairly quickly in an upcoming patch version of the current release line. If this is the case, a maintainer will add the `backport-stable` label and a bot will open a cherry-pick PR onto the current release line.
+* If your change is **breaking** (it changes or removes a public API), it waits on `main` for the next scheduled breaking "release train." Mark it with a `!` in the PR title (e.g. `feat!:`).
+* During a release candidate's bake period, its `*-rc.*` branch accepts **bug fixes only**, and those still follow upstream-first (fix on `main`, then cherry-pick).
+
+For the full model, see the [release process](https://github.com/contentauth/c2pa-rs/blob/main/docs/release-process.md).
+
+### Pull request titles
+
+Titles of pull requests that target a long-lived branch such as _main_ or a release-specific branch should follow [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/#specification). The repository's [commit lint rules](https://github.com/contentauth/c2pa-rs/blob/main/.commitlintrc.yml) require that the first word of the pull request title must be one of the following:
+
+- `fix`
+- `feat`
+- `chore`
+- `update`
+- `doc`
+
+Optionally, but preferred, a scope can be added in parentheses after the type. The scope should be the name of the module or component that the commit affects. For example, `feat(api): Introduce a new API to validate 1.0 claims`.
+
+If more detail is warranted, add a blank line and then continue with sentences (these sentences should be punctuated as such) and paragraphs as needed to provide that detail. There is no need to word-wrap this message.
+
+For example:
+
+```text
+feat(api): Introduce a new API to validate 1.0 claims
+
+Repurpose existing v2 API for 0.8 compatibility (read: no validation) mode.
+```
+
+The conventional commit message requirement does not apply to individual commits within a pull request, provided that those commits will be squashed when the PR is merged and the resulting squash commit does follow the conventional commit requirement. This may require the person merging the PR to verify the commit message syntax when performing the squash merge.  
+
+TIP: For single-commit PRs, ensure the commit message conforms to the conventional commit requirement, since by default that will also be the title of the PR.
+
+## From contributor to committer
+
+We love contributions from our community! If you'd like to go a step beyond contributor
+and become a committer with full write access and a say in the project, you must
+be invited to the project. The existing committers employ an internal nomination
+process that must reach lazy consensus (silence is approval) before invitations
+are issued. If you feel you are qualified and want to get more deeply involved,
+feel free to reach out to existing committers to have a conversation about that.
+
+## Security issues
+
+For information on reporting security issues, see [SECURITY.md](SECURITY.md).

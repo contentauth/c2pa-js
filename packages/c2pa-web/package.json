@@ -70,6 +70,6 @@
     "vite-tsconfig-paths": "^5.1.4"
   },
   "scripts": {
-    "build:docs": "typedoc src/index.ts src/inline.ts"
+    "build:docs": "typedoc --out api-docs src/index.ts src/inline.ts"
   }
 }

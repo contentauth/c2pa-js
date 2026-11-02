@@ -2,5 +2,7 @@
   "entryPoints": ["packages/*"],
   "name": "@contentauth/c2pa-js",
   "entryPointStrategy": "packages",
+  "out": "api-docs",
+  "cleanOutputDir": false,
   "includeVersion": false
 }
