@@ -246,13 +246,15 @@ describe("CallbackCredentialHolder accessors", () => {
   it("releases main loop when idle", () => {
     // Note: Runs in a child process, since tests a potential hang.
 
-    const entry = new URL("../dist/index.js", import.meta.url).href;
-    const script = `
+    const scriptEntrypoint = new URL("../dist/index.js", import.meta.url).href;
+
+    // Check the run of the script releases channels, to free up main loop.
+    const testScript = `
       import {
         CallbackCredentialHolder,
         CallbackSigner,
         IdentityAssertionSigner,
-      } from ${JSON.stringify(entry)};
+      } from ${JSON.stringify(scriptEntrypoint)};
       const signer = CallbackSigner.newSigner(
         { alg: "es256", certs: [Buffer.alloc(1)], reserveSize: 1000, directCoseHandling: false },
         async () => Buffer.alloc(64),
@@ -268,15 +270,15 @@ describe("CallbackCredentialHolder accessors", () => {
       ];
     `;
 
-    const result = spawnSync(
+    const runResult = spawnSync(
       process.execPath,
-      ["--input-type=module", "-e", script],
+      ["--input-type=module", "-e", testScript],
       { timeout: 5_000, encoding: "utf8" },
     );
 
-    expect(result.stderr).not.toMatch(/Error/);
-    expect(result.signal).toBeNull();
-    expect(result.status).toBe(0);
+    expect(runResult.stderr).not.toMatch(/Error/);
+    expect(runResult.signal).toBeNull();
+    expect(runResult.status).toBe(0);
   });
 });
 
