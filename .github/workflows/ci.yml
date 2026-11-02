@@ -72,3 +72,34 @@ jobs:
           curl -fSL "$BASE/decoder_B.onnx" -o packages/c2pa-node/tmp/trustmark_models/decoder_B.onnx
 
       - run: pnpm ci:check
+
+  windows-arm:
+    name: Test c2pa-node on Windows ARM
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: ./.github/actions/install-dependencies
+        name: Install dependencies
+
+      - name: Cache Trustmark models
+        id: cache-trustmark-models
+        uses: actions/cache@v4
+        with:
+          path: packages/c2pa-node/tmp/trustmark_models
+          key: trustmark-models-B-v1
+
+      - name: Download Trustmark models
+        if: steps.cache-trustmark-models.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          mkdir -p packages/c2pa-node/tmp/trustmark_models
+          BASE="https://cai-watermark.adobe.net/watermarking/trustmark-models"
+          curl -fSL "$BASE/encoder_B.onnx" -o packages/c2pa-node/tmp/trustmark_models/encoder_B.onnx
+          curl -fSL "$BASE/decoder_B.onnx" -o packages/c2pa-node/tmp/trustmark_models/decoder_B.onnx
+
+      - name: Build and test c2pa-node
+        run: pnpm --dir packages/c2pa-node test
