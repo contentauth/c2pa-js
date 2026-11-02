@@ -32,6 +32,11 @@ pub struct NeonReader {
 impl Finalize for NeonReader {}
 
 impl NeonReader {
+    pub fn supported_mime_types(mut cx: FunctionContext) -> JsResult<JsValue> {
+        neon_serde4::to_value(&mut cx, &Reader::supported_mime_types())
+            .or_else(|err| cx.throw_error(err.to_string()))
+    }
+
     pub fn new(mut cx: FunctionContext) -> JsResult<JsBox<NeonReader>> {
         Ok(cx.boxed(Self {
             reader: Arc::new(Mutex::new(Reader::default())),

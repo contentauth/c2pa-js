@@ -27,6 +27,11 @@ import type {
 } from "./types.d.ts";
 
 export class Reader implements ReaderInterface {
+  /** Returns the MIME types this SDK build can read. */
+  static supportedMimeTypes(): string[] {
+    return getNeonBinary().readerSupportedMimeTypes();
+  }
+
   constructor(private reader: NeonReaderHandle) { }
 
   json(): ManifestStore {
