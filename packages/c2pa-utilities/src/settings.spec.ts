@@ -393,6 +393,53 @@ describe('withDefaultSettings', () => {
   });
 });
 
+describe('trust settings in-flight requests', () => {
+  const url = 'https://example.com/trust-anchors.pem';
+  const pem = '-----BEGIN CERTIFICATE-----\nanchor\n-----END CERTIFICATE-----';
+
+  it('shares concurrent fetches across settings resolutions without caching completed responses', async () => {
+    const fetch = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      return new Response(pem);
+    });
+    const options = { fetch };
+    const resolve = () =>
+      resolveSettings({ trust: { trustAnchors: url } }, options);
+
+    const [first, second] = await Promise.all([resolve(), resolve()]);
+
+    expect(fetch).toHaveBeenCalledOnce();
+    for (const settingsJson of [first, second]) {
+      expect(JSON.parse(settingsJson).trust.anchors[0].trust_anchors).toBe(pem);
+    }
+
+    await resolve();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('clears failed in-flight fetches so later resolution can retry', async () => {
+    let requestCount = 0;
+    const options = {
+      maxRetries: 0,
+      fetch: async () => {
+        requestCount++;
+        if (requestCount === 1) {
+          throw new Error('network down');
+        }
+        return new Response(pem);
+      }
+    };
+    const resolve = () =>
+      resolveSettings({ trust: { trustAnchors: url } }, options);
+
+    await expect(resolve()).rejects.toThrow('Failed to resolve trust settings');
+    const settingsJson = await resolve();
+
+    expect(requestCount).toBe(2);
+    expect(JSON.parse(settingsJson).trust.anchors[0].trust_anchors).toBe(pem);
+  });
+});
+
 describe('createTrustSettings / createCawgTrustSettings / createVerifySettings', () => {
   it('creates trust settings', () => {
     // Note: verifyTrustList is intentionally not part of the base TrustSettings type —

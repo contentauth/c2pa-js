@@ -9,6 +9,11 @@
 
 import { merge } from 'ts-deepmerge';
 import {
+  DEFAULT_INITIAL_RETRY_DELAY_MS,
+  DEFAULT_MAX_RETRIES,
+  DEFAULT_MAX_RETRY_AFTER_MS,
+  DEFAULT_MAX_RETRY_DELAY_MS,
+  DEFAULT_MAX_RESPONSE_BYTES,
   fetchWithRetry,
   fetchWithRetryRaw,
   type FetchWithRetryOptions
@@ -393,6 +398,60 @@ const TRUST_SETTINGS_KEYS: readonly TrustAnchorKey[] = [
   'allowedList'
 ];
 
+const inFlightTrustFetches = new Map<string, Promise<string>>();
+const functionIds = new WeakMap<object, number>();
+let nextFunctionId = 0;
+
+function getFunctionId(fn: object | undefined, defaultId: string): string {
+  if (!fn) {
+    return defaultId;
+  }
+
+  let id = functionIds.get(fn);
+  if (id === undefined) {
+    id = ++nextFunctionId;
+    functionIds.set(fn, id);
+  }
+  return String(id);
+}
+
+function getTrustFetchKey(url: string, options?: FetchWithRetryOptions): string {
+  const fetchPolicy = [
+    options?.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES,
+    options?.maxRetries ?? DEFAULT_MAX_RETRIES,
+    options?.initialRetryDelayMs ?? DEFAULT_INITIAL_RETRY_DELAY_MS,
+    options?.maxRetryDelayMs ?? DEFAULT_MAX_RETRY_DELAY_MS,
+    options?.maxRetryAfterMs ?? DEFAULT_MAX_RETRY_AFTER_MS,
+    getFunctionId(options?.isRetryableStatus, 'default-status'),
+    getFunctionId(options?.isRetryableError, 'default-error'),
+    getFunctionId(options?.fetch, 'global-fetch')
+  ];
+
+  return JSON.stringify([url, ...fetchPolicy]);
+}
+
+function fetchTrustSetting(
+  url: string,
+  options?: FetchWithRetryOptions
+): Promise<string> {
+  const key = getTrustFetchKey(url, options);
+  const existing = inFlightTrustFetches.get(key);
+  if (existing) {
+    return existing;
+  }
+
+  const request = fetchWithRetry(url, options);
+  inFlightTrustFetches.set(key, request);
+  const clearRequest = () => {
+    if (inFlightTrustFetches.get(key) === request) {
+      inFlightTrustFetches.delete(key);
+    }
+  };
+  void request.then(clearRequest, clearRequest);
+
+  return request;
+}
+
 /**
  * Walks a TrustSettings object and fetches trust resources if necessary, replacing URLs with
  * their fetched, validated values. Mutates `settings` in place.
@@ -424,7 +483,7 @@ export async function resolveTrustSettings(
               throw new Error('Expected a string value for array item');
             }
 
-            const text = await fetchWithRetry(val, options);
+            const text = await fetchTrustSetting(val, options);
 
             if (shouldValidateKey(key) && !containsCerts(text)) {
               throw new Error(`Error parsing PEM file at: ${val}`);
@@ -437,7 +496,7 @@ export async function resolveTrustSettings(
           const combined = result.join('');
           settings[key as TrustAnchorKey] = combined;
         } else if (val && typeof val === 'string' && isUrl(val)) {
-          const text = await fetchWithRetry(val, options);
+          const text = await fetchTrustSetting(val, options);
 
           if (shouldValidateKey(key) && !containsCerts(text)) {
             throw new Error(`Error parsing PEM file at: ${val}`);
