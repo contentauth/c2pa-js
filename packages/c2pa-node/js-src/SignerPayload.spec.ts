@@ -11,12 +11,13 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import { decode } from "cbor2";
 import { encodeSignerPayload } from "./index.js";
 
+const toHex = (bytes: Uint8Array) => Buffer.from(bytes).toString("hex");
+
 describe("encodeSignerPayload", () => {
-  it("maps the CAWG wire keys and encodes hashes as byte strings", () => {
-    const hash = Uint8Array.of(0, 127, 128, 255);
+  it("encodes roles, alg, and non-ASCII URLs to the golden CBOR bytes", () => {
+    const hash = Uint8Array.of(1, 2, 3);
     const payload = {
       referencedAssertions: [
         {
@@ -24,51 +25,68 @@ describe("encodeSignerPayload", () => {
           hash,
           alg: "sha256",
         },
-        { url: "second", hash: new Uint8Array() },
+        { url: "second/日本語", hash: Uint8Array.of(0, 127, 128, 255) },
       ],
       sigType: "cawg.x509.cose",
       roles: ["cawg.creator", "cawg.publisher"],
     };
     const bytes = encodeSignerPayload(payload);
     expect(bytes).toBeInstanceOf(Uint8Array);
-    expect(decode(bytes)).toEqual({
-      referenced_assertions: [
-        { url: payload.referencedAssertions[0].url, alg: "sha256", hash },
-        { url: "second", hash: new Uint8Array() },
-      ],
-      sig_type: payload.sigType,
-      role: payload.roles,
-    });
+    expect(toHex(bytes)).toBe(
+      "a3757265666572656e6365645f617373657274696f6e7382a36375726c782873656c66236a756d62663d2f633270612f617373657274696f6e732f633270612e616374696f6e7363616c6766736861323536646861736843010203a26375726c707365636f6e642fe697a5e69cace8aa9e646861736844007f80ff687369675f747970656e636177672e783530392e636f736564726f6c65826c636177672e63726561746f726e636177672e7075626c6973686572",
+    );
     expect(payload.referencedAssertions[0].hash).toEqual(hash);
   });
 
-  it.each([undefined, []])("omits an absent or empty role (%j)", (roles) => {
-    const bytes = encodeSignerPayload({
-      referencedAssertions: [],
-      sigType: "cawg.x509.cose",
-      roles,
-    });
-    expect(decode(bytes)).toEqual({
-      referenced_assertions: [],
-      sig_type: "cawg.x509.cose",
-    });
+  it.each([undefined, []])(
+    "omits an absent or empty role (%j) and encodes empty assertions",
+    (roles) => {
+      const bytes = encodeSignerPayload({
+        referencedAssertions: [],
+        sigType: "cawg.x509.cose",
+        roles,
+      });
+      expect(toHex(bytes)).toBe(
+        "a2757265666572656e6365645f617373657274696f6e7380687369675f747970656e636177672e783530392e636f7365",
+      );
+    },
+  );
+
+  it("accepts explicit undefined roles and rejects null roles", () => {
+    const base = { referencedAssertions: [], sigType: "test" };
+    expect(toHex(encodeSignerPayload({ ...base, roles: undefined }))).toBe(
+      toHex(encodeSignerPayload(base)),
+    );
+    expect(() =>
+      encodeSignerPayload({ ...base, roles: null } as never),
+    ).toThrow();
   });
 
-  it.each([0, 1, 23, 24, 255, 256, 65535, 65536])(
-    "preserves a %i-byte hash and respects typed array offsets",
-    (length) => {
+  it.each([
+    [0, "40"],
+    [1, "41"],
+    [23, "57"],
+    [24, "5818"],
+    [255, "58ff"],
+    [256, "590100"],
+    [65535, "59ffff"],
+    [65536, "5a00010000"],
+  ] as const)(
+    "encodes a %i-byte hash with the correct header and respects typed array offsets",
+    (length, header) => {
       const backing = new Uint8Array(length + 4).fill(255);
       const hash = backing.subarray(2, length + 2);
       hash.fill(128);
       const bytes = encodeSignerPayload({
-        referencedAssertions: [{ url: "assertion", hash }],
-        sigType: "cawg.x509.cose",
+        referencedAssertions: [{ url: "a", hash }],
+        sigType: "test",
       });
-      const decoded = decode(bytes) as {
-        referenced_assertions: { hash: Uint8Array }[];
-      };
-      expect(decoded.referenced_assertions[0].hash).toBeInstanceOf(Uint8Array);
-      expect(decoded.referenced_assertions[0].hash).toEqual(hash);
+      expect(toHex(bytes)).toBe(
+        "a2757265666572656e6365645f617373657274696f6e7381a26375726c61616468617368" +
+          header +
+          "80".repeat(length) +
+          "687369675f747970656474657374",
+      );
       expect(backing[0]).toBe(255);
     },
   );

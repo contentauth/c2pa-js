@@ -20,6 +20,7 @@ import type {
   NeonIdentityAssertionSignerHandle,
   NeonIdentityAssertionBuilderHandle,
   SignerPayload,
+  SignerPayloadInput,
   NeonCallbackSignerHandle,
 } from "./types.d.ts";
 
@@ -28,7 +29,7 @@ import type {
  * the wire keys are referenced_assertions, sig_type, and (when nonempty) role.
  */
 export function encodeSignerPayload(
-  payload: Omit<SignerPayload, "roles"> & { roles?: string[] },
+  payload: SignerPayloadInput,
 ): Uint8Array {
   return getNeonBinary().encodeSignerPayload(payload);
 }

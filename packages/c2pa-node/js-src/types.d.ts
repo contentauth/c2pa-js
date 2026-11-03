@@ -183,6 +183,11 @@ export interface SignerPayload {
   roles: string[];
 }
 
+/** Input to `encodeSignerPayload`; absent or empty roles are omitted. */
+export type SignerPayloadInput = Omit<SignerPayload, "roles"> & {
+  roles?: string[];
+};
+
 export interface HashedUri {
   url: string;
   hash: Uint8Array;

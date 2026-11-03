@@ -12,6 +12,9 @@ import { vi } from 'vitest';
 import { createC2pa, encodeSignerPayload } from '../index.js';
 import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 
+const toHex = (bytes: Uint8Array) =>
+  Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+
 describe('encodeSignerPayload', () => {
   test('encodes asynchronously through the worker using the CAWG wire representation', async ({
     c2pa
@@ -25,10 +28,7 @@ describe('encodeSignerPayload', () => {
     const bytes = await pending;
     expect(bytes).toBeInstanceOf(Uint8Array);
     // {referenced_assertions: [{url: "a", hash: h'0102'}], sig_type: "test"}
-    const hex = Array.from(bytes, (byte) =>
-      byte.toString(16).padStart(2, '0')
-    ).join('');
-    expect(hex).toBe(
+    expect(toHex(bytes)).toBe(
       'a2757265666572656e6365645f617373657274696f6e7381a26375726c61616468617368420102687369675f747970656474657374'
     );
     expect(
@@ -38,6 +38,44 @@ describe('encodeSignerPayload', () => {
         roles: []
       })
     ).toEqual(bytes);
+  });
+
+  test('encodes roles, alg, and non-ASCII URLs to the golden CBOR bytes', async ({
+    c2pa
+  }) => {
+    const bytes = await encodeSignerPayload(c2pa, {
+      referencedAssertions: [
+        {
+          url: 'self#jumbf=/c2pa/assertions/c2pa.actions',
+          hash: Uint8Array.of(1, 2, 3),
+          alg: 'sha256'
+        },
+        { url: 'second/日本語', hash: Uint8Array.of(0, 127, 128, 255) }
+      ],
+      sigType: 'cawg.x509.cose',
+      roles: ['cawg.creator', 'cawg.publisher']
+    });
+    expect(toHex(bytes)).toBe(
+      'a3757265666572656e6365645f617373657274696f6e7382a36375726c782873656c66236a756d62663d2f633270612f617373657274696f6e732f633270612e616374696f6e7363616c6766736861323536646861736843010203a26375726c707365636f6e642fe697a5e69cace8aa9e646861736844007f80ff687369675f747970656e636177672e783530392e636f736564726f6c65826c636177672e63726561746f726e636177672e7075626c6973686572'
+    );
+    const empty = { referencedAssertions: [], sigType: 'cawg.x509.cose' };
+    for (const roles of [undefined, []]) {
+      expect(toHex(await encodeSignerPayload(c2pa, { ...empty, roles }))).toBe(
+        'a2757265666572656e6365645f617373657274696f6e7380687369675f747970656e636177672e783530392e636f7365'
+      );
+    }
+  });
+
+  test('accepts explicit undefined roles and rejects null roles', async ({
+    c2pa
+  }) => {
+    const base = { referencedAssertions: [], sigType: 'test' };
+    expect(
+      await encodeSignerPayload(c2pa, { ...base, roles: undefined })
+    ).toEqual(await encodeSignerPayload(c2pa, base));
+    await expect(
+      encodeSignerPayload(c2pa, { ...base, roles: null } as never)
+    ).rejects.toThrow();
   });
 
   test('rejects malformed payloads', async ({ c2pa }) => {
@@ -91,10 +129,7 @@ describe('encodeSignerPayload', () => {
         referencedAssertions: [{ url: 'a', hash }],
         sigType: 'test'
       });
-      const hex = Array.from(bytes, (byte) =>
-        byte.toString(16).padStart(2, '0')
-      ).join('');
-      expect(hex).toBe(
+      expect(toHex(bytes)).toBe(
         'a2757265666572656e6365645f617373657274696f6e7381a26375726c61616468617368' +
           header +
           '80'.repeat(length) +

@@ -98,6 +98,13 @@ impl From<JsSignerPayload> for SignerPayload {
 pub fn encode_signer_payload(
     #[wasm_bindgen(unchecked_param_type = "SignerPayloadInput")] payload: JsValue,
 ) -> Result<Vec<u8>, JsString> {
+    if payload.is_object()
+        && Reflect::get(&payload, &JsValue::from_str("roles")).is_ok_and(|roles| roles.is_null())
+    {
+        return Err(JsString::from(
+            "roles must be an array of strings or undefined",
+        ));
+    }
     let payload: JsSignerPayload =
         serde_wasm_bindgen::from_value(payload).map_err(|err| JsString::from(err.to_string()))?;
     let payload: SignerPayload = payload.into();

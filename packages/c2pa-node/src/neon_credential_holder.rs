@@ -80,6 +80,12 @@ impl From<JsSignerPayload> for SignerPayload {
 /// Encode the JavaScript payload using the canonical CAWG wire representation.
 pub fn encode_signer_payload(mut cx: FunctionContext) -> JsResult<JsUint8Array> {
     let value = cx.argument::<JsValue>(0)?;
+    if let Ok(object) = value.downcast::<JsObject, _>(&mut cx) {
+        let roles = object.get_value(&mut cx, "roles")?;
+        if roles.is_a::<JsNull, _>(&mut cx) {
+            return cx.throw_type_error("roles must be an array of strings or undefined");
+        }
+    }
     let payload: JsSignerPayload = match neon_serde4::from_value(&mut cx, value) {
         Ok(payload) => payload,
         Err(neon_serde4::errors::Error::Js { throw }) => return Err(throw),
