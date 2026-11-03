@@ -3,3 +3,8 @@
 /coverage
 /.nx/cache
 /.nx/workspace-data
+**/api-docs/*
+!/api-docs/node-versions.json
+!/api-docs/web-versions.json
+!/api-docs/version-selector.js
+!/api-docs/version-selector.css

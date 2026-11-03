@@ -19,36 +19,8 @@ Use the version selector to switch releases. The existing
 [multi-package source documentation](https://contentauth.github.io/c2pa-js/)
 remains available.
 
-After installing workspace dependencies, run this from the monorepo root:
-
-```sh
-pnpm ci:docs:web
-```
-
-This requires npm and network access to the public npm registry, but no Rust
-build or WASM compilation. Packages are installed in isolated temporary
-directories with lifecycle scripts disabled. Only their TypeScript declarations
-are parsed, and temporary installs are removed after the build.
-
-The first version in [web-versions.json](../../api-docs/web-versions.json) is
-served at `docs/web/index.html`. Each selected release is also available at
-`docs/web/versions/<version>/index.html`, published at
-`https://contentauth.github.io/c2pa-js/web/versions/<version>/`.
-Use exact npm versions, not tags such as `latest` or version ranges. Put the
-desired default first; publishing a package does not automatically add it to
-the list.
-
-The public docs exclude members marked `@internal`. The build also rewrites the
-published README's monorepo-root relative links to their public GitHub URLs.
-
-Run `pnpm ci:docs:releases` to generate both web and Node release docs, or
-`pnpm ci:docs` to build the existing multi-package source site and both versioned
-sites. Node and web have independent version lists, and rebuilding one preserves
-the other. Generated HTML under `docs/` is not checked into version control.
-
-The release workflow publishes the complete site after a package release.
-Run that workflow manually to rebuild docs without publishing packages.
-Run `pnpm test:docs` for the documentation tooling tests.
+For documentation builds and version-list maintenance, see
+[Building API documentation](https://github.com/contentauth/c2pa-js/tree/main/docs/project-contributions.md#building-api-documentation).
 
 ## Importing the library
 
@@ -386,36 +358,5 @@ For the full list, see the [API reference](https://contentauth.github.io/c2pa-js
 
 ## Library development
 
-### Prerequisites
-
-Ensure the repo-wide prerequisites are installed:
-
-- A patched [Node.js](https://nodejs.org/) release; see [TLS trust stores](../../README.md#tls-trust-stores).
-- [Nx](https://nx.dev/getting-started/intro)
-- [pnpm](https://pnpm.io/)
-
-See the [c2pa-js README](../../README.md#prerequisites) for details.
-
-Then, install [the additional prerequisites for `c2pa-wasm`](../c2pa-wasm/README.md#prerequisites).
-
-### Building
-
-To build the library:
-
-```sh
-nx build c2pa-web
-```
-
-### Testing
-
-This library relies on [Vitest](https://vitest.dev/) to run its tests in a headless browser. Before the tests can be run, the test browser binaries must be installed. Run the following from the `packages/c2pa-web` directory (rather than from the root directory, to ensure that the correct binaries are installed):
-
-```sh
-pnpm exec playwright install
-```
-
-To run the tests:
-
-```sh
-nx test c2pa-web
-```
+For prerequisites, source builds, and browser tests, see
+[Contributing to c2pa-web](https://github.com/contentauth/c2pa-js/tree/main/docs/project-contributions.md#contributing-to-c2pa-web).

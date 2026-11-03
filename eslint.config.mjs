@@ -24,7 +24,11 @@ export default [
   ...nx.configs['flat/javascript'],
   {
     ignores: [
-      '**/docs',
+      '**/api-docs/*',
+      '!api-docs/node-versions.json',
+      '!api-docs/web-versions.json',
+      '!api-docs/version-selector.js',
+      '!api-docs/version-selector.css',
       '**/dist',
       '**/vite.config.*.timestamp*',
       '**/vitest.config.*.timestamp*'

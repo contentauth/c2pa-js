@@ -235,7 +235,7 @@ export async function buildSite(
         await cp(path.join(workspace, 'default'), site, { recursive: true });
       }
     }
-    const docs = path.join(root, 'docs');
+    const docs = path.join(root, 'api-docs');
     await mkdir(docs, { recursive: true });
     const output = path.join(docs, packageKey);
     await rm(output, { recursive: true, force: true });

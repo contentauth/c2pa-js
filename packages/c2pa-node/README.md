@@ -9,7 +9,11 @@
 
 To use the c2pa-node library, you need Node.js 22 or later. Use a patched release: v22.23.4+ on v22, v24.22.1+ on v24, or v26.12.1+ on v26. The binary installer and JavaScript fetch paths use Node's TLS stack independently of the Rust SDK; see [TLS trust stores](../../README.md#tls-trust-stores). If you need to manage multiple versions of Node on your machine, use a tool such as [nvm](https://github.com/nvm-sh/nvm).
 
-To build from source, you also need [Rust](https://www.rust-lang.org/tools/install). This is not required when installing the package normally: precompiled binaries are downloaded automatically during installation.
+Rust is not required when installing the package normally: precompiled binaries
+are downloaded automatically. For source builds, see
+[Contributing to c2pa-node](https://github.com/contentauth/c2pa-js/blob/main/docs/project-contributions.md#contributing-to-c2pa-node).
+
+
 
 ## Installation
 
@@ -50,35 +54,8 @@ versions of `@contentauth/c2pa-node`. Use the version selector to switch release
 The [multi-package documentation](https://contentauth.github.io/c2pa-js/) remains
 available at the existing root URL.
 
-To build only the versioned Node docs, run this from the monorepo root after
-installing workspace dependencies:
-
-```bash
-pnpm ci:docs:node
-```
-
-This requires npm and network access to the public npm registry, but no Rust build,
-native binaries, or GitHub authentication. Packages are installed in isolated
-temporary directories with lifecycle scripts disabled, and only their TypeScript
-declarations are parsed. Temporary installs are removed after the build.
-
-The first version in [node-versions.json](../../api-docs/node-versions.json) is
-served at `docs/node/index.html`. Each selected release is also available at
-`docs/node/versions/<version>/index.html`, published at
-`https://contentauth.github.io/c2pa-js/node/versions/<version>/`.
-Versions must be exact npm releases, not tags such as `latest` or version ranges.
-Adding a release does not automatically change the default: put the desired
-default first in the list.
-
-Run `pnpm ci:docs:releases` to build the versioned Node and web docs, or
-`pnpm ci:docs` to build the existing multi-package site and both versioned sites.
-Node and web have independent version lists, and rebuilding one does not remove
-the other. Generated HTML under `docs/` is not checked into version control.
-The release workflow publishes the complete site after a new package release;
-run that workflow manually to rebuild documentation without publishing packages.
-Publishing a package does not automatically add it to the configured docs versions.
-
-Run `pnpm test:docs` for the documentation tooling tests.
+For documentation builds and version-list maintenance, see
+[Building API documentation](https://github.com/contentauth/c2pa-js/blob/main/docs/project-contributions.md#building-api-documentation).
 
 ## Components
 
@@ -711,13 +688,9 @@ const builder = Builder.new(urlSettings);
 
 ### Build and use custom binary
 
-**Build Rust binary:**
-
-```bash
-pnpm run build:rust
-```
-
-**Use custom Rust binary:**
+For instructions on building a Rust binary, see
+[Contributing to c2pa-node](https://github.com/contentauth/c2pa-js/blob/main/docs/project-contributions.md#contributing-to-c2pa-node).
+To use a custom binary:
 
 ```bash
 export C2PA_LIBRARY_PATH=<path-to-binary-folder>/index.node

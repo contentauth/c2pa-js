@@ -4,7 +4,7 @@ The `testbed` app is a minimal local app for experimenting with [`c2pa-web`](../
 
 ## Prerequisites
 
-Install these before running the testbed. Full details are in the [c2pa-js README](../../README.md#prerequisites).
+Install these before running the testbed. Full details are in the [contributor prerequisites](../../docs/project-contributions.md#prerequisites).
 
 - **Node.js** v22.22 or later
 - **pnpm** and the **Nx** CLI (`npm install -g pnpm nx`)
