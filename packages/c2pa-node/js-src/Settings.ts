@@ -12,7 +12,7 @@
 // each license.
 
 import fs from "fs-extra";
-import { Context, settingsToJson, withDefaultSettings } from "@contentauth/c2pa-utilities";
+import { Context, type SdkConfig } from "@contentauth/c2pa-utilities";
 import type { C2paSettings } from "./types.d.ts";
 
 /**
@@ -33,25 +33,51 @@ export async function loadSettingsFromFile(filePath: string): Promise<string> {
 }
 
 /**
- * Resolves a settings argument (either the deprecated raw `C2paSettings or a `Context`) into
- * a JSON string that can be passed into the native library.
+ * Reads the SDK config out of a settings argument.
  *
- * Unlike `c2pa-web`'s `Context.toJson()`, this does not resolve trust-anchor URLs: `c2pa-node`
- * doesn't perform trust-anchor URL fetching yet, so a `Context`'s settings are only merged with
- * this package's defaults and serialized here.
+ * Only a `Context` carries an SDK config so the deprecated raw `C2paSettings` forms always
+ * resolve to `undefined`, leaving this package's defaults in place.
+ *
+ * @param settingsOrContext A `Context`, or (@deprecated) a raw `C2paSettings` string/object.
+ * @returns The `Context`'s SDK config, or `undefined` if there is none.
  */
-export function resolveSettingsForNeon(
+export function resolveSdkConfig(
   settingsOrContext: C2paSettings | Context | null | undefined,
-): string | undefined {
+): SdkConfig | undefined {
+  return settingsOrContext instanceof Context
+    ? settingsOrContext.sdkConfig
+    : undefined;
+}
+
+/**
+ * Resolves Context settings, including any trust-anchor URLs, before passing them to the native
+ * library. Deprecated raw settings retain their existing pass-through behavior.
+ */
+export async function resolveSettingsForNeon(
+  settingsOrContext: C2paSettings | Context | null | undefined,
+): Promise<string | undefined> {
   if (settingsOrContext == null) {
     return undefined;
   }
 
   if (settingsOrContext instanceof Context) {
-    return settingsToJson(withDefaultSettings(settingsOrContext.settings));
+    return settingsOrContext.toJson();
   }
 
   return typeof settingsOrContext === "string"
     ? settingsOrContext
     : JSON.stringify(settingsOrContext);
+}
+
+/**
+ * Resolves deprecated raw settings for the synchronous Builder factories.
+ */
+export function resolveRawSettingsForNeon(
+  settings: C2paSettings | null | undefined,
+): string | undefined {
+  if (settings == null) {
+    return undefined;
+  }
+
+  return typeof settings === "string" ? settings : JSON.stringify(settings);
 }

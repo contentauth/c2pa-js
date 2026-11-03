@@ -106,7 +106,8 @@ impl NeonCallbackCredentialHolder {
         let reserve_size = cx.argument::<JsNumber>(0)?.value(&mut cx) as usize;
         let sig_type = cx.argument::<JsString>(1)?.value(&mut cx);
         let callback = cx.argument::<JsFunction>(2)?.root(&mut cx);
-        let channel = cx.channel();
+        let mut channel = cx.channel();
+        channel.unref(&mut cx);
         Ok(cx.boxed(Self::new(
             channel,
             Arc::new(callback),

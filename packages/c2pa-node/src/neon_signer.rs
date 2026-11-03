@@ -164,7 +164,8 @@ impl NeonCallbackSigner {
         let config_handle = cx.argument::<JsBox<CallbackSignerConfig>>(0)?;
         let config_ref: &CallbackSignerConfig = config_handle.deref();
         let callback = cx.argument::<JsFunction>(1)?.root(&mut cx);
-        let channel = cx.channel();
+        let mut channel = cx.channel();
+        channel.unref(&mut cx);
         Ok(cx.boxed(Self::new(channel, Arc::new(callback), config_ref.clone())))
     }
 
@@ -317,6 +318,17 @@ impl AsyncSigner for NeonCallbackSigner {
 
     fn reserve_size(&self) -> usize {
         self.config.reserve_size
+    }
+
+    // Since c2pa-rs 0.91, async signing reaches the TSA only through these
+    // `AsyncSigner` methods; without them the defaults return `None` and
+    // `tsaUrl` / `tsaHeaders` are silently ignored.
+    fn time_authority_url(&self) -> Option<String> {
+        self.config.tsa_url.clone()
+    }
+
+    fn timestamp_request_headers(&self) -> Option<Vec<(String, String)>> {
+        self.config.tsa_headers.clone()
     }
 
     fn direct_cose_handling(&self) -> bool {

@@ -12,7 +12,11 @@
 // each license.
 
 import fs from "fs-extra";
-import { validateAssetSize } from "@contentauth/c2pa-utilities";
+import {
+  resolveConfiguredMaxSizeInBytes,
+  validateAssetSize,
+  type SdkConfig,
+} from "@contentauth/c2pa-utilities";
 import type { SourceAsset } from "./types.d.ts";
 
 // c2pa-node runs server-side, so it can reasonably support larger assets than c2pa-web,
@@ -27,17 +31,28 @@ export const MAX_SIZE_IN_BYTES = 10 * 10 ** 9; // 10 GB
  * so the memory cost isn't prevented, only reader construction is. Prefer `path`
  * for large or untrusted assets.
  * 
+ * @param asset The asset to validate.
+ * @param sdkConfig SDK config from a `Context`. A missing `maxSizeInBytes` falls back
+ * to {@link MAX_SIZE_IN_BYTES}.
+ *
+ * @throws {RangeError} If `maxSizeInBytes` isn't a finite, positive number.
  * @throws Error if reading the `FileAsset` fails.
  * @throws {AssetTooLargeError} If `sizeInBytes` exceeds the resolved limit.
  */
 export async function validateSourceAssetSize(
   asset: SourceAsset,
+  sdkConfig?: SdkConfig,
 ): Promise<void> {
+  const maxSizeInBytes = resolveConfiguredMaxSizeInBytes(
+    sdkConfig,
+    MAX_SIZE_IN_BYTES,
+  );
+
   if ("buffer" in asset) {
-    validateAssetSize(asset.buffer.length, MAX_SIZE_IN_BYTES);
+    validateAssetSize(asset.buffer.length, maxSizeInBytes);
     return;
   }
 
   const { size } = await fs.stat(asset.path);
-  validateAssetSize(size, MAX_SIZE_IN_BYTES);
+  validateAssetSize(size, maxSizeInBytes);
 }
