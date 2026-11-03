@@ -11,7 +11,9 @@ To use the c2pa-node library, you need Node.js 22 or later. Use a patched releas
 
 Rust is not required when installing the package normally: precompiled binaries
 are downloaded automatically. For source builds, see
-[Contributing to c2pa-node](../../docs/project-contributions.md#contributing-to-c2pa-node).
+[Contributing to c2pa-node](https://github.com/contentauth/c2pa-js/blob/main/docs/project-contributions.md#contributing-to-c2pa-node).
+
+
 
 ## Installation
 
@@ -53,7 +55,7 @@ The [multi-package documentation](https://contentauth.github.io/c2pa-js/) remain
 available at the existing root URL.
 
 For documentation builds and version-list maintenance, see
-[Building API documentation](../../docs/project-contributions.md#building-api-documentation).
+[Building API documentation](https://github.com/contentauth/c2pa-js/blob/main/docs/project-contributions.md#building-api-documentation).
 
 ## Components
 

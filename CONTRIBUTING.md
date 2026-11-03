@@ -39,42 +39,6 @@ expressions; keep related continuations such as `else` attached to their block.
 We encourage you to raise an issue in GitHub before starting work on a major addition to the crate.
 This will give us an opportunity to discuss API design and avoid duplicate efforts.
 
-### Which branch to target
-
-Open your pull request against **`main`**. We follow an _upstream-first_ rule: every change lands on `main` first, and release-line branches (`stable`, `v0.x`) only ever receive changes by cherry-pick — nothing originates on them. This keeps `main` the superset of all releases so nothing is lost across a version bump.
-
-* If your change is **additive** (a new API, a bug fix), it can ship fairly quickly in an upcoming patch version of the current release line. If this is the case, a maintainer will add the `backport-stable` label and a bot will open a cherry-pick PR onto the current release line.
-* If your change is **breaking** (it changes or removes a public API), it waits on `main` for the next scheduled breaking "release train." Mark it with a `!` in the PR title (e.g. `feat!:`).
-* During a release candidate's bake period, its `*-rc.*` branch accepts **bug fixes only**, and those still follow upstream-first (fix on `main`, then cherry-pick).
-
-For the full model, see the [release process](https://github.com/contentauth/c2pa-rs/blob/main/docs/release-process.md).
-
-### Pull request titles
-
-Titles of pull requests that target a long-lived branch such as _main_ or a release-specific branch should follow [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/#specification). The repository's [commit lint rules](https://github.com/contentauth/c2pa-rs/blob/main/.commitlintrc.yml) require that the first word of the pull request title must be one of the following:
-
-- `fix`
-- `feat`
-- `chore`
-- `update`
-- `doc`
-
-Optionally, but preferred, a scope can be added in parentheses after the type. The scope should be the name of the module or component that the commit affects. For example, `feat(api): Introduce a new API to validate 1.0 claims`.
-
-If more detail is warranted, add a blank line and then continue with sentences (these sentences should be punctuated as such) and paragraphs as needed to provide that detail. There is no need to word-wrap this message.
-
-For example:
-
-```text
-feat(api): Introduce a new API to validate 1.0 claims
-
-Repurpose existing v2 API for 0.8 compatibility (read: no validation) mode.
-```
-
-The conventional commit message requirement does not apply to individual commits within a pull request, provided that those commits will be squashed when the PR is merged and the resulting squash commit does follow the conventional commit requirement. This may require the person merging the PR to verify the commit message syntax when performing the squash merge.  
-
-TIP: For single-commit PRs, ensure the commit message conforms to the conventional commit requirement, since by default that will also be the title of the PR.
-
 ## From contributor to committer
 
 We love contributions from our community! If you'd like to go a step beyond contributor
