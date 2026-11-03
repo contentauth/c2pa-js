@@ -1096,19 +1096,23 @@ describe("Builder", () => {
       );
     });
 
-    it("newAsync(context) fetches trust-anchor URLs before creating the Builder", async () => {
+    it("newAsync(context) retries trust-anchor fetches and passes resolved PEM to the Builder", async () => {
       const pem = "-----BEGIN CERTIFICATE-----\nanchor\n-----END CERTIFICATE-----";
-      const fetch = vi.fn(async () => new Response(pem));
+      const fetch = vi
+        .fn()
+        .mockResolvedValueOnce(new Response("", { status: 503 }))
+        .mockResolvedValueOnce(new Response(pem));
       vi.stubGlobal("fetch", fetch);
 
       try {
-        await Builder.newAsync(
-          new Context({
-            trust: { trustAnchors: "https://example.com/anchors.pem" },
-          }),
-        );
+        const context = new Context({
+          trust: { trustAnchors: "https://example.com/anchors.pem" },
+        });
+        await Builder.newAsync(context);
 
-        expect(fetch).toHaveBeenCalledOnce();
+        expect(fetch).toHaveBeenCalledTimes(2);
+        const resolvedSettings = JSON.parse(await context.toJson());
+        expect(resolvedSettings.trust.anchors[0].trust_anchors).toBe(pem);
       } finally {
         vi.unstubAllGlobals();
       }
