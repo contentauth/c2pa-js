@@ -18,6 +18,8 @@ import { Context } from "@contentauth/c2pa-utilities";
 import fs from "fs-extra";
 import path from "path";
 import * as crypto from "crypto";
+import http from "http";
+import type { AddressInfo } from "net";
 
 import type {
   BuilderInterface,
@@ -445,6 +447,77 @@ describe("Builder", () => {
       expect(manifestStore.active_manifest).not.toBeUndefined();
       expect(activeManifest?.title).toBe("Test_Manifest");
     });
+
+    it("should send a time-stamp request to the callback signer's tsaUrl", async () => {
+      // A local TSA that records each request and refuses it.
+      const tsaRequests: http.IncomingHttpHeaders[] = [];
+      const tsa = http.createServer((req, res) => {
+        tsaRequests.push(req.headers);
+        req.resume();
+        req.on("end", () => {
+          res.writeHead(503);
+          res.end();
+        });
+      });
+      await new Promise<void>((resolve) => tsa.listen(0, "127.0.0.1", resolve));
+      const { port } = tsa.address() as AddressInfo;
+
+      try {
+        const signerConfig: JsCallbackSignerConfig = {
+          alg: "es256",
+          certs: [publicKey],
+          reserveSize: 20000,
+          tsaUrl: `http://127.0.0.1:${port}/tsa`,
+          tsaHeaders: [["x-c2pa-test", "tsa-header"]],
+          directCoseHandling: false,
+        };
+        const testSigner = new TestSigner(privateKey);
+        const signer = CallbackSigner.newSigner(signerConfig, testSigner.sign);
+
+        // The TSA refuses, so signing must fail instead of silently
+        // producing a manifest without a time-stamp.
+        await expect(
+          builder.signAsync(signer, source, { buffer: null }),
+        ).rejects.toThrow();
+        expect(tsaRequests.length).toBeGreaterThan(0);
+        expect(tsaRequests[0]!["content-type"]).toBe(
+          "application/timestamp-query",
+        );
+        expect(tsaRequests[0]!["x-c2pa-test"]).toBe("tsa-header");
+      } finally {
+        tsa.closeAllConnections();
+        await new Promise<void>((resolve) => tsa.close(() => resolve()));
+      }
+    });
+
+    // Needs network access to a real RFC 3161 TSA, e.g.
+    // C2PA_TEST_TSA_URL=http://timestamp.digicert.com
+    it.skipIf(!process.env.C2PA_TEST_TSA_URL)(
+      "should time-stamp a manifest signed with a callback signer",
+      async () => {
+        const dest: DestinationBufferAsset = {
+          buffer: null,
+        };
+        const signerConfig: JsCallbackSignerConfig = {
+          alg: "es256",
+          certs: [publicKey],
+          reserveSize: 20000,
+          tsaUrl: process.env.C2PA_TEST_TSA_URL,
+          directCoseHandling: false,
+        };
+        const testSigner = new TestSigner(privateKey);
+        const signer = CallbackSigner.newSigner(signerConfig, testSigner.sign);
+
+        await builder.signAsync(signer, source, dest);
+
+        const reader = await Reader.fromAsset({
+          buffer: dest.buffer! as Buffer,
+          mimeType: "jpeg",
+        });
+        expect(reader!.getActive()?.signature_info?.time).toBeTruthy();
+      },
+      30000,
+    );
 
     it("should preserve JSON assertion characters without escaping", async () => {
       const fingerprintAssertion = JSON.stringify({
