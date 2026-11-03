@@ -1,5 +1,12 @@
 # @contentauth/c2pa-wasm
 
+## 0.13.5
+
+### Patch Changes
+
+- f6bd783: c2pa-rs version bump to c2pa-rs v0.90.10
+- 6d22046: Add update manifest attribute API, make sure it supports strings too
+
 ## 0.13.4
 
 ### Patch Changes

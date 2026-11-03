@@ -1,5 +1,20 @@
 # @contentauth/c2pa-node
 
+## 0.9.12
+
+### Patch Changes
+
+- 78bed7a: Release channels in node to avoid keeping process alive
+- f6bd783: c2pa-rs version bump to c2pa-rs v0.90.10
+- f929896: Adds support for resolving trust-anchor URLs from `Context` settings before creating Node Readers and Builders via `Context`-based async constructors. This is an additive change; previously, the `Context` path only merged defaults and serialized settings without considering trust-anchor URLs.
+- 66d9e48: Fix `CallbackSigner` silently ignoring `tsaUrl` and `tsaHeaders` when signing with `Builder.signAsync`, `signConfigAsync` or `identitySignAsync`. Since 0.9.8, manifests were signed without an RFC 3161 time-stamp and the TSA was never contacted.
+- 61f9345: Add SdkConfig, a second Context constructor argument for SDK-side configuration, starting with maxSizeInBytes. Each SDK keeps its existing asset size limit as the default, so behavior is unchanged.
+- 6d22046: Add update manifest attribute API, make sure it supports strings too
+- Updated dependencies [f6bd783]
+- Updated dependencies [61f9345]
+  - @contentauth/c2pa-types@0.7.8
+  - @contentauth/c2pa-utilities@0.4.0
+
 ## 0.9.11
 
 ### Patch Changes

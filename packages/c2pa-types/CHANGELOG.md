@@ -1,5 +1,11 @@
 # @contentauth/c2pa-types
 
+## 0.7.8
+
+### Patch Changes
+
+- f6bd783: c2pa-rs version bump to c2pa-rs v0.90.10
+
 ## 0.7.7
 
 ### Patch Changes
