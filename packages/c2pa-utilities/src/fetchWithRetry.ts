@@ -103,6 +103,31 @@ export interface FetchWithRetryOptions {
 }
 
 /**
+ * Options for resolving trust-resource URLs in a {@link Context}.
+ *
+ * In-flight request sharing is enabled by default. Successful responses are not cached unless
+ * `cacheTtlMs` is greater than zero. HTTP URLs remain accepted by default for compatibility;
+ * set `requireHttps` to reject them.
+ */
+export interface TrustFetchOptions extends FetchWithRetryOptions {
+  /**
+   * Share a pending request for the same URL and fetch policy. Defaults to `true`.
+   */
+  deduplicateInFlight?: boolean;
+
+  /**
+   * Cache successful response text for this many milliseconds. Zero disables completed-response
+   * caching. Defaults to `0`.
+   */
+  cacheTtlMs?: number;
+
+  /**
+   * Reject trust-resource URLs that do not use HTTPS. Defaults to `false`.
+   */
+  requireHttps?: boolean;
+}
+
+/**
  * @param error The error to check, usually from a `fetch` call.
  * @returns Whether `error` represents a deliberate `AbortError`.
  */

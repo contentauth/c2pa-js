@@ -16,7 +16,8 @@ import {
   DEFAULT_MAX_RESPONSE_BYTES,
   fetchWithRetry,
   fetchWithRetryRaw,
-  type FetchWithRetryOptions
+  type FetchWithRetryOptions,
+  type TrustFetchOptions
 } from './fetchWithRetry.js';
 import { snakeCaseify, type SettingsObjectType } from './caseConversion.js';
 
@@ -204,7 +205,7 @@ export function withDefaultSettings(settings: Settings | undefined): Settings {
  */
 export async function resolveSettings(
   settings: Settings | undefined,
-  options?: FetchWithRetryOptions
+  options?: TrustFetchOptions
 ): Promise<string> {
   const finalSettings: Settings = withDefaultSettings(settings);
 
@@ -399,6 +400,10 @@ const TRUST_SETTINGS_KEYS: readonly TrustAnchorKey[] = [
 ];
 
 const inFlightTrustFetches = new Map<string, Promise<string>>();
+const completedTrustFetches = new Map<
+  string,
+  { value: string; expiresAt: number }
+>();
 const functionIds = new WeakMap<object, number>();
 let nextFunctionId = 0;
 
@@ -415,7 +420,7 @@ function getFunctionId(fn: object | undefined, defaultId: string): string {
   return String(id);
 }
 
-function getTrustFetchKey(url: string, options?: FetchWithRetryOptions): string {
+function getTrustFetchKey(url: string, options?: TrustFetchOptions): string {
   const fetchPolicy = [
     options?.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES,
     options?.maxRetries ?? DEFAULT_MAX_RETRIES,
@@ -432,24 +437,80 @@ function getTrustFetchKey(url: string, options?: FetchWithRetryOptions): string 
 
 function fetchTrustSetting(
   url: string,
-  options?: FetchWithRetryOptions
+  options?: TrustFetchOptions
 ): Promise<string> {
-  const key = getTrustFetchKey(url, options);
-  const existing = inFlightTrustFetches.get(key);
-  if (existing) {
-    return existing;
+  const {
+    cacheTtlMs = 0,
+    deduplicateInFlight = true,
+    requireHttps = false
+  } = options ?? {};
+  const parsedUrl = new URL(url);
+  if (requireHttps && parsedUrl.protocol !== 'https:') {
+    return Promise.reject(
+      new Error(`Trust resource URL must use HTTPS: ${url}`)
+    );
+  }
+
+  if (!Number.isFinite(cacheTtlMs) || cacheTtlMs < 0) {
+    return Promise.reject(
+      new Error('Trust fetch cacheTtlMs must be a non-negative finite number')
+    );
+  }
+
+  const requestKey = getTrustFetchKey(url, options);
+  const cacheKey = `${requestKey}\u0000${cacheTtlMs}`;
+  const now = Date.now();
+
+  for (const [cachedKey, cached] of completedTrustFetches) {
+    if (cached.expiresAt <= now) {
+      completedTrustFetches.delete(cachedKey);
+    }
+  }
+
+  if (cacheTtlMs > 0) {
+    const cached = completedTrustFetches.get(cacheKey);
+    if (cached) {
+      return Promise.resolve(cached.value);
+    }
+  }
+
+  if (deduplicateInFlight) {
+    const existing = inFlightTrustFetches.get(requestKey);
+    if (existing) {
+      return cacheTrustFetchResult(existing, cacheKey, cacheTtlMs);
+    }
   }
 
   const request = fetchWithRetry(url, options);
-  inFlightTrustFetches.set(key, request);
+  if (deduplicateInFlight) {
+    inFlightTrustFetches.set(requestKey, request);
+  }
   const clearRequest = () => {
-    if (inFlightTrustFetches.get(key) === request) {
-      inFlightTrustFetches.delete(key);
+    if (inFlightTrustFetches.get(requestKey) === request) {
+      inFlightTrustFetches.delete(requestKey);
     }
   };
   void request.then(clearRequest, clearRequest);
 
-  return request;
+  return cacheTrustFetchResult(request, cacheKey, cacheTtlMs);
+}
+
+function cacheTrustFetchResult(
+  request: Promise<string>,
+  cacheKey: string,
+  cacheTtlMs: number
+): Promise<string> {
+  if (cacheTtlMs <= 0) {
+    return request;
+  }
+
+  return request.then((value) => {
+    completedTrustFetches.set(cacheKey, {
+      value,
+      expiresAt: Date.now() + cacheTtlMs
+    });
+    return value;
+  });
 }
 
 /**
@@ -461,7 +522,7 @@ function fetchTrustSetting(
  */
 export async function resolveTrustSettings(
   settings: TrustSettings,
-  options?: FetchWithRetryOptions
+  options?: TrustFetchOptions
 ): Promise<void> {
   const shouldValidateKey = (key: string): boolean =>
     ['userAnchors', 'trustAnchors'].includes(key);

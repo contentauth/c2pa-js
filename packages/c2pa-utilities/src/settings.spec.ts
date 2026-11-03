@@ -18,6 +18,7 @@ import {
 } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import { Context } from './context.js';
 import {
   resolveSettings,
   createTrustSettings,
@@ -393,53 +394,6 @@ describe('withDefaultSettings', () => {
   });
 });
 
-describe('trust settings in-flight requests', () => {
-  const url = 'https://example.com/trust-anchors.pem';
-  const pem = '-----BEGIN CERTIFICATE-----\nanchor\n-----END CERTIFICATE-----';
-
-  it('shares concurrent fetches across settings resolutions without caching completed responses', async () => {
-    const fetch = vi.fn(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      return new Response(pem);
-    });
-    const options = { fetch };
-    const resolve = () =>
-      resolveSettings({ trust: { trustAnchors: url } }, options);
-
-    const [first, second] = await Promise.all([resolve(), resolve()]);
-
-    expect(fetch).toHaveBeenCalledOnce();
-    for (const settingsJson of [first, second]) {
-      expect(JSON.parse(settingsJson).trust.anchors[0].trust_anchors).toBe(pem);
-    }
-
-    await resolve();
-    expect(fetch).toHaveBeenCalledTimes(2);
-  });
-
-  it('clears failed in-flight fetches so later resolution can retry', async () => {
-    let requestCount = 0;
-    const options = {
-      maxRetries: 0,
-      fetch: async () => {
-        requestCount++;
-        if (requestCount === 1) {
-          throw new Error('network down');
-        }
-        return new Response(pem);
-      }
-    };
-    const resolve = () =>
-      resolveSettings({ trust: { trustAnchors: url } }, options);
-
-    await expect(resolve()).rejects.toThrow('Failed to resolve trust settings');
-    const settingsJson = await resolve();
-
-    expect(requestCount).toBe(2);
-    expect(JSON.parse(settingsJson).trust.anchors[0].trust_anchors).toBe(pem);
-  });
-});
-
 describe('createTrustSettings / createCawgTrustSettings / createVerifySettings', () => {
   it('creates trust settings', () => {
     // Note: verifyTrustList is intentionally not part of the base TrustSettings type —
@@ -649,6 +603,171 @@ describe('settingsToJson', () => {
     expect(cawgAnchor.trust_anchors).toBe('test');
     expect('allowed_list' in cawgAnchor).toBe(false);
     expect(parsed.verify.verify_after_reading).toBe(false);
+  });
+});
+
+describe('trust settings in-flight requests', () => {
+  const url = 'https://example.com/trust-anchors.pem';
+  const pem = '-----BEGIN CERTIFICATE-----\nanchor\n-----END CERTIFICATE-----';
+
+  it('shares concurrent fetches for the same URL across settings resolutions', async () => {
+    const fetch = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      return new Response(pem);
+    });
+    vi.stubGlobal('fetch', fetch);
+
+    const resolve = () => resolveSettings({ trust: { trustAnchors: url } });
+    const [first, second] = await Promise.all([resolve(), resolve()]);
+
+    expect(fetch).toHaveBeenCalledOnce();
+    for (const settingsJson of [first, second]) {
+      expect(JSON.parse(settingsJson).trust.anchors[0].trust_anchors).toBe(pem);
+    }
+
+    await resolve();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  describe('trust fetching Context options', () => {
+    const contextUrl = 'https://example.com/context-options-anchors.pem';
+
+    it('uses trust fetch options attached to Context', async () => {
+      const fetch = vi.fn(async () => new Response(pem));
+      const context = new Context(
+        { trust: { trustAnchors: contextUrl } },
+        undefined,
+        { trustFetch: { fetch, maxRetries: 0, requireHttps: true } }
+      );
+
+      await context.toJson();
+
+      expect(fetch).toHaveBeenCalledOnce();
+    });
+
+    it('allows toJson options to override Context trust fetch options', async () => {
+      const contextFetch = vi.fn(async () => new Response(pem));
+      const overrideFetch = vi.fn(async () => new Response(pem));
+      const context = new Context(
+        { trust: { trustAnchors: contextUrl } },
+        undefined,
+        { trustFetch: { fetch: contextFetch } }
+      );
+
+      await context.toJson({ fetch: overrideFetch });
+
+      expect(contextFetch).not.toHaveBeenCalled();
+      expect(overrideFetch).toHaveBeenCalledOnce();
+    });
+
+    it('can require HTTPS for trust resources', async () => {
+      const fetch = vi.fn(async () => new Response(pem));
+      await expect(
+        resolveSettings(
+          { trust: { trustAnchors: 'http://example.com/anchors.pem' } },
+          { fetch, requireHttps: true }
+        )
+      ).rejects.toThrow('Trust resource URL must use HTTPS');
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('can disable in-flight deduplication', async () => {
+      const fetch = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return new Response(pem);
+      });
+      const options = { fetch, deduplicateInFlight: false };
+      const resolve = () =>
+        resolveSettings({ trust: { trustAnchors: contextUrl } }, options);
+
+      await Promise.all([resolve(), resolve()]);
+
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('caches successful trust responses for the configured TTL', async () => {
+      const cacheUrl = `${contextUrl}?cache`;
+      const fetch = vi.fn(async () => new Response(pem));
+      const options = { fetch, cacheTtlMs: 10_000 };
+      const resolve = () =>
+        resolveSettings({ trust: { trustAnchors: cacheUrl } }, options);
+
+      await resolve();
+      await resolve();
+
+      expect(fetch).toHaveBeenCalledOnce();
+    });
+
+    it('fetches again after a completed response cache entry expires', async () => {
+      const cacheUrl = `${contextUrl}?expiry`;
+      const fetch = vi.fn(async () => new Response(pem));
+      const resolve = () =>
+        resolveSettings(
+          { trust: { trustAnchors: cacheUrl } },
+          { fetch, cacheTtlMs: 10 }
+        );
+
+      vi.useFakeTimers();
+      try {
+        await resolve();
+        await vi.advanceTimersByTimeAsync(11);
+        await resolve();
+      } finally {
+        vi.useRealTimers();
+      }
+
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps completed cache entries separate for different TTLs while sharing fetches', async () => {
+      const cacheUrl = `${contextUrl}?different-ttls`;
+      const fetch = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return new Response(pem);
+      });
+      const resolve = (cacheTtlMs: number) =>
+        resolveSettings(
+          { trust: { trustAnchors: cacheUrl } },
+          { fetch, cacheTtlMs }
+        );
+
+      await Promise.all([resolve(10_000), resolve(20_000)]);
+      await resolve(10_000);
+      await resolve(20_000);
+
+      expect(fetch).toHaveBeenCalledOnce();
+    });
+
+    it('rejects invalid cache TTL options', async () => {
+      await expect(
+        resolveSettings(
+          { trust: { trustAnchors: `${contextUrl}?invalid-ttl` } },
+          { cacheTtlMs: -1 }
+        )
+      ).rejects.toThrow('cacheTtlMs must be a non-negative finite number');
+    });
+  });
+
+  it('clears failed in-flight fetches so later resolution can retry', async () => {
+    let requestCount = 0;
+    const options = {
+      maxRetries: 0,
+      fetch: async () => {
+        requestCount++;
+        if (requestCount === 1) {
+          throw new Error('network down');
+        }
+        return new Response(pem);
+      }
+    };
+    const resolve = () =>
+      resolveSettings({ trust: { trustAnchors: url } }, options);
+
+    await expect(resolve()).rejects.toThrow('Failed to resolve trust settings');
+    const settingsJson = await resolve();
+
+    expect(requestCount).toBe(2);
+    expect(JSON.parse(settingsJson).trust.anchors[0].trust_anchors).toBe(pem);
   });
 });
 

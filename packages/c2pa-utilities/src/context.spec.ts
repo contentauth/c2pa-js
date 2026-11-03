@@ -30,6 +30,13 @@ describe('Context', () => {
     expect(withSdkConfig).toEqual(await new Context().toJson());
   });
 
+  test('Context options are not serialized into the settings JSON', async () => {
+    const context = new Context(undefined, undefined, {
+      trustFetch: { cacheTtlMs: 1000, requireHttps: true }
+    });
+    expect(await context.toJson()).toEqual(await new Context().toJson());
+  });
+
   test('settings getter returns what was attached', () => {
     expect(new Context().settings).toBeUndefined();
 
