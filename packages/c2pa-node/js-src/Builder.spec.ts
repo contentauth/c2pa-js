@@ -18,6 +18,7 @@ import { Context } from "@contentauth/c2pa-utilities";
 import fs from "fs-extra";
 import path from "path";
 import * as crypto from "crypto";
+import { vi } from "vitest";
 import http from "http";
 import type { AddressInfo } from "net";
 
@@ -1093,6 +1094,47 @@ describe("Builder", () => {
       expect(manifestStore.validation_status ?? []).not.toContainEqual(
         expect.objectContaining({ code: "signingCredential.untrusted" }),
       );
+    });
+
+    it("newAsync(context) fetches trust-anchor URLs before creating the Builder", async () => {
+      const pem = "-----BEGIN CERTIFICATE-----\nanchor\n-----END CERTIFICATE-----";
+      const fetch = vi.fn(async () => new Response(pem));
+      vi.stubGlobal("fetch", fetch);
+
+      try {
+        const context = new Context({
+          trust: { trustAnchors: "https://example.com/anchors.pem" },
+        });
+        await Builder.newAsync(context);
+
+        expect(fetch).toHaveBeenCalledOnce();
+        const resolvedSettings = JSON.parse(await context.toJson());
+        expect(resolvedSettings.trust.anchors[0].trust_anchors).toBe(pem);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it("newAsync(context) retries failed trust-anchor fetches", async () => {
+      const pem = "-----BEGIN CERTIFICATE-----\nanchor\n-----END CERTIFICATE-----";
+      const fetch = vi
+        .fn()
+        .mockResolvedValueOnce(new Response("", { status: 503 }))
+        .mockResolvedValueOnce(new Response(pem));
+      vi.stubGlobal("fetch", fetch);
+
+      try {
+        const context = new Context({
+          trust: { trustAnchors: "https://example.com/anchors.pem" },
+        });
+        await Builder.newAsync(context);
+
+        expect(fetch).toHaveBeenCalledTimes(2);
+        const resolvedSettings = JSON.parse(await context.toJson());
+        expect(resolvedSettings.trust.anchors[0].trust_anchors).toBe(pem);
+      } finally {
+        vi.unstubAllGlobals();
+      }
     });
 
     it("withJsonAsync(json, context) applies the Context's settings", async () => {

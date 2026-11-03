@@ -22,7 +22,7 @@ import type {
 import { Context } from "@contentauth/c2pa-utilities";
 
 import { getNeonBinary } from "./binary.js";
-import { resolveSettingsForNeon } from "./Settings.js";
+import { resolveRawSettingsForNeon, resolveSettingsForNeon } from "./Settings.js";
 import type {
   BuilderInterface,
   C2paSettings,
@@ -65,7 +65,7 @@ export class Builder implements BuilderInterface {
    * @param settings A raw `C2paSettings` string/object.
    */
   static new(settings?: C2paSettings): Builder {
-    const settingsStr = resolveSettingsForNeon(settings);
+    const settingsStr = resolveRawSettingsForNeon(settings);
     const builder: NeonBuilderHandle = getNeonBinary().builderNew(settingsStr);
     return new Builder(builder);
   }
@@ -74,14 +74,13 @@ export class Builder implements BuilderInterface {
    * Create a Builder with a minimal manifest definition, configured by a `Context`.
    * Prefer this over the deprecated {@link Builder.new}.
    *
-   * Declared async for forward compatibility. Upcoming work will allow for trust anchor
-   * resolution at construction time.
+   * Resolves trust-anchor URLs in the Context before constructing the Builder.
    *
    * @param context A `Context` object containing configuration settings for this Builder.
    * Defaults to an empty `Context` using default settings if one is not provided.
    */
   static async newAsync(context: Context = new Context()): Promise<Builder> {
-    const settingsStr = resolveSettingsForNeon(context);
+    const settingsStr = await resolveSettingsForNeon(context);
     const builder: NeonBuilderHandle = getNeonBinary().builderNew(settingsStr);
     return new Builder(builder);
   }
@@ -93,7 +92,7 @@ export class Builder implements BuilderInterface {
    */
   static withJson(json: Manifest, settings?: C2paSettings): Builder {
     const jsonString = stringifyManifestDefinition(json);
-    const settingsStr = resolveSettingsForNeon(settings);
+    const settingsStr = resolveRawSettingsForNeon(settings);
     const builder: NeonBuilderHandle = getNeonBinary().builderWithJson(
       jsonString,
       settingsStr,
@@ -105,8 +104,7 @@ export class Builder implements BuilderInterface {
    * Create a Builder from a manifest definition, configured by a `Context`. Prefer this over
    * the deprecated {@link Builder.withJson}.
    *
-   * Declared async for forward compatibility. Upcoming work will allow c2pa-node
-   * to resolve trust anchors at construction time.
+   * Resolves trust-anchor URLs in the Context before constructing the Builder.
    *
    * @param json The manifest JSON.
    * @param context A `Context` object containing configuration settings for this Builder.
@@ -117,7 +115,7 @@ export class Builder implements BuilderInterface {
     context: Context = new Context(),
   ): Promise<Builder> {
     const jsonString = stringifyManifestDefinition(json);
-    const settingsStr = resolveSettingsForNeon(context);
+    const settingsStr = await resolveSettingsForNeon(context);
     const builder: NeonBuilderHandle = getNeonBinary().builderWithJson(
       jsonString,
       settingsStr,
@@ -199,7 +197,7 @@ export class Builder implements BuilderInterface {
     asset: SourceAsset,
     settingsOrContext?: C2paSettings | Context | null,
   ): Promise<Builder> {
-    const settingsStr = resolveSettingsForNeon(settingsOrContext);
+    const settingsStr = await resolveSettingsForNeon(settingsOrContext);
     return new Builder(
       await getNeonBinary().builderFromArchive(asset, settingsStr),
     );
