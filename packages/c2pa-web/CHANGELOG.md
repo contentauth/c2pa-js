@@ -1,5 +1,19 @@
 # @contentauth/c2pa-web
 
+## 0.15.6
+
+### Patch Changes
+
+- f6bd783: c2pa-rs version bump to c2pa-rs v0.90.10
+- 61f9345: Add SdkConfig, a second Context constructor argument for SDK-side configuration, starting with maxSizeInBytes. Each SDK keeps its existing asset size limit as the default, so behavior is unchanged.
+- 6d22046: Add update manifest attribute API, make sure it supports strings too
+- Updated dependencies [f6bd783]
+- Updated dependencies [61f9345]
+- Updated dependencies [6d22046]
+  - @contentauth/c2pa-types@0.7.8
+  - @contentauth/c2pa-utilities@0.4.0
+  - @contentauth/c2pa-wasm@0.13.5
+
 ## 0.15.5
 
 ### Patch Changes
