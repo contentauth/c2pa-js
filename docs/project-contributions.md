@@ -39,7 +39,7 @@ To build from source instead of using published packages only, you need
 
 #### TLS trust stores for builds
 
-The workspace pins `c2pa` to **0.91.7** for native bindings, WebAssembly, and type
+The workspace pins `c2pa` to **0.91.10** for native bindings, WebAssembly, and type
 generation. Native SDK HTTP requests and Trustmark model downloads use Reqwest
 with Rustls and share the patched `rustls-webpki` verifier and `webpki-roots`
 bundle in `Cargo.lock`.
