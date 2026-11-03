@@ -7,6 +7,17 @@ The c2pa-js repository is a monorepo containing JavaScript libraries and tools f
 - [**c2pa-web**](packages/c2pa-web/README.md): Library for C2PA metadata in the browser. Import and use this package in browser client JavaScript code.
 - [**c2pa-node**](packages/c2pa-node/README.md): Node.js library that can read and validate C2PA manifest data that is attached to media assets and add signed manifests to media assets.
 
+Versioned API documentation for published releases is available for
+[Node.js](https://contentauth.github.io/c2pa-js/node/) and
+[web](https://contentauth.github.io/c2pa-js/web/). See the
+[Node.js](packages/c2pa-node/README.md#documentation) and
+[web](packages/c2pa-web/README.md#documentation) documentation build instructions
+to select releases or generate the sites locally.
+
+Run `pnpm ci:docs:releases` to build both versioned sites without building the
+workspace libraries. Run `pnpm ci:docs` to build the existing multi-package
+source docs and both versioned sites together.
+
 Additionally, the repo contains these intermediate and internal libraries:
 
 - [**c2pa-wasm**](packages/c2pa-wasm/README.md): WebAssembly bindings for [c2pa-rs](https://github.com/contentauth/c2pa-rs) that power c2pa-web, built with [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen). Most applications should use c2pa-web instead of calling the bindings directly.
@@ -34,9 +45,23 @@ Install the following before you work in this repository.
 
 #### Node.js
 
-Node.js **v22.22.0 or later** is required. Older versions may fail to build because of unrecognized file extensions.
+Use a patched Node.js release: **v22.23.4+ on v22, v24.22.1+ on v24, or v26.12.1+ on v26**. These releases update the bundled roots and block the compromised eMudhra intermediate public keys. Older Node versions may also fail to build because of unrecognized file extensions.
 
-If you use [nvm](https://github.com/nvm-sh/nvm), install a supported v22 release (for example, `nvm install 22.22.0`).
+If you use [nvm](https://github.com/nvm-sh/nvm), install a patched v22 release (for example, `nvm install 22.23.4`).
+
+#### TLS trust stores
+
+The workspace pins `c2pa` to **0.91.7** for native bindings, WebAssembly, and type generation. Native SDK HTTP requests and Trustmark model downloads use Reqwest with Rustls and share the patched `rustls-webpki` verifier and `webpki-roots` bundle in `Cargo.lock`.
+
+The Rust upgrade does **not** update every HTTPS trust path:
+
+- The Node package's binary installer uses `node-fetch`, and shared utilities use the runtime's global `fetch` (or a caller-supplied implementation) for settings and trust-resource URLs. Build tooling also uses Node HTTPS clients, including `got` for the Binaryen download. These paths need a patched Node runtime; updating npm HTTP-client packages alone does not update Node's TLS verifier or roots.
+- Browser/WASM HTTP requests, including remote manifests, timestamp requests, and WASM loading, use browser networking. Keep the browser and its revocation data current, along with the OS trust store where applicable. A Rust dependency update cannot patch the browser.
+- Native build tooling has independent trust stores: the Trustmark dependency's ONNX Runtime downloader uses `ureq` with `native-tls`, while Cargo, Rustup, `cargo-binstall`, and shell downloads use their own runtime or system TLS configuration. Keep those tools and OS CA packages patched.
+
+No production TLS CA bundle is maintained in this repository. Custom fetch implementations, Node CA overrides (such as `NODE_EXTRA_CA_CERTS`), proxies, and externally supplied binaries remain the deployer's responsibility. C2PA signing trust anchors and test certificates are separate from HTTPS CA roots.
+
+See the [eMudhra incident and patched-client list](https://emudhra.we-have-a-problem.com/) and the upstream Node security releases for [v22.23.4](https://github.com/nodejs/node/releases/tag/v22.23.4), [v24.22.1](https://github.com/nodejs/node/releases/tag/v24.22.1), and [v26.12.1](https://github.com/nodejs/node/releases/tag/v26.12.1).
 
 #### pnpm and Nx
 

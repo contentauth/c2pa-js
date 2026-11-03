@@ -300,7 +300,7 @@ export class Builder implements BuilderInterface {
     );
   }
 
-  updateManifestProperty(property: string, value: ClaimVersion): void {
+  updateManifestProperty(property: string, value: string | ClaimVersion): void {
     getNeonBinary().builderUpdateManifestProperty.call(
       this.builder,
       property,

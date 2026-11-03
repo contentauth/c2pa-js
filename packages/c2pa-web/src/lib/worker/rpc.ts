@@ -75,6 +75,11 @@ const { createTx, rx } = channel<{
   ) => void;
   builder_setRemoteUrl: (builderId: number, url: string) => void;
   builder_setNoEmbed: (builderId: number, noEmbed: boolean) => void;
+  builder_updateManifestProperty: (
+    builderId: number,
+    property: string,
+    value: string | number
+  ) => void;
   builder_setThumbnailFromBlob: (
     builderId: number,
     format: string,

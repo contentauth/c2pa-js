@@ -332,8 +332,8 @@ export interface BuilderInterface {
   getManifestDefinition(): Manifest;
 
   /**
-   * Update a string property of the manifest
-   * @returns The manifest definition
+   * Update a property of the manifest. Throws for an unsupported property or type.
+   * Calling while a signAsync is pending hangs the process: it blocks the thread the signer callback needs.
    */
   updateManifestProperty(property: string, value: string | ClaimVersion): void;
 

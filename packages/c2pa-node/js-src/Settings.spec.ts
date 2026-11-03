@@ -19,6 +19,7 @@ import { vi } from "vitest";
 import {
   loadSettingsFromFile,
   resolveRawSettingsForNeon,
+  resolveSdkConfig,
   resolveSettingsForNeon,
 } from "./Settings.js";
 
@@ -110,6 +111,15 @@ verify_after_sign = false`;
       );
     });
 
+    it("does not serialize a Context's SDK config", async () => {
+      const result = await resolveSettingsForNeon(
+        new Context(undefined, { maxSizeInBytes: 42 }),
+      );
+      expect(JSON.parse(result!)).toEqual(
+        JSON.parse(settingsToJson(DEFAULT_SETTINGS)),
+      );
+    });
+
     it("merges a Context's settings with defaults", async () => {
       const settings = { verify: { verifyTrust: false } };
       const result = await resolveSettingsForNeon(new Context(settings));
@@ -141,6 +151,24 @@ verify_after_sign = false`;
       const rawSettings = { verify: { verify_trust: false } };
       const result = await resolveSettingsForNeon(rawSettings);
       expect(JSON.parse(result!)).toEqual(rawSettings);
+    });
+  });
+
+  describe("resolveSdkConfig", () => {
+    it("returns a Context's SDK config", () => {
+      const sdkConfig = { maxSizeInBytes: 42 };
+      expect(resolveSdkConfig(new Context(undefined, sdkConfig))).toEqual(sdkConfig);
+    });
+
+    it("returns undefined when a Context carries no SDK config", () => {
+      expect(resolveSdkConfig(new Context())).toBeUndefined();
+    });
+
+    it("returns undefined for the deprecated raw settings forms", () => {
+      expect(resolveSdkConfig(undefined)).toBeUndefined();
+      expect(resolveSdkConfig(null)).toBeUndefined();
+      expect(resolveSdkConfig({ verify: { verifyTrust: false } })).toBeUndefined();
+      expect(resolveSdkConfig('{"verify":{"verify_trust":false}}')).toBeUndefined();
     });
   });
 });

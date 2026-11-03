@@ -12,7 +12,7 @@
 // each license.
 
 import fs from "fs-extra";
-import { Context } from "@contentauth/c2pa-utilities";
+import { Context, type SdkConfig } from "@contentauth/c2pa-utilities";
 import type { C2paSettings } from "./types.d.ts";
 
 /**
@@ -30,6 +30,23 @@ import type { C2paSettings } from "./types.d.ts";
 export async function loadSettingsFromFile(filePath: string): Promise<string> {
   const content = await fs.readFile(filePath, "utf8");
   return content;
+}
+
+/**
+ * Reads the SDK config out of a settings argument.
+ *
+ * Only a `Context` carries an SDK config so the deprecated raw `C2paSettings` forms always
+ * resolve to `undefined`, leaving this package's defaults in place.
+ *
+ * @param settingsOrContext A `Context`, or (@deprecated) a raw `C2paSettings` string/object.
+ * @returns The `Context`'s SDK config, or `undefined` if there is none.
+ */
+export function resolveSdkConfig(
+  settingsOrContext: C2paSettings | Context | null | undefined,
+): SdkConfig | undefined {
+  return settingsOrContext instanceof Context
+    ? settingsOrContext.sdkConfig
+    : undefined;
 }
 
 /**

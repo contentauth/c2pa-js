@@ -11,6 +11,21 @@ permissions:
   contents: read
 
 jobs:
+  api-docs:
+    name: Versioned Node.js and web API documentation
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+      - name: Install documentation tooling without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm test:docs
+      - run: pnpm ci:docs:releases
+
   cargo_fmt:
     name: Enforce Rust code format
     runs-on: ubuntu-24.04

@@ -17,6 +17,19 @@ describe('Context', () => {
     expect(result).toEqual(settingsToJson(DEFAULT_SETTINGS));
   });
 
+  test('sdkConfig getter returns what was attached', () => {
+    expect(new Context().sdkConfig).toBeUndefined();
+    expect(new Context({ verify: { verifyTrust: false } }).sdkConfig).toBeUndefined();
+
+    const sdkConfig = { maxSizeInBytes: 42 };
+    expect(new Context(undefined, sdkConfig).sdkConfig).toEqual(sdkConfig);
+  });
+
+  test('sdkConfig is not serialized into the settings JSON', async () => {
+    const withSdkConfig = await new Context(undefined, { maxSizeInBytes: 42 }).toJson();
+    expect(withSdkConfig).toEqual(await new Context().toJson());
+  });
+
   test('settings getter returns what was attached', () => {
     expect(new Context().settings).toBeUndefined();
 

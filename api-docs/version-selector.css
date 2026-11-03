@@ -1,0 +1,11 @@
+.api-version-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  white-space: nowrap;
+}
+
+.api-version-selector select {
+  color: var(--color-text);
+  background: var(--color-background);
+}
