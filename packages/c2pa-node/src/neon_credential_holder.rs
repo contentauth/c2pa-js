@@ -32,7 +32,7 @@ struct JsSignerPayload {
     referenced_assertions: Vec<JsHashedUri>,
     sig_type: String,
     #[serde(default)]
-    roles: Vec<String>,
+    roles: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -58,7 +58,7 @@ impl From<&SignerPayload> for JsSignerPayload {
                 })
                 .collect(),
             sig_type: payload.sig_type.clone(),
-            roles: payload.roles.clone(),
+            roles: Some(payload.roles.clone()),
         }
     }
 }
@@ -72,9 +72,25 @@ impl From<JsSignerPayload> for SignerPayload {
                 .map(|uri| HashedUri::new(uri.url, uri.alg, &uri.hash))
                 .collect(),
             sig_type: payload.sig_type,
-            roles: payload.roles,
+            roles: payload.roles.unwrap_or_default(),
         }
     }
+}
+
+/// Encode the JavaScript payload using the canonical CAWG wire representation.
+pub fn encode_signer_payload(mut cx: FunctionContext) -> JsResult<JsUint8Array> {
+    let value = cx.argument::<JsValue>(0)?;
+    let payload: JsSignerPayload = match neon_serde4::from_value(&mut cx, value) {
+        Ok(payload) => payload,
+        Err(neon_serde4::errors::Error::Js { throw }) => return Err(throw),
+        Err(err) => return cx.throw_type_error(err.to_string()),
+    };
+    let payload: SignerPayload = payload.into();
+    let mut bytes = Vec::new();
+    if let Err(err) = c2pa_cbor::to_writer(&mut bytes, &payload) {
+        return cx.throw_error(err.to_string());
+    }
+    JsUint8Array::from_slice(&mut cx, &bytes)
 }
 
 /// NeonCallbackCredentialHolder allows JS to asynchronously sign a SignerPayload.

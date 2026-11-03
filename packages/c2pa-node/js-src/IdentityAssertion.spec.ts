@@ -17,7 +17,7 @@ import type { Manifest } from "@contentauth/c2pa-types";
 import fs from "fs-extra";
 import * as crypto from "crypto";
 import { spawnSync } from "child_process";
-import { encode } from "cbor2";
+import { encodeSignerPayload } from "./index.js";
 
 import type {
   JsCallbackSignerConfig,
@@ -48,7 +48,7 @@ class TestCawgSigner {
   constructor(private manifestSigner: TestSigner) {}
 
   sign = async (payload: SignerPayload): Promise<Buffer> => {
-    const cborBytes = Buffer.from(encode(payload));
+    const cborBytes = Buffer.from(encodeSignerPayload(payload));
     return this.manifestSigner.sign(cborBytes);
   };
 }

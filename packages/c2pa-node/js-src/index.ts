@@ -19,6 +19,7 @@ export {
   IdentityAssertionBuilder,
   IdentityAssertionSigner,
   CallbackCredentialHolder,
+  encodeSignerPayload,
 } from "./IdentityAssertion.js";
 export { Trustmark } from "./Trustmark.js";
 export { isActionsAssertion } from "./assertions.js";

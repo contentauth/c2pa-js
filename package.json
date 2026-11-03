@@ -11,7 +11,8 @@
     "ci:docs:releases": "pnpm ci:docs:node && pnpm ci:docs:web",
     "ci:docs:node": "node scripts/generate-api-docs.mjs node",
     "ci:docs:web": "node scripts/generate-api-docs.mjs web",
-    "test:docs": "node --test scripts/api-docs.test.mjs"
+    "test:docs": "node --test scripts/api-docs.test.mjs",
+    "test:signer-payload": "pnpm exec nx run-many -t build --projects=c2pa-node,c2pa-wasm && pnpm exec vitest run --config tests/vitest.config.ts"
   },
   "private": true,
   "devDependencies": {

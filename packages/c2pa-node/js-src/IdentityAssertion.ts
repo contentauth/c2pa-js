@@ -23,6 +23,16 @@ import type {
   NeonCallbackSignerHandle,
 } from "./types.d.ts";
 
+/**
+ * Encode a CAWG SignerPayload using c2pa_cbor. Hashes become CBOR byte strings;
+ * the wire keys are referenced_assertions, sig_type, and (when nonempty) role.
+ */
+export function encodeSignerPayload(
+  payload: Omit<SignerPayload, "roles"> & { roles?: string[] },
+): Uint8Array {
+  return getNeonBinary().encodeSignerPayload(payload);
+}
+
 export class IdentityAssertionBuilder
   implements IdentityAssertionBuilderInterface
 {

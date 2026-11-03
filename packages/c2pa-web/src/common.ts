@@ -8,6 +8,7 @@
  */
 
 export type { Config, C2pa } from './lib/c2pa.js';
+export { encodeSignerPayload } from './lib/signer.js';
 
 export type { ManifestAndAssetBytes, BuilderFactory } from './lib/builder.js';
 
@@ -18,6 +19,7 @@ export type {
   SigningAlg,
   HashedUri,
   SignerPayload,
+  SignerPayloadInput,
   CredentialHolder,
   IdentityAssertion,
   SignOptions

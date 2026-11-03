@@ -72,3 +72,4 @@ jobs:
           curl -fSL "$BASE/decoder_B.onnx" -o packages/c2pa-node/tmp/trustmark_models/decoder_B.onnx
 
       - run: pnpm ci:check
+      - run: pnpm test:signer-payload
