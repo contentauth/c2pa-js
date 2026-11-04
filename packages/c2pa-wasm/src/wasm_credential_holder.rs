@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use c2pa::identity::SignerPayload;
 use c2pa::identity::builder::{AsyncCredentialHolder, IdentityBuilderError};
 use js_sys::{Function as JsFunction, JsString, Promise as JsPromise, Reflect, Uint8Array};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
@@ -28,6 +28,8 @@ interface SignerPayload {
     sigType: string;
     roles: string[];
 }
+
+type SignerPayloadInput = Omit<SignerPayload, 'roles'> & { roles?: string[] };
 "#;
 
 /// JS-facing camelCase mirror of `c2pa::HashedUri`.
@@ -36,8 +38,8 @@ interface SignerPayload {
 /// (which serializes with its own snake_case field names). We build this
 /// shape explicitly so the JS credential-holder `sign` callback always sees
 /// `{ url, hash, alg }`, matching the public `HashedUri` TS type and the
-/// adobe-web/utilities `encodeSignerPayload` contract.
-#[derive(Serialize)]
+/// public `encodeSignerPayload` contract.
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct JsHashedUri {
     url: String,
@@ -50,12 +52,13 @@ struct JsHashedUri {
 /// JS-facing camelCase mirror of `c2pa::identity::SignerPayload`. See
 /// [`JsHashedUri`] for why this isn't a verbatim serde port of the c2pa
 /// type (whose fields serialize as `referenced_assertions`/`sig_type`/`role`).
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct JsSignerPayload {
     referenced_assertions: Vec<JsHashedUri>,
     sig_type: String,
-    roles: Vec<String>,
+    #[serde(default)]
+    roles: Option<Vec<String>>,
 }
 
 impl From<&SignerPayload> for JsSignerPayload {
@@ -71,9 +74,43 @@ impl From<&SignerPayload> for JsSignerPayload {
                 })
                 .collect(),
             sig_type: payload.sig_type.clone(),
-            roles: payload.roles.clone(),
+            roles: Some(payload.roles.clone()),
         }
     }
+}
+
+impl From<JsSignerPayload> for SignerPayload {
+    fn from(payload: JsSignerPayload) -> Self {
+        Self {
+            referenced_assertions: payload
+                .referenced_assertions
+                .into_iter()
+                .map(|uri| c2pa::HashedUri::new(uri.url, uri.alg, &uri.hash))
+                .collect(),
+            sig_type: payload.sig_type,
+            roles: payload.roles.unwrap_or_default(),
+        }
+    }
+}
+
+/// Encode a camelCase JavaScript SignerPayload as canonical CAWG CBOR.
+#[wasm_bindgen(js_name = encodeSignerPayload)]
+pub fn encode_signer_payload(
+    #[wasm_bindgen(unchecked_param_type = "SignerPayloadInput")] payload: JsValue,
+) -> Result<Vec<u8>, JsString> {
+    if payload.is_object()
+        && Reflect::get(&payload, &JsValue::from_str("roles")).is_ok_and(|roles| roles.is_null())
+    {
+        return Err(JsString::from(
+            "roles must be an array of strings or undefined",
+        ));
+    }
+    let payload: JsSignerPayload =
+        serde_wasm_bindgen::from_value(payload).map_err(|err| JsString::from(err.to_string()))?;
+    let payload: SignerPayload = payload.into();
+    let mut bytes = Vec::new();
+    c2pa_cbor::to_writer(&mut bytes, &payload).map_err(|err| JsString::from(err.to_string()))?;
+    Ok(bytes)
 }
 
 /// `WasmCredentialHolder` allows JS to asynchronously sign a `SignerPayload`

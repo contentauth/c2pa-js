@@ -15,6 +15,7 @@ import { Builder } from './builder.js';
 import { Reader } from './reader.js';
 import { createC2pa } from './c2pa.js';
 import type { CredentialHolder, SignerPayload } from './signer.js';
+import { encodeSignerPayload } from './signer.js';
 
 import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 
@@ -1306,6 +1307,17 @@ describe('builder', () => {
           reserveSize: 10000,
           sign: async (payload) => {
             receivedPayloads.push(payload);
+            // The signing worker is awaiting this callback. Encoding must
+            // still complete on that same worker through nested RPC.
+            const [bytes, repeated] = await Promise.all([
+              encodeSignerPayload(c2pa, payload),
+              encodeSignerPayload(c2pa, payload)
+            ]);
+            expect(bytes.byteLength).toBeGreaterThan(0);
+            expect(repeated).toEqual(bytes);
+            expect(
+              payload.referencedAssertions[0].hash.byteLength
+            ).toBeGreaterThan(0);
             return FIXED_SIGNATURE;
           }
         };

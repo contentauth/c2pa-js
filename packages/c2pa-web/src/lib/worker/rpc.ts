@@ -12,7 +12,8 @@ import { ManifestAndAssetBytes } from '../builder.js';
 import type {
   SerializableIdentityAssertion,
   SerializableSigningPayload,
-  SignerPayload
+  SignerPayload,
+  SignerPayloadInput
 } from '../signer.js';
 
 import { channel } from 'highgain';
@@ -20,6 +21,8 @@ import { channel } from 'highgain';
 // Define browser-to-worker RPC interface
 const { createTx, rx } = channel<{
   initWorker: (module: WebAssembly.Module) => void;
+
+  encodeSignerPayload: (payload: SignerPayloadInput) => Uint8Array<ArrayBuffer>;
 
   // Reader construction methods
   reader_fromBlob: (
