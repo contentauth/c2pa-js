@@ -116,4 +116,105 @@ describe("encodeSignerPayload", () => {
       } as never),
     ).toThrow();
   });
+
+  describe("input contract", () => {
+    // Keep these cases aligned with c2pa-web's signer.spec.ts. The JS-to-Rust
+    // adapters differ even though both bindings use the same Rust serializer.
+    const hash = Uint8Array.of(1, 2);
+    const uri = { url: "a", hash };
+    const payload = { referencedAssertions: [uri], sigType: "test" };
+    const rejected: [string, unknown][] = [
+      ["an undefined payload", undefined],
+      ["a null payload", null],
+      ["missing referencedAssertions", { sigType: "test" }],
+      ["missing sigType", { referencedAssertions: [uri] }],
+      [
+        "snake_case referenced_assertions",
+        { referenced_assertions: [uri], sigType: "test" },
+      ],
+      [
+        "snake_case sig_type",
+        { referencedAssertions: [uri], sig_type: "test" },
+      ],
+      [
+        "case-mismatched SigType",
+        { referencedAssertions: [uri], SigType: "test" },
+      ],
+      [
+        "non-array referencedAssertions",
+        { ...payload, referencedAssertions: {} },
+      ],
+      ["a non-string sigType", { ...payload, sigType: 42 }],
+      ["a null assertion", { ...payload, referencedAssertions: [null] }],
+      ["a missing url", { ...payload, referencedAssertions: [{ hash }] }],
+      [
+        "case-mismatched Url",
+        { ...payload, referencedAssertions: [{ Url: "a", hash }] },
+      ],
+      [
+        "a non-string url",
+        { ...payload, referencedAssertions: [{ ...uri, url: 42 }] },
+      ],
+      ["a missing hash", { ...payload, referencedAssertions: [{ url: "a" }] }],
+      [
+        "case-mismatched Hash",
+        { ...payload, referencedAssertions: [{ url: "a", Hash: hash }] },
+      ],
+      [
+        "a string hash",
+        { ...payload, referencedAssertions: [{ ...uri, hash: "not bytes" }] },
+      ],
+      [
+        "a non-string alg",
+        { ...payload, referencedAssertions: [{ ...uri, alg: 42 }] },
+      ],
+      ["null roles", { ...payload, roles: null }],
+      ["non-array roles", { ...payload, roles: "creator" }],
+      ["a non-string role", { ...payload, roles: [42] }],
+    ];
+
+    it.each(rejected)("rejects %s", (_name, input) => {
+      expect(() => encodeSignerPayload(input as never)).toThrow();
+    });
+
+    const ignored: [string, unknown][] = [
+      ["extra payload properties", { ...payload, extra: { version: 1 } }],
+      [
+        "wire-format field names alongside camelCase fields",
+        {
+          ...payload,
+          referenced_assertions: [],
+          sig_type: "ignored",
+          role: ["ignored"],
+        },
+      ],
+      [
+        "extra assertion properties",
+        { ...payload, referencedAssertions: [{ ...uri, extra: true }] },
+      ],
+      [
+        "case-mismatched optional Roles and Alg",
+        {
+          ...payload,
+          Roles: ["ignored"],
+          referencedAssertions: [{ ...uri, Alg: "ignored" }],
+        },
+      ],
+    ];
+
+    it.each(ignored)("ignores %s", (_name, input) => {
+      expect(encodeSignerPayload(input as never)).toEqual(
+        encodeSignerPayload(payload),
+      );
+    });
+
+    it("ignores an unknown function property without cloning the payload", () => {
+      expect(
+        encodeSignerPayload({
+          ...payload,
+          extra: () => undefined,
+        } as never),
+      ).toEqual(encodeSignerPayload(payload));
+    });
+  });
 });

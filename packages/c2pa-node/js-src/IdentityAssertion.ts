@@ -27,6 +27,19 @@ import type {
 /**
  * Encode a CAWG SignerPayload using c2pa_cbor. Hashes become CBOR byte strings;
  * the wire keys are referenced_assertions, sig_type, and (when nonempty) role.
+ *
+ * Input names are case-sensitive: referencedAssertions, sigType, roles, and each
+ * reference's url, hash, and alg. Wire-format names are not aliases. Missing or
+ * incorrectly cased required fields are rejected; unknown data properties are
+ * ignored, including incorrectly cased optional fields. Omitted, undefined, or
+ * empty roles are omitted on the wire; null roles are rejected.
+ *
+ * Use plain data objects with Uint8Array hashes for portability between bindings
+ * (Node Buffer hashes are also supported here). Validation failures throw
+ * synchronously. The Web counterpart rejects its Promise and additionally
+ * requires the entire payload, including unknown properties, to be
+ * structured-cloneable: an unknown function property is ignored here but cannot
+ * be sent to the Web worker. Error types and messages are binding-specific.
  */
 export function encodeSignerPayload(
   payload: SignerPayloadInput,
