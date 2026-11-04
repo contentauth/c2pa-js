@@ -1,5 +1,16 @@
 # @contentauth/c2pa-web
 
+## 0.16.0
+
+### Minor Changes
+
+- 1406314: Add `encodeSignerPayload` and the `SignerPayloadInput` type to encode a CAWG SignerPayload as canonical CBOR (synchronous in Node, asynchronous via the `C2pa` instance's worker in Web).
+
+### Patch Changes
+
+- Updated dependencies [1406314]
+  - @contentauth/c2pa-wasm@0.14.0
+
 ## 0.15.6
 
 ### Patch Changes
