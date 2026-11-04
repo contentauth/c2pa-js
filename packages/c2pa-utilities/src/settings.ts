@@ -16,6 +16,7 @@ import {
   DEFAULT_MAX_RESPONSE_BYTES,
   fetchWithRetry,
   fetchWithRetryRaw,
+  validateFetchWithRetryOptions,
   type FetchWithRetryOptions
 } from './fetchWithRetry.js';
 import { snakeCaseify, type SettingsObjectType } from './caseConversion.js';
@@ -196,6 +197,12 @@ export function withDefaultSettings(settings: Settings | undefined): Settings {
  * consumption by the core native SDK. `settings` is merged on top of this package's default
  * settings (see {@link withDefaultSettings}). To combine more than one `Settings` source, merge them with
  * {@link mergeSettings} first and pass the single result in here.
+ *
+ * Concurrent trust-resource requests using the global fetch and the same policy are shared.
+ * Custom fetch implementations are isolated because their request context may be mutable.
+ * Each trust-resource fetch has a 30-second deadline covering retries and body consumption;
+ * a timeout aborts the request, rejects all waiting resolutions, and permits a later retry.
+ * Completed responses are not cached.
  *
  * @param settings Settings to resolve.
  * @param options Optional configurations for fetch-with-retry.
@@ -399,6 +406,7 @@ const TRUST_SETTINGS_KEYS: readonly TrustAnchorKey[] = [
 ];
 
 const inFlightTrustFetches = new Map<string, Promise<string>>();
+const TRUST_FETCH_TIMEOUT_MS = 30_000;
 const functionIds = new WeakMap<object, number>();
 let nextFunctionId = 0;
 
@@ -424,7 +432,7 @@ function getTrustFetchKey(url: string, options?: FetchWithRetryOptions): string 
     options?.maxRetryAfterMs ?? DEFAULT_MAX_RETRY_AFTER_MS,
     getFunctionId(options?.isRetryableStatus, 'default-status'),
     getFunctionId(options?.isRetryableError, 'default-error'),
-    getFunctionId(options?.fetch, 'global-fetch')
+    getFunctionId(globalThis.fetch, 'global-fetch')
   ];
 
   return JSON.stringify([url, ...fetchPolicy]);
@@ -434,13 +442,18 @@ function fetchTrustSetting(
   url: string,
   options?: FetchWithRetryOptions
 ): Promise<string> {
+  validateFetchWithRetryOptions(options);
+  if (options?.fetch) {
+    return fetchTrustSettingWithTimeout(url, options);
+  }
+
   const key = getTrustFetchKey(url, options);
   const existing = inFlightTrustFetches.get(key);
   if (existing) {
     return existing;
   }
 
-  const request = fetchWithRetry(url, options);
+  const request = fetchTrustSettingWithTimeout(url, options);
   inFlightTrustFetches.set(key, request);
   const clearRequest = () => {
     if (inFlightTrustFetches.get(key) === request) {
@@ -450,6 +463,40 @@ function fetchTrustSetting(
   void request.then(clearRequest, clearRequest);
 
   return request;
+}
+
+async function fetchTrustSettingWithTimeout(
+  url: string,
+  options?: FetchWithRetryOptions
+): Promise<string> {
+  const controller = new AbortController();
+  const fetchFn = options?.fetch ?? globalThis.fetch;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      const error = new DOMException(
+        `Trust resource fetch timed out after ${TRUST_FETCH_TIMEOUT_MS} ms: ${url}`,
+        'AbortError'
+      );
+      controller.abort(error);
+      reject(error);
+    }, TRUST_FETCH_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([
+      fetchWithRetry(url, {
+        ...options,
+        fetch: (input, init) => {
+          controller.signal.throwIfAborted();
+          return fetchFn(input, { ...init, signal: controller.signal });
+        }
+      }),
+      timeout
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**

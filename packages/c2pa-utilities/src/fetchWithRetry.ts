@@ -44,11 +44,13 @@ export function defaultIsRetryableStatus(status: number): boolean {
 /**
  * Options to configure the fetch-with-retry mechanism ({@link fetchWithRetry} and
  * {@link fetchWithRetryRaw}). All fields are optional and fall back to the module's documented
- * defaults, so existing callers are unaffected by omitting them.
+ * defaults, so existing callers are unaffected by omitting them. Numeric options must be
+ * finite and non-negative; `NaN`, infinities and negative values throw before fetching.
  */
 export interface FetchWithRetryOptions {
   /**
    * Maximum allowed response size, in bytes, for {@link fetchWithRetry}'s text response.
+   * Zero permits only an empty response.
    * Defaults to {@link DEFAULT_MAX_RESPONSE_BYTES} when omitted. Not enforced by
    * {@link fetchWithRetryRaw}.
    */
@@ -56,18 +58,21 @@ export interface FetchWithRetryOptions {
 
   /**
    * Maximum number of retry attempts for a retryable network error or HTTP response.
+   * Must be a safe integer. Zero disables retries; infinity is not supported.
    * Defaults to {@link DEFAULT_MAX_RETRIES} when omitted.
    */
   maxRetries?: number;
 
   /**
    * Initial delay, in milliseconds, before the first retry's exponential backoff.
+   * Zero removes the exponential component (jitter still applies).
    * Defaults to {@link DEFAULT_INITIAL_RETRY_DELAY_MS} when omitted.
    */
   initialRetryDelayMs?: number;
 
   /**
    * Maximum delay, in milliseconds, that the exponential backoff (before jitter) can reach.
+   * Zero disables backoff delays, including jitter.
    * Defaults to {@link DEFAULT_MAX_RETRY_DELAY_MS} when omitted.
    */
   maxRetryDelayMs?: number;
@@ -75,7 +80,7 @@ export interface FetchWithRetryOptions {
   /**
    * Maximum `Retry-After` delay, in milliseconds, that will be honored. A `Retry-After` value
    * exceeding this throws immediately rather than waiting. Defaults to
-   * {@link DEFAULT_MAX_RETRY_AFTER_MS} when omitted.
+   * {@link DEFAULT_MAX_RETRY_AFTER_MS} when omitted. Zero rejects positive delays.
    */
   maxRetryAfterMs?: number;
 
@@ -97,9 +102,36 @@ export interface FetchWithRetryOptions {
   /**
    * The underlying fetch implementation to use. Defaults to the global `fetch` when omitted.
    * Useful for dependency injection, such as wrapping another HTTP client's own request pipeline
-   * (like `wretch` middleware's `next`, or a test mock).
+   * (like `wretch` middleware's `next`, or a test mock). Trust-resource resolution does not
+   * deduplicate calls with a custom implementation: a wrapper's request context may change
+   * without changing its function identity.
    */
   fetch?: (input: string, init?: RequestInit) => Promise<Response>;
+}
+
+/** @internal */
+export function validateFetchWithRetryOptions(
+  options?: FetchWithRetryOptions
+): void {
+  const keys = [
+    'maxResponseBytes',
+    'maxRetries',
+    'initialRetryDelayMs',
+    'maxRetryDelayMs',
+    'maxRetryAfterMs'
+  ] as const;
+  for (const key of keys) {
+    const value = options?.[key];
+    if (value !== undefined && (!Number.isFinite(value) || value < 0)) {
+      throw new Error(`${key} must be a non-negative finite number`);
+    }
+  }
+  if (
+    options?.maxRetries !== undefined &&
+    !Number.isSafeInteger(options.maxRetries)
+  ) {
+    throw new Error('maxRetries must be a non-negative safe integer');
+  }
 }
 
 /**
@@ -185,6 +217,7 @@ export async function fetchWithRetryRaw(
   options?: FetchWithRetryOptions
 ): Promise<Response> {
   assertValidUrl(input);
+  validateFetchWithRetryOptions(options);
 
   const maxRetries = options?.maxRetries ?? DEFAULT_MAX_RETRIES;
   const initialRetryDelayMs =

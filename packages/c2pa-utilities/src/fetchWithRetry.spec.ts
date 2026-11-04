@@ -22,7 +22,8 @@ import {
   fetchWithRetry,
   fetchWithRetryRaw,
   DEFAULT_MAX_RETRY_AFTER_MS,
-  DEFAULT_MAX_RESPONSE_BYTES
+  DEFAULT_MAX_RESPONSE_BYTES,
+  type FetchWithRetryOptions
 } from './fetchWithRetry.js';
 
 const server = setupServer();
@@ -45,6 +46,94 @@ describe('URL validation', () => {
     await expect(fetchWithRetryRaw('not a valid url')).rejects.toThrow(
       'Invalid URL: not a valid url'
     );
+  });
+});
+
+describe('numeric fetch options', () => {
+  const keys = [
+    'maxResponseBytes',
+    'maxRetries',
+    'initialRetryDelayMs',
+    'maxRetryDelayMs',
+    'maxRetryAfterMs'
+  ] as const;
+
+  test.each(keys)('rejects invalid %s values before fetching', async (key) => {
+    const fetch = vi.fn(async () => new Response(''));
+    for (const value of [NaN, Infinity, -Infinity, -1]) {
+      const options: FetchWithRetryOptions = { fetch, [key]: value };
+      await expect(
+        fetchWithRetry('https://example.com', options)
+      ).rejects.toThrow(key);
+      await expect(
+        fetchWithRetryRaw('https://example.com', undefined, options)
+      ).rejects.toThrow(key);
+    }
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test('rejects a fractional retry count', async () => {
+    const fetch = vi.fn(async () => new Response(''));
+    await expect(
+      fetchWithRetry('https://example.com', { fetch, maxRetries: 0.5 })
+    ).rejects.toThrow('maxRetries');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test('allows zero limits and disables retries with maxRetries: 0', async () => {
+    const fetch = vi.fn(async () => new Response(''));
+    const options = {
+      fetch,
+      maxResponseBytes: 0,
+      maxRetries: 0,
+      initialRetryDelayMs: 0,
+      maxRetryDelayMs: 0,
+      maxRetryAfterMs: 0
+    };
+    await expect(
+      fetchWithRetry('https://example.com', options)
+    ).resolves.toBe('');
+    fetch.mockRejectedValueOnce(new Error('offline'));
+    await expect(
+      fetchWithRetry('https://example.com', options)
+    ).rejects.toThrow('offline');
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    fetch.mockResolvedValueOnce(new Response('not empty'));
+    await expect(
+      fetchWithRetry('https://example.com', options)
+    ).rejects.toThrow('too large');
+    fetch.mockResolvedValueOnce(
+      new Response(null, {
+        status: 503,
+        headers: { 'Retry-After': '1' }
+      })
+    );
+    await expect(
+      fetchWithRetry('https://example.com', options)
+    ).rejects.toThrow('exceeds the maximum allowed delay');
+    expect(fetch).toHaveBeenCalledTimes(4);
+  });
+
+  test('zero backoff limits retry without a delay', async () => {
+    const fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(new Response('recovered'));
+    vi.useFakeTimers();
+    try {
+      const request = fetchWithRetry('https://example.com', {
+        fetch,
+        maxRetries: 1,
+        initialRetryDelayMs: 0,
+        maxRetryDelayMs: 0
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      await expect(request).resolves.toBe('recovered');
+      expect(fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
