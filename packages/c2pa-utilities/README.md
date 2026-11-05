@@ -73,8 +73,10 @@ Each trust-resource fetch has a fixed 30-second deadline covering network reques
 Set `ContextOptions.trustFetch` using the third `Context` constructor argument to configure trust fetching. `context.toJson(options)` overrides those defaults for that resolution; `resolveSettings(settings, options)` accepts the same options directly. In addition to the fetch policy options described below:
 
 - `deduplicateInFlight` defaults to `true`; set it to `false` to make independent global-fetch requests.
-- `cacheTtlMs` defaults to `0`, disabling completed-response caching. A positive, finite value caches successful global-fetch responses for that many milliseconds. Negative or non-finite values are rejected. Different fetch policies and TTLs use separate cache entries; failures are never cached.
-- `requireHttps` defaults to `false` for compatibility; set it to `true` to reject HTTP trust-resource URLs.
+- `cacheTtlMs` defaults to `0`, a valid value that never reads or writes completed-response cache entries. In-flight sharing remains enabled independently. A positive, finite value caches successful global-fetch responses for that many milliseconds. Negative or non-finite values are rejected. Different fetch policies and TTLs use separate cache entries; failures are never cached.
+- `requireHttps` defaults to `false` for compatibility; set it to `true` to reject non-HTTPS trust-resource URLs and all redirects. Fetch's `redirect: 'error'` mode prevents contacting an HTTP redirect target. HTTPS redirects are also rejected, since browser Fetch does not expose cross-origin manual redirect destinations for validation. Custom fetch implementations must honor this redirect mode.
+
+Cache keys use the original URL, effective fetch policy (including HTTPS enforcement), global fetch identity, and TTL. Omitted numeric defaults and explicitly supplied default values produce the same policy key, so separate Contexts and newly created options objects can reuse an entry. Custom retry predicates are keyed by function identity; creating a new predicate function produces a separate policy.
 
 ```typescript
 const context = new Context(settings, undefined, {
@@ -82,6 +84,8 @@ const context = new Context(settings, undefined, {
 });
 await context.toJson();
 ```
+
+In per-call options, an explicit `undefined` resets that option to its SDK default, while an omitted property retains the Context's configured value. For example, `context.toJson({ cacheTtlMs: undefined })` disables completed-response caching for the first resolution. This does not erase core settings or clear an already memoized successful resolution.
 
 Custom fetch implementations still honor HTTPS enforcement, numeric option validation, and the deadline, but never participate in shared caching. The trust-resource deadline applies only to trust fetching, not to direct calls to `fetchWithRetry`, `fetchWithRetryRaw`, or `loadSettingsFromUrl`.
 

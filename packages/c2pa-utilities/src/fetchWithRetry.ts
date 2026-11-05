@@ -140,7 +140,7 @@ export function validateFetchWithRetryOptions(
  *
  * In-flight request sharing is enabled by default. Successful responses are not cached unless
  * `cacheTtlMs` is greater than zero. HTTP URLs remain accepted by default for compatibility;
- * set `requireHttps` to reject them.
+ * set `requireHttps` to reject them and all redirects.
  */
 export interface TrustFetchOptions extends FetchWithRetryOptions {
   /**
@@ -157,7 +157,9 @@ export interface TrustFetchOptions extends FetchWithRetryOptions {
   cacheTtlMs?: number;
 
   /**
-   * Reject trust-resource URLs that do not use HTTPS. Defaults to `false`.
+   * Reject non-HTTPS trust-resource URLs and all redirects. Defaults to `false`.
+   * Uses Fetch's `redirect: 'error'` mode to prevent HTTPS-to-HTTP downgrades before
+   * contacting the redirect target. Custom fetch implementations must honor this mode.
    */
   requireHttps?: boolean;
 }

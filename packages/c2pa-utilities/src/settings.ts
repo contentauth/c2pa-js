@@ -436,6 +436,7 @@ function getTrustFetchKey(url: string, options?: TrustFetchOptions): string {
     options?.initialRetryDelayMs ?? DEFAULT_INITIAL_RETRY_DELAY_MS,
     options?.maxRetryDelayMs ?? DEFAULT_MAX_RETRY_DELAY_MS,
     options?.maxRetryAfterMs ?? DEFAULT_MAX_RETRY_AFTER_MS,
+    options?.requireHttps ?? false,
     getFunctionId(options?.isRetryableStatus, 'default-status'),
     getFunctionId(options?.isRetryableError, 'default-error'),
     getFunctionId(globalThis.fetch, 'global-fetch')
@@ -529,7 +530,7 @@ function cacheTrustFetchResult(
 
 async function executeTrustFetch(
   url: string,
-  options?: FetchWithRetryOptions
+  options?: TrustFetchOptions
 ): Promise<string> {
   const controller = new AbortController();
   const fetchFn = options?.fetch ?? globalThis.fetch;
@@ -551,7 +552,14 @@ async function executeTrustFetch(
         ...options,
         fetch: (input, init) => {
           controller.signal.throwIfAborted();
-          return fetchFn(input, { ...init, signal: controller.signal });
+          const requestInit: RequestInit = {
+            ...init,
+            signal: controller.signal
+          };
+          if (options?.requireHttps) {
+            requestInit.redirect = 'error';
+          }
+          return fetchFn(input, requestInit);
         }
       }),
       timeout

@@ -102,8 +102,10 @@ export class Context {
    * permanently break this `Context`.
    *
    * @param options Optional configurations for trust-resource fetching. These override the
-   * corresponding options attached to this Context. Only consulted on the first call, or the
-   * first call after a previous failure.
+   * corresponding options attached to this Context. Explicit `undefined` resets an option to
+   * its SDK default; omitted properties retain the Context's option. This does not clear core
+   * settings or a memoized successful result. Only consulted on the first call, or the first
+   * call after a previous failure.
    * @returns A JSON-serialized string of the resolved settings.
    */
   toJson(options?: TrustFetchOptions): Promise<string> {

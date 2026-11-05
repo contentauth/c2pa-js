@@ -32,7 +32,13 @@ import {
   type VerifySettings,
   type Settings
 } from './settings.js';
-import { DEFAULT_MAX_RESPONSE_BYTES } from './fetchWithRetry.js';
+import {
+  DEFAULT_INITIAL_RETRY_DELAY_MS,
+  DEFAULT_MAX_RETRIES,
+  DEFAULT_MAX_RETRY_AFTER_MS,
+  DEFAULT_MAX_RETRY_DELAY_MS,
+  DEFAULT_MAX_RESPONSE_BYTES
+} from './fetchWithRetry.js';
 
 const server = setupServer();
 
@@ -792,6 +798,52 @@ describe('trust fetching Context options', () => {
     expect(overrideFetch).toHaveBeenCalledOnce();
   });
 
+  it('allows explicit undefined to restore SDK defaults without clearing core settings', async () => {
+    const fetch = vi.fn(async () => new Response(pem));
+    const contextFetch = vi.fn(async () => new Response(pem));
+    vi.stubGlobal('fetch', fetch);
+    const settings: Settings = {
+      trust: { trustAnchors: 'http://example.com/undefined-options.pem' },
+      verify: { verifyTrust: true }
+    };
+    const createContext = () =>
+      new Context(settings, undefined, {
+        trustFetch: {
+          fetch: contextFetch,
+          cacheTtlMs: 10_000,
+          requireHttps: true
+        }
+      });
+    const overrides = {
+      fetch: undefined,
+      cacheTtlMs: undefined,
+      requireHttps: undefined
+    };
+
+    const context = createContext();
+    const result = await context.toJson(overrides);
+    await createContext().toJson(overrides);
+
+    expect(context.settings).toBe(settings);
+    expect(JSON.parse(result).verify.verify_trust).toBe(true);
+    expect(contextFetch).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('retains Context options omitted from per-call overrides', async () => {
+    const fetch = vi.fn(async () => new Response(pem));
+    const context = new Context(
+      { trust: { trustAnchors: 'http://example.com/retained-options.pem' } },
+      undefined,
+      { trustFetch: { fetch, requireHttps: true } }
+    );
+
+    await expect(context.toJson({ maxRetries: 0 })).rejects.toThrow(
+      'Trust resource URL must use HTTPS'
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('can require HTTPS for trust resources', async () => {
     const fetch = vi.fn(async () => new Response(pem));
     await expect(
@@ -802,6 +854,91 @@ describe('trust fetching Context options', () => {
     ).rejects.toThrow('Trust resource URL must use HTTPS');
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  it.each(['http:', 'https:'])(
+    'rejects %s redirect targets when HTTPS is required without contacting the target',
+    async (protocol) => {
+      const redirectUrl = `${protocol}//example.com/redirected-anchors.pem`;
+      const redirected = vi.fn(() => HttpResponse.text(pem));
+      server.use(
+        http.get(contextUrl, () =>
+          new HttpResponse(null, {
+            status: 302,
+            headers: { Location: redirectUrl }
+          })
+        ),
+        http.get(redirectUrl, redirected)
+      );
+
+      await expect(
+        resolveSettings(
+          { trust: { trustAnchors: contextUrl } },
+          { requireHttps: true, maxRetries: 0 }
+        )
+      ).rejects.toThrow('Failed to resolve trust settings');
+      expect(redirected).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([undefined, false])(
+    'preserves redirect following when requireHttps is %s',
+    async (requireHttps) => {
+      const redirectUrl = 'http://example.com/permissive-redirect.pem';
+      const redirected = vi.fn(() => HttpResponse.text(pem));
+      server.use(
+        http.get(contextUrl, () =>
+          new HttpResponse(null, {
+            status: 302,
+            headers: { Location: redirectUrl }
+          })
+        ),
+        http.get(redirectUrl, redirected)
+      );
+
+      const result = await resolveSettings(
+        { trust: { trustAnchors: contextUrl } },
+        { requireHttps, maxRetries: 0 }
+      );
+
+      expect(JSON.parse(result).trust.anchors[0].trust_anchors).toBe(pem);
+      expect(redirected).toHaveBeenCalledOnce();
+    }
+  );
+
+  it.each(['in-flight', 'completed'])(
+    'does not reuse a permissive %s request when HTTPS is required',
+    async (phase) => {
+      const redirectUrl = 'http://example.com/cache-redirect.pem';
+      const redirected = vi.fn(() => HttpResponse.text(pem));
+      const redirectSource = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return new HttpResponse(null, {
+          status: 302,
+          headers: { Location: redirectUrl }
+        });
+      });
+      server.use(
+        http.get(contextUrl, redirectSource),
+        http.get(redirectUrl, redirected)
+      );
+      const settings: Settings = {
+        trust: { trustAnchors: `${contextUrl}?redirect-cache=${phase}` }
+      };
+      const options = { cacheTtlMs: 10_000, maxRetries: 0 };
+      const permissive = resolveSettings(settings, options);
+      if (phase === 'completed') {
+        await permissive;
+      }
+      const strict = expect(
+        resolveSettings(settings, { ...options, requireHttps: true })
+      ).rejects.toThrow('Failed to resolve trust settings');
+
+      await Promise.all([permissive, strict]);
+
+      expect(redirectSource).toHaveBeenCalledTimes(2);
+      expect(redirected).toHaveBeenCalledOnce();
+    }
+  );
 
   it('can disable in-flight deduplication', async () => {
     const fetch = vi.fn(async () => {
@@ -829,6 +966,53 @@ describe('trust fetching Context options', () => {
     await resolve();
     await resolve();
 
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it('treats zero TTL as no completed caching while still sharing in-flight requests', async () => {
+    const cacheUrl = `${contextUrl}?zero-ttl`;
+    const fetch = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      return new Response(pem);
+    });
+    vi.stubGlobal('fetch', fetch);
+    const resolve = (cacheTtlMs: number) =>
+      resolveSettings(
+        { trust: { trustAnchors: cacheUrl } },
+        { cacheTtlMs }
+      );
+
+    await resolve(10_000);
+    await Promise.all([resolve(0), resolve(0)]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    await resolve(0);
+    expect(fetch).toHaveBeenCalledTimes(3);
+    await resolve(10_000);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('hits the cache across Contexts with equivalent default fetch policies', async () => {
+    const fetch = vi.fn(async () => new Response(pem));
+    vi.stubGlobal('fetch', fetch);
+    const settings: Settings = {
+      trust: { trustAnchors: `${contextUrl}?equivalent-policies` }
+    };
+    const first = new Context(settings, undefined, {
+      trustFetch: { cacheTtlMs: 10_000 }
+    });
+    const second = new Context(settings, undefined, {
+      trustFetch: {
+        cacheTtlMs: 10_000,
+        maxResponseBytes: DEFAULT_MAX_RESPONSE_BYTES,
+        maxRetries: DEFAULT_MAX_RETRIES,
+        initialRetryDelayMs: DEFAULT_INITIAL_RETRY_DELAY_MS,
+        maxRetryDelayMs: DEFAULT_MAX_RETRY_DELAY_MS,
+        maxRetryAfterMs: DEFAULT_MAX_RETRY_AFTER_MS,
+        requireHttps: false
+      }
+    });
+
+    expect(await second.toJson()).toBe(await first.toJson());
     expect(fetch).toHaveBeenCalledOnce();
   });
 
