@@ -444,7 +444,7 @@ function fetchTrustSetting(
 ): Promise<string> {
   validateFetchWithRetryOptions(options);
   if (options?.fetch) {
-    return fetchTrustSettingWithTimeout(url, options);
+    return executeTrustFetch(url, options);
   }
 
   const key = getTrustFetchKey(url, options);
@@ -453,7 +453,7 @@ function fetchTrustSetting(
     return existing;
   }
 
-  const request = fetchTrustSettingWithTimeout(url, options);
+  const request = executeTrustFetch(url, options);
   inFlightTrustFetches.set(key, request);
   const clearRequest = () => {
     if (inFlightTrustFetches.get(key) === request) {
@@ -465,7 +465,7 @@ function fetchTrustSetting(
   return request;
 }
 
-async function fetchTrustSettingWithTimeout(
+async function executeTrustFetch(
   url: string,
   options?: FetchWithRetryOptions
 ): Promise<string> {
