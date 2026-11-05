@@ -99,4 +99,93 @@ describe('Context', () => {
     // The successful resolution is memoized as usual from here on.
     expect(context.toJson()).toBe(second);
   });
+
+  test('inherits a cached resource lifetime without extending it for a new Context', async () => {
+    const fetch = vi.fn(async () => new Response(
+      `-----BEGIN CERTIFICATE-----\nanchor-${fetch.mock.calls.length}\n-----END CERTIFICATE-----`
+    ));
+    vi.stubGlobal('fetch', fetch);
+    vi.useFakeTimers();
+    const createContext = () => new Context(
+      { trust: { trustAnchors: 'https://example.com/inherited-expiry.pem' } },
+      undefined,
+      { trustFetch: { cacheTtlMs: 100, maxRetries: 0 } }
+    );
+    try {
+      const first = await createContext().toJson();
+      await vi.advanceTimersByTimeAsync(90);
+      const context = createContext();
+      await expect(context.toJson()).resolves.toBe(first);
+      expect(fetch).toHaveBeenCalledOnce();
+      await vi.advanceTimersByTimeAsync(10);
+
+      const pending = context.toJson();
+      expect(context.toJson()).toBe(pending);
+      const refreshed = await pending;
+      expect(refreshed).not.toBe(first);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test('refresh failures reject instead of memoizing expired trust data', async () => {
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(new Response(
+        '-----BEGIN CERTIFICATE-----\nfirst\n-----END CERTIFICATE-----'
+      ))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(new Response(
+        '-----BEGIN CERTIFICATE-----\nupdated\n-----END CERTIFICATE-----'
+      ));
+    vi.useFakeTimers();
+    const context = new Context(
+      { trust: { trustAnchors: 'https://example.com/refresh-failure.pem' } },
+      undefined,
+      { trustFetch: { fetch, cacheTtlMs: 100, maxRetries: 0 } }
+    );
+    try {
+      await context.toJson();
+      await vi.advanceTimersByTimeAsync(100);
+      await expect(context.toJson()).rejects.toThrow('offline');
+      await expect(context.toJson()).resolves.toContain('updated');
+      expect(fetch).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test('uses the earliest lifetime when trust resources resolve at different times', async () => {
+    const fetch = vi.fn(async (url: string) => {
+      if (url.endsWith('slow.pem')) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      return new Response(
+        '-----BEGIN CERTIFICATE-----\nanchor\n-----END CERTIFICATE-----'
+      );
+    });
+    const context = new Context(
+      { trust: { trustAnchors: [
+        'https://example.com/fast.pem',
+        'https://example.com/slow.pem'
+      ] } },
+      undefined,
+      { trustFetch: { fetch, cacheTtlMs: 100 } }
+    );
+    vi.useFakeTimers();
+    try {
+      const pending = context.toJson();
+      await vi.advanceTimersByTimeAsync(50);
+      await pending;
+      await vi.advanceTimersByTimeAsync(50);
+      const refresh = context.toJson();
+      expect(refresh).not.toBe(pending);
+      await vi.advanceTimersByTimeAsync(50);
+      await refresh;
+      expect(fetch).toHaveBeenCalledTimes(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

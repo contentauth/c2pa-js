@@ -215,24 +215,39 @@ export async function resolveSettings(
   settings: Settings | undefined,
   options?: TrustFetchOptions
 ): Promise<string> {
+  return (await resolveSettingsWithExpiry(settings, options)).json;
+}
+
+/** @internal */
+export async function resolveSettingsWithExpiry(
+  settings: Settings | undefined,
+  options?: TrustFetchOptions
+): Promise<{ json: string; expiresAt?: number }> {
   const finalSettings: Settings = withDefaultSettings(settings);
 
-  const resolvePromises: Promise<void>[] = [];
+  const resolvePromises: Promise<number | undefined>[] = [];
 
   if (finalSettings.trust) {
-    resolvePromises.push(resolveTrustSettings(finalSettings.trust, options));
+    resolvePromises.push(
+      resolveTrustSettingsWithExpiry(finalSettings.trust, options)
+    );
   }
 
   if (finalSettings.cawgTrust) {
     resolvePromises.push(
-      resolveTrustSettings(finalSettings.cawgTrust, options)
+      resolveTrustSettingsWithExpiry(finalSettings.cawgTrust, options)
     );
   }
 
   // Wait for all trust list resolutions to complete.
-  await Promise.all(resolvePromises);
+  const expiries = (await Promise.all(resolvePromises)).filter(
+    (expiry): expiry is number => expiry !== undefined
+  );
 
-  return JSON.stringify(snakeCaseify(toWireSettings(finalSettings)));
+  return {
+    json: JSON.stringify(snakeCaseify(toWireSettings(finalSettings))),
+    expiresAt: expiries.length ? Math.min(...expiries) : undefined
+  };
 }
 
 /**
@@ -448,7 +463,7 @@ function getTrustFetchKey(url: string, options?: TrustFetchOptions): string {
 function fetchTrustSetting(
   url: string,
   options?: TrustFetchOptions
-): Promise<string> {
+): Promise<{ value: string; expiresAt?: number }> {
   validateFetchWithRetryOptions(options);
   const {
     cacheTtlMs = 0,
@@ -469,7 +484,10 @@ function fetchTrustSetting(
   }
 
   if (options?.fetch) {
-    return executeTrustFetch(url, options);
+    return executeTrustFetch(url, options).then((value) => ({
+      value,
+      expiresAt: cacheTtlMs > 0 ? Date.now() + cacheTtlMs : undefined
+    }));
   }
 
   const requestKey = getTrustFetchKey(url, options);
@@ -485,7 +503,7 @@ function fetchTrustSetting(
   if (cacheTtlMs > 0) {
     const cached = completedTrustFetches.get(cacheKey);
     if (cached) {
-      return Promise.resolve(cached.value);
+      return Promise.resolve(cached);
     }
   }
 
@@ -514,17 +532,18 @@ function cacheTrustFetchResult(
   request: Promise<string>,
   cacheKey: string,
   cacheTtlMs: number
-): Promise<string> {
+): Promise<{ value: string; expiresAt?: number }> {
   if (cacheTtlMs <= 0) {
-    return request;
+    return request.then((value) => ({ value }));
   }
 
   return request.then((value) => {
-    completedTrustFetches.set(cacheKey, {
+    const cached = {
       value,
       expiresAt: Date.now() + cacheTtlMs
-    });
-    return value;
+    };
+    completedTrustFetches.set(cacheKey, cached);
+    return cached;
   });
 }
 
@@ -580,6 +599,21 @@ export async function resolveTrustSettings(
   settings: TrustSettings,
   options?: TrustFetchOptions
 ): Promise<void> {
+  await resolveTrustSettingsWithExpiry(settings, options);
+}
+
+async function resolveTrustSettingsWithExpiry(
+  settings: TrustSettings,
+  options?: TrustFetchOptions
+): Promise<number | undefined> {
+  const expiries: number[] = [];
+  const fetchText = async (url: string): Promise<string> => {
+    const resolved = await fetchTrustSetting(url, options);
+    if (resolved.expiresAt !== undefined) {
+      expiries.push(resolved.expiresAt);
+    }
+    return resolved.value;
+  };
   const shouldValidateKey = (key: string): boolean =>
     ['userAnchors', 'trustAnchors'].includes(key);
 
@@ -600,7 +634,7 @@ export async function resolveTrustSettings(
               throw new Error('Expected a string value for array item');
             }
 
-            const text = await fetchTrustSetting(val, options);
+            const text = await fetchText(val);
 
             if (shouldValidateKey(key) && !containsCerts(text)) {
               throw new Error(`Error parsing PEM file at: ${val}`);
@@ -613,7 +647,7 @@ export async function resolveTrustSettings(
           const combined = result.join('');
           settings[key as TrustAnchorKey] = combined;
         } else if (val && typeof val === 'string' && isUrl(val)) {
-          const text = await fetchTrustSetting(val, options);
+          const text = await fetchText(val);
 
           if (shouldValidateKey(key) && !containsCerts(text)) {
             throw new Error(`Error parsing PEM file at: ${val}`);
@@ -626,6 +660,7 @@ export async function resolveTrustSettings(
       });
 
     await Promise.all(promises);
+    return expiries.length ? Math.min(...expiries) : undefined;
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     throw new Error(`Failed to resolve trust settings. ${message}`, {

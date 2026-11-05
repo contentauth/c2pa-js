@@ -60,7 +60,7 @@ const contextJson = await context.toJson();
 // '{"verify":{"verify_trust":true},"trust":{"trust_anchors":"-----BEGIN CERTIFICATE-----..."}}'
 ```
 
-This step is asynchronous, and can throw if a trust-anchor URL fails to resolve. Bindings resolve the settings before constructing the native/WASM `Reader` or `Builder`. Within a `Context`, concurrent calls share the same resolution promise and successful results are memoized; failed resolutions can be retried on a later call.
+This step is asynchronous, and can throw if a trust-anchor URL fails to resolve. Bindings resolve the settings before constructing the native/WASM `Reader` or `Builder`. Within a `Context`, concurrent calls share the same resolution promise and successful results are memoized. When a positive trust-fetch cache TTL is configured, memoization expires at the earliest resolved trust-resource deadline, including the remaining lifetime of a response fetched by another `Context`. The next call refreshes the settings; refresh failures reject instead of reusing expired trust data. Without a positive TTL, successful settings remain memoized. Failed resolutions can be retried on a later call.
 
 #### Trust-resource fetching
 
