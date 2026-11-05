@@ -403,9 +403,9 @@ describe('trust settings in-flight requests', () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
       return new Response(pem);
     });
-    const options = { fetch };
+    vi.stubGlobal('fetch', fetch);
     const resolve = () =>
-      resolveSettings({ trust: { trustAnchors: url } }, options);
+      resolveSettings({ trust: { trustAnchors: url } });
 
     const [first, second] = await Promise.all([resolve(), resolve()]);
 
@@ -420,24 +420,131 @@ describe('trust settings in-flight requests', () => {
 
   it('clears failed in-flight fetches so later resolution can retry', async () => {
     let requestCount = 0;
-    const options = {
-      maxRetries: 0,
-      fetch: async () => {
-        requestCount++;
-        if (requestCount === 1) {
-          throw new Error('network down');
-        }
-        return new Response(pem);
+    vi.stubGlobal('fetch', async () => {
+      requestCount++;
+      if (requestCount === 1) {
+        throw new Error('network down');
       }
-    };
+      return new Response(pem);
+    });
     const resolve = () =>
-      resolveSettings({ trust: { trustAnchors: url } }, options);
+      resolveSettings({ trust: { trustAnchors: url } }, { maxRetries: 0 });
 
     await expect(resolve()).rejects.toThrow('Failed to resolve trust settings');
     const settingsJson = await resolve();
 
     expect(requestCount).toBe(2);
     expect(JSON.parse(settingsJson).trust.anchors[0].trust_anchors).toBe(pem);
+  });
+
+  it.each(['request', 'body'])(
+    'times out a hung %s and allows a later fetch',
+    async (phase) => {
+      let signal: AbortSignal | null | undefined;
+      const fetch = vi.fn(async (_input: string, init?: RequestInit) => {
+        signal = init?.signal;
+        if (fetch.mock.calls.length > 1) {
+          return new Response(pem);
+        }
+        if (phase === 'request') {
+          return new Promise<Response>(() => undefined);
+        }
+        return new Response(new ReadableStream());
+      });
+      vi.stubGlobal('fetch', fetch);
+      vi.useFakeTimers();
+      try {
+        const resolve = () =>
+          resolveSettings({ trust: { trustAnchors: url } }, { maxRetries: 0 });
+        const first = resolve();
+        const second = resolve();
+        const failures = Promise.all([
+          expect(first).rejects.toThrow('timed out'),
+          expect(second).rejects.toThrow('timed out')
+        ]);
+
+        expect(fetch).toHaveBeenCalledOnce();
+        await vi.advanceTimersByTimeAsync(29_999);
+        expect(signal?.aborted).toBe(false);
+        await vi.advanceTimersByTimeAsync(1);
+        await failures;
+        expect(signal?.aborted).toBe(true);
+
+        const recovered = await resolve();
+        expect(JSON.parse(recovered).trust.anchors[0].trust_anchors).toBe(pem);
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
+
+  it('does not share custom fetch wrappers with mutable request context', async () => {
+    let tenant = 'first';
+    const fetch = vi.fn(async () => {
+      const currentTenant = tenant;
+      await Promise.resolve();
+      return new Response(
+        `-----BEGIN CERTIFICATE-----\n${currentTenant}\n-----END CERTIFICATE-----`
+      );
+    });
+    const resolve = () =>
+      resolveSettings({ trust: { trustAnchors: url } }, { fetch });
+
+    const first = resolve();
+    tenant = 'second';
+    const second = resolve();
+    const results = await Promise.all([first, second]);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(results[0]).trust.anchors[0].trust_anchors).toContain(
+      '\nfirst\n'
+    );
+    expect(JSON.parse(results[1]).trust.anchors[0].trust_anchors).toContain(
+      '\nsecond\n'
+    );
+  });
+
+  it('rejects invalid policies rather than sharing a default-policy request', async () => {
+    const fetch = vi.fn(async () => {
+      await Promise.resolve();
+      return new Response(pem);
+    });
+    vi.stubGlobal('fetch', fetch);
+    const pending = resolveSettings({ trust: { trustAnchors: url } });
+    await expect(
+      resolveSettings({ trust: { trustAnchors: url } }, { maxRetries: NaN })
+    ).rejects.toThrow('maxRetries');
+    await pending;
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it('keeps different retry policies isolated', async () => {
+    const fetch = vi.fn(async () => {
+      await Promise.resolve();
+      return new Response(pem);
+    });
+    vi.stubGlobal('fetch', fetch);
+    await Promise.all([
+      resolveSettings({ trust: { trustAnchors: url } }, { maxRetries: 0 }),
+      resolveSettings({ trust: { trustAnchors: url } }, { maxRetries: 1 })
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not share requests after the global fetch implementation changes', async () => {
+    const firstFetch = vi.fn(async () => new Response(pem));
+    const secondFetch = vi.fn(async () => new Response(pem));
+    vi.stubGlobal('fetch', firstFetch);
+    const first = resolveSettings({ trust: { trustAnchors: url } });
+    vi.stubGlobal('fetch', secondFetch);
+    await Promise.all([
+      first,
+      resolveSettings({ trust: { trustAnchors: url } })
+    ]);
+    expect(firstFetch).toHaveBeenCalledOnce();
+    expect(secondFetch).toHaveBeenCalledOnce();
   });
 });
 
@@ -701,7 +808,8 @@ describe('trust fetching Context options', () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
       return new Response(pem);
     });
-    const options = { fetch, deduplicateInFlight: false };
+    vi.stubGlobal('fetch', fetch);
+    const options = { deduplicateInFlight: false };
     const resolve = () =>
       resolveSettings({ trust: { trustAnchors: contextUrl } }, options);
 
@@ -713,7 +821,8 @@ describe('trust fetching Context options', () => {
   it('caches successful trust responses for the configured TTL', async () => {
     const cacheUrl = `${contextUrl}?cache`;
     const fetch = vi.fn(async () => new Response(pem));
-    const options = { fetch, cacheTtlMs: 10_000 };
+    vi.stubGlobal('fetch', fetch);
+    const options = { cacheTtlMs: 10_000 };
     const resolve = () =>
       resolveSettings({ trust: { trustAnchors: cacheUrl } }, options);
 
@@ -726,15 +835,18 @@ describe('trust fetching Context options', () => {
   it('fetches again after a completed response cache entry expires', async () => {
     const cacheUrl = `${contextUrl}?expiry`;
     const fetch = vi.fn(async () => new Response(pem));
+    vi.stubGlobal('fetch', fetch);
     const resolve = () =>
       resolveSettings(
         { trust: { trustAnchors: cacheUrl } },
-        { fetch, cacheTtlMs: 10 }
+        { cacheTtlMs: 10 }
       );
 
     vi.useFakeTimers();
     try {
       await resolve();
+      await resolve();
+      expect(fetch).toHaveBeenCalledOnce();
       await vi.advanceTimersByTimeAsync(11);
       await resolve();
     } finally {
@@ -750,10 +862,11 @@ describe('trust fetching Context options', () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
       return new Response(pem);
     });
+    vi.stubGlobal('fetch', fetch);
     const resolve = (cacheTtlMs: number) =>
       resolveSettings(
         { trust: { trustAnchors: cacheUrl } },
-        { fetch, cacheTtlMs }
+        { cacheTtlMs }
       );
 
     await Promise.all([resolve(10_000), resolve(20_000)]);
@@ -763,13 +876,103 @@ describe('trust fetching Context options', () => {
     expect(fetch).toHaveBeenCalledOnce();
   });
 
-  it('rejects invalid cache TTL options', async () => {
-    await expect(
+  it('never shares or caches custom fetch responses even when a TTL is configured', async () => {
+    let tenant = 'first';
+    const fetch = vi.fn(async () => {
+      const currentTenant = tenant;
+      await Promise.resolve();
+      return new Response(
+        `-----BEGIN CERTIFICATE-----\n${currentTenant}\n-----END CERTIFICATE-----`
+      );
+    });
+    const resolve = () =>
       resolveSettings(
-        { trust: { trustAnchors: `${contextUrl}?invalid-ttl` } },
-        { cacheTtlMs: -1 }
-      )
-    ).rejects.toThrow('cacheTtlMs must be a non-negative finite number');
+        { trust: { trustAnchors: `${contextUrl}?custom-cache` } },
+        { fetch, cacheTtlMs: 10_000 }
+      );
+
+    const first = resolve();
+    tenant = 'second';
+    const second = resolve();
+    const results = await Promise.all([first, second]);
+    tenant = 'third';
+    results.push(await resolve());
+
+    expect(fetch).toHaveBeenCalledTimes(3);
+    for (const [index, expected] of ['first', 'second', 'third'].entries()) {
+      expect(JSON.parse(results[index]).trust.anchors[0].trust_anchors).toContain(
+        `\n${expected}\n`
+      );
+    }
+  });
+
+  it.each([true, false])(
+    'times out and recovers with TTL caching when in-flight deduplication is %s',
+    async (deduplicateInFlight) => {
+      let signal: AbortSignal | null | undefined;
+      const fetch = vi.fn(async (_input: string, init?: RequestInit) => {
+        signal = init?.signal;
+        if (fetch.mock.calls.length === 1) {
+          return new Promise<Response>(() => undefined);
+        }
+        return new Response(pem);
+      });
+      vi.stubGlobal('fetch', fetch);
+      const resolve = () =>
+        resolveSettings(
+          { trust: { trustAnchors: `${contextUrl}?timeout-cache` } },
+          { cacheTtlMs: 10_000, deduplicateInFlight, maxRetries: 0 }
+        );
+
+      vi.useFakeTimers();
+      try {
+        const failure = expect(resolve()).rejects.toThrow('timed out');
+        await vi.advanceTimersByTimeAsync(29_999);
+        expect(signal?.aborted).toBe(false);
+        await vi.advanceTimersByTimeAsync(1);
+        await failure;
+        expect(signal?.aborted).toBe(true);
+
+        const recovered = await resolve();
+        expect(JSON.parse(recovered).trust.anchors[0].trust_anchors).toBe(pem);
+        expect(await resolve()).toBe(recovered);
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
+
+  it.each([-1, NaN, Infinity, -Infinity])(
+    'rejects invalid cache TTL %s before fetching',
+    async (cacheTtlMs) => {
+      const fetch = vi.fn(async () => new Response(pem));
+      await expect(
+        resolveSettings(
+          { trust: { trustAnchors: `${contextUrl}?invalid-ttl` } },
+          { fetch, cacheTtlMs }
+        )
+      ).rejects.toThrow('cacheTtlMs must be a non-negative finite number');
+      expect(fetch).not.toHaveBeenCalled();
+    }
+  );
+
+  it('keeps completed cache entries separate for different retry policies', async () => {
+    const fetch = vi.fn(async () => new Response(pem));
+    vi.stubGlobal('fetch', fetch);
+    const resolve = (maxRetries: number) =>
+      resolveSettings(
+        { trust: { trustAnchors: `${contextUrl}?cached-policies` } },
+        { cacheTtlMs: 10_000, maxRetries }
+      );
+
+    await resolve(0);
+    await resolve(1);
+    await resolve(0);
+    await resolve(1);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -60,7 +60,30 @@ const contextJson = await context.toJson();
 // '{"verify":{"verify_trust":true},"trust":{"trust_anchors":"-----BEGIN CERTIFICATE-----..."}}'
 ```
 
-This step is asynchronous, and can throw if a trust-anchor URL fails to resolve. Bindings call it once, right after building the base `Context`, rather than on every `Reader`/`Builder` call. Internally, `toJson()` is a thin wrapper over `resolveSettings`, below.
+This step is asynchronous, and can throw if a trust-anchor URL fails to resolve. Bindings resolve the settings before constructing the native/WASM `Reader` or `Builder`. Within a `Context`, concurrent calls share the same resolution promise and successful results are memoized; failed resolutions can be retried on a later call.
+
+#### Trust-resource fetching
+
+Concurrent trust-resource fetches using the global `fetch`, the same URL, and the same effective fetch policy share one pending request across settings resolutions. Entries are removed after success or failure; completed responses are not cached by default. Reusing a successfully resolved `Context` still reuses its memoized settings.
+
+Custom `fetch` implementations bypass both shared in-flight and completed-response caches because a wrapper can change its request context (such as authentication headers) without changing its function identity.
+
+Each trust-resource fetch has a fixed 30-second deadline covering network requests, retry delays, and response-body consumption. A timeout aborts the request and rejects all waiting resolutions, without substituting trust data. A later resolution can attempt a new fetch even if a custom implementation ignores cancellation.
+
+Set `ContextOptions.trustFetch` using the third `Context` constructor argument to configure trust fetching. `context.toJson(options)` overrides those defaults for that resolution; `resolveSettings(settings, options)` accepts the same options directly. In addition to the fetch policy options described below:
+
+- `deduplicateInFlight` defaults to `true`; set it to `false` to make independent global-fetch requests.
+- `cacheTtlMs` defaults to `0`, disabling completed-response caching. A positive, finite value caches successful global-fetch responses for that many milliseconds. Negative or non-finite values are rejected. Different fetch policies and TTLs use separate cache entries; failures are never cached.
+- `requireHttps` defaults to `false` for compatibility; set it to `true` to reject HTTP trust-resource URLs.
+
+```typescript
+const context = new Context(settings, undefined, {
+  trustFetch: { cacheTtlMs: 60_000, requireHttps: true, maxRetries: 1 }
+});
+await context.toJson();
+```
+
+Custom fetch implementations still honor HTTPS enforcement, numeric option validation, and the deadline, but never participate in shared caching. The trust-resource deadline applies only to trust fetching, not to direct calls to `fetchWithRetry`, `fetchWithRetryRaw`, or `loadSettingsFromUrl`.
 
 #### Building `Settings` directly
 
@@ -133,6 +156,16 @@ await fetchWithRetry(url, {
 ```
 
 An `AbortError` is never retried, and a malformed URL throws immediately rather than being retried.
+
+Numeric fetch options must be finite and non-negative. `NaN`, `Infinity`, `-Infinity`, and negative values throw before fetching; infinity does not mean retry forever. `maxRetries` must also be a safe integer. Omitted options retain their defaults.
+
+| Option | Meaning of `0` |
+| --- | --- |
+| `maxRetries` | One initial attempt, no retries |
+| `maxResponseBytes` | Only an empty text response is allowed; not enforced by `fetchWithRetryRaw` |
+| `initialRetryDelayMs` | No exponential-delay component; jitter still applies |
+| `maxRetryDelayMs` | No backoff delay, including jitter |
+| `maxRetryAfterMs` | Reject positive `Retry-After` delays; allow zero or past dates |
 
 ### Asset size validation
 
