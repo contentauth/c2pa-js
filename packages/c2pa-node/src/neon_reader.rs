@@ -65,7 +65,7 @@ impl NeonReader {
 
                 // Create reader with or without context
                 let reader = if let Some(context) = context_opt {
-                    Reader::from_context(context)
+                    Reader::from_shared_context(&context)
                         .with_stream_async(&format, stream)
                         .await?
                 } else {
@@ -107,8 +107,7 @@ impl NeonReader {
             .argument::<JsObject>(1)
             .and_then(|obj| parse_asset(&mut cx, obj))?;
 
-        // Parse optional settings parameter (argument 2) - note: settings are not currently used
-        // for from_manifest_data_and_asset as the c2pa-rs API doesn't support context for this method yet
+        // Parse optional settings parameter (argument 2)
         let context_opt =
             parse_settings(&mut cx, 2, "Reader").or_else(|err| cx.throw_error(err.to_string()))?;
 
@@ -122,7 +121,7 @@ impl NeonReader {
                 let stream = asset.into_read_stream()?;
 
                 let reader = if let Some(context) = context_opt {
-                    Reader::from_context(context)
+                    Reader::from_shared_context(&context)
                         .with_manifest_data_and_stream_async(&c2pa_data, &format, stream)
                         .await?
                 } else {

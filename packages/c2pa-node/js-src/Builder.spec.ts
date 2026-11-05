@@ -21,7 +21,9 @@ import * as crypto from "crypto";
 import { vi } from "vitest";
 import http from "http";
 import type { AddressInfo } from "net";
+import { setTimeout as delay } from "node:timers/promises";
 
+import { getNeonBinary } from "./binary.js";
 import type {
   BuilderInterface,
   C2paSettings,
@@ -1096,6 +1098,62 @@ describe("Builder", () => {
       );
     });
 
+    it("shares a Context across concurrent readers and builders without changing validation", async () => {
+      const manifestData = await fs.readFile(
+        "./tests/fixtures/CA/manifest_data.c2pa",
+      );
+      const buffer = await fs.readFile("./tests/fixtures/CA.jpg");
+      const asset = { buffer, mimeType: "jpeg" };
+      const context = new Context({
+        verify: {
+          verifyAfterReading: false,
+        },
+      });
+      const strictContext = new Context({
+        verify: {
+          verifyAfterReading: true,
+        },
+      });
+      const contextFactory = vi.spyOn(
+        getNeonBinary(),
+        "contextFromSettings",
+      );
+
+      try {
+        const [
+          reader1,
+          reader2,
+          builder1,
+          builder2,
+          strictReader,
+          defaultReader,
+        ] =
+          await Promise.all([
+            Reader.fromManifestDataAndAsset(manifestData, asset, context),
+            Reader.fromManifestDataAndAsset(manifestData, asset, context),
+            Builder.newAsync(context),
+            Builder.withJsonAsync(manifestDefinition, context),
+            Reader.fromManifestDataAndAsset(manifestData, asset, strictContext),
+            Reader.fromManifestDataAndAsset(manifestData, asset),
+          ]);
+
+        expect(reader1!.json().validation_status).toBeUndefined();
+        expect(reader2!.json().validation_status).toBeUndefined();
+        const strictValidation = strictReader!.json().validation_status;
+        expect(strictValidation).toEqual(
+          defaultReader!.json().validation_status,
+        );
+        expect(strictValidation).toContainEqual(
+          expect.objectContaining({ code: "signingCredential.untrusted" }),
+        );
+        expect(builder1.getManifestDefinition()).toBeDefined();
+        expect(builder2.getManifestDefinition()).toBeDefined();
+        expect(contextFactory).toHaveBeenCalledTimes(2);
+      } finally {
+        contextFactory.mockRestore();
+      }
+    });
+
     it("newAsync(context) fetches trust-anchor URLs before creating the Builder", async () => {
       const pem = "-----BEGIN CERTIFICATE-----\nanchor\n-----END CERTIFICATE-----";
       const fetch = vi.fn(async () => new Response(pem));
@@ -1111,6 +1169,101 @@ describe("Builder", () => {
         const resolvedSettings = JSON.parse(await context.toJson());
         expect(resolvedSettings.trust.anchors[0].trust_anchors).toBe(pem);
       } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it("uses refreshed settings after a trust-resource TTL expires", async () => {
+      const pem1 =
+        "-----BEGIN CERTIFICATE-----\nanchor one\n-----END CERTIFICATE-----";
+      const pem2 =
+        "-----BEGIN CERTIFICATE-----\nanchor two\n-----END CERTIFICATE-----";
+      const pems = [pem1, pem2];
+      let fetchCount = 0;
+      const fetch = vi.fn(async () => new Response(pems[fetchCount++] ?? ""));
+      const contextFactory = vi.spyOn(
+        getNeonBinary(),
+        "contextFromSettings",
+      );
+      vi.stubGlobal("fetch", fetch);
+
+      try {
+        const context = new Context(
+          {
+            trust: {
+              trustAnchors: "https://example.com/anchors-node-context-ttl.pem",
+            },
+          },
+          undefined,
+          { trustFetch: { cacheTtlMs: 10 } },
+        );
+
+        const firstBuilder = await Builder.newAsync(context);
+        const firstSettings = JSON.parse(await context.toJson());
+        await Builder.withJsonAsync(manifestDefinition, context);
+        expect(fetch).toHaveBeenCalledOnce();
+
+        await delay(25);
+
+        const refreshedBuilder = await Builder.newAsync(context);
+        const refreshedSettings = JSON.parse(await context.toJson());
+
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(firstSettings.trust.anchors[0].trust_anchors).toBe(pem1);
+        expect(refreshedSettings.trust.anchors[0].trust_anchors).toBe(pem2);
+        expect(firstBuilder.getManifestDefinition()).toBeDefined();
+        expect(refreshedBuilder.getManifestDefinition()).toBeDefined();
+        expect(contextFactory).toHaveBeenCalledTimes(2);
+        expect(contextFactory.mock.results[0]?.value).not.toBe(
+          contextFactory.mock.results[1]?.value,
+        );
+      } finally {
+        contextFactory.mockRestore();
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it("does not reuse expired native settings after a refresh fails", async () => {
+      const pem1 =
+        "-----BEGIN CERTIFICATE-----\nanchor one\n-----END CERTIFICATE-----";
+      const pem2 =
+        "-----BEGIN CERTIFICATE-----\nanchor two\n-----END CERTIFICATE-----";
+      const fetch = vi
+        .fn()
+        .mockResolvedValueOnce(new Response(pem1))
+        .mockResolvedValueOnce(new Response("", { status: 503 }))
+        .mockResolvedValueOnce(new Response(pem2));
+      const contextFactory = vi.spyOn(
+        getNeonBinary(),
+        "contextFromSettings",
+      );
+      vi.stubGlobal("fetch", fetch);
+
+      try {
+        const context = new Context(
+          {
+            trust: {
+              trustAnchors:
+                "https://example.com/anchors-node-context-refresh-failure.pem",
+            },
+          },
+          undefined,
+          { trustFetch: { cacheTtlMs: 10, maxRetries: 0 } },
+        );
+
+        await Builder.newAsync(context);
+        await delay(25);
+        await expect(Builder.newAsync(context)).rejects.toThrow();
+        expect(contextFactory).toHaveBeenCalledOnce();
+
+        const refreshedBuilder = await Builder.newAsync(context);
+        const refreshedSettings = JSON.parse(await context.toJson());
+        expect(fetch).toHaveBeenCalledTimes(3);
+        expect(contextFactory).toHaveBeenCalledTimes(2);
+        expect(refreshedSettings.trust.anchors[0].trust_anchors).toBe(pem2);
+        expect(refreshedBuilder.getManifestDefinition()).toBeDefined();
+      } finally {
+        contextFactory.mockRestore();
         vi.unstubAllGlobals();
       }
     });
