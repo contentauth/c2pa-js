@@ -12,6 +12,14 @@
 // each license.
 
 import fs from "fs-extra";
+import type { Context } from "@contentauth/c2pa-utilities";
+import type { NeonContextHandle } from "./types.d.ts";
+import { getNeonBinary } from "./binary.js";
+
+const nativeContexts = new WeakMap<
+  Context,
+  { settingsJson: string; handle: NeonContextHandle }
+>();
 
 /**
  * This file contains only Settings functions that are unique to the Node SDK.
@@ -28,4 +36,29 @@ import fs from "fs-extra";
 export async function loadSettingsFromFile(filePath: string): Promise<string> {
   const content = await fs.readFile(filePath, "utf8");
   return content;
+}
+
+/**
+ * Resolves a Context to its latest native handle. The settings JSON is transferred and parsed
+ * only when a Context produces a new effective JSON value.
+ */
+export async function resolveNativeContextForNeon(
+  context: Context,
+  errorPrefix: string,
+): Promise<NeonContextHandle> {
+  const settingsJson = await context.toJson();
+  const cachedContext = nativeContexts.get(context);
+  if (cachedContext?.settingsJson === settingsJson) {
+    return cachedContext.handle;
+  }
+
+  const nativeContext = getNeonBinary().contextFromSettings(
+    settingsJson,
+    errorPrefix,
+  );
+  nativeContexts.set(context, {
+    settingsJson,
+    handle: nativeContext,
+  });
+  return nativeContext;
 }
