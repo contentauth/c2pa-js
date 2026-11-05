@@ -53,7 +53,7 @@ export default defineConfig(() => ({
     },
     rollupOptions: {
       // External packages that should not be bundled into your library.
-      external: ['@contentauth/c2pa-types', 'highgain']
+      external: ['@contentauth/c2pa-types', '@contentauth/c2pa-utilities', 'highgain']
     }
   },
   server: {

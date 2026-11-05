@@ -72,6 +72,11 @@ nx lint c2pa-web --fix   # Runs ESLint and applies fixes
 
 ## Contributing to c2pa-web
 
+Published entry-point compatibility is checked by `pnpm test:exports`, which
+first builds `c2pa-node` and `c2pa-web`. It verifies the shared Context constructor,
+cross-package declaration compatibility and removal of deprecated settings APIs.
+`pnpm ci:check` includes this check after the library targets finish.
+
 Install the [repo-wide prerequisites](#prerequisites), including the additional
 [c2pa-wasm prerequisites](../packages/c2pa-wasm/README.md#prerequisites).
 

@@ -8,16 +8,17 @@
  */
 
 import { test, describe, expect } from 'test/methods.js';
-import { ManifestDefinition, Ingredient, Action } from '@contentauth/c2pa-types';
+import {
+  ManifestDefinition,
+  Ingredient,
+  Action
+} from '@contentauth/c2pa-types';
 import { getBlobForAsset, createTestSigner } from 'test/utils.js';
 import { Context } from '@contentauth/c2pa-utilities';
 import { Builder } from './builder.js';
 import { Reader } from './reader.js';
-import { createC2pa } from './c2pa.js';
 import type { CredentialHolder, SignerPayload } from './signer.js';
 import { encodeSignerPayload } from './signer.js';
-
-import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 
 import C_JPG from 'test/assets/C.jpg';
 import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';
@@ -167,7 +168,11 @@ describe('builder', () => {
         // Build and serialise an archive to restore from.
         const archive = await (await Builder.new(c2pa)).toArchive();
 
-        const builder = await Builder.fromArchive(c2pa, new Blob([archive]), context);
+        const builder = await Builder.fromArchive(
+          c2pa,
+          new Blob([archive]),
+          context
+        );
 
         const blob = await getBlobForAsset(C_JPG);
 
@@ -201,7 +206,8 @@ describe('builder', () => {
 
         const archive = await builder.toArchive();
 
-        const builderFromArchive = await Builder.fromArchive(c2pa, 
+        const builderFromArchive = await Builder.fromArchive(
+          c2pa,
           new Blob([archive])
         );
 
@@ -246,7 +252,8 @@ describe('builder', () => {
 
         const archive = await builder.toArchive();
 
-        const builderFromArchive = await Builder.fromArchive(c2pa, 
+        const builderFromArchive = await Builder.fromArchive(
+          c2pa,
           new Blob([archive])
         );
 
@@ -304,7 +311,8 @@ describe('builder', () => {
 
         // Read the C2PA archive with Reader using application/c2pa format
         const archiveBlob = new Blob([archive]);
-        const reader = await Reader.fromBlob(c2pa,
+        const reader = await Reader.fromBlob(
+          c2pa,
           'application/c2pa',
           archiveBlob,
           readerContext
@@ -398,7 +406,8 @@ describe('builder', () => {
         const readerSettings = new Context({
           verify: { verifyAfterReading: false }
         });
-        const signedReader = await Reader.fromBlob(c2pa,
+        const signedReader = await Reader.fromBlob(
+          c2pa,
           'image/jpeg',
           new Blob([signedBytes], { type: 'image/jpeg' }),
           readerSettings
@@ -421,9 +430,9 @@ describe('builder', () => {
 
         // C_with_CAWG_data.jpg has 3 assertions: c2pa.actions.v2, cawg.training-mining, cawg.identity
         const originalStore = await originalReader!.manifestStore();
-        const originalLabels = originalStore.manifests![parentLabel!].assertions!.map(
-          (a) => a.label
-        );
+        const originalLabels = originalStore.manifests![
+          parentLabel!
+        ].assertions!.map((a) => a.label);
         expect(originalLabels).toContain('cawg.training-mining');
 
         // Construct JUMBF URI for the assertion to redact
@@ -442,7 +451,8 @@ describe('builder', () => {
         const readerSettings = new Context({
           verify: { verifyAfterReading: false }
         });
-        const signedReader = await Reader.fromBlob(c2pa,
+        const signedReader = await Reader.fromBlob(
+          c2pa,
           'image/jpeg',
           new Blob([signedBytes], { type: 'image/jpeg' }),
           readerSettings
@@ -630,8 +640,7 @@ describe('builder', () => {
                 actions: [
                   {
                     action: 'c2pa.opened',
-                    digitalSourceType:
-                      'http://c2pa.org/digitalsourcetype/empty'
+                    digitalSourceType: 'http://c2pa.org/digitalsourcetype/empty'
                   },
                   { action: 'c2pa.edited' }
                 ]
@@ -671,9 +680,7 @@ describe('builder', () => {
         const definition = await builder.getDefinition();
         const remaining = (definition.assertions ?? [])
           .filter((a) => a.label.startsWith('c2pa.actions'))
-          .flatMap(
-            (a) => (a.data as { actions: { action: string }[] }).actions
-          )
+          .flatMap((a) => (a.data as { actions: { action: string }[] }).actions)
           .map((a) => a.action);
         expect(remaining).toEqual([
           'c2pa.opened',
@@ -854,8 +861,7 @@ describe('builder', () => {
                 actions: [
                   {
                     action: 'c2pa.created',
-                    digitalSourceType:
-                      'http://c2pa.org/digitalsourcetype/empty'
+                    digitalSourceType: 'http://c2pa.org/digitalsourcetype/empty'
                   }
                 ]
               }
@@ -923,8 +929,7 @@ describe('builder', () => {
                 actions: [
                   {
                     action: 'c2pa.created',
-                    digitalSourceType:
-                      'http://c2pa.org/digitalsourcetype/empty'
+                    digitalSourceType: 'http://c2pa.org/digitalsourcetype/empty'
                   }
                 ]
               }
@@ -986,9 +991,7 @@ describe('builder', () => {
         ).toBeUndefined();
       });
 
-      test('is no-op when there is no actions assertion', async ({
-        c2pa
-      }) => {
+      test('is no-op when there is no actions assertion', async ({ c2pa }) => {
         const builder = await Builder.fromDefinition(c2pa, {
           claim_generator_info: [{ name: 'c2pa-web-test', version: '1.0.0' }],
           format: 'image/jpeg',
@@ -1029,8 +1032,7 @@ describe('builder', () => {
                 actions: [
                   {
                     action: 'c2pa.created',
-                    digitalSourceType:
-                      'http://c2pa.org/digitalsourcetype/empty'
+                    digitalSourceType: 'http://c2pa.org/digitalsourcetype/empty'
                   }
                 ]
               }
@@ -1075,8 +1077,7 @@ describe('builder', () => {
                 actions: [
                   {
                     action: 'c2pa.created',
-                    digitalSourceType:
-                      'http://c2pa.org/digitalsourcetype/empty'
+                    digitalSourceType: 'http://c2pa.org/digitalsourcetype/empty'
                   }
                 ],
                 allActionsIncluded: false,
@@ -1167,14 +1168,11 @@ describe('builder', () => {
                 actions: [
                   {
                     action: 'c2pa.created',
-                    digitalSourceType:
-                      'http://c2pa.org/digitalsourcetype/empty'
+                    digitalSourceType: 'http://c2pa.org/digitalsourcetype/empty'
                   }
                 ],
                 allActionsIncluded: true,
-                softwareAgents: [
-                  { name: 'c2pa-web-test', version: '1.0.0' }
-                ],
+                softwareAgents: [{ name: 'c2pa-web-test', version: '1.0.0' }],
                 templates: [{ action: 'c2pa.edited' }],
                 metadata: { dataSource: { type: 'humanEdits' } }
               }
@@ -1270,7 +1268,8 @@ describe('builder', () => {
         const readerSettings = new Context({
           verify: { verifyAfterReading: false }
         });
-        const reader = await Reader.fromBlob(c2pa,
+        const reader = await Reader.fromBlob(
+          c2pa,
           jxlMimetype,
           new Blob([signedBytes], { type: jxlMimetype }),
           readerSettings
@@ -1359,9 +1358,7 @@ describe('builder', () => {
         const activeLabel = await reader!.activeLabel();
         const manifestStore = await reader!.manifestStore();
         const activeManifest = manifestStore.manifests![activeLabel!];
-        const assertionLabels = activeManifest.assertions!.map(
-          (a) => a.label
-        );
+        const assertionLabels = activeManifest.assertions!.map((a) => a.label);
 
         expect(assertionLabels).toContain('cawg.identity');
       });
@@ -1411,72 +1408,33 @@ describe('builder', () => {
     });
   });
 
-  describe('BuilderFactory (deprecated)', () => {
-    test('creates a Builder via c2pa.builder.new', async ({ c2pa }) => {
-      const builder = await c2pa.builder.new();
-      const definition = await builder.getDefinition();
-      expect(definition).toEqual({
-        assertions: [],
-        format: '',
-        ingredients: [],
-        instance_id: ''
-      });
+  describe('Context-only API', () => {
+    test('does not expose the deprecated factories', ({ c2pa }) => {
+      expect(c2pa).not.toHaveProperty('reader');
+      expect(c2pa).not.toHaveProperty('builder');
     });
 
-    test('creates a Builder via c2pa.builder.fromDefinition', async ({
-      c2pa
-    }) => {
-      const manifestDefinition: ManifestDefinition = {
-        format: 'image/jpeg',
-        instance_id: '1234',
-        assertions: [],
-        ingredients: []
-      };
-
-      const builder = await c2pa.builder.fromDefinition(manifestDefinition);
-      const definition = await builder.getDefinition();
-
-      expect(definition).toEqual(manifestDefinition);
-    });
-
-    test('creates a Builder via c2pa.builder.fromArchive', async ({
-      c2pa
-    }) => {
-      const archive = await (await c2pa.builder.new()).toArchive();
-
-      const builder = await c2pa.builder.fromArchive(new Blob([archive]));
-      const definition = await builder.getDefinition();
-
-      expect(definition).toMatchObject({
-        assertions: [],
-        format: '',
-        ingredients: [],
-        instance_id: ''
-      });
-    });
-
-    test('merges per-call settings over the top-level settings passed to createC2pa, with per-call taking precedence', async () => {
-      const c2pa = await createC2pa({
-        wasmSrc,
-        settings: { verify: { verifyTrust: false } }
-      });
-
-      const builder = await c2pa.builder.new({
-        verify: { verifyTrust: true }
-      });
-
+    test('keeps contexts independent on the same worker', async ({ c2pa }) => {
       const blob = await getBlobForAsset(C_JPG);
-      await builder.addIngredientFromBlob({}, blob.type, blob);
-
-      const definition = await builder.getDefinition();
-      const ingredientFailureCodes =
-        definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
-          (entry) => entry.code
+      for (const verifyTrust of [true, false]) {
+        const builder = await Builder.new(
+          c2pa,
+          new Context({ verify: { verifyTrust } })
         );
-
-      expect(ingredientFailureCodes).toContain('signingCredential.untrusted');
-
-      c2pa.dispose();
+        try {
+          await builder.addIngredientFromBlob({}, blob.type, blob);
+          const definition = await builder.getDefinition();
+          const codes =
+            definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
+              (entry) => entry.code
+            ) ?? [];
+          expect(codes.includes('signingCredential.untrusted')).toBe(
+            verifyTrust
+          );
+        } finally {
+          await builder.free();
+        }
+      }
     });
   });
 });

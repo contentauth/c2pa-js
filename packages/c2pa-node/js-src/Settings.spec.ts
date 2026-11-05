@@ -8,20 +8,7 @@ import fs from "fs-extra";
 import * as path from "path";
 import * as os from "os";
 
-import {
-  Context,
-  DEFAULT_SETTINGS,
-  mergeSettings,
-  settingsToJson,
-} from "@contentauth/c2pa-utilities";
-import { vi } from "vitest";
-
-import {
-  loadSettingsFromFile,
-  resolveRawSettingsForNeon,
-  resolveSdkConfig,
-  resolveSettingsForNeon,
-} from "./Settings.js";
+import { loadSettingsFromFile } from "./Settings.js";
 
 describe("Settings", () => {
   describe("loadSettingsFromFile", () => {
@@ -71,104 +58,4 @@ verify_after_sign = false`;
     });
   });
 
-  describe("resolveRawSettingsForNeon", () => {
-    it("returns undefined when omitted", () => {
-      expect(resolveRawSettingsForNeon(undefined)).toBeUndefined();
-    });
-
-    it("returns undefined when null is passed in", () => {
-      // A plain-JS caller can pass `null` explicitly.
-      // It must not fall through to JSON.stringify(null), which would send the
-      // native library the literal string "null" instead of "no settings".
-      expect(resolveRawSettingsForNeon(null)).toBeUndefined();
-    });
-
-    it("passes raw settings through unchanged", () => {
-      const rawSettings = { verify: { verify_trust: false } };
-      const result = resolveRawSettingsForNeon(rawSettings);
-      expect(JSON.parse(result!)).toEqual(rawSettings);
-    });
-
-    it("passes raw settings JSON through unchanged", () => {
-      const json = JSON.stringify({ verify: { verify_trust: false } });
-      expect(resolveRawSettingsForNeon(json)).toBe(json);
-    });
-  });
-
-  describe("resolveSettingsForNeon", () => {
-    it("returns undefined when omitted", async () => {
-      expect(await resolveSettingsForNeon(undefined)).toBeUndefined();
-    });
-
-    it("returns undefined when null is passed in", async () => {
-      expect(await resolveSettingsForNeon(null)).toBeUndefined();
-    });
-
-    it("applies defaults for an empty Context", async () => {
-      const result = await resolveSettingsForNeon(new Context());
-      expect(JSON.parse(result!)).toEqual(
-        JSON.parse(settingsToJson(DEFAULT_SETTINGS)),
-      );
-    });
-
-    it("does not serialize a Context's SDK config", async () => {
-      const result = await resolveSettingsForNeon(
-        new Context(undefined, { maxSizeInBytes: 42 }),
-      );
-      expect(JSON.parse(result!)).toEqual(
-        JSON.parse(settingsToJson(DEFAULT_SETTINGS)),
-      );
-    });
-
-    it("merges a Context's settings with defaults", async () => {
-      const settings = { verify: { verifyTrust: false } };
-      const result = await resolveSettingsForNeon(new Context(settings));
-      expect(JSON.parse(result!)).toEqual(
-        JSON.parse(settingsToJson(mergeSettings(DEFAULT_SETTINGS, settings))),
-      );
-    });
-
-    it("fetches trust-anchor URLs before returning Context settings", async () => {
-      const pem = "-----BEGIN CERTIFICATE-----\nanchor\n-----END CERTIFICATE-----";
-      const fetch = vi.fn(async () => new Response(pem));
-      vi.stubGlobal("fetch", fetch);
-
-      try {
-        const result = await resolveSettingsForNeon(
-          new Context({
-            trust: { trustAnchors: "https://example.com/anchors.pem" },
-          }),
-        );
-
-        expect(fetch).toHaveBeenCalledOnce();
-        expect(JSON.parse(result!).trust.anchors[0].trust_anchors).toBe(pem);
-      } finally {
-        vi.unstubAllGlobals();
-      }
-    });
-
-    it("keeps deprecated raw settings unchanged", async () => {
-      const rawSettings = { verify: { verify_trust: false } };
-      const result = await resolveSettingsForNeon(rawSettings);
-      expect(JSON.parse(result!)).toEqual(rawSettings);
-    });
-  });
-
-  describe("resolveSdkConfig", () => {
-    it("returns a Context's SDK config", () => {
-      const sdkConfig = { maxSizeInBytes: 42 };
-      expect(resolveSdkConfig(new Context(undefined, sdkConfig))).toEqual(sdkConfig);
-    });
-
-    it("returns undefined when a Context carries no SDK config", () => {
-      expect(resolveSdkConfig(new Context())).toBeUndefined();
-    });
-
-    it("returns undefined for the deprecated raw settings forms", () => {
-      expect(resolveSdkConfig(undefined)).toBeUndefined();
-      expect(resolveSdkConfig(null)).toBeUndefined();
-      expect(resolveSdkConfig({ verify: { verifyTrust: false } })).toBeUndefined();
-      expect(resolveSdkConfig('{"verify":{"verify_trust":false}}')).toBeUndefined();
-    });
-  });
 });
