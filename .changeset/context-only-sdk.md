@@ -1,6 +1,6 @@
 ---
-"@contentauth/c2pa-node": major
-"@contentauth/c2pa-web": major
+"@contentauth/c2pa-node": minor
+"@contentauth/c2pa-web": minor
 ---
 
 Remove deprecated raw-settings SDK creation paths in favor of Context.
