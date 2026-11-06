@@ -104,8 +104,7 @@ export interface FetchWithRetryOptions {
    * Useful for dependency injection, such as wrapping another HTTP client's own request pipeline
    * (like `wretch` middleware's `next`, or a test mock). Trust-resource resolution does not
    * deduplicate calls with a custom implementation: a wrapper's request context may change
-   * without changing its function identity. Custom implementations also bypass
-   * completed-response caching.
+   * without changing its function identity.
    */
   fetch?: (input: string, init?: RequestInit) => Promise<Response>;
 }
@@ -138,9 +137,9 @@ export function validateFetchWithRetryOptions(
 /**
  * Options for resolving trust-resource URLs in a {@link Context}.
  *
- * In-flight request sharing is enabled by default. Successful responses are not cached unless
- * `cacheTtlMs` is greater than zero. HTTP URLs remain accepted by default for compatibility;
- * set `requireHttps` to reject them and all redirects.
+ * In-flight request sharing is enabled by default. Completed responses are not cached.
+ * HTTP URLs remain accepted by default for compatibility; set `requireHttps` to reject them
+ * and all redirects.
  */
 export interface TrustFetchOptions extends FetchWithRetryOptions {
   /**
@@ -148,13 +147,6 @@ export interface TrustFetchOptions extends FetchWithRetryOptions {
    * Defaults to `true`; custom fetch implementations are always isolated.
    */
   deduplicateInFlight?: boolean;
-
-  /**
-   * Cache successful response text from the global fetch for this many milliseconds.
-   * Must be finite and non-negative. Zero disables completed-response caching.
-   * Defaults to `0`; custom fetch implementations are never cached.
-   */
-  cacheTtlMs?: number;
 
   /**
    * Reject non-HTTPS trust-resource URLs and all redirects. Defaults to `false`.

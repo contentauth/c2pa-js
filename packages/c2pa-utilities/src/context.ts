@@ -8,7 +8,7 @@
  */
 
 import type { TrustFetchOptions } from './fetchWithRetry.js';
-import { resolveSettingsWithExpiry, type Settings } from './settings.js';
+import { resolveSettings, type Settings } from './settings.js';
 
 /**
  * SDK-side configuration for a {@link Context}.
@@ -33,7 +33,7 @@ export interface SdkConfig {
  */
 export interface ContextOptions {
   /**
-   * Controls fetching, retrying, and caching of trust-resource URLs.
+   * Controls fetching, retrying, and in-flight sharing of trust-resource URLs.
    */
   trustFetch?: TrustFetchOptions;
 }
@@ -53,7 +53,6 @@ export class Context {
   private readonly _sdkConfig?: SdkConfig;
   private readonly _options?: ContextOptions;
   private _jsonPromise?: Promise<string>;
-  private _jsonExpiresAt?: number;
 
   /**
    * @param settings Core SDK settings.
@@ -93,9 +92,8 @@ export class Context {
 
   /**
    * Resolves this `Context`'s settings (fetching any embedded trust-anchor URLs) and serializes
-   * the result for consumption by the WASM/native boundary. A successful result is memoized
-   * until the earliest resolved trust resource expires when a positive cache TTL is configured.
-   * Refresh failures reject without reusing expired settings. If different fetch-with-retry
+   * the result for consumption by the WASM/native boundary. A successful result is memoized, so
+   * resolution of this Context's settings only happens once. If different fetch-with-retry
    * options need to be provided after resolution succeeds, callers should create a separate
    * `Context` with the desired options.
    *
@@ -107,7 +105,7 @@ export class Context {
    * corresponding options attached to this Context. Explicit `undefined` resets an option to
    * its SDK default; omitted properties retain the Context's option. This does not clear core
    * settings or a memoized successful result. Only consulted on the first call, or the first
-   * call after a previous failure or trust-resource expiry.
+   * call after a previous failure.
    * @returns A JSON-serialized string of the resolved settings.
    */
   toJson(options?: TrustFetchOptions): Promise<string> {
@@ -115,24 +113,12 @@ export class Context {
       ...this._options?.trustFetch,
       ...options
     };
-    if (
-      this._jsonPromise &&
-      (this._jsonExpiresAt === undefined || Date.now() < this._jsonExpiresAt)
-    ) {
-      return this._jsonPromise;
-    }
-
-    this._jsonExpiresAt = undefined;
-    this._jsonPromise = resolveSettingsWithExpiry(this.settings, trustFetchOptions)
-      .then(({ json, expiresAt }) => {
-        this._jsonExpiresAt = expiresAt;
-        return json;
-      })
-      .catch((error: unknown) => {
+    this._jsonPromise ??= resolveSettings(this.settings, trustFetchOptions).catch(
+      (error: unknown) => {
         this._jsonPromise = undefined;
-        this._jsonExpiresAt = undefined;
         throw error;
-      });
+      }
+    );
     return this._jsonPromise;
   }
 }
