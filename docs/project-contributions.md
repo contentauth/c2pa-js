@@ -148,8 +148,10 @@ Node and web have independent version lists:
   `@contentauth/c2pa-web`, including the main and `/inline` entry points.
 
 Versions must be exact npm releases, not tags such as `latest` or version ranges.
-The first entry is the default. Adding or publishing a release does not
-automatically change the default or add it to the lists.
+The first entry is the default. Stable web releases automatically prepend their
+exact npm version to the web list, promoting an existing entry without duplicates.
+Older entries and other index metadata are preserved. Node releases still require
+manual list updates; prereleases do not automatically change either list.
 
 The first Node.js version is served at `api-docs/node/index.html`; every selected
 release is also available at `api-docs/node/versions/<version>/index.html`,
@@ -177,6 +179,21 @@ and selector assets remain tracked.
 The release workflow publishes the complete site after a new package release.
 Run that workflow manually to rebuild documentation without publishing packages.
 GitHub Pages publishes `api-docs/` as the site root, so public URLs are unchanged.
+
+For stable web releases, the existing `publish-docs` job verifies the exact GitHub
+release tag (`@contentauth/c2pa-web@<version>`) and npm publication, then commits
+only `api-docs/web-versions.json` directly to `main` using `GITHUB_TOKEN`. It builds
+and deploys the complete site from that same checkout after a successful push;
+reruns do not create empty commits. Branch protection and repository rules must
+permit this bot update, or the job fails before deployment.
+
+Changesets creates releases using `GITHUB_TOKEN`, which does not trigger another
+release workflow. Its publication outputs therefore drive the update and deploy
+explicitly in the same workflow. A separately published stable web GitHub release
+also rebuilds docs; node and other package release events do not update the web
+index. Main-branch package publishing, prerelease docs rebuilds after Changesets
+publication, and manual docs-only/native-binary rebuild behavior are preserved.
+The automation does not modify release tags.
 
 For unversioned web-only source documentation, run `pnpm build:docs` from
 `packages/c2pa-web`; its output goes into that package's `api-docs/` directory.
