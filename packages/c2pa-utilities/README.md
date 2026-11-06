@@ -68,7 +68,7 @@ Concurrent trust-resource fetches using the global `fetch`, the same URL, and th
 
 Custom `fetch` implementations are not deduplicated because a wrapper can change its request context (such as authentication headers) without changing its function identity.
 
-Each trust-resource fetch has a fixed 30-second deadline covering network requests, retry delays, and response-body consumption. A timeout aborts the request and rejects all waiting resolutions, without substituting trust data. A later resolution can attempt a new fetch even if a custom implementation ignores cancellation.
+Each trust-resource fetch has a fixed 30-second deadline covering network requests, retry delays, and response-body consumption. A timeout rejects with a `TimeoutError`, aborts the request and any pending retry delay, and rejects all waiting resolutions without substituting trust data. A later resolution can attempt a new fetch even if a custom implementation ignores cancellation.
 
 Set `ContextOptions.trustFetch` using the third `Context` constructor argument to configure trust fetching. `context.toJson(options)` overrides those defaults for that resolution; `resolveSettings(settings, options)` accepts the same options directly. In addition to the fetch policy options described below:
 
@@ -146,6 +146,7 @@ const response = await fetchWithRetryRaw('https://example.com/upload', {
 Both functions accept an `FetchWithRetryOptions` object to override the defaults:
 
 ```typescript
+const controller = new AbortController();
 await fetchWithRetry(url, {
   maxRetries: 5,
   initialRetryDelayMs: 500,
@@ -154,11 +155,12 @@ await fetchWithRetry(url, {
   maxResponseBytes: 5 * 1024 * 1024,
   isRetryableStatus: (status) => status === 429 || status >= 500,
   isRetryableError: (error) => true,
-  fetch: myFetchImplementation
+  fetch: myFetchImplementation,
+  signal: controller.signal
 });
 ```
 
-An `AbortError` is never retried, and a malformed URL throws immediately rather than being retried.
+Aborting `signal` cancels the active request and any pending retry delay; the signal's reason is propagated and no further retry is attempted. A malformed URL throws immediately rather than being retried.
 
 Numeric fetch options must be finite and non-negative. `NaN`, `Infinity`, `-Infinity`, and negative values throw before fetching; infinity does not mean retry forever. `maxRetries` must also be a safe integer. Omitted options retain their defaults.
 

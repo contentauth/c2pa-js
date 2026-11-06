@@ -387,6 +387,32 @@ describe('fetchWithRetry', () => {
     expect(requestCount).toBe(5);
   });
 
+  test('cancels a pending retry delay when its signal is aborted', async () => {
+    const controller = new AbortController();
+    const fetch = vi.fn(async () =>
+      new Response(null, {
+        status: 429,
+        headers: { 'Retry-After': '30' }
+      })
+    );
+    vi.useFakeTimers();
+    try {
+      const request = fetchWithRetry('https://example.com', {
+        fetch,
+        signal: controller.signal
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+      controller.abort(new DOMException('Request cancelled', 'AbortError'));
+
+      await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test('honors a custom maxRetryAfterMs cap', async () => {
     server.use(
       http.get(

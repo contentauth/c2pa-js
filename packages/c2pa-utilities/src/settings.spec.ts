@@ -486,6 +486,42 @@ describe('trust settings in-flight requests', () => {
     }
   );
 
+  it('cancels a retry delay at the deadline and reports a TimeoutError', async () => {
+    let requestCount = 0;
+    const fetch = vi.fn(async () => {
+      requestCount++;
+      if (requestCount === 1 || requestCount === 2) {
+        return new Response(null, {
+          status: 503,
+          headers: { 'Retry-After': requestCount === 1 ? '25' : '30' }
+        });
+      }
+      return new Response(pem);
+    });
+    vi.stubGlobal('fetch', fetch);
+    vi.useFakeTimers();
+    try {
+      const resolve = () =>
+        resolveSettings({ trust: { trustAnchors: url } });
+      const failure = resolve().catch((error: unknown) => error);
+
+      await vi.advanceTimersByTimeAsync(30_000);
+
+      expect(await failure).toMatchObject({
+        name: 'TimeoutError',
+        cause: expect.objectContaining({ name: 'TimeoutError' })
+      });
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(vi.getTimerCount()).toBe(0);
+
+      const recovered = await resolve();
+      expect(JSON.parse(recovered).trust.anchors[0].trust_anchors).toBe(pem);
+      expect(fetch).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('does not share custom fetch wrappers with mutable request context', async () => {
     let tenant = 'first';
     const fetch = vi.fn(async () => {
