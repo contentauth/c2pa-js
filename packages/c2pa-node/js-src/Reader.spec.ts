@@ -217,39 +217,6 @@ describe("Reader", () => {
     );
   });
 
-  it("should read from manifest data and file with settings context", async () => {
-    const manifestData = await fs.readFile(
-      "./tests/fixtures/CA/manifest_data.c2pa",
-    );
-    const buffer = await fs.readFile("./tests/fixtures/CA.jpg");
-
-    const settings = {
-      verify: {
-        verify_after_reading: false,
-        verify_trust: false,
-      },
-    };
-
-    const reader = await Reader.fromManifestDataAndAsset(
-      manifestData,
-      {
-        buffer,
-        mimeType: "jpeg",
-      },
-      settings,
-    );
-
-    expect(reader).not.toBeNull();
-    const json = reader!.json();
-
-    // Settings should affect validation behavior
-    // With verify_after_reading: false, validation_status should be undefined
-    expect(json.validation_status).toBeUndefined();
-
-    expect(json.manifests).toBeDefined();
-    expect(json.active_manifest).toEqual(manifestStore.active_manifest);
-  });
-
   it("should read from manifest data and file with a Context", async () => {
     const manifestData = await fs.readFile(
       "./tests/fixtures/CA/manifest_data.c2pa",
@@ -275,8 +242,6 @@ describe("Reader", () => {
     expect(reader).not.toBeNull();
     const json = reader!.json();
 
-    // Same effect as the raw-settings equivalent above: verifyAfterReading: false means
-    // validation_status should be undefined.
     expect(json.validation_status).toBeUndefined();
 
     expect(json.manifests).toBeDefined();

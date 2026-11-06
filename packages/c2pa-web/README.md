@@ -104,21 +104,22 @@ const reader2 = await Reader.fromBlob(
 
 Each `Context` holds whatever single `Settings` object was passed to its constructor and does not handle any merging of settings. To combine more than one `Settings` source, merge them first with `mergeSettings()`, then construct a `Context` from the single, merged result. See [`c2pa-utilities`'s README](../c2pa-utilities/README.md#combining-settings) for details.
 
-A `Context`'s settings are resolved once upon creation and then memoized for re-use. Passing the same `Context` instance to multiple `Reader`/`Builder` calls doesn't re-fetch trust-anchor URLs on every call.
+A `Context`'s settings are resolved on its first use and then memoized for re-use. Passing the same `Context` instance to multiple `Reader`/`Builder` calls doesn't re-fetch trust-anchor URLs on every call.
 
-### Factory API (deprecated)
+`Context` is defined in `@contentauth/c2pa-utilities` and re-exported unchanged by `@contentauth/c2pa-node`, `@contentauth/c2pa-web` and `@contentauth/c2pa-web/inline`. These entry points share constructor identity and types, including for subclasses. Application bundlers should resolve a single compatible utilities version rather than embedding separate copies.
 
-Earlier versions of `c2pa-web` configured the SDK once via `createC2pa({ settings })`, and created `Reader`/`Builder` objects through `c2pa.reader`/`c2pa.builder` factory methods that took a raw `Settings` object per call, merged over those top-level settings. This is still supported, but deprecated in favor of `Reader`/`Builder`'s static methods with an explicit `Context`, shown above, and will be removed in a future version:
+### Migrating from the deprecated factory API
+
+`createC2pa({ settings })`, `c2pa.reader` and `c2pa.builder` have been removed, including from `/inline`. Top-level settings now throw an error rather than being silently ignored. Use the static Reader/Builder methods with a `Context` instead:
 
 ```typescript
-const c2pa = await createC2pa({ wasmSrc, settings: { verify: { verifyTrust: true } } });
-
-// Settings passed here are merged over, and take precedence over, the top-level settings above.
-const reader = await c2pa.reader.fromBlob(blob.type, blob, {
-  trust: { trustAnchors: 'https://example.com/trust-anchors.pem' }
-});
-const builder = await c2pa.builder.new();
+const c2pa = await createC2pa({ wasmSrc });
+const context = new Context(mergeSettings(baseSettings, perInstanceSettings));
+const reader = await Reader.fromBlob(c2pa, blob.type, blob, context);
+const builder = await Builder.new(c2pa, context);
 ```
+
+Import `mergeSettings` from the same SDK entry point to preserve the old top-level/per-call merge precedence explicitly. Use `Reader.fromBlobFragment`, `Builder.fromDefinition` and `Builder.fromArchive` for the corresponding removed factory methods. Omit the context argument, or pass `new Context()`, to use defaults. Raw settings objects and `null` are not Context arguments.
 
 ## Using the library
 

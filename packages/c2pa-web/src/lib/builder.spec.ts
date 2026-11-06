@@ -13,11 +13,8 @@ import { getBlobForAsset, createTestSigner } from 'test/utils.js';
 import { Context } from '@contentauth/c2pa-utilities';
 import { Builder } from './builder.js';
 import { Reader } from './reader.js';
-import { createC2pa } from './c2pa.js';
 import type { CredentialHolder, SignerPayload } from './signer.js';
 import { encodeSignerPayload } from './signer.js';
-
-import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 
 import C_JPG from 'test/assets/C.jpg';
 import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';
@@ -1411,72 +1408,33 @@ describe('builder', () => {
     });
   });
 
-  describe('BuilderFactory (deprecated)', () => {
-    test('creates a Builder via c2pa.builder.new', async ({ c2pa }) => {
-      const builder = await c2pa.builder.new();
-      const definition = await builder.getDefinition();
-      expect(definition).toEqual({
-        assertions: [],
-        format: '',
-        ingredients: [],
-        instance_id: ''
-      });
+  describe('Context-only API', () => {
+    test('does not expose the deprecated factories', ({ c2pa }) => {
+      expect(c2pa).not.toHaveProperty('reader');
+      expect(c2pa).not.toHaveProperty('builder');
     });
 
-    test('creates a Builder via c2pa.builder.fromDefinition', async ({
-      c2pa
-    }) => {
-      const manifestDefinition: ManifestDefinition = {
-        format: 'image/jpeg',
-        instance_id: '1234',
-        assertions: [],
-        ingredients: []
-      };
-
-      const builder = await c2pa.builder.fromDefinition(manifestDefinition);
-      const definition = await builder.getDefinition();
-
-      expect(definition).toEqual(manifestDefinition);
-    });
-
-    test('creates a Builder via c2pa.builder.fromArchive', async ({
-      c2pa
-    }) => {
-      const archive = await (await c2pa.builder.new()).toArchive();
-
-      const builder = await c2pa.builder.fromArchive(new Blob([archive]));
-      const definition = await builder.getDefinition();
-
-      expect(definition).toMatchObject({
-        assertions: [],
-        format: '',
-        ingredients: [],
-        instance_id: ''
-      });
-    });
-
-    test('merges per-call settings over the top-level settings passed to createC2pa, with per-call taking precedence', async () => {
-      const c2pa = await createC2pa({
-        wasmSrc,
-        settings: { verify: { verifyTrust: false } }
-      });
-
-      const builder = await c2pa.builder.new({
-        verify: { verifyTrust: true }
-      });
-
+    test('keeps contexts independent on the same worker', async ({ c2pa }) => {
       const blob = await getBlobForAsset(C_JPG);
-      await builder.addIngredientFromBlob({}, blob.type, blob);
-
-      const definition = await builder.getDefinition();
-      const ingredientFailureCodes =
-        definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
-          (entry) => entry.code
+      for (const verifyTrust of [true, false]) {
+        const builder = await Builder.new(
+          c2pa,
+          new Context({ verify: { verifyTrust } })
         );
-
-      expect(ingredientFailureCodes).toContain('signingCredential.untrusted');
-
-      c2pa.dispose();
+        try {
+          await builder.addIngredientFromBlob({}, blob.type, blob);
+          const definition = await builder.getDefinition();
+          const codes =
+            definition.ingredients?.[0].validation_results?.activeManifest?.failure.map(
+              (entry) => entry.code
+            ) ?? [];
+          expect(codes.includes('signingCredential.untrusted')).toBe(
+            verifyTrust
+          );
+        } finally {
+          await builder.free();
+        }
+      }
     });
   });
 });
