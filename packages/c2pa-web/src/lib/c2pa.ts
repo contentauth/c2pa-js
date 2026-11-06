@@ -45,7 +45,7 @@ export interface C2pa {
  *
  * The returned handle carries no unique configuration of its own and is purely the worker runtime
  * with the WASM binary loaded on it.
- *
+ * 
  * Clients are free to create as many `Reader`s/`Builder`s from it, each with its own `Context`
  * to configure their respective behaviors. They all share the same c2pa-web instance and worker.
  *

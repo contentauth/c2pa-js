@@ -157,7 +157,7 @@ describe("IdentityAssertionBuilder", () => {
     };
 
     // Create the manifest builder
-    const builder = (await Builder.withJsonAsync(manifestDefinition));
+    const builder = await Builder.withJsonAsync(manifestDefinition);
 
     // Add the required resources
     await builder.addResource("thumbnail.jpg", {
@@ -318,7 +318,7 @@ describe("handles reserveSize", () => {
       cawgTestSigner.sign,
     );
 
-    const builder = (await Builder.withJsonAsync({
+    const builder = await Builder.withJsonAsync({
       claim_generator_info: [{ name: "c2pa_test", version: "2.0.0" }],
       title: "Test_Manifest",
       format: "image/jpeg",
@@ -346,7 +346,7 @@ describe("handles reserveSize", () => {
           },
         },
       ],
-    } as Manifest));
+    } as Manifest);
 
     const iaSigner = IdentityAssertionSigner.new(c2paSigner.getHandle());
     const iab =

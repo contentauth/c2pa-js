@@ -146,7 +146,7 @@ describe("CallbackSigner", () => {
       resources: { resources: {} },
     };
 
-    const builder = (await Builder.withJsonAsync(manifestDefinition));
+    const builder = await Builder.withJsonAsync(manifestDefinition);
     builder.setIntent({ create: "http://c2pa.org/digitalsourcetype/empty" });
     const source = {
       buffer: await fs.readFile("./tests/fixtures/CA.jpg"),

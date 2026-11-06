@@ -11,14 +11,10 @@ import { test, describe, expect } from 'test/methods.js';
 import { vi } from 'vitest';
 import { createC2pa } from './c2pa.js';
 import { Reader } from './reader.js';
-import {
-  AssetTooLargeError,
-  Context,
-  Settings,
-  mergeSettings
-} from '@contentauth/c2pa-utilities';
+import { AssetTooLargeError, Context, Settings, mergeSettings } from '@contentauth/c2pa-utilities';
 import { getBlobForAsset } from 'test/utils.js';
 import { MAX_SIZE_IN_BYTES } from './reader.js';
+
 import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 
 import C_with_CAWG_data from 'test/assets/C_with_CAWG_data.jpg';
@@ -290,9 +286,7 @@ describe('reader', () => {
         ).rejects.toThrow(AssetTooLargeError);
       });
 
-      test('should honor a max size from the given Context', async ({
-        c2pa
-      }) => {
+      test('should honor a max size from the given Context', async ({ c2pa }) => {
         const initBlob = await getBlobForAsset(dashinit);
         const fragmentBlob = await getBlobForAsset(dash1);
         const context = new Context(undefined, { maxSizeInBytes: 1 });

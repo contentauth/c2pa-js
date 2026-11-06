@@ -109,12 +109,11 @@ function getSerializableIdentityAssertions(
 }
 
 // Module-level registry for garbage collection
-const registry = new FinalizationRegistry<{
-  worker: WorkerManager;
-  id: number;
-}>(({ worker, id }) => {
-  worker.tx.builder_free(id);
-});
+const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>(
+  ({ worker, id }) => {
+    worker.tx.builder_free(id);
+  }
+);
 
 /**
  * The `Builder` class supports building C2PA manifests and signing assets.
@@ -135,10 +134,7 @@ export class Builder {
    * @param context Optional `Context` configuring this builder's behavior.
    * @returns A {@link Builder} object.
    */
-  static async new(
-    c2pa: C2pa,
-    context: Context = new Context()
-  ): Promise<Builder> {
+  static async new(c2pa: C2pa, context: Context = new Context()): Promise<Builder> {
     const settingsJson = await context.toJson();
     const { worker } = c2pa;
 
@@ -191,10 +187,7 @@ export class Builder {
     const settingsJson = await context.toJson();
     const { worker } = c2pa;
 
-    const builderId = await worker.tx.builder_fromArchive(
-      archive,
-      settingsJson
-    );
+    const builderId = await worker.tx.builder_fromArchive(archive, settingsJson);
 
     const builder = new Builder(worker, builderId);
     registry.register(builder, { worker, id: builderId }, builder);
@@ -294,11 +287,7 @@ export class Builder {
     property: ManifestProperty,
     value: string | ClaimVersion
   ): Promise<void> {
-    await this.#worker.tx.builder_updateManifestProperty(
-      this.#id,
-      property,
-      value
-    );
+    await this.#worker.tx.builder_updateManifestProperty(this.#id, property, value);
   }
 
   /**
@@ -331,8 +320,9 @@ export class Builder {
    * @param keep The action is retained when the predicate returns true.
    */
   async filterActions(keep: (action: Action) => boolean): Promise<void> {
-    const definition: ManifestDefinition =
-      await this.#worker.tx.builder_getDefinition(this.#id);
+    const definition: ManifestDefinition = await this.#worker.tx.builder_getDefinition(
+      this.#id
+    );
     const actions = getActionsFromDefinition(definition);
     const indices = actions.reduce<number[]>((kept, action, i) => {
       if (keep(action)) {
@@ -359,8 +349,9 @@ export class Builder {
   async filterIngredients(
     rescue: (ingredient: Ingredient) => boolean
   ): Promise<void> {
-    const definition: ManifestDefinition =
-      await this.#worker.tx.builder_getDefinition(this.#id);
+    const definition: ManifestDefinition = await this.#worker.tx.builder_getDefinition(
+      this.#id
+    );
     const ingredients: Ingredient[] = definition.ingredients ?? [];
     const indices = ingredients.reduce<number[]>((rescued, ingredient, i) => {
       if (rescue(ingredient)) {
@@ -386,8 +377,9 @@ export class Builder {
     keepAction: (action: Action) => boolean,
     rescueIngredient: (ingredient: Ingredient) => boolean
   ): Promise<void> {
-    const definition: ManifestDefinition =
-      await this.#worker.tx.builder_getDefinition(this.#id);
+    const definition: ManifestDefinition = await this.#worker.tx.builder_getDefinition(
+      this.#id
+    );
     const actions = getActionsFromDefinition(definition);
     const actionIndices = actions.reduce<number[]>((kept, action, i) => {
       if (keepAction(action)) {
@@ -432,8 +424,9 @@ export class Builder {
   async updateActions(
     transform: (actions: Action[]) => Action[]
   ): Promise<void> {
-    const definition: ManifestDefinition =
-      await this.#worker.tx.builder_getDefinition(this.#id);
+    const definition: ManifestDefinition = await this.#worker.tx.builder_getDefinition(
+      this.#id
+    );
     // One group per actions assertion: `transform` runs once per assertion
     // Each is rewritten in place under its own label.
     const groups = getActionGroupsFromDefinition(definition);
@@ -465,12 +458,7 @@ export class Builder {
     blob: Blob
   ): Promise<void> {
     const json = JSON.stringify(ingredientDefinition);
-    await this.#worker.tx.builder_addIngredientFromBlob(
-      this.#id,
-      json,
-      format,
-      blob
-    );
+    await this.#worker.tx.builder_addIngredientFromBlob(this.#id, json, format, blob);
   }
 
   /**
@@ -480,11 +468,7 @@ export class Builder {
    * @param blob Blob of the resource's bytes.
    */
   async addResourceFromBlob(resourceId: string, blob: Blob): Promise<void> {
-    await this.#worker.tx.builder_addResourceFromBlob(
-      this.#id,
-      resourceId,
-      blob
-    );
+    await this.#worker.tx.builder_addResourceFromBlob(this.#id, resourceId, blob);
   }
 
   /**
