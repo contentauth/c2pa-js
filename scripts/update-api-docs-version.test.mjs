@@ -31,6 +31,8 @@ import {
 
 const tag = '@contentauth/c2pa-web@0.16.0';
 const release = { tag_name: tag, draft: false, prerelease: false };
+const nodeTag = '@contentauth/c2pa-node@0.10.0';
+const nodeRelease = { ...release, tag_name: nodeTag };
 const initial = {
   versions: ['0.15.4', '0.16.0', '0.15.3', '0.16.0'],
   metadata: { keep: ['unchanged'] }
@@ -138,6 +140,119 @@ test('promotes, deduplicates and prepends exact versions preserving metadata and
   );
 });
 
+test('node routing selects stable npm publications, not web or native rebuild inputs', () => {
+  const mixed = [
+    { name: '@contentauth/c2pa-web', version: '0.16.0' },
+    { name: '@contentauth/c2pa-node', version: '0.10.0' }
+  ];
+  assert.equal(selectRelease('node', mixed, {}), nodeTag);
+  assert.equal(selectRelease('node', [], { release: nodeRelease }), nodeTag);
+  for (const excluded of [
+    release,
+    { ...nodeRelease, prerelease: true },
+    { ...nodeRelease, draft: true },
+    { ...nodeRelease, tag_name: `${nodeTag}-rc.1` }
+  ]) {
+    assert.equal(selectRelease('node', [], { release: excluded }), '');
+  }
+  assert.equal(
+    selectRelease('node', [], { inputs: { version: '0.10.0' } }),
+    ''
+  );
+  assert.equal(selectRelease('node', [mixed[0]], {}), '');
+  assert.equal(
+    selectRelease(
+      'node',
+      [mixed[0], { ...mixed[1], version: '0.10.0-rc.1' }],
+      {}
+    ),
+    ''
+  );
+  assert.equal(
+    selectRelease(
+      'web',
+      [mixed[0], { ...mixed[1], version: '0.10.0-rc.1' }],
+      {}
+    ),
+    tag
+  );
+  assert.throws(
+    () => selectRelease('node', [mixed[1], mixed[1]], {}),
+    /multiple/
+  );
+  assert.throws(
+    () => selectRelease('node', [{ ...mixed[1], version: 'latest' }], {}),
+    /exact npm/
+  );
+});
+
+test('node promotions preserve metadata, history and web index and reject invalid releases', async (t) => {
+  const root = await fixture(t);
+  const filename = path.join(root, 'api-docs/node-versions.json');
+  const webBefore = await readFile(
+    path.join(root, 'api-docs/web-versions.json'),
+    'utf8'
+  );
+  const config = {
+    ...initial,
+    versions: ['0.9.10', '0.10.0', '0.9.9', '0.10.0']
+  };
+  await writeFile(filename, JSON.stringify(config));
+  assert.equal(
+    await updateReleaseVersion('node', nodeRelease, nodeTag, root),
+    true
+  );
+  assert.deepEqual(JSON.parse(await readFile(filename, 'utf8')), {
+    ...config,
+    versions: ['0.10.0', '0.9.10', '0.9.9']
+  });
+  assert.equal(
+    await updateReleaseVersion('node', nodeRelease, nodeTag, root),
+    false
+  );
+  const next = { ...nodeRelease, tag_name: '@contentauth/c2pa-node@0.10.1' };
+  assert.equal(
+    await updateReleaseVersion('node', next, next.tag_name, root),
+    true
+  );
+  assert.deepEqual(JSON.parse(await readFile(filename, 'utf8')).versions, [
+    '0.10.1',
+    '0.10.0',
+    '0.9.10',
+    '0.9.9'
+  ]);
+  const before = await readFile(filename, 'utf8');
+  for (const excluded of [
+    release,
+    { ...nodeRelease, prerelease: true },
+    { ...nodeRelease, draft: true },
+    { ...nodeRelease, tag_name: `${nodeTag}-rc.1` }
+  ]) {
+    assert.equal(
+      await updateReleaseVersion('node', excluded, excluded.tag_name, root),
+      false
+    );
+  }
+  await assert.rejects(
+    updateReleaseVersion('node', nodeRelease, tag, root),
+    /different release/
+  );
+  await assert.rejects(
+    updateReleaseVersion('node', { tag_name: nodeTag }, nodeTag, root),
+    /flags/
+  );
+  assert.equal(await readFile(filename, 'utf8'), before);
+  assert.equal(
+    await readFile(path.join(root, 'api-docs/web-versions.json'), 'utf8'),
+    webBefore
+  );
+  await writeFile(filename, '{"versions":["latest"]}');
+  await assert.rejects(
+    updateReleaseVersion('node', nodeRelease, nodeTag, root),
+    /exact npm/
+  );
+});
+
 test('prereleases, drafts and other package tags cannot change web versions', async (t) => {
   const root = await fixture(t);
   const filename = path.join(root, 'api-docs/web-versions.json');
@@ -169,108 +284,184 @@ test('prereleases, drafts and other package tags cannot change web versions', as
   );
 });
 
-test('workflow persists to main without empty commits and fails on push or publication errors', async (t) => {
-  const root = await fixture(t);
-  await mkdir(path.join(root, 'scripts'));
-  for (const filename of [
-    'generate-api-docs.mjs',
-    'update-api-docs-version.mjs'
-  ]) {
-    await cp(
-      path.join(ROOT, 'scripts', filename),
-      path.join(root, 'scripts', filename)
+for (const packageKeys of [['web'], ['node'], ['web', 'node']]) {
+  test(`workflow persists ${packageKeys.join(
+    '+'
+  )} to main without empty commits and fails on errors`, async (t) => {
+    const root = await fixture(t);
+    await mkdir(path.join(root, 'scripts'));
+    for (const filename of [
+      'generate-api-docs.mjs',
+      'update-api-docs-version.mjs'
+    ]) {
+      await cp(
+        path.join(ROOT, 'scripts', filename),
+        path.join(root, 'scripts', filename)
+      );
+    }
+    await symlink(
+      path.join(ROOT, 'node_modules'),
+      path.join(root, 'node_modules')
     );
-  }
-  await symlink(
-    path.join(ROOT, 'node_modules'),
-    path.join(root, 'node_modules')
-  );
-  const git = (...args) =>
-    execFileSync('git', args, {
-      cwd: root,
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe']
-    }).trim();
-  git('init', '-b', 'main');
-  git('config', 'user.name', 'Test');
-  git('config', 'user.email', 'test@example.invalid');
-  git('add', 'api-docs');
-  git('commit', '-m', 'fixture');
-  git('init', '--bare', path.join(root, 'remote.git'));
-  git('remote', 'add', 'origin', path.join(root, 'remote.git'));
-  git('push', 'origin', 'main');
-  const bin = path.join(root, 'bin');
-  await mkdir(bin);
-  for (const [name, script] of Object.entries({
-    gh: `#!/bin/sh\ncat <<'JSON'\n${JSON.stringify(release)}\nJSON\n`,
-    npm: '#!/bin/sh\nprintf \'"0.16.0"\\n\'\n',
-    sleep: '#!/bin/sh\nexit 0\n'
-  })) {
-    await writeFile(path.join(bin, name), script);
-    await chmod(path.join(bin, name), 0o755);
-  }
-  const workflow = await readFile(
-    path.join(ROOT, '.github/workflows/release.yml'),
-    'utf8'
-  );
-  const block = workflow
-    .split(
-      '      - name: Verify release and persist web documentation version\n'
-    )[1]
-    .split('\n      - run:')[0];
-  const shell = block
-    .split('        run: |\n')[1]
-    .split('\n')
-    .map((line) => line.replace(/^ {10}/, ''))
-    .join('\n');
-  const run = () =>
-    spawnSync(
-      'bash',
-      ['--noprofile', '--norc', '-eo', 'pipefail', '-c', shell],
-      {
+    const git = (...args) =>
+      execFileSync('git', args, {
         cwd: root,
         encoding: 'utf8',
-        env: {
-          ...process.env,
-          PATH: `${bin}:${process.env.PATH}`,
-          RUNNER_TEMP: root,
-          GITHUB_REPOSITORY: 'contentauth/c2pa-js',
-          DOCS_RELEASE_TAG: tag
-        }
-      }
+        stdio: ['pipe', 'pipe', 'pipe']
+      }).trim();
+    git('init', '-b', 'main');
+    git('config', 'user.name', 'Test');
+    git('config', 'user.email', 'test@example.invalid');
+    git('add', 'api-docs');
+    git('commit', '-m', 'fixture');
+    git('init', '--bare', path.join(root, 'remote.git'));
+    git('remote', 'add', 'origin', path.join(root, 'remote.git'));
+    git('push', 'origin', 'main');
+    const bin = path.join(root, 'bin');
+    await mkdir(bin);
+    for (const [name, script] of Object.entries({
+      gh: '#!/bin/sh\nprintf \'{"tag_name":"%s","draft":false,"prerelease":false}\\n\' "$DOCS_RELEASE_TAG"\n',
+      npm: '#!/bin/sh\nprintf \'"%s"\\n\' "${DOCS_RELEASE_TAG##*@}"\n',
+      sleep: '#!/bin/sh\nexit 0\n'
+    })) {
+      await writeFile(path.join(bin, name), script);
+      await chmod(path.join(bin, name), 0o755);
+    }
+    const workflow = await readFile(
+      path.join(ROOT, '.github/workflows/release.yml'),
+      'utf8'
     );
-  const first = run();
-  assert.equal(first.status, 0, first.stderr);
-  assert.equal(git('rev-parse', 'HEAD'), git('rev-parse', 'origin/main'));
-  const head = git('rev-parse', 'HEAD');
-  assert.deepEqual(
-    git('diff-tree', '--no-commit-id', '--name-only', '-r', 'HEAD').split('\n'),
-    ['api-docs/web-versions.json']
-  );
-  const rerun = run();
-  assert.equal(rerun.status, 0, rerun.stderr);
-  assert.equal(git('rev-parse', 'HEAD'), head);
+    const shellFor = (packageKey, action) => {
+      const block = workflow
+        .split(
+          `      - name: ${
+            action === 'select'
+              ? 'Resolve stable'
+              : 'Verify release and persist'
+          } ${packageKey} documentation ${
+            action === 'select' ? 'release' : 'version'
+          }\n`
+        )[1]
+        .split('\n      - ')[0];
+      return block
+        .split('        run: |\n')[1]
+        .split('\n')
+        .map((line) => line.replace(/^ {10}/, ''))
+        .join('\n');
+    };
+    const eventPath = path.join(root, 'event.json');
+    const outputPath = path.join(root, 'output');
+    const publications = packageKeys.map((key) => ({
+      name: `@contentauth/c2pa-${key}`,
+      version: key === 'web' ? '0.16.0' : '0.10.0'
+    }));
+    await writeFile(eventPath, '{}');
+    const run = (packageKey, action = 'update') =>
+      spawnSync(
+        'bash',
+        [
+          '--noprofile',
+          '--norc',
+          '-eo',
+          'pipefail',
+          '-c',
+          shellFor(packageKey, action)
+        ],
+        {
+          cwd: root,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            PATH: `${bin}:${process.env.PATH}`,
+            RUNNER_TEMP: root,
+            GITHUB_REPOSITORY: 'contentauth/c2pa-js',
+            DOCS_RELEASE_TAG: `@contentauth/c2pa-${packageKey}@${
+              packageKey === 'web' ? '0.16.0' : '0.10.0'
+            }`,
+            GITHUB_EVENT_PATH: eventPath,
+            GITHUB_OUTPUT: outputPath,
+            PUBLISHED_PACKAGES: JSON.stringify(publications)
+          }
+        }
+      );
+    const initialHead = git('rev-parse', 'HEAD');
+    for (const packageKey of ['web', 'node']) {
+      await writeFile(outputPath, '');
+      const selected = run(packageKey, 'select');
+      assert.equal(selected.status, 0, selected.stderr);
+      assert.equal(
+        await readFile(outputPath, 'utf8'),
+        `tag=${
+          packageKeys.includes(packageKey)
+            ? `@contentauth/c2pa-${packageKey}@${
+                packageKey === 'web' ? '0.16.0' : '0.10.0'
+              }`
+            : ''
+        }\n`
+      );
+      if (!packageKeys.includes(packageKey)) continue;
+      const first = run(packageKey);
+      assert.equal(first.status, 0, first.stderr);
+      assert.equal(git('rev-parse', 'HEAD'), git('rev-parse', 'origin/main'));
+      assert.deepEqual(
+        git('diff-tree', '--no-commit-id', '--name-only', '-r', 'HEAD').split(
+          '\n'
+        ),
+        [`api-docs/${packageKey}-versions.json`]
+      );
+    }
+    const head = git('rev-parse', 'HEAD');
+    assert.deepEqual(
+      git('diff', '--name-only', initialHead, head).split('\n').sort(),
+      packageKeys.map((key) => `api-docs/${key}-versions.json`).sort()
+    );
+    for (const packageKey of packageKeys) {
+      const rerun = run(packageKey);
+      assert.equal(rerun.status, 0, rerun.stderr);
+      assert.equal(git('rev-parse', 'HEAD'), head);
+    }
+    const packageKey = packageKeys.at(-1);
+    const filename = `api-docs/${packageKey}-versions.json`;
 
-  await writeFile(
-    path.join(root, 'remote.git/hooks/pre-receive'),
-    '#!/bin/sh\nexit 1\n'
-  );
-  await chmod(path.join(root, 'remote.git/hooks/pre-receive'), 0o755);
-  await writeFile(
-    path.join(root, 'api-docs/web-versions.json'),
-    JSON.stringify(initial)
-  );
-  git('add', 'api-docs/web-versions.json');
-  git('commit', '-m', 'restore fixture list');
-  const failedPush = run();
-  assert.notEqual(failedPush.status, 0);
-  assert.match(failedPush.stderr, /rejected/);
+    await writeFile(
+      path.join(root, 'remote.git/hooks/pre-receive'),
+      '#!/bin/sh\nexit 1\n'
+    );
+    await chmod(path.join(root, 'remote.git/hooks/pre-receive'), 0o755);
+    await writeFile(
+      path.join(root, filename),
+      JSON.stringify(packageKey === 'web' ? initial : { versions: ['0.9.10'] })
+    );
+    git('add', filename);
+    git('commit', '-m', 'restore fixture list');
+    const failedPush = run(packageKey);
+    assert.notEqual(failedPush.status, 0);
+    assert.match(failedPush.stderr, /rejected/);
 
-  await writeFile(path.join(bin, 'npm'), '#!/bin/sh\nexit 1\n');
-  const failedPublication = run();
-  assert.notEqual(failedPublication.status, 0);
-  assert.match(failedPublication.stdout, /unavailable after retrying/);
-});
+    const failedHead = git('rev-parse', 'HEAD');
+    await writeFile(
+      path.join(bin, 'gh'),
+      '#!/bin/sh\nprintf \'{"tag_name":"wrong","draft":false,"prerelease":false}\\n\'\n'
+    );
+    const invalidMetadata = run(packageKey);
+    assert.notEqual(invalidMetadata.status, 0);
+    assert.match(invalidMetadata.stderr, /different release/);
+    assert.equal(git('rev-parse', 'HEAD'), failedHead);
+
+    await writeFile(
+      path.join(bin, 'npm'),
+      '#!/bin/sh\nprintf \'"0.0.0"\\n\'\n'
+    );
+    const failedPublication = run(packageKey);
+    assert.notEqual(failedPublication.status, 0);
+    assert.match(failedPublication.stdout, /unavailable after retrying/);
+    await writeFile(path.join(bin, 'npm'), '#!/bin/sh\nexit 1\n');
+    const missingPublication = run(packageKey);
+    assert.notEqual(missingPublication.status, 0);
+    assert.match(missingPublication.stdout, /unavailable after retrying/);
+    assert.equal(git('rev-parse', 'HEAD'), failedHead);
+  });
+}
 
 test('release routing preserves explicit Changesets/manual deploys and prevents release-triggered package publishing', async () => {
   const workflow = await readFile(
@@ -303,7 +494,7 @@ test('release routing preserves explicit Changesets/manual deploys and prevents 
     shouldDeploy('release', {
       release: { ...release, tag_name: '@contentauth/c2pa-node@0.10.0' }
     }),
-    false
+    true
   );
   assert.equal(
     shouldDeploy('release', {
@@ -330,6 +521,15 @@ test('release routing preserves explicit Changesets/manual deploys and prevents 
   );
   assert.match(docs, /ref: main/);
   assert.match(docs, /contents: write/);
+  assert.match(
+    docs,
+    /startsWith\(github\.event\.release\.tag_name, '@contentauth\/c2pa-node@'\)/
+  );
+  assert.equal(docs.split('run: pnpm ci:docs').length - 1, 1);
+  assert.equal(docs.split('uses: actions/deploy-pages@v4').length - 1, 1);
+  assert.ok(
+    docs.indexOf('update node "$metadata"') < docs.indexOf('run: pnpm ci:docs')
+  );
   assert.ok(
     docs.indexOf('git push origin HEAD:main') <
       docs.indexOf('run: pnpm ci:docs')
