@@ -1,5 +1,9 @@
 # Working in c2pa-js
 
+Run the smallest relevant lint/test/build/typecheck targets.
+Broaden to affected consumers for shared types, utilities, or bindings; use `pnpm ci:check` for substantial cross-package changes.
+Report exact checks and missing prerequisites; never claim skipped checks passed.
+
 Read [README.md](./README.md), the [development guide](./docs/project-contributions.md),
 [CONTRIBUTING.md](./CONTRIBUTING.md), and the relevant package README.
 This guide applies repository-wide. Follow package conventions; Node and browser bindings are not interchangeable.
@@ -78,22 +82,35 @@ See [CI](./.github/workflows/ci.yml) for environment details.
 
 ## Coding and compatibility
 
-- Match surrounding naming, imports, layout, and error handling. Avoid unrelated rewrites or bulk formatting.
+### General
+
+- Match surrounding naming, imports, layout, and error handling.
+  Apply required lint/format fixes to changed code; avoid unrelated rewrites or repository-wide formatting.
 - Keep strict TypeScript, ESM exports, and `.js` relative imports.
   Prefer domain types and guards over `any`, unchecked casts, or non-null assertions.
-  Node has separate [TypeScript](./packages/c2pa-node/tsconfig.json) and [ESLint](./packages/c2pa-node/eslint.config.cjs) configuration.
 - Use applicable ESLint and [Prettier](./.prettierrc): single quotes, no trailing commas.
   Preserve license headers; new JS/TS covered by [root ESLint](./eslint.config.mjs) needs the adjacent Adobe header.
 - Use nightly rustfmt and [rustfmt.toml](./rustfmt.toml) import grouping.
   Respect crate editions and [blank-line rules](./CONTRIBUTING.md#code-formatting) for multiline blocks.
+- Update both TypeScript/Rust sides and exported types when an API spans bindings.
+- Preserve validation, cleanup, and error contracts. Reuse conversion helpers; never hide failures with success defaults.
+- Update public API documentation with behavior changes. Preserve documentation style and `@internal` boundaries.
+
+### Shared utilities
+
 - Check utilities before adding Settings/Context, Reader/Builder validation, signer, or HTTP logic.
   Keep shared behavior aligned; document intentional differences and unavoidable duplicates.
 - Keep Node filesystem/native code out of browser/shared code.
-  Update both TypeScript/Rust sides and exported types; check web main, inline, and worker surfaces.
-- Preserve validation, cleanup, and error contracts. Reuse conversion helpers; never hide failures with success defaults.
-  Keep [Node errors](./packages/c2pa-node/src/error.rs) distinct from
-  [WASM reader errors](./packages/c2pa-wasm/src/wasm_reader.rs): `JsString` supports Firefox workers.
-- Update public API documentation with behavior changes. Preserve documentation style and `@internal` boundaries.
+
+### Node
+
+- Use Node's separate [TypeScript](./packages/c2pa-node/tsconfig.json) and [ESLint](./packages/c2pa-node/eslint.config.cjs) configuration.
+- Preserve [Node error conversion](./packages/c2pa-node/src/error.rs); do not unify it with WASM reader errors.
+
+### Web and WASM
+
+- Check web main, inline, and worker surfaces when changing APIs.
+- Preserve [WASM reader errors](./packages/c2pa-wasm/src/wasm_reader.rs): `JsString` supports Firefox workers.
 
 ## Generated files and dependencies
 
@@ -107,9 +124,6 @@ See [CI](./.github/workflows/ci.yml) for environment details.
 
 ## Validation and pull requests
 
-- Run the smallest relevant lint/test/build/typecheck targets.
-  Broaden to affected consumers for shared types, utilities, or bindings; use `pnpm ci:check` for substantial cross-package changes.
-  Report exact checks and missing prerequisites; never claim skipped checks passed.
 - Add nearby regression tests using existing fixtures/mocks. Cover errors and cleanup; test bindings at runtime, not only through mocks.
   Node/utilities use colocated `*.spec.ts` in Node Vitest.
   Reuse [web fixtures](./packages/c2pa-web/test/methods.ts) for initialization/disposal and MSW lifecycle.
