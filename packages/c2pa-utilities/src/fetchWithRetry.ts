@@ -107,6 +107,11 @@ export interface FetchWithRetryOptions {
    * without changing its function identity.
    */
   fetch?: (input: string, init?: RequestInit) => Promise<Response>;
+
+  /**
+   * Optional cancellation signal. Aborting it cancels the request and any pending retry delay.
+   */
+  signal?: AbortSignal;
 }
 
 /** @internal */
@@ -140,6 +145,41 @@ export function validateFetchWithRetryOptions(
  */
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
+}
+
+function getAbortReason(signal: AbortSignal): unknown {
+  return (
+    signal.reason ?? new DOMException('The operation was aborted', 'AbortError')
+  );
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw getAbortReason(signal);
+  }
+}
+
+function waitForRetry(delayMs: number, signal?: AbortSignal): Promise<void> {
+  throwIfAborted(signal);
+
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, delayMs);
+    const onAbort = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+      if (signal) {
+        reject(getAbortReason(signal));
+      }
+    };
+
+    signal?.addEventListener('abort', onAbort, { once: true });
+    if (signal?.aborted) {
+      onAbort();
+    }
+  });
 }
 
 /**
@@ -199,7 +239,8 @@ function assertValidUrl(input: string): void {
  * Fetches `input`, retrying on network errors and on responses whose status is deemed
  * retryable (see {@link FetchWithRetryOptions.isRetryableStatus}), with exponential backoff
  * (respecting a `Retry-After` header when present). Gives up on receiving `AbortError` and
- * does not retry.
+ * does not retry. Aborting a supplied signal also stops pending retry delays and propagates
+ * the signal's reason.
  * 
  * Callers are responsible for reading and validating the body themselves (e.g. `.json()`,
  * `.text()`, streaming, or their own size cap), which makes this suitable for arbitrary
@@ -227,17 +268,26 @@ export async function fetchWithRetryRaw(
   const isRetryableStatus = options?.isRetryableStatus ?? defaultIsRetryableStatus;
   const isRetryableError = options?.isRetryableError ?? (() => true);
   const fetchFn = options?.fetch ?? fetch;
+  const signal =
+    init?.signal && options?.signal && init.signal !== options.signal
+      ? AbortSignal.any([init.signal, options.signal])
+      : (init?.signal ?? options?.signal);
+  const requestInit = signal ? { ...init, signal } : init;
 
   const backoff = (attempt: number) =>
     calculateBackoffMs(attempt, initialRetryDelayMs, maxRetryDelayMs);
 
   for (let attempt = 0; ; attempt++) {
+    throwIfAborted(signal);
     let res: Response;
     try {
-      res = await fetchFn(input, init);
+      res = await fetchFn(input, requestInit);
     } catch (e) {
+      if (signal?.aborted) {
+        throw getAbortReason(signal);
+      }
       if (!isAbortError(e) && isRetryableError(e) && attempt < maxRetries) {
-        await new Promise((resolve) => setTimeout(resolve, backoff(attempt)));
+        await waitForRetry(backoff(attempt), signal);
         continue;
       }
       const message = e instanceof Error ? e.message : String(e);
@@ -245,6 +295,7 @@ export async function fetchWithRetryRaw(
         cause: e
       });
     }
+    throwIfAborted(signal);
 
     if (!res.ok) {
       const retryable = isRetryableStatus(res.status);
@@ -261,9 +312,7 @@ export async function fetchWithRetryRaw(
           }
 
           if (attempt < maxRetries) {
-            await new Promise((resolve) =>
-              setTimeout(resolve, Math.max(retryAfterMs, 0))
-            );
+            await waitForRetry(Math.max(retryAfterMs, 0), signal);
             continue;
           }
 
@@ -273,7 +322,7 @@ export async function fetchWithRetryRaw(
         }
 
         if (attempt < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, backoff(attempt)));
+          await waitForRetry(backoff(attempt), signal);
           continue;
         }
       }

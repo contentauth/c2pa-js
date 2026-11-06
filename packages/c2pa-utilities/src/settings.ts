@@ -432,6 +432,7 @@ function getTrustFetchKey(url: string, options?: FetchWithRetryOptions): string 
     options?.maxRetryAfterMs ?? DEFAULT_MAX_RETRY_AFTER_MS,
     getFunctionId(options?.isRetryableStatus, 'default-status'),
     getFunctionId(options?.isRetryableError, 'default-error'),
+    getFunctionId(options?.signal, 'no-signal'),
     getFunctionId(globalThis.fetch, 'global-fetch')
   ];
 
@@ -471,31 +472,52 @@ async function executeTrustFetch(
 ): Promise<string> {
   const controller = new AbortController();
   const fetchFn = options?.fetch ?? globalThis.fetch;
+  const externalSignal = options?.signal;
+  const requestSignal = externalSignal
+    ? AbortSignal.any([controller.signal, externalSignal])
+    : controller.signal;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let removeAbortListener: (() => void) | undefined;
   const timeout = new Promise<never>((_resolve, reject) => {
     timer = setTimeout(() => {
       const error = new DOMException(
         `Trust resource fetch timed out after ${TRUST_FETCH_TIMEOUT_MS} ms: ${url}`,
-        'AbortError'
+        'TimeoutError'
       );
       controller.abort(error);
       reject(error);
     }, TRUST_FETCH_TIMEOUT_MS);
   });
+  const externalAbort = externalSignal
+    ? new Promise<never>((_resolve, reject) => {
+        const onAbort = () => {
+          reject(
+            externalSignal.reason ??
+              new DOMException('The operation was aborted', 'AbortError')
+          );
+        };
+        if (externalSignal.aborted) {
+          onAbort();
+        } else {
+          externalSignal.addEventListener('abort', onAbort, { once: true });
+          removeAbortListener = () =>
+            externalSignal.removeEventListener('abort', onAbort);
+        }
+      })
+    : undefined;
 
   try {
-    return await Promise.race([
-      fetchWithRetry(url, {
-        ...options,
-        fetch: (input, init) => {
-          controller.signal.throwIfAborted();
-          return fetchFn(input, { ...init, signal: controller.signal });
-        }
-      }),
-      timeout
-    ]);
+    const request = fetchWithRetry(url, {
+      ...options,
+      fetch: fetchFn,
+      signal: requestSignal
+    });
+    return await Promise.race(
+      externalAbort ? [request, timeout, externalAbort] : [request, timeout]
+    );
   } finally {
     clearTimeout(timer);
+    removeAbortListener?.();
   }
 }
 
@@ -558,8 +580,15 @@ export async function resolveTrustSettings(
     await Promise.all(promises);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    throw new Error(`Failed to resolve trust settings. ${message}`, {
+    const error = new Error(`Failed to resolve trust settings. ${message}`, {
       cause: e
     });
+    if (
+      (e instanceof Error || e instanceof DOMException) &&
+      e.name === 'TimeoutError'
+    ) {
+      error.name = 'TimeoutError';
+    }
+    throw error;
   }
 }
