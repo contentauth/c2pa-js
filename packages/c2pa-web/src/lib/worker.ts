@@ -16,15 +16,43 @@ import {
   encodeSignerPayload as wasmEncodeSignerPayload
 } from '@contentauth/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
-import { createWorkerTx, rx } from './worker/rpc.js';
+import { createWorkerTx, MAX_CACHED_CONTEXTS, rx } from './worker/rpc.js';
 import { sanitizeManifestStore } from './worker/sanitizeManifestStore.js';
+import type { WorkerContext } from './worker/rpc.js';
 import type { SerializableIdentityAssertion, SignerPayload } from './signer.js';
 import { transfer } from 'highgain';
 
 const readerMap = createWorkerObjectMap<WasmReader>();
 const builderMap = createWorkerObjectMap<WasmBuilder>();
+const contextJsonMap = new Map<number, string>();
 
 const tx = createWorkerTx();
+
+function getContextJson(context: WorkerContext): string {
+  const existingJson = contextJsonMap.get(context.id);
+  if (context.json !== undefined) {
+    if (existingJson !== undefined && existingJson !== context.json) {
+      throw new Error('Worker context ID was reused with different settings');
+    }
+    if (
+      existingJson === undefined &&
+      contextJsonMap.size === MAX_CACHED_CONTEXTS
+    ) {
+      const oldestId = contextJsonMap.keys().next().value;
+      if (oldestId !== undefined) {
+        contextJsonMap.delete(oldestId);
+      }
+    }
+    contextJsonMap.set(context.id, context.json);
+  }
+
+  const contextJson = contextJsonMap.get(context.id);
+  if (contextJson === undefined) {
+    throw new Error('Worker context settings have not been registered');
+  }
+
+  return contextJson;
+}
 
 /**
  * Maps the serializable `identityAssertions` payload (browser->worker) to the
@@ -61,17 +89,21 @@ rx(
       const bytes = wasmEncodeSignerPayload(payload);
       return transfer(bytes, bytes.buffer);
     },
-    async reader_fromBlob(format, blob, contextJson) {
-      const reader = await WasmReader.fromBlob(format, blob, contextJson);
+    async reader_fromBlob(format, blob, context) {
+      const reader = await WasmReader.fromBlob(
+        format,
+        blob,
+        getContextJson(context)
+      );
       const readerId = readerMap.add(reader);
       return readerId;
     },
-    async reader_fromBlobFragment(format, init, fragment, contextJson) {
+    async reader_fromBlobFragment(format, init, fragment, context) {
       const reader = await WasmReader.fromBlobFragment(
         format,
         init,
         fragment,
-        contextJson
+        getContextJson(context)
       );
       const readerId = readerMap.add(reader);
       return readerId;
@@ -106,18 +138,18 @@ rx(
       reader.free();
       readerMap.remove(readerId);
     },
-    builder_new(contextJson) {
-      const builder = WasmBuilder.new(contextJson);
+    builder_new(context) {
+      const builder = WasmBuilder.new(getContextJson(context));
       const builderId = builderMap.add(builder);
       return builderId;
     },
-    builder_fromJson(json: string, contextJson) {
-      const builder = WasmBuilder.fromJson(json, contextJson);
+    builder_fromJson(json: string, context) {
+      const builder = WasmBuilder.fromJson(json, getContextJson(context));
       const builderId = builderMap.add(builder);
       return builderId;
     },
-    builder_fromArchive(archive, contextJson) {
-      const builder = WasmBuilder.fromArchive(archive, contextJson);
+    builder_fromArchive(archive, context) {
+      const builder = WasmBuilder.fromArchive(archive, getContextJson(context));
       const builderId = builderMap.add(builder);
       return builderId;
     },

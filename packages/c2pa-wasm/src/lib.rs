@@ -13,6 +13,8 @@ use wasm_bindgen::prelude::*;
 
 mod error;
 
+mod wasm_context;
+
 /// Contains functions to create types usable by c2pa-rs from JS types.
 pub mod stream;
 

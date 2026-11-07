@@ -104,7 +104,9 @@ const reader2 = await Reader.fromBlob(
 
 Each `Context` holds whatever single `Settings` object was passed to its constructor and does not handle any merging of settings. To combine more than one `Settings` source, merge them first with `mergeSettings()`, then construct a `Context` from the single, merged result. See [`c2pa-utilities`'s README](../c2pa-utilities/README.md#combining-settings) for details.
 
-A `Context`'s settings are resolved on its first use and then memoized for re-use. Passing the same `Context` instance to multiple `Reader`/`Builder` calls doesn't re-fetch trust-anchor URLs on every call.
+Within each worker, Readers and Builders reuse the parsed context when their effective settings JSON is unchanged. Different resolved settings create a separate context generation. The worker and WASM each retain at most 16 settings generations. Evicted settings are transferred and parsed again if requested, while existing Readers and Builders keep their original context snapshot until freed. Disposing `c2pa` terminates the worker and releases its cache. This reuse does not change trust-resource resolution or error handling; see [`c2pa-utilities`'s README](../c2pa-utilities/README.md#trust-resource-fetching) for fetch behavior.
+
+A `Context` memoizes successful settings resolution without automatic expiry. Repeated `Reader`/`Builder` calls using that Context reuse its resolution. Create a new `Context` to fetch updated trust resources; the new resolution does not change existing Readers or Builders. Failed resolution rejects and can be retried.
 
 `Context` is defined in `@contentauth/c2pa-utilities` and re-exported unchanged by `@contentauth/c2pa-node`, `@contentauth/c2pa-web` and `@contentauth/c2pa-web/inline`. These entry points share constructor identity and types, including for subclasses. Application bundlers should resolve a single compatible utilities version rather than embedding separate copies.
 

@@ -8,12 +8,18 @@
  */
 
 import { CredentialHolder, Signer } from '../signer.js';
-import { createTx, workerRx } from './rpc.js';
+import {
+  createTx,
+  MAX_CACHED_CONTEXTS,
+  workerRx,
+  type WorkerContext
+} from './rpc.js';
 import InlineWorker from '../worker?worker&inline';
 import { transfer } from 'highgain';
 
 export interface WorkerManager {
   tx: ReturnType<typeof createTx>;
+  context: (settingsJson: string) => WorkerContext;
   registerSignReceiver: (signFn: Signer['sign']) => number;
   registerCredentialHolderReceiver: (
     signFn: CredentialHolder['sign']
@@ -57,6 +63,7 @@ export async function createWorkerManager(
 ): Promise<WorkerManager> {
   const { wasm, workerSrc } = config;
   let signerRequestId = 0;
+  let contextRequestId = 0;
 
   const worker = workerSrc
     ? new Worker(validateWorkerSrc(workerSrc), { type: 'module' })
@@ -64,6 +71,7 @@ export async function createWorkerManager(
 
   const tx = createTx(worker);
 
+  const contextIds = new Map<string, number>();
   const signingRequestMap = new Map<number, Signer['sign']>();
   const credentialHolderRequestMap = new Map<number, CredentialHolder['sign']>();
 
@@ -108,12 +116,34 @@ export async function createWorkerManager(
     return id;
   }
 
+  function context(settingsJson: string): WorkerContext {
+    const existingId = contextIds.get(settingsJson);
+    if (existingId !== undefined) {
+      return { id: existingId };
+    }
+
+    if (contextIds.size === MAX_CACHED_CONTEXTS) {
+      const oldestSettings = contextIds.keys().next().value;
+      if (oldestSettings !== undefined) {
+        contextIds.delete(oldestSettings);
+      }
+    }
+
+    const id = contextRequestId++;
+    contextIds.set(settingsJson, id);
+    return { id, json: settingsJson };
+  }
+
   await tx.initWorker(wasm);
 
   return {
     tx,
+    context,
     registerSignReceiver,
     registerCredentialHolderReceiver,
-    terminate: () => worker.terminate()
+    terminate: () => {
+      contextIds.clear();
+      worker.terminate();
+    }
   };
 }
