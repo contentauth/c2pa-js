@@ -13,7 +13,13 @@
 
 import fs from "fs-extra";
 import { Context, type SdkConfig } from "@contentauth/c2pa-utilities";
-import type { C2paSettings } from "./types.d.ts";
+import type { C2paSettings, NeonContextHandle } from "./types.d.ts";
+import { getNeonBinary } from "./binary.js";
+
+const nativeContexts = new WeakMap<
+  Context,
+  { settingsJson: string; handle: NeonContextHandle }
+>();
 
 /**
  * This file contains only Settings functions that are unique to the Node SDK.
@@ -67,6 +73,35 @@ export async function resolveSettingsForNeon(
   return typeof settingsOrContext === "string"
     ? settingsOrContext
     : JSON.stringify(settingsOrContext);
+}
+
+/**
+ * Resolves a Context to its latest native handle. The settings JSON is transferred and parsed
+ * only when a Context produces a new effective JSON value.
+ */
+export async function resolveNativeContextForNeon(
+  settingsOrContext: C2paSettings | Context | null | undefined,
+  errorPrefix: string,
+): Promise<string | NeonContextHandle | undefined> {
+  if (!(settingsOrContext instanceof Context)) {
+    return resolveSettingsForNeon(settingsOrContext);
+  }
+
+  const settingsJson = await settingsOrContext.toJson();
+  const cachedContext = nativeContexts.get(settingsOrContext);
+  if (cachedContext?.settingsJson === settingsJson) {
+    return cachedContext.handle;
+  }
+
+  const nativeContext = getNeonBinary().contextFromSettings(
+    settingsJson,
+    errorPrefix,
+  );
+  nativeContexts.set(settingsOrContext, {
+    settingsJson,
+    handle: nativeContext,
+  });
+  return nativeContext;
 }
 
 /**

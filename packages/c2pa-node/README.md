@@ -98,6 +98,8 @@ const remoteUrl = reader.remoteUrl();
 > [!NOTE]
 > `Reader.fromAsset`/`Reader.fromManifestDataAndAsset` also accept a raw settings object in place of a `Context` (e.g. `Reader.fromAsset(inputAsset, { verify: { verify_trust: true } })`), but this is deprecated — see [Per-instance settings (deprecated)](#per-instance-settings-deprecated).
 
+Node keeps the latest resolved settings JSON and native context handle for each JavaScript `Context` in a `WeakMap`. Repeated `Reader` and `Builder` construction with the same effective settings reuses that handle without retransferring or reparsing the JSON. Successful settings resolution stays memoized within the `Context`; create a new `Context` to resolve updated trust resources. Existing Readers and Builders retain their construction-time settings.
+
 `Reader.fromAsset` and `Reader.fromManifestDataAndAsset` reject assets larger than 10 GB, throwing `AssetTooLargeError` (exported from `@contentauth/c2pa-node`). Note that for a `SourceBufferAsset`, this only rejects after the buffer is already fully allocated in memory. Pass a `FileAsset` instead for large or untrusted assets so oversized files are rejected before being read into memory.
 
 > [!WARNING]
