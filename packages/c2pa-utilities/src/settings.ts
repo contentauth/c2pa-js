@@ -9,8 +9,14 @@
 
 import { merge } from 'ts-deepmerge';
 import {
+  DEFAULT_INITIAL_RETRY_DELAY_MS,
+  DEFAULT_MAX_RETRIES,
+  DEFAULT_MAX_RETRY_AFTER_MS,
+  DEFAULT_MAX_RETRY_DELAY_MS,
+  DEFAULT_MAX_RESPONSE_BYTES,
   fetchWithRetry,
   fetchWithRetryRaw,
+  validateFetchWithRetryOptions,
   type FetchWithRetryOptions
 } from './fetchWithRetry.js';
 import { snakeCaseify, type SettingsObjectType } from './caseConversion.js';
@@ -191,6 +197,12 @@ export function withDefaultSettings(settings: Settings | undefined): Settings {
  * consumption by the core native SDK. `settings` is merged on top of this package's default
  * settings (see {@link withDefaultSettings}). To combine more than one `Settings` source, merge them with
  * {@link mergeSettings} first and pass the single result in here.
+ *
+ * Concurrent trust-resource requests using the global fetch and the same policy are shared.
+ * Custom fetch implementations are isolated because their request context may be mutable.
+ * Each trust-resource fetch has a 30-second deadline covering retries and body consumption;
+ * a timeout aborts the request, rejects all waiting resolutions, and permits a later retry.
+ * Completed responses are not cached.
  *
  * @param settings Settings to resolve.
  * @param options Optional configurations for fetch-with-retry.
@@ -393,6 +405,122 @@ const TRUST_SETTINGS_KEYS: readonly TrustAnchorKey[] = [
   'allowedList'
 ];
 
+const inFlightTrustFetches = new Map<string, Promise<string>>();
+const TRUST_FETCH_TIMEOUT_MS = 30_000;
+const functionIds = new WeakMap<object, number>();
+let nextFunctionId = 0;
+
+function getFunctionId(fn: object | undefined, defaultId: string): string {
+  if (!fn) {
+    return defaultId;
+  }
+
+  let id = functionIds.get(fn);
+  if (id === undefined) {
+    id = ++nextFunctionId;
+    functionIds.set(fn, id);
+  }
+  return String(id);
+}
+
+function getTrustFetchKey(url: string, options?: FetchWithRetryOptions): string {
+  const fetchPolicy = [
+    options?.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES,
+    options?.maxRetries ?? DEFAULT_MAX_RETRIES,
+    options?.initialRetryDelayMs ?? DEFAULT_INITIAL_RETRY_DELAY_MS,
+    options?.maxRetryDelayMs ?? DEFAULT_MAX_RETRY_DELAY_MS,
+    options?.maxRetryAfterMs ?? DEFAULT_MAX_RETRY_AFTER_MS,
+    getFunctionId(options?.isRetryableStatus, 'default-status'),
+    getFunctionId(options?.isRetryableError, 'default-error'),
+    getFunctionId(options?.signal, 'no-signal'),
+    getFunctionId(globalThis.fetch, 'global-fetch')
+  ];
+
+  return JSON.stringify([url, ...fetchPolicy]);
+}
+
+function fetchTrustSetting(
+  url: string,
+  options?: FetchWithRetryOptions
+): Promise<string> {
+  validateFetchWithRetryOptions(options);
+  if (options?.fetch) {
+    return executeTrustFetch(url, options);
+  }
+
+  const key = getTrustFetchKey(url, options);
+  const existing = inFlightTrustFetches.get(key);
+  if (existing) {
+    return existing;
+  }
+
+  const request = executeTrustFetch(url, options);
+  inFlightTrustFetches.set(key, request);
+  const clearRequest = () => {
+    if (inFlightTrustFetches.get(key) === request) {
+      inFlightTrustFetches.delete(key);
+    }
+  };
+  void request.then(clearRequest, clearRequest);
+
+  return request;
+}
+
+async function executeTrustFetch(
+  url: string,
+  options?: FetchWithRetryOptions
+): Promise<string> {
+  const controller = new AbortController();
+  const fetchFn = options?.fetch ?? globalThis.fetch;
+  const externalSignal = options?.signal;
+  const requestSignal = externalSignal
+    ? AbortSignal.any([controller.signal, externalSignal])
+    : controller.signal;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let removeAbortListener: (() => void) | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      const error = new DOMException(
+        `Trust resource fetch timed out after ${TRUST_FETCH_TIMEOUT_MS} ms: ${url}`,
+        'TimeoutError'
+      );
+      controller.abort(error);
+      reject(error);
+    }, TRUST_FETCH_TIMEOUT_MS);
+  });
+  const externalAbort = externalSignal
+    ? new Promise<never>((_resolve, reject) => {
+        const onAbort = () => {
+          reject(
+            externalSignal.reason ??
+              new DOMException('The operation was aborted', 'AbortError')
+          );
+        };
+        if (externalSignal.aborted) {
+          onAbort();
+        } else {
+          externalSignal.addEventListener('abort', onAbort, { once: true });
+          removeAbortListener = () =>
+            externalSignal.removeEventListener('abort', onAbort);
+        }
+      })
+    : undefined;
+
+  try {
+    const request = fetchWithRetry(url, {
+      ...options,
+      fetch: fetchFn,
+      signal: requestSignal
+    });
+    return await Promise.race(
+      externalAbort ? [request, timeout, externalAbort] : [request, timeout]
+    );
+  } finally {
+    clearTimeout(timer);
+    removeAbortListener?.();
+  }
+}
+
 /**
  * Walks a TrustSettings object and fetches trust resources if necessary, replacing URLs with
  * their fetched, validated values. Mutates `settings` in place.
@@ -424,7 +552,7 @@ export async function resolveTrustSettings(
               throw new Error('Expected a string value for array item');
             }
 
-            const text = await fetchWithRetry(val, options);
+            const text = await fetchTrustSetting(val, options);
 
             if (shouldValidateKey(key) && !containsCerts(text)) {
               throw new Error(`Error parsing PEM file at: ${val}`);
@@ -437,7 +565,7 @@ export async function resolveTrustSettings(
           const combined = result.join('');
           settings[key as TrustAnchorKey] = combined;
         } else if (val && typeof val === 'string' && isUrl(val)) {
-          const text = await fetchWithRetry(val, options);
+          const text = await fetchTrustSetting(val, options);
 
           if (shouldValidateKey(key) && !containsCerts(text)) {
             throw new Error(`Error parsing PEM file at: ${val}`);
@@ -452,8 +580,15 @@ export async function resolveTrustSettings(
     await Promise.all(promises);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    throw new Error(`Failed to resolve trust settings. ${message}`, {
+    const error = new Error(`Failed to resolve trust settings. ${message}`, {
       cause: e
     });
+    if (
+      (e instanceof Error || e instanceof DOMException) &&
+      e.name === 'TimeoutError'
+    ) {
+      error.name = 'TimeoutError';
+    }
+    throw error;
   }
 }

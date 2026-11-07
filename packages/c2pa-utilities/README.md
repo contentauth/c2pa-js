@@ -60,7 +60,17 @@ const contextJson = await context.toJson();
 // '{"verify":{"verify_trust":true},"trust":{"trust_anchors":"-----BEGIN CERTIFICATE-----..."}}'
 ```
 
-This step is asynchronous, and can throw if a trust-anchor URL fails to resolve. Bindings call it once, right after building the base `Context`, rather than on every `Reader`/`Builder` call. Internally, `toJson()` is a thin wrapper over `resolveSettings`, below.
+This step is asynchronous, and can throw if a trust-anchor URL fails to resolve. Bindings resolve the settings before constructing the native/WASM `Reader` or `Builder`. Within a `Context`, concurrent calls share the same resolution promise and successful results are memoized; failed resolutions can be retried on a later call.
+
+#### Trust-resource fetching
+
+Concurrent trust-resource fetches using the global `fetch`, the same URL, and the same effective fetch policy share one pending request across settings resolutions. Entries are removed after success or failure; completed responses are not cached by this mechanism. Reusing a successfully resolved `Context` still reuses its memoized settings.
+
+Custom `fetch` implementations are not deduplicated because a wrapper can change its request context (such as authentication headers) without changing its function identity.
+
+Each trust-resource fetch has a fixed 30-second deadline covering network requests, retry delays, and response-body consumption. A timeout rejects with a `TimeoutError`, aborts the request and any pending retry delay, and rejects all waiting resolutions without substituting trust data. A later resolution can attempt a new fetch even if a custom implementation ignores cancellation.
+
+`context.toJson(options)` and `resolveSettings(settings, options)` accept the fetch policy options described below. The trust-resource deadline applies only to trust fetching, not to direct calls to `fetchWithRetry`, `fetchWithRetryRaw`, or `loadSettingsFromUrl`.
 
 #### Building `Settings` directly
 
@@ -120,6 +130,7 @@ const response = await fetchWithRetryRaw('https://example.com/upload', {
 Both functions accept an `FetchWithRetryOptions` object to override the defaults:
 
 ```typescript
+const controller = new AbortController();
 await fetchWithRetry(url, {
   maxRetries: 5,
   initialRetryDelayMs: 500,
@@ -128,11 +139,22 @@ await fetchWithRetry(url, {
   maxResponseBytes: 5 * 1024 * 1024,
   isRetryableStatus: (status) => status === 429 || status >= 500,
   isRetryableError: (error) => true,
-  fetch: myFetchImplementation
+  fetch: myFetchImplementation,
+  signal: controller.signal
 });
 ```
 
-An `AbortError` is never retried, and a malformed URL throws immediately rather than being retried.
+Aborting `signal` cancels the active request and any pending retry delay; the signal's reason is propagated and no further retry is attempted. A malformed URL throws immediately rather than being retried.
+
+Numeric fetch options must be finite and non-negative. `NaN`, `Infinity`, `-Infinity`, and negative values throw before fetching; infinity does not mean retry forever. `maxRetries` must also be a safe integer. Omitted options retain their defaults.
+
+| Option | Meaning of `0` |
+| --- | --- |
+| `maxRetries` | One initial attempt, no retries |
+| `maxResponseBytes` | Only an empty text response is allowed; not enforced by `fetchWithRetryRaw` |
+| `initialRetryDelayMs` | No exponential-delay component; jitter still applies |
+| `maxRetryDelayMs` | No backoff delay, including jitter |
+| `maxRetryAfterMs` | Reject positive `Retry-After` delays; allow zero or past dates |
 
 ### Asset size validation
 
