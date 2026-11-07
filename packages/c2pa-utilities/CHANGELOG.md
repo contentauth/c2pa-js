@@ -1,5 +1,21 @@
 # @contentauth/c2pa-utilities
 
+## 0.5.0
+
+### Minor Changes
+
+- e1dd252: Add Context options to configure trust-resource retries, HTTPS enforcement, and in-flight deduplication.
+
+  HTTPS enforcement rejects all redirects before contacting their targets and isolates strict requests from permissive in-flight requests. Document equivalent-policy request sharing and explicit undefined overrides of Context options. Completed responses are not cached; successful settings remain memoized only within each Context.
+
+### Patch Changes
+
+- 9973341: Reuse in-flight trust-resource fetches across concurrent settings resolutions using the global fetch and the same URL and effective fetch policy, without caching completed responses. Keep custom fetch implementations isolated to avoid sharing requests across mutable wrapper contexts.
+
+  Apply a 30-second trust-resource deadline covering retries and response-body consumption. Timeouts reject waiting resolutions and allow subsequent fetch attempts without silently substituting trust data.
+
+  Validate numeric fetch options before fetching: reject non-finite and negative values, require a safe-integer retry count, and document option-specific zero behavior.
+
 ## 0.4.0
 
 ### Minor Changes
