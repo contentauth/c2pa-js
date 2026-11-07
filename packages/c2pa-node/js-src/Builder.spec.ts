@@ -21,7 +21,6 @@ import * as crypto from "crypto";
 import { vi } from "vitest";
 import http from "http";
 import type { AddressInfo } from "net";
-import { setTimeout as delay } from "node:timers/promises";
 
 import { getNeonBinary } from "./binary.js";
 import type {
@@ -1173,7 +1172,7 @@ describe("Builder", () => {
       }
     });
 
-    it("uses refreshed settings after a trust-resource TTL expires", async () => {
+    it("resolves updated trust settings with a fresh Context while preserving existing instances", async () => {
       const pem1 =
         "-----BEGIN CERTIFICATE-----\nanchor one\n-----END CERTIFICATE-----";
       const pem2 =
@@ -1188,29 +1187,27 @@ describe("Builder", () => {
       vi.stubGlobal("fetch", fetch);
 
       try {
-        const context = new Context(
-          {
-            trust: {
-              trustAnchors: "https://example.com/anchors-node-context-ttl.pem",
-            },
+        const settings = {
+          trust: {
+            trustAnchors: "https://example.com/anchors-node-context-fresh.pem",
           },
-          undefined,
-          { trustFetch: { cacheTtlMs: 10 } },
-        );
+        };
+        const context = new Context(settings);
 
         const firstBuilder = await Builder.newAsync(context);
         const firstSettings = JSON.parse(await context.toJson());
         await Builder.withJsonAsync(manifestDefinition, context);
         expect(fetch).toHaveBeenCalledOnce();
 
-        await delay(25);
-
-        const refreshedBuilder = await Builder.newAsync(context);
-        const refreshedSettings = JSON.parse(await context.toJson());
+        const freshContext = new Context(settings);
+        const refreshedBuilder = await Builder.newAsync(freshContext);
+        const refreshedSettings = JSON.parse(await freshContext.toJson());
+        await Builder.newAsync(context);
 
         expect(fetch).toHaveBeenCalledTimes(2);
         expect(firstSettings.trust.anchors[0].trust_anchors).toBe(pem1);
         expect(refreshedSettings.trust.anchors[0].trust_anchors).toBe(pem2);
+        expect(JSON.parse(await context.toJson())).toEqual(firstSettings);
         expect(firstBuilder.getManifestDefinition()).toBeDefined();
         expect(refreshedBuilder.getManifestDefinition()).toBeDefined();
         expect(contextFactory).toHaveBeenCalledTimes(2);
@@ -1223,7 +1220,7 @@ describe("Builder", () => {
       }
     });
 
-    it("does not reuse expired native settings after a refresh fails", async () => {
+    it("does not reuse another Context's native settings when fresh resolution fails", async () => {
       const pem1 =
         "-----BEGIN CERTIFICATE-----\nanchor one\n-----END CERTIFICATE-----";
       const pem2 =
@@ -1240,27 +1237,31 @@ describe("Builder", () => {
       vi.stubGlobal("fetch", fetch);
 
       try {
-        const context = new Context(
-          {
-            trust: {
-              trustAnchors:
-                "https://example.com/anchors-node-context-refresh-failure.pem",
-            },
+        const settings = {
+          trust: {
+            trustAnchors:
+              "https://example.com/anchors-node-context-fresh-failure.pem",
           },
-          undefined,
-          { trustFetch: { cacheTtlMs: 10, maxRetries: 0 } },
-        );
+        };
+        const options = { trustFetch: { maxRetries: 0 } };
+        const context = new Context(settings, undefined, options);
 
         await Builder.newAsync(context);
-        await delay(25);
-        await expect(Builder.newAsync(context)).rejects.toThrow();
+        const freshContext = new Context(settings, undefined, options);
+        await expect(Builder.newAsync(freshContext)).rejects.toThrow();
+        expect(contextFactory).toHaveBeenCalledOnce();
+        await Builder.newAsync(context);
+        expect(fetch).toHaveBeenCalledTimes(2);
         expect(contextFactory).toHaveBeenCalledOnce();
 
-        const refreshedBuilder = await Builder.newAsync(context);
-        const refreshedSettings = JSON.parse(await context.toJson());
+        const refreshedBuilder = await Builder.newAsync(freshContext);
+        const refreshedSettings = JSON.parse(await freshContext.toJson());
         expect(fetch).toHaveBeenCalledTimes(3);
         expect(contextFactory).toHaveBeenCalledTimes(2);
         expect(refreshedSettings.trust.anchors[0].trust_anchors).toBe(pem2);
+        expect(
+          JSON.parse(await context.toJson()).trust.anchors[0].trust_anchors,
+        ).toBe(pem1);
         expect(refreshedBuilder.getManifestDefinition()).toBeDefined();
       } finally {
         contextFactory.mockRestore();
