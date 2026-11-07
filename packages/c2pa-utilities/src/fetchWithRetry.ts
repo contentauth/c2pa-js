@@ -140,6 +140,28 @@ export function validateFetchWithRetryOptions(
 }
 
 /**
+ * Options for resolving trust-resource URLs in a {@link Context}.
+ *
+ * In-flight request sharing is enabled by default. Completed responses are not cached.
+ * HTTP URLs remain accepted by default for compatibility; set `requireHttps` to reject them
+ * and all redirects.
+ */
+export interface TrustFetchOptions extends FetchWithRetryOptions {
+  /**
+   * Share a pending request for the same URL and fetch policy when using the global fetch.
+   * Defaults to `true`; custom fetch implementations are always isolated.
+   */
+  deduplicateInFlight?: boolean;
+
+  /**
+   * Reject non-HTTPS trust-resource URLs and all redirects. Defaults to `false`.
+   * Uses Fetch's `redirect: 'error'` mode to prevent HTTPS-to-HTTP downgrades before
+   * contacting the redirect target. Custom fetch implementations must honor this mode.
+   */
+  requireHttps?: boolean;
+}
+
+/**
  * @param error The error to check, usually from a `fetch` call.
  * @returns Whether `error` represents a deliberate `AbortError`.
  */

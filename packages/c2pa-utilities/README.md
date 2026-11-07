@@ -64,13 +64,29 @@ This step is asynchronous, and can throw if a trust-anchor URL fails to resolve.
 
 #### Trust-resource fetching
 
-Concurrent trust-resource fetches using the global `fetch`, the same URL, and the same effective fetch policy share one pending request across settings resolutions. Entries are removed after success or failure; completed responses are not cached by this mechanism. Reusing a successfully resolved `Context` still reuses its memoized settings.
+Concurrent trust-resource fetches using the global `fetch`, the same URL, and the same effective fetch policy share one pending request across settings resolutions. Entries are removed after success or failure; completed responses are not cached. Reusing a successfully resolved `Context` still reuses its memoized settings.
 
 Custom `fetch` implementations are not deduplicated because a wrapper can change its request context (such as authentication headers) without changing its function identity.
 
 Each trust-resource fetch has a fixed 30-second deadline covering network requests, retry delays, and response-body consumption. A timeout rejects with a `TimeoutError`, aborts the request and any pending retry delay, and rejects all waiting resolutions without substituting trust data. A later resolution can attempt a new fetch even if a custom implementation ignores cancellation.
 
-`context.toJson(options)` and `resolveSettings(settings, options)` accept the fetch policy options described below. The trust-resource deadline applies only to trust fetching, not to direct calls to `fetchWithRetry`, `fetchWithRetryRaw`, or `loadSettingsFromUrl`.
+Set `ContextOptions.trustFetch` using the third `Context` constructor argument to configure trust fetching. `context.toJson(options)` overrides those defaults for that resolution; `resolveSettings(settings, options)` accepts the same options directly. In addition to the fetch policy options described below:
+
+- `deduplicateInFlight` defaults to `true`; set it to `false` to make independent global-fetch requests.
+- `requireHttps` defaults to `false` for compatibility; set it to `true` to reject non-HTTPS trust-resource URLs and all redirects. Fetch's `redirect: 'error'` mode prevents contacting an HTTP redirect target. HTTPS redirects are also rejected, since browser Fetch does not expose cross-origin manual redirect destinations for validation. Custom fetch implementations must honor this redirect mode.
+
+In-flight request keys use the original URL, effective fetch policy (including HTTPS enforcement), and global fetch identity. Omitted numeric defaults and explicitly supplied default values produce the same policy key, so separate Contexts and newly created options objects can share a pending request. Custom retry predicates are keyed by function identity; creating a new predicate function produces a separate policy.
+
+```typescript
+const context = new Context(settings, undefined, {
+  trustFetch: { requireHttps: true, maxRetries: 1 }
+});
+await context.toJson();
+```
+
+In per-call options, an explicit `undefined` resets that option to its SDK default, while an omitted property retains the Context's configured value. For example, `context.toJson({ maxRetries: undefined })` restores the SDK's default retry count for the first resolution. This does not erase core settings or clear an already memoized successful resolution.
+
+Custom fetch implementations still honor HTTPS enforcement, numeric option validation, and the deadline, but never participate in in-flight sharing. The trust-resource deadline applies only to trust fetching, not to direct calls to `fetchWithRetry`, `fetchWithRetryRaw`, or `loadSettingsFromUrl`.
 
 #### Building `Settings` directly
 

@@ -17,7 +17,8 @@ import {
   fetchWithRetry,
   fetchWithRetryRaw,
   validateFetchWithRetryOptions,
-  type FetchWithRetryOptions
+  type FetchWithRetryOptions,
+  type TrustFetchOptions
 } from './fetchWithRetry.js';
 import { snakeCaseify, type SettingsObjectType } from './caseConversion.js';
 
@@ -211,14 +212,16 @@ export function withDefaultSettings(settings: Settings | undefined): Settings {
  */
 export async function resolveSettings(
   settings: Settings | undefined,
-  options?: FetchWithRetryOptions
+  options?: TrustFetchOptions
 ): Promise<string> {
   const finalSettings: Settings = withDefaultSettings(settings);
 
   const resolvePromises: Promise<void>[] = [];
 
   if (finalSettings.trust) {
-    resolvePromises.push(resolveTrustSettings(finalSettings.trust, options));
+    resolvePromises.push(
+      resolveTrustSettings(finalSettings.trust, options)
+    );
   }
 
   if (finalSettings.cawgTrust) {
@@ -423,13 +426,14 @@ function getFunctionId(fn: object | undefined, defaultId: string): string {
   return String(id);
 }
 
-function getTrustFetchKey(url: string, options?: FetchWithRetryOptions): string {
+function getTrustFetchKey(url: string, options?: TrustFetchOptions): string {
   const fetchPolicy = [
     options?.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES,
     options?.maxRetries ?? DEFAULT_MAX_RETRIES,
     options?.initialRetryDelayMs ?? DEFAULT_INITIAL_RETRY_DELAY_MS,
     options?.maxRetryDelayMs ?? DEFAULT_MAX_RETRY_DELAY_MS,
     options?.maxRetryAfterMs ?? DEFAULT_MAX_RETRY_AFTER_MS,
+    options?.requireHttps ?? false,
     getFunctionId(options?.isRetryableStatus, 'default-status'),
     getFunctionId(options?.isRetryableError, 'default-error'),
     getFunctionId(options?.signal, 'no-signal'),
@@ -441,24 +445,35 @@ function getTrustFetchKey(url: string, options?: FetchWithRetryOptions): string 
 
 function fetchTrustSetting(
   url: string,
-  options?: FetchWithRetryOptions
+  options?: TrustFetchOptions
 ): Promise<string> {
   validateFetchWithRetryOptions(options);
-  if (options?.fetch) {
+  const {
+    deduplicateInFlight = true,
+    requireHttps = false
+  } = options ?? {};
+  const parsedUrl = new URL(url);
+  if (requireHttps && parsedUrl.protocol !== 'https:') {
+    return Promise.reject(
+      new Error(`Trust resource URL must use HTTPS: ${url}`)
+    );
+  }
+
+  if (options?.fetch || !deduplicateInFlight) {
     return executeTrustFetch(url, options);
   }
 
-  const key = getTrustFetchKey(url, options);
-  const existing = inFlightTrustFetches.get(key);
+  const requestKey = getTrustFetchKey(url, options);
+  const existing = inFlightTrustFetches.get(requestKey);
   if (existing) {
     return existing;
   }
 
   const request = executeTrustFetch(url, options);
-  inFlightTrustFetches.set(key, request);
+  inFlightTrustFetches.set(requestKey, request);
   const clearRequest = () => {
-    if (inFlightTrustFetches.get(key) === request) {
-      inFlightTrustFetches.delete(key);
+    if (inFlightTrustFetches.get(requestKey) === request) {
+      inFlightTrustFetches.delete(requestKey);
     }
   };
   void request.then(clearRequest, clearRequest);
@@ -468,7 +483,7 @@ function fetchTrustSetting(
 
 async function executeTrustFetch(
   url: string,
-  options?: FetchWithRetryOptions
+  options?: TrustFetchOptions
 ): Promise<string> {
   const controller = new AbortController();
   const fetchFn = options?.fetch ?? globalThis.fetch;
@@ -509,7 +524,13 @@ async function executeTrustFetch(
   try {
     const request = fetchWithRetry(url, {
       ...options,
-      fetch: fetchFn,
+      fetch: (input, init) => {
+        const requestInit: RequestInit = { ...init };
+        if (options?.requireHttps) {
+          requestInit.redirect = 'error';
+        }
+        return fetchFn(input, requestInit);
+      },
       signal: requestSignal
     });
     return await Promise.race(
@@ -530,7 +551,7 @@ async function executeTrustFetch(
  */
 export async function resolveTrustSettings(
   settings: TrustSettings,
-  options?: FetchWithRetryOptions
+  options?: TrustFetchOptions
 ): Promise<void> {
   const shouldValidateKey = (key: string): boolean =>
     ['userAnchors', 'trustAnchors'].includes(key);
