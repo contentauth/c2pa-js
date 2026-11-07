@@ -74,7 +74,11 @@ export class Reader {
       const settingsJson = await context.toJson();
       const { worker } = c2pa;
 
-      const readerId = await worker.tx.reader_fromBlob(format ?? '', blob, settingsJson);
+      const readerId = await worker.tx.reader_fromBlob(
+        format ?? '',
+        blob,
+        worker.context(settingsJson)
+      );
 
       const reader = new Reader(worker, readerId);
       registry.register(reader, { worker, id: readerId }, reader);
@@ -114,12 +118,13 @@ export class Reader {
     try {
       const settingsJson = await context.toJson();
       const { worker } = c2pa;
+      const workerContext = worker.context(settingsJson);
 
       const readerId = await worker.tx.reader_fromBlobFragment(
         format,
         init,
         fragment,
-        settingsJson
+        workerContext
       );
 
       const reader = new Reader(worker, readerId);
