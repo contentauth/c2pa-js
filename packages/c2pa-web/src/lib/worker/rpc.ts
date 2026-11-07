@@ -18,6 +18,13 @@ import type {
 
 import { channel } from 'highgain';
 
+export interface WorkerContext {
+  id: number;
+  json?: string;
+}
+
+export const MAX_CACHED_CONTEXTS = 16;
+
 // Define browser-to-worker RPC interface
 const { createTx, rx } = channel<{
   initWorker: (module: WebAssembly.Module) => void;
@@ -28,13 +35,13 @@ const { createTx, rx } = channel<{
   reader_fromBlob: (
     format: string,
     blob: Blob,
-    contextJson?: string
+    context: WorkerContext
   ) => Promise<number>;
   reader_fromBlobFragment: (
     format: string,
     init: Blob,
     fragment: Blob,
-    contextJson?: string
+    context: WorkerContext
   ) => Promise<number>;
 
   // Reader methods
@@ -50,9 +57,9 @@ const { createTx, rx } = channel<{
   reader_free: (readerId: number) => void;
 
   // Builder construction methods
-  builder_new: (contextJson?: string) => number;
-  builder_fromJson: (json: string, contextJson?: string) => number;
-  builder_fromArchive: (archive: Blob, contextJson?: string) => number;
+  builder_new: (context: WorkerContext) => number;
+  builder_fromJson: (json: string, context: WorkerContext) => number;
+  builder_fromArchive: (archive: Blob, context: WorkerContext) => number;
 
   // Builder methods
   builder_setIntent: (builderId: number, intent: BuilderIntent) => void;

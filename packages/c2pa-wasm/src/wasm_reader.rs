@@ -7,14 +7,16 @@
 
 use std::io::{Cursor, Read, Seek};
 
-use c2pa::{Context, Reader};
+use c2pa::Reader;
 use js_sys::{JsString, Uint8Array};
 use serde::Serialize;
 use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 use web_sys::Blob;
 
-use crate::{error::WasmError, stream::BlobStream, utils::cursor_to_u8array};
+use crate::{
+    error::WasmError, stream::BlobStream, utils::cursor_to_u8array, wasm_context::context_from_json,
+};
 
 /// Wraps a `c2pa::Reader`.
 #[wasm_bindgen]
@@ -49,13 +51,8 @@ impl WasmReader {
         stream: impl Read + Seek + Send,
         context_json: Option<String>,
     ) -> Result<WasmReader, JsString> {
-        let context = match context_json {
-            Some(json) => Context::new()
-                .with_settings(json.as_str())
-                .map_err(WasmError::from)?,
-            None => Context::new(),
-        };
-        let reader = Reader::from_context(context)
+        let context = context_from_json(context_json)?;
+        let reader = Reader::from_shared_context(&context)
             .with_stream_async(format, stream)
             .await
             .map_err(WasmError::from)?;
@@ -102,13 +99,8 @@ impl WasmReader {
         fragment: impl Read + Seek + Send,
         context_json: Option<String>,
     ) -> Result<WasmReader, JsString> {
-        let context = match context_json {
-            Some(json) => Context::new()
-                .with_settings(json.as_str())
-                .map_err(WasmError::from)?,
-            None => Context::new(),
-        };
-        let reader = Reader::from_context(context)
+        let context = context_from_json(context_json)?;
+        let reader = Reader::from_shared_context(&context)
             .with_fragment_async(format, init, fragment)
             .await
             .map_err(WasmError::from)?;
