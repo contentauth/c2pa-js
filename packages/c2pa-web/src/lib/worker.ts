@@ -9,7 +9,12 @@
 
 /// <reference lib="webworker" />
 
-import { WasmReader, initSync, WasmBuilder } from '@contentauth/c2pa-wasm';
+import {
+  WasmReader,
+  initSync,
+  WasmBuilder,
+  encodeSignerPayload as wasmEncodeSignerPayload
+} from '@contentauth/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
 import { createWorkerTx, rx } from './worker/rpc.js';
 import { sanitizeManifestStore } from './worker/sanitizeManifestStore.js';
@@ -51,6 +56,10 @@ rx(
   wrapFunctionsForErrorHandling({
     async initWorker(module) {
       initSync({ module });
+    },
+    encodeSignerPayload(payload) {
+      const bytes = wasmEncodeSignerPayload(payload);
+      return transfer(bytes, bytes.buffer);
     },
     async reader_fromBlob(format, blob, contextJson) {
       const reader = await WasmReader.fromBlob(format, blob, contextJson);

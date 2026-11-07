@@ -167,6 +167,10 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
     // Identity Assertions
     cx.export_function(
+        "encodeSignerPayload",
+        neon_credential_holder::encode_signer_payload,
+    )?;
+    cx.export_function(
         "identitySignerNew",
         neon_identity_assertion_signer::NeonIdentityAssertionSigner::new,
     )?;

@@ -8,6 +8,7 @@
  */
 
 import type { SigningAlg } from '@contentauth/c2pa-utilities';
+import type { C2pa } from './c2pa.js';
 
 export type { SigningAlg };
 
@@ -57,6 +58,36 @@ export interface SignerPayload {
   referencedAssertions: HashedUri[];
   sigType: string;
   roles: string[];
+}
+
+/** Input to {@link encodeSignerPayload}; absent or empty roles are omitted. */
+export type SignerPayloadInput = Omit<SignerPayload, 'roles'> & {
+  roles?: string[];
+};
+
+/**
+ * Encode a CAWG SignerPayload using c2pa_cbor in this instance's existing
+ * worker. Hashes become CBOR byte strings; the wire keys are
+ * referenced_assertions, sig_type, and (when nonempty) role. The payload is
+ * copied to the worker, so encoding does not detach the caller's hash buffers.
+ *
+ * Input names are case-sensitive: referencedAssertions, sigType, roles, and each
+ * reference's url, hash, and alg. Wire-format names are not aliases. Missing or
+ * incorrectly cased required fields are rejected; unknown data properties are
+ * ignored, including incorrectly cased optional fields. Omitted, undefined, or
+ * empty roles are omitted on the wire; null roles are rejected.
+ *
+ * Use plain data objects with Uint8Array hashes. The entire payload, including
+ * unknown properties, must be structured-cloneable. An unknown function
+ * property that Node can ignore still causes a cloning failure here. Validation
+ * and cloning failures reject the Promise; Node's validation throws synchronously.
+ * Error types and messages are binding-specific.
+ */
+export async function encodeSignerPayload(
+  c2pa: C2pa,
+  payload: SignerPayloadInput
+): Promise<Uint8Array<ArrayBuffer>> {
+  return c2pa.worker.tx.encodeSignerPayload(payload);
 }
 
 /**
