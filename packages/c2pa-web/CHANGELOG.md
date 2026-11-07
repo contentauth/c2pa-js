@@ -1,5 +1,13 @@
 # @contentauth/c2pa-web
 
+## 0.16.1
+
+### Patch Changes
+
+- Updated dependencies [e1dd252]
+- Updated dependencies [9973341]
+  - @contentauth/c2pa-utilities@0.5.0
+
 ## 0.16.0
 
 ### Minor Changes
