@@ -11,7 +11,11 @@ import { test, describe, expect } from 'test/methods.js';
 import { vi } from 'vitest';
 import { createC2pa } from './c2pa.js';
 import { Reader } from './reader.js';
-import { AssetTooLargeError, Context, Settings } from '@contentauth/c2pa-utilities';
+import {
+  AssetTooLargeError,
+  Context,
+  Settings
+} from '@contentauth/c2pa-utilities';
 import { getBlobForAsset } from 'test/utils.js';
 import { MAX_SIZE_IN_BYTES } from './reader.js';
 
@@ -21,7 +25,7 @@ import C_with_CAWG_data from 'test/assets/C_with_CAWG_data.jpg';
 import C_with_CAWG_data_thumbnail from 'test/assets/C_with_CAWG_data_thumbnail.jpg';
 import C_with_CAWG_data_ManifestStore from 'test/manifests/C_with_CAWG_data.js';
 
-import C_with_CAWG_data_trusted_ManifestStore from 'test/manifests/C_with_CAWG_data_trusted.js';
+import C_with_CAWG_data_manifest_trusted_ManifestStore from 'test/manifests/C_with_CAWG_data_manifest_trusted.js';
 import C_with_CAWG_data_untrusted_ManifestStore from 'test/manifests/C_with_CAWG_data_untrusted.js';
 import no_alg from 'test/assets/no_alg.jpg';
 import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';
@@ -156,7 +160,9 @@ describe('reader', () => {
 
         const manifestStore = await reader!.manifestStore();
 
-        expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
+        expect(manifestStore).toEqual(
+          C_with_CAWG_data_manifest_trusted_ManifestStore
+        );
 
         c2pa.dispose();
       });
@@ -192,7 +198,7 @@ describe('reader', () => {
         );
 
         expect(await trustedReader!.manifestStore()).toEqual(
-          C_with_CAWG_data_trusted_ManifestStore
+          C_with_CAWG_data_manifest_trusted_ManifestStore
         );
         expect(await untrustedReader!.manifestStore()).toEqual(
           C_with_CAWG_data_untrusted_ManifestStore
@@ -286,7 +292,9 @@ describe('reader', () => {
         ).rejects.toThrow(AssetTooLargeError);
       });
 
-      test('should honor a max size from the given Context', async ({ c2pa }) => {
+      test('should honor a max size from the given Context', async ({
+        c2pa
+      }) => {
         const initBlob = await getBlobForAsset(dashinit);
         const fragmentBlob = await getBlobForAsset(dash1);
         const context = new Context(undefined, { maxSizeInBytes: 1 });
@@ -366,7 +374,7 @@ describe('reader', () => {
     });
   });
 
-  test('should report a trusted asset when when configured to verify trust', async ({
+  test('keeps manifest trust separate from legacy CAWG identity trust', async ({
     c2pa
   }) => {
     const context = new Context({
@@ -389,7 +397,18 @@ describe('reader', () => {
 
     const manifestStore = await reader!.manifestStore();
 
-    expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
+    expect(manifestStore).toEqual(
+      C_with_CAWG_data_manifest_trusted_ManifestStore
+    );
+    expect(manifestStore.validation_results?.activeManifest?.success).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'signingCredential.trusted' })
+      ])
+    );
+    expect(manifestStore.validation_results?.activeManifest?.failure).toEqual([
+      expect.objectContaining({ code: 'cawg.x509.credential.untrusted' })
+    ]);
+    expect(manifestStore.validation_state).toBe('Valid');
   });
 
   test('should report an untrusted asset when configured to verify trust', async ({
@@ -540,7 +559,9 @@ describe('reader', () => {
 
       const manifestStore = await reader!.manifestStore();
 
-      expect(manifestStore).toEqual(C_with_CAWG_data_trusted_ManifestStore);
+      expect(manifestStore).toEqual(
+        C_with_CAWG_data_manifest_trusted_ManifestStore
+      );
 
       c2pa.dispose();
     });

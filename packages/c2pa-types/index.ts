@@ -16,6 +16,18 @@ import type { Reader } from './types/ManifestStore.js';
 // eslint-disable-next-line @typescript-eslint/no-empty-interface, @typescript-eslint/no-empty-object-type
 export interface ManifestStore extends Reader {}
 
+/** @deprecated Upstream removed region-of-interest roles. Retained for source compatibility. */
+export type Role =
+  | 'c2pa.areaOfInterest'
+  | 'c2pa.cropped'
+  | 'c2pa.edited'
+  | 'c2pa.placed'
+  | 'c2pa.redacted'
+  | 'c2pa.subjectArea'
+  | 'c2pa.deleted'
+  | 'c2pa.styled'
+  | 'c2pa.watermarked';
+
 export type {
   Actor,
   AssertionMetadata,
@@ -37,7 +49,6 @@ export type {
   RegionOfInterest,
   ResourceRef,
   ReviewRating,
-  Role,
   Shape,
   SignatureInfo,
   StatusCodes,

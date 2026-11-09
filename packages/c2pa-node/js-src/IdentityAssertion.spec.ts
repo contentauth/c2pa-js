@@ -17,6 +17,8 @@ import type { Manifest } from "@contentauth/c2pa-types";
 import fs from "fs-extra";
 import * as crypto from "crypto";
 import { spawnSync } from "child_process";
+import { once } from "node:events";
+import { createServer } from "node:http";
 import { encodeSignerPayload } from "./index.js";
 
 import type {
@@ -186,6 +188,73 @@ describe("IdentityAssertionBuilder", () => {
       buffer: dest.buffer! as Buffer,
       mimeType: "image/jpeg",
     });
+  });
+
+  it("forwards timestamp requests and failures through the identity signer", async () => {
+    const { CallbackSigner } = await import("./Signer.js");
+    const { Builder } = await import("./Builder.js");
+    const { IdentityAssertionSigner } = await import("./IdentityAssertion.js");
+    const requests: {
+      method: string | undefined;
+      marker: string | string[] | undefined;
+    }[] = [];
+    const server = createServer((request, response) => {
+      requests.push({
+        method: request.method,
+        marker: request.headers["x-c2pa-preflight"],
+      });
+      request.resume();
+      response.writeHead(503).end("Timestamp service unavailable");
+    });
+    server.listen(0, "127.0.0.1");
+    await once(server, "listening");
+
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        throw new Error("Expected a TCP timestamp test server");
+      }
+
+      const testSigner = new TestSigner(
+        await fs.readFile("./tests/fixtures/certs/es256.pem"),
+      );
+      const signer = CallbackSigner.newSigner(
+        {
+          alg: "es256",
+          certs: [await fs.readFile("./tests/fixtures/certs/es256.pub")],
+          reserveSize: 10000,
+          tsaUrl: `http://127.0.0.1:${address.port}`,
+          tsaHeaders: [["x-c2pa-preflight", "identity-signer"]],
+          directCoseHandling: false,
+        },
+        testSigner.sign,
+      );
+      const builder = Builder.withJson({
+        claim_generator_info: [{ name: "c2pa_test", version: "2.0.0" }],
+        format: "image/jpeg",
+        assertions: manifestDefinition.assertions,
+      });
+
+      await expect(
+        builder.signAsync(
+          IdentityAssertionSigner.new(signer.getHandle()),
+          {
+            buffer: await fs.readFile("./tests/fixtures/CA.jpg"),
+            mimeType: "image/jpeg",
+          },
+          { buffer: null },
+        ),
+      ).rejects.toThrow(/timestamp|503/i);
+      expect(requests).toContainEqual({
+        method: "POST",
+        marker: "identity-signer",
+      });
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      });
+    }
   });
 });
 

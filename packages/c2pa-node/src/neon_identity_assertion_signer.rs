@@ -135,9 +135,13 @@ impl AsyncSigner for NeonIdentityAssertionSigner {
         c2pa::AsyncSigner::timestamp_request_body(&*self.signer.read().unwrap(), message)
     }
 
-    async fn send_timestamp_request(&self, message: &[u8]) -> Option<Result<Vec<u8>, c2pa::Error>> {
+    async fn send_timestamp_request(
+        &self,
+        message: &[u8],
+        context: &c2pa::Context,
+    ) -> Option<Result<Vec<u8>, c2pa::Error>> {
         let signer = self.signer.read().unwrap().clone();
-        c2pa::AsyncSigner::send_timestamp_request(&signer, message).await
+        c2pa::AsyncSigner::send_timestamp_request(&signer, message, context).await
     }
 
     fn dynamic_assertions(&self) -> Vec<Box<dyn AsyncDynamicAssertion>> {
