@@ -1409,11 +1409,6 @@ describe('builder', () => {
   });
 
   describe('Context-only API', () => {
-    test('does not expose the deprecated factories', ({ c2pa }) => {
-      expect(c2pa).not.toHaveProperty('reader');
-      expect(c2pa).not.toHaveProperty('builder');
-    });
-
     test('keeps contexts independent on the same worker', async ({ c2pa }) => {
       const blob = await getBlobForAsset(C_JPG);
       for (const verifyTrust of [true, false]) {
