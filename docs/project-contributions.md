@@ -194,9 +194,22 @@ Changesets creates releases using `GITHUB_TOKEN`, which does not trigger another
 release workflow. Its publication outputs therefore drive the update and deploy
 explicitly in the same workflow. When Changesets publishes both packages, both
 indexes update before one complete-site build and deployment. A separately published
-stable web or node GitHub release also rebuilds docs and updates only its own index;
-other package release events do not update either index. Prereleases are not
-automatically added. Main-branch package publishing, prerelease docs rebuilds after Changesets
+stable web or node GitHub release
+dispatches the release workflow on `main`, passing the exact tag through the
+`docs-release-tag` input. The tag-triggered job only dispatches; it does not use
+the `github-pages` environment. Promotion and deployment run exclusively with
+`refs/heads/main`, satisfying the environment's main-only deployment policy.
+`GITHUB_TOKEN` requires `actions: write` for this explicit workflow dispatch,
+which can trigger a workflow even though ordinary token-created release events
+cannot. Dispatch failures fail visibly; the main-branch run re-verifies GitHub
+and npm publication before changing the index. Manual docs rebuilds must also
+target `main`.
+
+The dispatched tag selects only its own package's index; node events cannot
+change the web index, and web events cannot change the node index. Unsupported
+package tags and invalid or prerelease dispatch inputs fail validation. Prereleases
+are not automatically added.
+Main-branch package publishing, prerelease docs rebuilds after Changesets
 publication, and manual docs-only/native-binary rebuild behavior are preserved.
 Manual native-binary rebuild inputs do not promote npm documentation versions.
 The automation does not modify release tags or bypass branch protection.
