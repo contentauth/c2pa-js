@@ -39,10 +39,8 @@ To build from source instead of using published packages only, you need
 
 #### TLS trust stores for builds
 
-This preflight uses the `c2pa-rs` **0.92.0-rc** Git branch for native bindings,
-WebAssembly, and type generation, with the tested commit pinned in `Cargo.lock`.
-See [preflighting c2pa-rs](./c2pa-rs-preflight.md) before updating that pin.
-Native SDK HTTP requests and Trustmark model downloads use Reqwest
+The workspace pins `c2pa` to **0.91.10** for native bindings, WebAssembly, and type
+generation. Native SDK HTTP requests and Trustmark model downloads use Reqwest
 with Rustls and share the patched `rustls-webpki` verifier and `webpki-roots`
 bundle in `Cargo.lock`.
 
