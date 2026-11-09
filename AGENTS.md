@@ -1,7 +1,8 @@
 # Working in c2pa-js
 
 Run the smallest relevant lint/test/build/typecheck targets.
-Broaden to affected consumers for shared types, utilities, or bindings; use `pnpm ci:check` for substantial cross-package changes.
+For shared types, utilities, or bindings, identify affected consumers from imports and call sites; test changed paths in each.
+Run `pnpm ci:check` for API or behavior changes spanning packages, or when consumer impact is unclear.
 Report exact checks and missing prerequisites; never claim skipped checks passed.
 
 Read [README.md](./README.md), the [development guide](./docs/project-contributions.md),
@@ -14,7 +15,7 @@ pnpm/Nx monorepo with a Rust workspace. Production packages use `@contentauth/`;
 
 - [c2pa-web](./packages/c2pa-web/): browser TypeScript API over WASM and shared utilities.
   Public entry points: [main](./packages/c2pa-web/src/index.ts), [inline](./packages/c2pa-web/src/inline.ts);
-  worker code: `src/lib/worker.ts`.
+  The [worker](./packages/c2pa-web/src/lib/worker.ts) bridges browser API calls to WASM.
 - [c2pa-node](./packages/c2pa-node/): Node API with a native Neon addon.
   TypeScript and tests: `js-src/`; Rust: `src/`; fixtures: `tests/`.
   Start at [public exports](./packages/c2pa-node/js-src/index.ts) and [native registrations](./packages/c2pa-node/src/lib.rs).
@@ -56,6 +57,18 @@ Run from the repository root unless noted. Use `pnpm exec nx`; no global Nx requ
 
 ```sh
 pnpm install --frozen-lockfile
+```
+
+- **Web tests:** next, run `pnpm exec playwright install` from `packages/c2pa-web`, then return to the root.
+  Vitest uses headless Chromium, Firefox, and WebKit.
+- **WASM tests:** `wasm-pack` with headless Chrome.
+- **Node tests:** build the local native addon; downloaded binaries do not test changed Rust.
+- **Trustmark tests:** download missing ONNX models; require network access or a populated writable cache.
+  CI uses `packages/c2pa-node/tmp/trustmark_models/`.
+
+Common commands; run only those relevant to your change:
+
+```sh
 pnpm exec nx build c2pa-web
 pnpm exec nx lint c2pa-web
 pnpm exec nx test c2pa-web
@@ -71,12 +84,6 @@ Prefer Nx targets for dependency-build ordering.
 `pnpm ci:check` runs library lint/test/build; nightly Rust formatting is separate.
 See [CI](./.github/workflows/ci.yml) for environment details.
 
-- **Web tests:** run `pnpm exec playwright install` from `packages/c2pa-web`, then return to the root.
-  Vitest uses headless Chromium, Firefox, and WebKit.
-- **WASM tests:** `wasm-pack` with headless Chrome.
-- **Node tests:** build the local native addon; downloaded binaries do not test changed Rust.
-- **Trustmark tests:** download missing ONNX models; require network access or a populated writable cache.
-  CI uses `packages/c2pa-node/tmp/trustmark_models/`.
 - **Manual browser testing:** build `c2pa-web`, then `pnpm exec nx serve testbed`.
   See [testbed README](./tools/testbed/README.md) for HTTPS setup.
 
@@ -109,7 +116,8 @@ See [CI](./.github/workflows/ci.yml) for environment details.
 
 ### Web and WASM
 
-- Check web main, inline, and worker surfaces when changing APIs.
+- Trace changed web APIs through main/inline entry points, worker messaging, and WASM.
+  Update and test affected layers only.
 - Preserve [WASM reader errors](./packages/c2pa-wasm/src/wasm_reader.rs): `JsString` supports Firefox workers.
 
 ## Generated files and dependencies
