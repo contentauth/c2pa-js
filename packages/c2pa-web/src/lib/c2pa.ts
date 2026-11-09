@@ -59,11 +59,6 @@ export interface C2pa {
  * ```
  */
 export async function createC2pa(config: Config): Promise<C2pa> {
-  if ('settings' in config) {
-    throw new TypeError(
-      'Config.settings is no longer supported. Pass a Context to Reader or Builder instead.'
-    );
-  }
   const { wasmSrc, workerSrc } = config;
 
   const wasm =

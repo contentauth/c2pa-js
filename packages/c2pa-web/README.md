@@ -110,7 +110,7 @@ A `Context`'s settings are resolved on its first use and then memoized for re-us
 
 ### Migrating from the deprecated factory API
 
-`createC2pa({ settings })`, `c2pa.reader` and `c2pa.builder` have been removed, including from `/inline`. Top-level settings now throw an error rather than being silently ignored. Use the static Reader/Builder methods with a `Context` instead:
+`createC2pa({ settings })`, `c2pa.reader` and `c2pa.builder` have been removed, including from `/inline`. Use the static Reader/Builder methods with a `Context` instead:
 
 ```typescript
 const c2pa = await createC2pa({ wasmSrc });
