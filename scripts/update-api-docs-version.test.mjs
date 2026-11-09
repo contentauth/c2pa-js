@@ -64,6 +64,28 @@ test('selects only the requested stable Changesets package or published release'
     tag
   );
   assert.equal(selectRelease('web', [], { release }), tag);
+  assert.equal(
+    selectRelease('web', [], { inputs: { 'docs-release-tag': tag } }),
+    tag
+  );
+  assert.equal(
+    selectRelease('web', [], { inputs: { 'docs-release-tag': '' } }),
+    ''
+  );
+  for (const invalidTag of [
+    '@contentauth/c2pa-node@0.16.0',
+    '@contentauth/c2pa-web@0.16.0-rc.1',
+    '@contentauth/c2pa-web@../main',
+    `${tag}\nunexpected`
+  ]) {
+    assert.throws(
+      () =>
+        selectRelease('web', [], {
+          inputs: { 'docs-release-tag': invalidTag }
+        }),
+      /exact stable release tag/
+    );
+  }
   for (const eventRelease of [
     { ...release, prerelease: true },
     { ...release, draft: true },
@@ -272,7 +294,99 @@ test('workflow persists to main without empty commits and fails on push or publi
   assert.match(failedPublication.stdout, /unavailable after retrying/);
 });
 
-test('release routing preserves explicit Changesets/manual deploys and prevents release-triggered package publishing', async () => {
+test('release events dispatch docs on main without entering the Pages environment', async (t) => {
+  const root = await fixture(t);
+  const workflow = await readFile(
+    path.join(ROOT, '.github/workflows/release.yml'),
+    'utf8'
+  );
+  const dispatch = workflow
+    .split('  dispatch-release-docs:\n')[1]
+    .split('\n  release:\n')[0];
+  assert.doesNotMatch(dispatch, /environment:/);
+  assert.match(dispatch, /actions: write/);
+  const condition = dispatch.split('    if: |\n')[1].split('    runs-on:')[0];
+  const shouldDispatch = (eventName, eventRelease) =>
+    vm.runInNewContext(condition, {
+      startsWith: (value, prefix) => value.startsWith(prefix),
+      github: { event_name: eventName, event: { release: eventRelease } }
+    });
+  assert.equal(shouldDispatch('release', release), true);
+  assert.equal(shouldDispatch('push'), false);
+  assert.equal(shouldDispatch('workflow_dispatch'), false);
+  assert.equal(
+    shouldDispatch('release', { ...release, prerelease: true }),
+    false
+  );
+  assert.equal(shouldDispatch('release', { ...release, draft: true }), false);
+  for (const name of ['c2pa-node', 'c2pa-wasm']) {
+    assert.equal(
+      shouldDispatch('release', {
+        ...release,
+        tag_name: `@contentauth/${name}@0.16.0`
+      }),
+      false
+    );
+  }
+  const bin = path.join(root, 'bin');
+  await mkdir(bin);
+  const argsFile = path.join(root, 'dispatch-args');
+  await writeFile(
+    path.join(bin, 'gh'),
+    '#!/bin/sh\nprintf "%s\\n" "$@" > "$ARGS_FILE"\nexit "${DISPATCH_STATUS:-0}"\n'
+  );
+  await chmod(path.join(bin, 'gh'), 0o755);
+  const shell = dispatch
+    .split('        run: |\n')[1]
+    .split('\n')
+    .map((line) => line.replace(/^ {10}/, ''))
+    .join('\n');
+  const run = (releaseTag, status = '0') =>
+    spawnSync(
+      'bash',
+      ['--noprofile', '--norc', '-eo', 'pipefail', '-c', shell],
+      {
+        cwd: root,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH}`,
+          DOCS_RELEASE_TAG: releaseTag,
+          GITHUB_REPOSITORY: 'contentauth/c2pa-js',
+          ARGS_FILE: argsFile,
+          DISPATCH_STATUS: status
+        }
+      }
+    );
+  const dispatched = run(tag);
+  assert.equal(dispatched.status, 0, dispatched.stderr);
+  assert.deepEqual((await readFile(argsFile, 'utf8')).trim().split('\n'), [
+    'workflow',
+    'run',
+    'release.yml',
+    '--repo',
+    'contentauth/c2pa-js',
+    '--ref',
+    'main',
+    '-f',
+    `docs-release-tag=${tag}`
+  ]);
+  assert.notEqual(run(tag, '1').status, 0);
+  for (const invalidTag of [
+    '@contentauth/c2pa-node@0.16.0',
+    '@contentauth/c2pa-web@0.16.0-rc.1',
+    '@contentauth/c2pa-web@00.16.0',
+    `${tag}\nunexpected`
+  ]) {
+    await rm(argsFile, { force: true });
+    const skipped = run(invalidTag);
+    assert.equal(skipped.status, 0, skipped.stderr);
+    assert.match(skipped.stdout, /skipping documentation dispatch/);
+    await assert.rejects(readFile(argsFile), { code: 'ENOENT' });
+  }
+});
+
+test('release routing only deploys from main and preserves explicit Changesets/manual rebuilds', async () => {
   const workflow = await readFile(
     path.join(ROOT, '.github/workflows/release.yml'),
     'utf8'
@@ -281,16 +395,25 @@ test('release routing preserves explicit Changesets/manual deploys and prevents 
   assert.match(workflow, /if: github\.event_name == 'push'/);
   const docs = workflow.split('  publish-docs:\n')[1];
   const condition = docs.split('    if: |\n')[1].split('    concurrency:')[0];
-  const shouldDeploy = (eventName, event = {}, published = '') =>
+  const shouldDeploy = (
+    eventName,
+    event = {},
+    published = '',
+    ref = 'refs/heads/main'
+  ) =>
     vm.runInNewContext(condition, {
       always: () => true,
       cancelled: () => false,
       startsWith: (value, prefix) => value.startsWith(prefix),
-      github: { event_name: eventName, event },
+      github: { event_name: eventName, event, ref },
       inputs: { version: event.version || '' },
       needs: { release: { outputs: { published } } }
     });
-  assert.equal(shouldDeploy('release', { release }), true);
+  assert.equal(
+    shouldDeploy('release', { release }, '', `refs/tags/${tag}`),
+    false
+  );
+  assert.equal(shouldDeploy('release', { release }), false);
   assert.equal(
     shouldDeploy('release', { release: { ...release, prerelease: true } }),
     false
@@ -314,20 +437,22 @@ test('release routing preserves explicit Changesets/manual deploys and prevents 
   assert.equal(shouldDeploy('push', {}, 'true'), true);
   assert.equal(shouldDeploy('push', {}, 'false'), false);
   assert.equal(shouldDeploy('workflow_dispatch'), true);
+  assert.equal(
+    shouldDeploy('workflow_dispatch', { inputs: { 'docs-release-tag': tag } }),
+    true
+  );
+  assert.equal(
+    shouldDeploy('workflow_dispatch', {}, '', 'refs/heads/feature'),
+    false
+  );
+  assert.equal(shouldDeploy('push', {}, 'true', 'refs/heads/feature'), false);
   assert.equal(shouldDeploy('workflow_dispatch', { version: '0.10.0' }), false);
   assert.match(docs, /needs\.release\.outputs\.published == 'true'/);
   assert.match(
     docs,
     /github\.event_name == 'workflow_dispatch' && inputs\.version == ''/
   );
-  assert.match(
-    docs,
-    /!github\.event\.release\.prerelease && !github\.event\.release\.draft/
-  );
-  assert.match(
-    docs,
-    /startsWith\(github\.event\.release\.tag_name, '@contentauth\/c2pa-web@'\)/
-  );
+  assert.match(docs, /github\.ref == 'refs\/heads\/main'/);
   assert.match(docs, /ref: main/);
   assert.match(docs, /contents: write/);
   assert.ok(

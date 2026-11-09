@@ -190,8 +190,18 @@ permit this bot update, or the job fails before deployment.
 Changesets creates releases using `GITHUB_TOKEN`, which does not trigger another
 release workflow. Its publication outputs therefore drive the update and deploy
 explicitly in the same workflow. A separately published stable web GitHub release
-also rebuilds docs; node and other package release events do not update the web
-index. Main-branch package publishing, prerelease docs rebuilds after Changesets
+dispatches the release workflow on `main`, passing the exact tag through the
+`docs-release-tag` input. The tag-triggered job only dispatches; it does not use
+the `github-pages` environment. Promotion and deployment run exclusively with
+`refs/heads/main`, satisfying the environment's main-only deployment policy.
+`GITHUB_TOKEN` requires `actions: write` for this explicit workflow dispatch,
+which can trigger a workflow even though ordinary token-created release events
+cannot. Dispatch failures fail visibly; the main-branch run re-verifies GitHub
+and npm publication before changing the index. Manual docs rebuilds must also
+target `main`.
+
+Node and other package release events do not update the web index.
+Main-branch package publishing, prerelease docs rebuilds after Changesets
 publication, and manual docs-only/native-binary rebuild behavior are preserved.
 The automation does not modify release tags.
 

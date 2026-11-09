@@ -22,6 +22,10 @@ on:
         description: 'Build and package binaries without uploading release assets (requires version)'
         type: boolean
         default: false
+      docs-release-tag:
+        description: 'Stable web release tag to promote in docs (leave empty for a rebuild)'
+        type: string
+        required: false
   push:
     branches:
       - main
@@ -31,6 +35,27 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
+  dispatch-release-docs:
+    if: |
+      github.event_name == 'release' &&
+      !github.event.release.prerelease && !github.event.release.draft &&
+      startsWith(github.event.release.tag_name, '@contentauth/c2pa-web@')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch stable web release docs on main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCS_RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [[ ! "$DOCS_RELEASE_TAG" =~ ^@contentauth/c2pa-web@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Not a stable web release tag; skipping documentation dispatch."
+            exit 0
+          fi
+          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref main \
+            -f "docs-release-tag=$DOCS_RELEASE_TAG"
+
   release:
     name: Release
     if: github.event_name == 'push'
@@ -298,12 +323,9 @@ jobs:
   publish-docs:
     needs: [release]
     if: |
-      always() && !cancelled() && (
+      always() && !cancelled() && github.ref == 'refs/heads/main' && (
         needs.release.outputs.published == 'true' ||
-        (github.event_name == 'workflow_dispatch' && inputs.version == '') ||
-        (github.event_name == 'release' &&
-         !github.event.release.prerelease && !github.event.release.draft &&
-         startsWith(github.event.release.tag_name, '@contentauth/c2pa-web@'))
+        (github.event_name == 'workflow_dispatch' && inputs.version == '')
       )
     concurrency:
       group: github-pages

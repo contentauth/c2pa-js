@@ -30,6 +30,15 @@ function stableVersion(packageKey, tag) {
 
 export function selectRelease(packageKey, publishedPackages, event) {
   const name = packageName(packageKey);
+  const dispatchedTag = event.inputs?.['docs-release-tag'];
+  if (dispatchedTag) {
+    if (!stableVersion(packageKey, dispatchedTag)) {
+      throw new Error(
+        'Expected an exact stable release tag for this documentation package.'
+      );
+    }
+    return dispatchedTag;
+  }
   if (event.release) {
     const release = event.release;
     return release.prerelease === false &&
