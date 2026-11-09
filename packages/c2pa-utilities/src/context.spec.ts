@@ -30,6 +30,13 @@ describe('Context', () => {
     expect(withSdkConfig).toEqual(await new Context().toJson());
   });
 
+  test('Context options are not serialized into the settings JSON', async () => {
+    const context = new Context(undefined, undefined, {
+      trustFetch: { maxRetries: 0, requireHttps: true }
+    });
+    expect(await context.toJson()).toEqual(await new Context().toJson());
+  });
+
   test('settings getter returns what was attached', () => {
     expect(new Context().settings).toBeUndefined();
 
@@ -92,4 +99,33 @@ describe('Context', () => {
     // The successful resolution is memoized as usual from here on.
     expect(context.toJson()).toBe(second);
   });
+
+  test('memoizes trust settings only within each Context without automatic refresh', async () => {
+    const fetch = vi.fn(async () => new Response(
+      `-----BEGIN CERTIFICATE-----\nanchor-${fetch.mock.calls.length}\n-----END CERTIFICATE-----`
+    ));
+    vi.stubGlobal('fetch', fetch);
+    vi.useFakeTimers();
+    const createContext = () => new Context(
+      { trust: { trustAnchors: 'https://example.com/context-memoization.pem' } },
+      undefined,
+      { trustFetch: { maxRetries: 0 } }
+    );
+    try {
+      const context = createContext();
+      const pending = context.toJson();
+      const first = await pending;
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(context.toJson()).toBe(pending);
+      await expect(context.toJson()).resolves.toBe(first);
+      expect(fetch).toHaveBeenCalledOnce();
+
+      await expect(createContext().toJson()).resolves.not.toBe(first);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
 });

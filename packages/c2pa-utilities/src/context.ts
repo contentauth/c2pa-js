@@ -7,7 +7,7 @@
  * it.
  */
 
-import type { FetchWithRetryOptions } from './fetchWithRetry.js';
+import type { TrustFetchOptions } from './fetchWithRetry.js';
 import { resolveSettings, type Settings } from './settings.js';
 
 /**
@@ -28,6 +28,17 @@ export interface SdkConfig {
 }
 
 /**
+ * SDK behavior options for a {@link Context}. These options stay in JavaScript and are not
+ * serialized into settings passed to the native/WASM SDK.
+ */
+export interface ContextOptions {
+  /**
+   * Controls fetching, retrying, and in-flight sharing of trust-resource URLs.
+   */
+  trustFetch?: TrustFetchOptions;
+}
+
+/**
  * A `Context` configures the behavior of a `Reader`/`Builder`. 
  * 
  * It is provided at creation time (e.g. `Reader.fromBlob(c2pa, format, blob, context)`),
@@ -40,11 +51,22 @@ export interface SdkConfig {
 export class Context {
   private readonly _settings?: Settings;
   private readonly _sdkConfig?: SdkConfig;
+  private readonly _options?: ContextOptions;
   private _jsonPromise?: Promise<string>;
 
-  constructor(settings?: Settings, sdkConfig?: SdkConfig) {
+  /**
+   * @param settings Core SDK settings.
+   * @param sdkConfig JavaScript SDK configuration.
+   * @param options JavaScript SDK behavior options, including trust-resource fetching controls.
+   */
+  constructor(
+    settings?: Settings,
+    sdkConfig?: SdkConfig,
+    options?: ContextOptions
+  ) {
     this._settings = settings;
     this._sdkConfig = sdkConfig;
+    this._options = options;
   }
 
   /**
@@ -72,19 +94,26 @@ export class Context {
    * Resolves this `Context`'s settings (fetching any embedded trust-anchor URLs) and serializes
    * the result for consumption by the WASM/native boundary. A successful result is memoized, so
    * resolution of this Context's settings only happens once. If different fetch-with-retry
-   * options need to be provided, callers should create a separate `Context` and then call
-   * `toJson()` with the desired options.
+   * options need to be provided after resolution succeeds, callers should create a separate
+   * `Context` with the desired options.
    *
    * A failed resolution is not memoized: the next call to `toJson()` tries again from scratch,
    * so a transient failure (e.g. a network error while fetching a trust-anchor URL) doesn't
    * permanently break this `Context`.
    *
-   * @param options Optional configurations for fetch-with-retry, used when resolving trust-anchor
-   * URLs. Only consulted on the first call, or the first call after a previous failure.
+   * @param options Optional configurations for trust-resource fetching. These override the
+   * corresponding options attached to this Context. Explicit `undefined` resets an option to
+   * its SDK default; omitted properties retain the Context's option. This does not clear core
+   * settings or a memoized successful result. Only consulted on the first call, or the first
+   * call after a previous failure.
    * @returns A JSON-serialized string of the resolved settings.
    */
-  toJson(options?: FetchWithRetryOptions): Promise<string> {
-    this._jsonPromise ??= resolveSettings(this.settings, options).catch(
+  toJson(options?: TrustFetchOptions): Promise<string> {
+    const trustFetchOptions = {
+      ...this._options?.trustFetch,
+      ...options
+    };
+    this._jsonPromise ??= resolveSettings(this.settings, trustFetchOptions).catch(
       (error: unknown) => {
         this._jsonPromise = undefined;
         throw error;

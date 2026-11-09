@@ -62,7 +62,33 @@ const contextJson = await context.toJson();
 // '{"verify":{"verify_trust":true},"trust":{"trust_anchors":"-----BEGIN CERTIFICATE-----..."}}'
 ```
 
-This step is asynchronous, and can throw if a trust-anchor URL fails to resolve. Reader/Builder factories call it when creating an instance; the Context memoizes successful resolution and retries after a failure. Internally, `toJson()` is a thin wrapper over `resolveSettings`, below.
+This step is asynchronous, and can throw if a trust-anchor URL fails to resolve. Bindings resolve the settings before constructing the native/WASM `Reader` or `Builder`. Within a `Context`, concurrent calls share the same resolution promise and successful results are memoized; failed resolutions can be retried on a later call.
+
+#### Trust-resource fetching
+
+Concurrent trust-resource fetches using the global `fetch`, the same URL, and the same effective fetch policy share one pending request across settings resolutions. Entries are removed after success or failure; completed responses are not cached. Reusing a successfully resolved `Context` still reuses its memoized settings.
+
+Custom `fetch` implementations are not deduplicated because a wrapper can change its request context (such as authentication headers) without changing its function identity.
+
+Each trust-resource fetch has a fixed 30-second deadline covering network requests, retry delays, and response-body consumption. A timeout rejects with a `TimeoutError`, aborts the request and any pending retry delay, and rejects all waiting resolutions without substituting trust data. A later resolution can attempt a new fetch even if a custom implementation ignores cancellation.
+
+Set `ContextOptions.trustFetch` using the third `Context` constructor argument to configure trust fetching. `context.toJson(options)` overrides those defaults for that resolution; `resolveSettings(settings, options)` accepts the same options directly. In addition to the fetch policy options described below:
+
+- `deduplicateInFlight` defaults to `true`; set it to `false` to make independent global-fetch requests.
+- `requireHttps` defaults to `false` for compatibility; set it to `true` to reject non-HTTPS trust-resource URLs and all redirects. Fetch's `redirect: 'error'` mode prevents contacting an HTTP redirect target. HTTPS redirects are also rejected, since browser Fetch does not expose cross-origin manual redirect destinations for validation. Custom fetch implementations must honor this redirect mode.
+
+In-flight request keys use the original URL, effective fetch policy (including HTTPS enforcement), and global fetch identity. Omitted numeric defaults and explicitly supplied default values produce the same policy key, so separate Contexts and newly created options objects can share a pending request. Custom retry predicates are keyed by function identity; creating a new predicate function produces a separate policy.
+
+```typescript
+const context = new Context(settings, undefined, {
+  trustFetch: { requireHttps: true, maxRetries: 1 }
+});
+await context.toJson();
+```
+
+In per-call options, an explicit `undefined` resets that option to its SDK default, while an omitted property retains the Context's configured value. For example, `context.toJson({ maxRetries: undefined })` restores the SDK's default retry count for the first resolution. This does not erase core settings or clear an already memoized successful resolution.
+
+Custom fetch implementations still honor HTTPS enforcement, numeric option validation, and the deadline, but never participate in in-flight sharing. The trust-resource deadline applies only to trust fetching, not to direct calls to `fetchWithRetry`, `fetchWithRetryRaw`, or `loadSettingsFromUrl`.
 
 #### Building `Settings` directly
 
@@ -122,6 +148,7 @@ const response = await fetchWithRetryRaw('https://example.com/upload', {
 Both functions accept an `FetchWithRetryOptions` object to override the defaults:
 
 ```typescript
+const controller = new AbortController();
 await fetchWithRetry(url, {
   maxRetries: 5,
   initialRetryDelayMs: 500,
@@ -130,11 +157,22 @@ await fetchWithRetry(url, {
   maxResponseBytes: 5 * 1024 * 1024,
   isRetryableStatus: (status) => status === 429 || status >= 500,
   isRetryableError: (error) => true,
-  fetch: myFetchImplementation
+  fetch: myFetchImplementation,
+  signal: controller.signal
 });
 ```
 
-An `AbortError` is never retried, and a malformed URL throws immediately rather than being retried.
+Aborting `signal` cancels the active request and any pending retry delay; the signal's reason is propagated and no further retry is attempted. A malformed URL throws immediately rather than being retried.
+
+Numeric fetch options must be finite and non-negative. `NaN`, `Infinity`, `-Infinity`, and negative values throw before fetching; infinity does not mean retry forever. `maxRetries` must also be a safe integer. Omitted options retain their defaults.
+
+| Option | Meaning of `0` |
+| --- | --- |
+| `maxRetries` | One initial attempt, no retries |
+| `maxResponseBytes` | Only an empty text response is allowed; not enforced by `fetchWithRetryRaw` |
+| `initialRetryDelayMs` | No exponential-delay component; jitter still applies |
+| `maxRetryDelayMs` | No backoff delay, including jitter |
+| `maxRetryAfterMs` | Reject positive `Retry-After` delays; allow zero or past dates |
 
 ### Asset size validation
 

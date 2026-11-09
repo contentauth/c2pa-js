@@ -18,6 +18,7 @@ import {
 } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import { Context } from './context.js';
 import {
   resolveSettings,
   createTrustSettings,
@@ -31,7 +32,13 @@ import {
   type VerifySettings,
   type Settings
 } from './settings.js';
-import { DEFAULT_MAX_RESPONSE_BYTES } from './fetchWithRetry.js';
+import {
+  DEFAULT_INITIAL_RETRY_DELAY_MS,
+  DEFAULT_MAX_RETRIES,
+  DEFAULT_MAX_RETRY_AFTER_MS,
+  DEFAULT_MAX_RETRY_DELAY_MS,
+  DEFAULT_MAX_RESPONSE_BYTES
+} from './fetchWithRetry.js';
 
 const server = setupServer();
 
@@ -393,6 +400,196 @@ describe('withDefaultSettings', () => {
   });
 });
 
+describe('trust settings in-flight requests', () => {
+  const url = 'https://example.com/trust-anchors.pem';
+  const pem = '-----BEGIN CERTIFICATE-----\nanchor\n-----END CERTIFICATE-----';
+
+  it('shares concurrent fetches across settings resolutions without caching completed responses', async () => {
+    const fetch = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      return new Response(pem);
+    });
+    vi.stubGlobal('fetch', fetch);
+    const resolve = () =>
+      resolveSettings({ trust: { trustAnchors: url } });
+
+    const [first, second] = await Promise.all([resolve(), resolve()]);
+
+    expect(fetch).toHaveBeenCalledOnce();
+    for (const settingsJson of [first, second]) {
+      expect(JSON.parse(settingsJson).trust.anchors[0].trust_anchors).toBe(pem);
+    }
+
+    await resolve();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('clears failed in-flight fetches so later resolution can retry', async () => {
+    let requestCount = 0;
+    vi.stubGlobal('fetch', async () => {
+      requestCount++;
+      if (requestCount === 1) {
+        throw new Error('network down');
+      }
+      return new Response(pem);
+    });
+    const resolve = () =>
+      resolveSettings({ trust: { trustAnchors: url } }, { maxRetries: 0 });
+
+    await expect(resolve()).rejects.toThrow('Failed to resolve trust settings');
+    const settingsJson = await resolve();
+
+    expect(requestCount).toBe(2);
+    expect(JSON.parse(settingsJson).trust.anchors[0].trust_anchors).toBe(pem);
+  });
+
+  it.each(['request', 'body'])(
+    'times out a hung %s and allows a later fetch',
+    async (phase) => {
+      let signal: AbortSignal | null | undefined;
+      const fetch = vi.fn(async (_input: string, init?: RequestInit) => {
+        signal = init?.signal;
+        if (fetch.mock.calls.length > 1) {
+          return new Response(pem);
+        }
+        if (phase === 'request') {
+          return new Promise<Response>(() => undefined);
+        }
+        return new Response(new ReadableStream());
+      });
+      vi.stubGlobal('fetch', fetch);
+      vi.useFakeTimers();
+      try {
+        const resolve = () =>
+          resolveSettings({ trust: { trustAnchors: url } }, { maxRetries: 0 });
+        const first = resolve();
+        const second = resolve();
+        const failures = Promise.all([
+          expect(first).rejects.toThrow('timed out'),
+          expect(second).rejects.toThrow('timed out')
+        ]);
+
+        expect(fetch).toHaveBeenCalledOnce();
+        await vi.advanceTimersByTimeAsync(29_999);
+        expect(signal?.aborted).toBe(false);
+        await vi.advanceTimersByTimeAsync(1);
+        await failures;
+        expect(signal?.aborted).toBe(true);
+
+        const recovered = await resolve();
+        expect(JSON.parse(recovered).trust.anchors[0].trust_anchors).toBe(pem);
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
+
+  it('cancels a retry delay at the deadline and reports a TimeoutError', async () => {
+    let requestCount = 0;
+    const fetch = vi.fn(async () => {
+      requestCount++;
+      if (requestCount === 1 || requestCount === 2) {
+        return new Response(null, {
+          status: 503,
+          headers: { 'Retry-After': requestCount === 1 ? '25' : '30' }
+        });
+      }
+      return new Response(pem);
+    });
+    vi.stubGlobal('fetch', fetch);
+    vi.useFakeTimers();
+    try {
+      const resolve = () =>
+        resolveSettings({ trust: { trustAnchors: url } });
+      const failure = resolve().catch((error: unknown) => error);
+
+      await vi.advanceTimersByTimeAsync(30_000);
+
+      expect(await failure).toMatchObject({
+        name: 'TimeoutError',
+        cause: expect.objectContaining({ name: 'TimeoutError' })
+      });
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(vi.getTimerCount()).toBe(0);
+
+      const recovered = await resolve();
+      expect(JSON.parse(recovered).trust.anchors[0].trust_anchors).toBe(pem);
+      expect(fetch).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not share custom fetch wrappers with mutable request context', async () => {
+    let tenant = 'first';
+    const fetch = vi.fn(async () => {
+      const currentTenant = tenant;
+      await Promise.resolve();
+      return new Response(
+        `-----BEGIN CERTIFICATE-----\n${currentTenant}\n-----END CERTIFICATE-----`
+      );
+    });
+    const resolve = () =>
+      resolveSettings({ trust: { trustAnchors: url } }, { fetch });
+
+    const first = resolve();
+    tenant = 'second';
+    const second = resolve();
+    const results = await Promise.all([first, second]);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(results[0]).trust.anchors[0].trust_anchors).toContain(
+      '\nfirst\n'
+    );
+    expect(JSON.parse(results[1]).trust.anchors[0].trust_anchors).toContain(
+      '\nsecond\n'
+    );
+  });
+
+  it('rejects invalid policies rather than sharing a default-policy request', async () => {
+    const fetch = vi.fn(async () => {
+      await Promise.resolve();
+      return new Response(pem);
+    });
+    vi.stubGlobal('fetch', fetch);
+    const pending = resolveSettings({ trust: { trustAnchors: url } });
+    await expect(
+      resolveSettings({ trust: { trustAnchors: url } }, { maxRetries: NaN })
+    ).rejects.toThrow('maxRetries');
+    await pending;
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it('keeps different retry policies isolated', async () => {
+    const fetch = vi.fn(async () => {
+      await Promise.resolve();
+      return new Response(pem);
+    });
+    vi.stubGlobal('fetch', fetch);
+    await Promise.all([
+      resolveSettings({ trust: { trustAnchors: url } }, { maxRetries: 0 }),
+      resolveSettings({ trust: { trustAnchors: url } }, { maxRetries: 1 })
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not share requests after the global fetch implementation changes', async () => {
+    const firstFetch = vi.fn(async () => new Response(pem));
+    const secondFetch = vi.fn(async () => new Response(pem));
+    vi.stubGlobal('fetch', firstFetch);
+    const first = resolveSettings({ trust: { trustAnchors: url } });
+    vi.stubGlobal('fetch', secondFetch);
+    await Promise.all([
+      first,
+      resolveSettings({ trust: { trustAnchors: url } })
+    ]);
+    expect(firstFetch).toHaveBeenCalledOnce();
+    expect(secondFetch).toHaveBeenCalledOnce();
+  });
+});
+
 describe('createTrustSettings / createCawgTrustSettings / createVerifySettings', () => {
   it('creates trust settings', () => {
     // Note: verifyTrustList is intentionally not part of the base TrustSettings type —
@@ -603,6 +800,307 @@ describe('settingsToJson', () => {
     expect('allowed_list' in cawgAnchor).toBe(false);
     expect(parsed.verify.verify_after_reading).toBe(false);
   });
+});
+
+describe('trust fetching Context options', () => {
+  const pem = '-----BEGIN CERTIFICATE-----\nanchor\n-----END CERTIFICATE-----';
+  const contextUrl = 'https://example.com/context-options-anchors.pem';
+
+  it('uses trust fetch options attached to Context', async () => {
+    const fetch = vi.fn(async () => new Response(pem));
+    const context = new Context(
+      { trust: { trustAnchors: contextUrl } },
+      undefined,
+      { trustFetch: { fetch, maxRetries: 0, requireHttps: true } }
+    );
+
+    await context.toJson();
+
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it('allows toJson options to override Context trust fetch options', async () => {
+    const contextFetch = vi.fn(async () => new Response(pem));
+    const overrideFetch = vi.fn(async () => new Response(pem));
+    const context = new Context(
+      { trust: { trustAnchors: contextUrl } },
+      undefined,
+      { trustFetch: { fetch: contextFetch } }
+    );
+
+    await context.toJson({ fetch: overrideFetch });
+
+    expect(contextFetch).not.toHaveBeenCalled();
+    expect(overrideFetch).toHaveBeenCalledOnce();
+  });
+
+  it('allows explicit undefined to restore SDK defaults without clearing core settings', async () => {
+    const fetch = vi.fn(async () => new Response(pem));
+    const contextFetch = vi.fn(async () => new Response(pem));
+    vi.stubGlobal('fetch', fetch);
+    const settings: Settings = {
+      trust: { trustAnchors: 'http://example.com/undefined-options.pem' },
+      verify: { verifyTrust: true }
+    };
+    const createContext = () =>
+      new Context(settings, undefined, {
+        trustFetch: {
+          fetch: contextFetch,
+          requireHttps: true
+        }
+      });
+    const overrides = {
+      fetch: undefined,
+      requireHttps: undefined
+    };
+
+    const context = createContext();
+    const result = await context.toJson(overrides);
+    await createContext().toJson(overrides);
+
+    expect(context.settings).toBe(settings);
+    expect(JSON.parse(result).verify.verify_trust).toBe(true);
+    expect(contextFetch).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('retains Context options omitted from per-call overrides', async () => {
+    const fetch = vi.fn(async () => new Response(pem));
+    const context = new Context(
+      { trust: { trustAnchors: 'http://example.com/retained-options.pem' } },
+      undefined,
+      { trustFetch: { fetch, requireHttps: true } }
+    );
+
+    await expect(context.toJson({ maxRetries: 0 })).rejects.toThrow(
+      'Trust resource URL must use HTTPS'
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('can require HTTPS for trust resources', async () => {
+    const fetch = vi.fn(async () => new Response(pem));
+    await expect(
+      resolveSettings(
+        { trust: { trustAnchors: 'http://example.com/anchors.pem' } },
+        { fetch, requireHttps: true }
+      )
+    ).rejects.toThrow('Trust resource URL must use HTTPS');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(['http:', 'https:'])(
+    'rejects %s redirect targets when HTTPS is required without contacting the target',
+    async (protocol) => {
+      const redirectUrl = `${protocol}//example.com/redirected-anchors.pem`;
+      const redirected = vi.fn(() => HttpResponse.text(pem));
+      server.use(
+        http.get(contextUrl, () =>
+          new HttpResponse(null, {
+            status: 302,
+            headers: { Location: redirectUrl }
+          })
+        ),
+        http.get(redirectUrl, redirected)
+      );
+
+      await expect(
+        resolveSettings(
+          { trust: { trustAnchors: contextUrl } },
+          { requireHttps: true, maxRetries: 0 }
+        )
+      ).rejects.toThrow('Failed to resolve trust settings');
+      expect(redirected).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([undefined, false])(
+    'preserves redirect following when requireHttps is %s',
+    async (requireHttps) => {
+      const redirectUrl = 'http://example.com/permissive-redirect.pem';
+      const redirected = vi.fn(() => HttpResponse.text(pem));
+      server.use(
+        http.get(contextUrl, () =>
+          new HttpResponse(null, {
+            status: 302,
+            headers: { Location: redirectUrl }
+          })
+        ),
+        http.get(redirectUrl, redirected)
+      );
+
+      const result = await resolveSettings(
+        { trust: { trustAnchors: contextUrl } },
+        { requireHttps, maxRetries: 0 }
+      );
+
+      expect(JSON.parse(result).trust.anchors[0].trust_anchors).toBe(pem);
+      expect(redirected).toHaveBeenCalledOnce();
+    }
+  );
+
+  it.each(['in-flight', 'completed'])(
+    'does not reuse a permissive %s request when HTTPS is required',
+    async (phase) => {
+      const redirectUrl = 'http://example.com/policy-redirect.pem';
+      const redirected = vi.fn(() => HttpResponse.text(pem));
+      const redirectSource = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return new HttpResponse(null, {
+          status: 302,
+          headers: { Location: redirectUrl }
+        });
+      });
+      server.use(
+        http.get(contextUrl, redirectSource),
+        http.get(redirectUrl, redirected)
+      );
+      const settings: Settings = {
+        trust: { trustAnchors: `${contextUrl}?redirect-policy=${phase}` }
+      };
+      const options = { maxRetries: 0 };
+      const permissive = resolveSettings(settings, options);
+      if (phase === 'completed') {
+        await permissive;
+      }
+      const strict = expect(
+        resolveSettings(settings, { ...options, requireHttps: true })
+      ).rejects.toThrow('Failed to resolve trust settings');
+
+      await Promise.all([permissive, strict]);
+
+      expect(redirectSource).toHaveBeenCalledTimes(2);
+      expect(redirected).toHaveBeenCalledOnce();
+    }
+  );
+
+  it('can disable in-flight deduplication', async () => {
+    const fetch = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      return new Response(pem);
+    });
+    vi.stubGlobal('fetch', fetch);
+    const options = { deduplicateInFlight: false };
+    const resolve = () =>
+      resolveSettings({ trust: { trustAnchors: contextUrl } }, options);
+
+    await Promise.all([resolve(), resolve()]);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('fetches completed trust responses again for a new Context', async () => {
+    const fetch = vi.fn(async () => new Response(
+      `-----BEGIN CERTIFICATE-----\nanchor-${fetch.mock.calls.length}\n-----END CERTIFICATE-----`
+    ));
+    vi.stubGlobal('fetch', fetch);
+    const settings: Settings = {
+      trust: { trustAnchors: `${contextUrl}?completed-response` }
+    };
+    const context = new Context(settings);
+    const first = await context.toJson();
+
+    await expect(new Context(settings).toJson()).resolves.not.toBe(first);
+    await expect(context.toJson()).resolves.toBe(first);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('shares only pending requests across Contexts with equivalent default fetch policies', async () => {
+    const fetch = vi.fn(async () => {
+      await Promise.resolve();
+      return new Response(pem);
+    });
+    vi.stubGlobal('fetch', fetch);
+    const settings: Settings = {
+      trust: { trustAnchors: `${contextUrl}?equivalent-policies` }
+    };
+    const first = new Context(settings);
+    const second = new Context(settings, undefined, {
+      trustFetch: {
+        maxResponseBytes: DEFAULT_MAX_RESPONSE_BYTES,
+        maxRetries: DEFAULT_MAX_RETRIES,
+        initialRetryDelayMs: DEFAULT_INITIAL_RETRY_DELAY_MS,
+        maxRetryDelayMs: DEFAULT_MAX_RETRY_DELAY_MS,
+        maxRetryAfterMs: DEFAULT_MAX_RETRY_AFTER_MS,
+        requireHttps: false
+      }
+    });
+
+    const results = await Promise.all([first.toJson(), second.toJson()]);
+    expect(results[0]).toBe(results[1]);
+    expect(fetch).toHaveBeenCalledOnce();
+    await expect(new Context(settings).toJson()).resolves.toBe(results[0]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps custom fetch requests independent before and after completion', async () => {
+    let tenant = 'first';
+    const fetch = vi.fn(async () => {
+      const currentTenant = tenant;
+      await Promise.resolve();
+      return new Response(
+        `-----BEGIN CERTIFICATE-----\n${currentTenant}\n-----END CERTIFICATE-----`
+      );
+    });
+    const resolve = () =>
+      resolveSettings(
+        { trust: { trustAnchors: `${contextUrl}?custom-requests` } },
+        { fetch }
+      );
+
+    const first = resolve();
+    tenant = 'second';
+    const second = resolve();
+    const results = await Promise.all([first, second]);
+    tenant = 'third';
+    results.push(await resolve());
+
+    expect(fetch).toHaveBeenCalledTimes(3);
+    for (const [index, expected] of ['first', 'second', 'third'].entries()) {
+      expect(JSON.parse(results[index]).trust.anchors[0].trust_anchors).toContain(
+        `\n${expected}\n`
+      );
+    }
+  });
+
+  it.each([true, false])(
+    'times out and recovers when in-flight deduplication is %s',
+    async (deduplicateInFlight) => {
+      let signal: AbortSignal | null | undefined;
+      const fetch = vi.fn(async (_input: string, init?: RequestInit) => {
+        signal = init?.signal;
+        if (fetch.mock.calls.length === 1) {
+          return new Promise<Response>(() => undefined);
+        }
+        return new Response(pem);
+      });
+      vi.stubGlobal('fetch', fetch);
+      const resolve = () =>
+        resolveSettings(
+          { trust: { trustAnchors: `${contextUrl}?timeout-recovery` } },
+          { deduplicateInFlight, maxRetries: 0 }
+        );
+
+      vi.useFakeTimers();
+      try {
+        const failure = expect(resolve()).rejects.toThrow('timed out');
+        await vi.advanceTimersByTimeAsync(29_999);
+        expect(signal?.aborted).toBe(false);
+        await vi.advanceTimersByTimeAsync(1);
+        await failure;
+        expect(signal?.aborted).toBe(true);
+
+        const recovered = await resolve();
+        expect(JSON.parse(recovered).trust.anchors[0].trust_anchors).toBe(pem);
+        expect(await resolve()).toBe(recovered);
+        expect(fetch).toHaveBeenCalledTimes(3);
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
+
 });
 
 describe('loadSettingsFromUrl', () => {
