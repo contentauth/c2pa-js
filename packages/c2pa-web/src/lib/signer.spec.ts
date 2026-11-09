@@ -16,6 +16,33 @@ const toHex = (bytes: Uint8Array) =>
   Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 
 describe('encodeSignerPayload', () => {
+  test('accepts raw instances and wrappers with different or missing factories', async ({
+    c2pa
+  }) => {
+    const wrapped = {
+      ...c2pa,
+      reader: () => ({ kind: 'wrapped-reader' }),
+      builder: () => ({ kind: 'wrapped-builder' })
+    };
+    const workerOnly = { worker: c2pa.worker };
+    const payload = {
+      referencedAssertions: [{ url: 'a', hash: Uint8Array.of(1, 2) }],
+      sigType: 'test'
+    };
+
+    // These public calls are also checked by the normal project typecheck:
+    // neither the wrapper's factories nor any other C2pa members are required.
+    const rawBytes = await encodeSignerPayload(c2pa, payload);
+    const wrappedBytes = await encodeSignerPayload(wrapped, payload);
+    const workerOnlyBytes = await encodeSignerPayload(workerOnly, payload);
+
+    expect(toHex(wrappedBytes)).toBe(
+      'a2757265666572656e6365645f617373657274696f6e7381a26375726c61616468617368420102687369675f747970656474657374'
+    );
+    expect(wrappedBytes).toEqual(rawBytes);
+    expect(workerOnlyBytes).toEqual(rawBytes);
+  });
+
   test('encodes asynchronously through the worker using the CAWG wire representation', async ({
     c2pa
   }) => {
