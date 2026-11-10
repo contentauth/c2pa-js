@@ -18,7 +18,7 @@ Complete API documentation is generated from TypeScript source using [TypeDoc](h
 
 `Settings` is a plain, JSON-serializable object configuring SDK behavior around trust anchors, verification options, and `Reader`/`Builder` options.
 
-`Context` is the only supported way to configure a `Reader`/`Builder`. `Context` objects are passed directly to the call that creates a `Reader`/`Builder` instance, so one running SDK instance can freely create many different `Reader`/`Builder`s, each with its own `Context`. `Context` changes do not propagate, since the `Context` is snapshotted when used to construct a `Reader`/`Builder`. Therefore, it can be safely used to construct multiple instances.
+`Context` is the only supported way to configure a `Reader`/`Builder`. `Context` objects are passed directly to the call that creates a `Reader`/`Builder` instance, so one running SDK instance can freely create many different `Reader`/`Builder`s, each with its own `Context`. `Context` changes do not propagate, since the `Context` is snapshotted when used to construct a `Reader`/`Builder`. Therefore, it can be safely used to construct multiple `Reader`/`Builder` instances.
 
 This package owns the single `Context` class definition. The Node, web and web `/inline` packages re-export it without bundling another copy. Importing or extending `Context` from any of these entry points preserves constructor identity, `instanceof` behavior and TypeScript assignability when they resolve the same utilities version. Downstream SDKs should re-export or subclass this class, not copy it; keep it external when bundling libraries and ensure consumers resolve one compatible version.
 
