@@ -180,16 +180,21 @@ The release workflow publishes the complete site after a new package release.
 Run that workflow manually to rebuild documentation without publishing packages.
 GitHub Pages publishes `api-docs/` as the site root, so public URLs are unchanged.
 
-For stable web releases, the existing `publish-docs` job verifies the exact GitHub
-release tag (`@contentauth/c2pa-web@<version>`) and npm publication, then commits
-only `api-docs/web-versions.json` directly to `main` using `GITHUB_TOKEN`. It builds
+For stable web and node releases, the existing `publish-docs` job verifies the exact
+GitHub release tag (`@contentauth/c2pa-web@<version>` or
+`@contentauth/c2pa-node@<version>`) and npm publication, then commits only that
+package's `api-docs/web-versions.json` or `api-docs/node-versions.json` directly to
+`main` using `GITHUB_TOKEN`. Each index promotes the exact version, removes duplicate
+entries for it, and preserves older versions and metadata. It builds
 and deploys the complete site from that same checkout after a successful push;
 reruns do not create empty commits. Branch protection and repository rules must
 permit this bot update, or the job fails before deployment.
 
 Changesets creates releases using `GITHUB_TOKEN`, which does not trigger another
 release workflow. Its publication outputs therefore drive the update and deploy
-explicitly in the same workflow. A separately published stable web GitHub release
+explicitly in the same workflow. When Changesets publishes both packages, both
+indexes update before one complete-site build and deployment. A separately published
+stable web or node GitHub release
 dispatches the release workflow on `main`, passing the exact tag through the
 `docs-release-tag` input. The tag-triggered job only dispatches; it does not use
 the `github-pages` environment. Promotion and deployment run exclusively with
@@ -200,10 +205,14 @@ cannot. Dispatch failures fail visibly; the main-branch run re-verifies GitHub
 and npm publication before changing the index. Manual docs rebuilds must also
 target `main`.
 
-Node and other package release events do not update the web index.
+The dispatched tag selects only its own package's index; node events cannot
+change the web index, and web events cannot change the node index. Unsupported
+package tags and invalid or prerelease dispatch inputs fail validation. Prereleases
+are not automatically added.
 Main-branch package publishing, prerelease docs rebuilds after Changesets
 publication, and manual docs-only/native-binary rebuild behavior are preserved.
-The automation does not modify release tags.
+Manual native-binary rebuild inputs do not promote npm documentation versions.
+The automation does not modify release tags or bypass branch protection.
 
 For unversioned web-only source documentation, run `pnpm build:docs` from
 `packages/c2pa-web`; its output goes into that package's `api-docs/` directory.

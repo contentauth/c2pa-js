@@ -32,12 +32,14 @@ export function selectRelease(packageKey, publishedPackages, event) {
   const name = packageName(packageKey);
   const dispatchedTag = event.inputs?.['docs-release-tag'];
   if (dispatchedTag) {
-    if (!stableVersion(packageKey, dispatchedTag)) {
+    if (
+      !Object.keys(PACKAGES).some((key) => stableVersion(key, dispatchedTag))
+    ) {
       throw new Error(
-        'Expected an exact stable release tag for this documentation package.'
+        'Expected an exact stable release tag for a documentation package.'
       );
     }
-    return dispatchedTag;
+    return stableVersion(packageKey, dispatchedTag) ? dispatchedTag : '';
   }
   if (event.release) {
     const release = event.release;
