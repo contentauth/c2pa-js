@@ -3,5 +3,5 @@
   "compilerOptions": {
     "outDir": "dist"
   },
-  "include": ["index.ts", "index.test-d.ts", "types/**/*.ts"]
+  "include": ["index.ts", "types/**/*.ts"]
 }
