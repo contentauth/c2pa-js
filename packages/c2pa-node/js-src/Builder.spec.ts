@@ -1147,10 +1147,35 @@ describe("Builder", () => {
         );
         expect(builder1.getManifestDefinition()).toBeDefined();
         expect(builder2.getManifestDefinition()).toBeDefined();
-        expect(contextFactory).toHaveBeenCalledTimes(2);
+        expect(contextFactory).toHaveBeenCalledTimes(3);
       } finally {
         contextFactory.mockRestore();
       }
+    });
+
+    it.each([
+      null,
+      { verify: { verifyTrust: false } },
+      '{"verify":{"verify_trust":false}}',
+    ])("rejects non-Context configuration %j", async (configuration) => {
+      // @ts-expect-error SDK creation requires a Context, not raw settings or null.
+      await expect(Builder.newAsync(configuration)).rejects.toThrow(TypeError);
+      await expect(
+        // @ts-expect-error SDK creation requires a Context, not raw settings or null.
+        Builder.withJsonAsync(manifestDefinition, configuration),
+      ).rejects.toThrow(TypeError);
+      await expect(
+        // @ts-expect-error SDK creation requires a Context, not raw settings or null.
+        Builder.fromArchive(source, configuration),
+      ).rejects.toThrow(TypeError);
+      await expect(
+        // @ts-expect-error SDK creation requires a Context, not raw settings or null.
+        Reader.fromAsset(source, configuration),
+      ).rejects.toThrow(TypeError);
+      await expect(
+        // @ts-expect-error SDK creation requires a Context, not raw settings or null.
+        Reader.fromManifestDataAndAsset(Buffer.alloc(0), source, configuration),
+      ).rejects.toThrow(TypeError);
     });
 
     it("newAsync(context) fetches trust-anchor URLs before creating the Builder", async () => {
