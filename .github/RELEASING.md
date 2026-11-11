@@ -18,9 +18,19 @@ existing GitHub release. It does not publish npm packages or documentation.
 Existing release assets are left unchanged; selecting **all** still builds those
 targets but skips their uploads.
 
+To repair an incompatible existing binary, select its target and enable
+**replace-existing**. The workflow builds and validates the replacement before
+replacing that asset; the default still preserves existing assets.
+
+Linux binaries are built on Ubuntu 24.04 and checked for glibc requirements no
+newer than 2.39. The x86_64 binary must also load successfully on that runner
+before it can be uploaded. Linux build caches include this baseline so newer
+runner images cannot supply incompatible cached output.
+
 Leaving the version empty preserves the manual documentation-only workflow.
 
 ## Dry runs (verification without upload)
+
 To verify a rebuild before uploading release assets, enter a version and enable
 **dry-run**. The workflow still checks out the release tag, verifies npm
 availability, builds and packages the binary, and looks up the existing GitHub
