@@ -70,6 +70,8 @@ export type SignerPayloadInput = Omit<SignerPayload, 'roles'> & {
  * worker. Hashes become CBOR byte strings; the wire keys are
  * referenced_assertions, sig_type, and (when nonempty) role. The payload is
  * copied to the worker, so encoding does not detach the caller's hash buffers.
+ * Only the instance's worker capability is required; wrappers may replace or
+ * omit its reader and builder factories.
  *
  * Input names are case-sensitive: referencedAssertions, sigType, roles, and each
  * reference's url, hash, and alg. Wire-format names are not aliases. Missing or
@@ -84,7 +86,7 @@ export type SignerPayloadInput = Omit<SignerPayload, 'roles'> & {
  * Error types and messages are binding-specific.
  */
 export async function encodeSignerPayload(
-  c2pa: C2pa,
+  c2pa: Pick<C2pa, 'worker'>,
   payload: SignerPayloadInput
 ): Promise<Uint8Array<ArrayBuffer>> {
   return c2pa.worker.tx.encodeSignerPayload(payload);

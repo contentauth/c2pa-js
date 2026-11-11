@@ -194,12 +194,6 @@ export interface HashedUri {
   alg?: string;
 }
 
-/**
- * Optional settings that can be provided when creating a Reader or Builder.
- * Can be a JSON string or a settings object.
- */
-export type C2paSettings = string | object;
-
 export interface BuilderInterface {
   /** 
    * An intent lets the API know what kind of manifest to create.
@@ -536,27 +530,3 @@ export interface TrustmarkConfig {
   version: TrustmarkVersion;
   modelPath?: string;
 }
-
-import type {
-  Settings as _Settings,
-  TrustSettings as _TrustSettings,
-  VerifySettings as _VerifySettings
-} from "@contentauth/c2pa-utilities";
-
-/**
- * @deprecated Use `TrustSettings` instead, which encapsulates both normal trust and CAWG trust settings.
- * Kept as an alias for backwards compatibility.
- */
-export type TrustConfig = _TrustSettings;
-
-/**
- * @deprecated Use `VerifySettings` instead.
- * Kept as an alias for backwards compatibility.
- */
-export type VerifyConfig = _VerifySettings;
-
-/**
- * @deprecated Use `Settings` instead.
- * Kept as an alias for backwards compatibility.
- */
-export type SettingsContext = _Settings;

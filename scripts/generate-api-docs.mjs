@@ -49,7 +49,10 @@ const VERSION =
 
 export async function loadVersions(filename) {
   const config = JSON.parse(await readFile(filename, 'utf8'));
-  const versions = config?.versions;
+  return validateVersions(config?.versions);
+}
+
+export function validateVersions(versions) {
   if (
     !Array.isArray(versions) ||
     versions.length === 0 ||

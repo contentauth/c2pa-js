@@ -22,16 +22,44 @@ on:
         description: 'Build and package binaries without uploading release assets (requires version)'
         type: boolean
         default: false
+      docs-release-tag:
+        description: 'Stable web or node release tag to promote in docs (leave empty for a rebuild)'
+        type: string
+        required: false
   push:
     branches:
       - main
+  release:
+    types: [published]
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
+  dispatch-release-docs:
+    if: |
+      github.event_name == 'release' &&
+      !github.event.release.prerelease && !github.event.release.draft &&
+      (startsWith(github.event.release.tag_name, '@contentauth/c2pa-web@') ||
+       startsWith(github.event.release.tag_name, '@contentauth/c2pa-node@'))
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch stable package release docs on main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCS_RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [[ ! "$DOCS_RELEASE_TAG" =~ ^@contentauth/c2pa-(web|node)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Not a stable web or node release tag; skipping documentation dispatch."
+            exit 0
+          fi
+          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref main \
+            -f "docs-release-tag=$DOCS_RELEASE_TAG"
+
   release:
     name: Release
-    if: github.event_name != 'workflow_dispatch'
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -295,12 +323,16 @@ jobs:
 
   publish-docs:
     needs: [release]
-    if: ${{ always() && (needs.release.outputs.published == 'true' || (github.event_name == 'workflow_dispatch' && inputs.version == '')) }}
+    if: |
+      always() && !cancelled() && github.ref == 'refs/heads/main' && (
+        needs.release.outputs.published == 'true' ||
+        (github.event_name == 'workflow_dispatch' && inputs.version == '')
+      )
     concurrency:
       group: github-pages
       cancel-in-progress: false
     permissions:
-      contents: read
+      contents: write
       pages: write
       id-token: write
     environment:
@@ -310,6 +342,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main
           filter: tree:0
           fetch-depth: 0
 
@@ -318,6 +351,88 @@ jobs:
 
       - uses: ./.github/actions/install-dependencies
         name: Install dependencies
+
+      - name: Resolve stable web documentation release
+        id: web-release
+        env:
+          PUBLISHED_PACKAGES: ${{ needs.release.outputs.publishedPackages }}
+        run: |
+          tag=$(node scripts/update-api-docs-version.mjs select web)
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve stable node documentation release
+        id: node-release
+        env:
+          PUBLISHED_PACKAGES: ${{ needs.release.outputs.publishedPackages }}
+        run: |
+          tag=$(node scripts/update-api-docs-version.mjs select node)
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Verify release and persist web documentation version
+        if: steps.web-release.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCS_RELEASE_TAG: ${{ steps.web-release.outputs.tag }}
+        run: |
+          metadata="$RUNNER_TEMP/web-docs-release.json"
+          version="${DOCS_RELEASE_TAG##*@}"
+          encoded_tag=$(jq -rn --arg tag "$DOCS_RELEASE_TAG" '$tag | @uri')
+          found=false
+          for delay in 0 5 10 20 30 50 70; do
+            sleep "$delay"
+            if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$encoded_tag" > "$metadata" &&
+              npm view "@contentauth/c2pa-web@$version" version --json \
+                --registry=https://registry.npmjs.org |
+                jq -e --arg version "$version" '. == $version'; then
+              found=true
+              break
+            fi
+          done
+          if [ "$found" != true ]; then
+            echo "::error::Published web release or exact npm version unavailable after retrying."
+            exit 1
+          fi
+          node scripts/update-api-docs-version.mjs update web "$metadata"
+          if ! git diff --quiet -- api-docs/web-versions.json; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add api-docs/web-versions.json
+            git commit -m "docs: promote $DOCS_RELEASE_TAG API documentation"
+            git push origin HEAD:main
+          fi
+
+      - name: Verify release and persist node documentation version
+        if: steps.node-release.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCS_RELEASE_TAG: ${{ steps.node-release.outputs.tag }}
+        run: |
+          metadata="$RUNNER_TEMP/node-docs-release.json"
+          version="${DOCS_RELEASE_TAG##*@}"
+          encoded_tag=$(jq -rn --arg tag "$DOCS_RELEASE_TAG" '$tag | @uri')
+          found=false
+          for delay in 0 5 10 20 30 50 70; do
+            sleep "$delay"
+            if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$encoded_tag" > "$metadata" &&
+              npm view "@contentauth/c2pa-node@$version" version --json \
+                --registry=https://registry.npmjs.org |
+                jq -e --arg version "$version" '. == $version'; then
+              found=true
+              break
+            fi
+          done
+          if [ "$found" != true ]; then
+            echo "::error::Published node release or exact npm version unavailable after retrying."
+            exit 1
+          fi
+          node scripts/update-api-docs-version.mjs update node "$metadata"
+          if ! git diff --quiet -- api-docs/node-versions.json; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add api-docs/node-versions.json
+            git commit -m "docs: promote $DOCS_RELEASE_TAG API documentation"
+            git push origin HEAD:main
+          fi
 
       - run: pnpm exec nx run-many -t build --projects=tag:lib
 
