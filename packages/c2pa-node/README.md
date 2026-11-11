@@ -95,9 +95,6 @@ const isEmbedded = reader.isEmbedded();
 const remoteUrl = reader.remoteUrl();
 ```
 
-> [!NOTE]
-> `Reader.fromAsset`/`Reader.fromManifestDataAndAsset` also accept a raw settings object in place of a `Context` (e.g. `Reader.fromAsset(inputAsset, { verify: { verify_trust: true } })`), but this is deprecated — see [Per-instance settings (deprecated)](#per-instance-settings-deprecated).
-
 `Reader.fromAsset` and `Reader.fromManifestDataAndAsset` reject assets larger than 10 GB, throwing `AssetTooLargeError` (exported from `@contentauth/c2pa-node`). Note that for a `SourceBufferAsset`, this only rejects after the buffer is already fully allocated in memory. Pass a `FileAsset` instead for large or untrusted assets so oversized files are rejected before being read into memory.
 
 > [!WARNING]
@@ -137,9 +134,6 @@ await builder.addResource('resource://example', resourceAsset);
 // Sign the manifest
 const manifest = builder.sign(signer, inputAsset, outputAsset);
 ```
-
-> [!NOTE]
-> `Builder.new`/`Builder.withJson` (synchronous, taking a raw settings object in place of a `Context`) still work but are deprecated — see [Per-instance settings (deprecated)](#per-instance-settings-deprecated).
 
 #### Setting builder intent
 
@@ -535,11 +529,11 @@ const decodedData = await trustmark.decode(imageBuffer);
 
 ### Settings and configuration
 
-The library provides comprehensive settings management that can be configured per Reader/Builder instance, via a `Context`, or using helper functions. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
+Configure each Reader/Builder instance with a `Context`. Settings helper functions remain available to prepare the settings object passed to its constructor. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
 
 #### Using a Context
 
-A `Context` (from [`c2pa-utilities`](../c2pa-utilities/README.md#context-and-settings), re-exported directly from `@contentauth/c2pa-node` so you don't need to add that package yourself) wraps `Settings` and is the recommended way to configure a `Reader` or `Builder`:
+A `Context` (from [`c2pa-utilities`](../c2pa-utilities/README.md#context-and-settings), re-exported directly from `@contentauth/c2pa-node` so you don't need to add that package yourself) wraps `Settings` and is the only supported way to configure a `Reader` or `Builder`. Node, web and web's `/inline` entry point re-export the same class, so contexts and subclasses can be shared across packages:
 
 ```javascript
 import { Reader, Builder, Context } from '@contentauth/c2pa-node';
@@ -560,46 +554,30 @@ const context = new Context({
 // Pass a Context to Reader
 const reader = await Reader.fromAsset(inputAsset, context);
 
-// Builder has async, Context-aware counterparts to its synchronous factories below
+// Builder creation resolves the Context asynchronously
 const builder = await Builder.newAsync(context);
 const builder2 = await Builder.withJsonAsync(manifestDefinition, context);
 const builder3 = await Builder.fromArchive(archiveAsset, context);
 ```
 
 > [!NOTE]
-> As in `c2pa-web`, URLs in a `Context`'s trust-anchor settings are fetched and resolved before the Reader or Builder is created. The deprecated raw-settings API does not resolve URLs; use a `Context` for URL-based trust anchors.
+> As in `c2pa-web`, URLs in a `Context`'s trust-anchor settings are fetched and resolved before the Reader or Builder is created. Successful resolution is memoized when a Context is reused.
 
-#### Per-instance settings (deprecated)
+#### Migrating from deprecated settings APIs
 
-Passing settings directly as a JSON string, or as a raw object matching the native settings shape (snake_case keys, no defaults applied), is deprecated and will be removed in a future major version — use a `Context` instead (above). `Builder.new`/`Builder.withJson` stay synchronous for this deprecated path; prefer their `newAsync`/`withJsonAsync` counterparts with a `Context` instead.
+Raw settings objects, JSON/TOML strings and `null` are no longer accepted by Reader/Builder factories. Convert configuration to the camelCase `Settings` shape and wrap it in `new Context(settings)`. Omit the context argument, or pass `new Context()`, to use defaults.
 
-```javascript
-import { Reader, Builder } from '@contentauth/c2pa-node';
+| Removed API | Replacement |
+| --- | --- |
+| `Builder.new(settings)` | `await Builder.newAsync(context)` |
+| `Builder.withJson(definition, settings)` | `await Builder.withJsonAsync(definition, context)` |
+| `Reader.fromAsset(asset, settings)` | `await Reader.fromAsset(asset, context)` |
+| `Reader.fromManifestDataAndAsset(data, asset, settings)` | `await Reader.fromManifestDataAndAsset(data, asset, context)` |
+| `Builder.fromArchive(asset, settings)` | `await Builder.fromArchive(asset, context)` |
+| `C2paSettings`, `SettingsContext` | `Settings` for configuration objects; `Context` for factory arguments |
+| `TrustConfig`, `VerifyConfig` | `TrustSettings`, `VerifySettings` |
 
-// Create settings object
-const settings = {
-  verify: {
-    verify_after_reading: false,
-    verify_after_sign: false,
-    verify_trust: true,
-    ocsp_fetch: true
-  },
-  trust: {
-    verify_trust_list: true,
-    trust_anchors: "path/to/anchors.pem"
-  }
-};
-
-// Pass settings to Reader
-const reader = await Reader.fromAsset(inputAsset, settings);
-
-// Pass settings to Builder
-const builder = Builder.new(settings);
-
-// Settings can also be JSON strings
-const settingsJson = JSON.stringify(settings);
-const builder2 = Builder.new(settingsJson);
-```
+`Context` applies SDK defaults and resolves trust-anchor URLs; unlike the removed raw settings path, it does not pass native settings through unchanged.
 
 #### Settings helper functions
 
@@ -607,13 +585,11 @@ The library provides helper functions to create and manage settings objects:
 
 ```javascript
 import {
+  Context,
   createTrustSettings,
   createCawgTrustSettings,
   createVerifySettings,
-  mergeSettings,
-  settingsToJson,
-  loadSettingsFromFile,
-  loadSettingsFromUrl
+  mergeSettings
 } from '@contentauth/c2pa-node';
 
 // Create trust settings
@@ -645,21 +621,11 @@ const verifySettings = createVerifySettings({
 // Merge multiple settings
 const combinedSettings = mergeSettings(trustSettings, verifySettings);
 
-// combinedSettings is a plain Settings object — use it with a Context (recommended)...
+// combinedSettings is a plain Settings object — wrap it in a Context
 const readerWithContext = await Reader.fromAsset(inputAsset, new Context(combinedSettings));
-
-// ...or convert it to a JSON string for the deprecated per-instance settings path
-const jsonString = settingsToJson(combinedSettings);
-const readerWithJson = await Reader.fromAsset(inputAsset, jsonString);
-
-// loadSettingsFromFile/loadSettingsFromUrl return a raw JSON string, not a Settings
-// object, so they pair with the deprecated per-instance settings path, not Context, for now.
-const fileSettings = await loadSettingsFromFile('./c2pa-settings.json');
-const reader2 = await Reader.fromAsset(inputAsset, fileSettings);
-
-const urlSettings = await loadSettingsFromUrl('https://example.com/c2pa-settings.json');
-const builder = Builder.new(urlSettings);
 ```
+
+Low-level serialization and loading helpers remain available, but their raw JSON/TOML strings are not valid Reader/Builder factory arguments.
 
 #### Available settings
 

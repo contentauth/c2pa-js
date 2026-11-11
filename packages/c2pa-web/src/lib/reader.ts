@@ -12,8 +12,6 @@ import type { C2pa } from './c2pa.js';
 import type { WorkerManager } from './worker/workerManager.js';
 import {
   Context,
-  Settings,
-  mergeSettings,
   resolveConfiguredMaxSizeInBytes,
   validateAssetSize
 } from '@contentauth/c2pa-utilities';
@@ -199,63 +197,6 @@ export class Reader {
     registry.unregister(this);
     await this.#worker.tx.reader_free(this.#id);
   }
-}
-
-/**
- * @deprecated Use `Reader`'s static methods instead.
- */
-export interface ReaderFactory {
-  /**
-   * @param settings Optional settings for this reader. Will override any values inherited from
-   * the top-level settings passed to {@link createC2pa}.
-   * @deprecated Use {@link Reader.fromBlob} with a `Context` instead.
-   */
-  fromBlob: (
-    format: string,
-    blob: Blob,
-    settings?: Settings
-  ) => Promise<Reader | null>;
-
-  /**
-   * @param settings Optional settings for this reader. Will override any values inherited from
-   * the top-level settings passed to {@link createC2pa}.
-   * @deprecated Use {@link Reader.fromBlobFragment} with a `Context` instead.
-   */
-  fromBlobFragment: (
-    format: string,
-    init: Blob,
-    fragment: Blob,
-    settings?: Settings
-  ) => Promise<Reader | null>;
-}
-
-/**
- * @deprecated Use `Reader.fromBlob`/`Reader.fromBlobFragment` with a `Context` instead.
- * @param c2pa The `C2pa` instance to create readers on.
- * @param baseSettings Optional settings inherited by every reader created from this factory.
- * @returns A {@link ReaderFactory} object containing reader creation methods.
- */
-export function createReaderFactory(
-  c2pa: C2pa,
-  baseSettings: Settings = {}
-): ReaderFactory {
-  return {
-    fromBlob: (format, blob, settings = {}) =>
-      Reader.fromBlob(
-        c2pa,
-        format,
-        blob,
-        new Context(mergeSettings(baseSettings, settings))
-      ),
-    fromBlobFragment: (format, init, fragment, settings = {}) =>
-      Reader.fromBlobFragment(
-        c2pa,
-        format,
-        init,
-        fragment,
-        new Context(mergeSettings(baseSettings, settings))
-      )
-  };
 }
 
 function handleReaderCreationError(maybeError: unknown): null {

@@ -24,7 +24,6 @@ import type { AddressInfo } from "net";
 
 import type {
   BuilderInterface,
-  C2paSettings,
   JsCallbackSignerConfig,
   DestinationBufferAsset,
   SourceBufferAsset,
@@ -157,7 +156,7 @@ describe("Builder", () => {
       assertions: [],
       resources: { resources: {} },
     };
-    const builder = Builder.withJson(test_definition);
+    const builder = await Builder.withJsonAsync(test_definition);
     await builder.addIngredient(parent_json, source);
     builder.addAssertion("org.test.assertion", "assertion");
     await builder.addResource(thumbnail_ref.identifier, {
@@ -181,8 +180,8 @@ describe("Builder", () => {
   describe("Sign and Archive", () => {
     let builder: BuilderInterface;
 
-    beforeEach(() => {
-      builder = Builder.withJson(manifestDefinition);
+    beforeEach(async () => {
+      builder = await Builder.withJsonAsync(manifestDefinition);
       builder.updateManifestProperty("claim_version", 2);
       builder.setIntent("edit");
     });
@@ -303,12 +302,12 @@ describe("Builder", () => {
     });
 
     it("should construct reader directly from builder archive buffer", async () => {
-      const settings: C2paSettings = JSON.stringify({
+      const context = new Context({
         builder: {
-          generate_c2pa_archive: true,
+          generateC2paArchive: true,
         },
         verify: {
-          verify_after_reading: false,
+          verifyAfterReading: false,
         },
       });
       // Create a builder
@@ -325,7 +324,7 @@ describe("Builder", () => {
         resources: { resources: {} },
       };
 
-      const testBuilder = Builder.withJson(simpleManifestDefinition, settings);
+      const testBuilder = await Builder.withJsonAsync(simpleManifestDefinition, context);
 
       // Add an ingredient
       await testBuilder.addIngredient(parent_json, source);
@@ -346,7 +345,7 @@ describe("Builder", () => {
           buffer: archive.buffer! as Buffer,
           mimeType: "application/c2pa",
         },
-        settings,
+        context,
       );
       expect(reader).not.toBeNull();
     });
@@ -594,7 +593,7 @@ describe("Builder", () => {
         resources: { resources: {} },
       };
 
-      const builder = Builder.withJson(manifestDefinition);
+      const builder = await Builder.withJsonAsync(manifestDefinition);
 
       const ingredientJson = '{"title": "Test Ingredient"}';
       const testThumbnail = await fs.readFile("./tests/fixtures/thumbnail.jpg");
@@ -634,7 +633,7 @@ describe("Builder", () => {
     });
 
     it("should add ingredient with custom metadata", async () => {
-      const builder = Builder.new();
+      const builder = await Builder.newAsync();
       const ingredient = {
         title: "Test Ingredient",
         format: "image/jpeg",
@@ -670,7 +669,7 @@ describe("Builder", () => {
       const signer = CallbackSigner.newSigner(signerConfig, testSigner.sign);
 
       // Sign source asset with a thumbnail
-      const step1Builder = Builder.withJson({
+      const step1Builder = await Builder.withJsonAsync({
         claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
         title: "Asset With Thumbnail",
         format: "image/jpeg",
@@ -702,7 +701,7 @@ describe("Builder", () => {
 
       // Redact the thumbnail
       const thumbnailUri = `self#jumbf=/c2pa/${parentLabel}/c2pa.assertions/c2pa.thumbnail.claim`;
-      const redactionBuilder = Builder.withJson({
+      const redactionBuilder = await Builder.withJsonAsync({
         claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
         title: "Redacted Thumbnail Manifest",
         format: "image/jpeg",
@@ -740,7 +739,7 @@ describe("Builder", () => {
       // Sign source asset with multiple distinct assertions
       const piiLabel = "stds.schema-org.CreativeWork";
       const retainedLabel = "org.contentauth.retained";
-      const step1Builder = Builder.withJson({
+      const step1Builder = await Builder.withJsonAsync({
         claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
         title: "Asset With Multiple Assertions",
         format: "image/jpeg",
@@ -785,7 +784,7 @@ describe("Builder", () => {
 
       // Redact only the PII assertion
       const redactionUri = `self#jumbf=/c2pa/${parentLabel}/c2pa.assertions/${piiLabel}`;
-      const redactionBuilder = Builder.withJson({
+      const redactionBuilder = await Builder.withJsonAsync({
         claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
         title: "Redacted Assertion Manifest",
         format: "image/jpeg",
@@ -815,20 +814,20 @@ describe("Builder", () => {
       expect(assertionLabels).toContain(retainedLabel);
     });
 
-    it("should add redactions via addRedaction method", () => {
+    it("should add redactions via addRedaction method", async () => {
       const uri1 = "self#jumbf=/c2pa/test-label/c2pa.assertions/cawg.identity";
       const uri2 =
         "self#jumbf=/c2pa/test-label/c2pa.assertions/stds.schema-org.CreativeWork";
-      const builder = Builder.new();
+      const builder = await Builder.newAsync();
       builder.addRedaction(uri1, "c2pa.PII.present");
       builder.addRedaction(uri2, "c2pa.PII.present");
       const definition = builder.getManifestDefinition();
       expect(definition.redactions).toEqual([uri1, uri2]);
     });
 
-    it("should set a label", () => {
+    it("should set a label", async () => {
       const label = "urn:c2pa:00000000-0000-4000-8000-000000000000";
-      const builder = Builder.new();
+      const builder = await Builder.newAsync();
       builder.updateManifestProperty("label", label);
       expect(builder.getManifestDefinition().label).toBe(label);
     });
@@ -861,7 +860,7 @@ describe("Builder", () => {
         ],
       };
 
-      const builder = Builder.withJson(simpleManifestDefinition);
+      const builder = await Builder.withJsonAsync(simpleManifestDefinition);
 
       // Set remote URL and no embed flag like the Rust test
       builder.setRemoteUrl("http://my_remote_url");
@@ -923,7 +922,7 @@ describe("Builder", () => {
         resources: { resources: {} },
       };
 
-      const builder = Builder.withJson(simpleManifestDefinition);
+      const builder = await Builder.withJsonAsync(simpleManifestDefinition);
       builder.setIntent({ create: "http://c2pa.org/digitalsourcetype/empty" });
 
       // Add an action using addAction method
@@ -987,7 +986,7 @@ describe("Builder", () => {
         resources: { resources: {} },
       };
 
-      const builder = Builder.withJson(simpleManifestDefinition);
+      const builder = await Builder.withJsonAsync(simpleManifestDefinition);
 
       // Add an ingredient using addIngredient method
       const ingredientJson = JSON.stringify({
@@ -1018,7 +1017,7 @@ describe("Builder", () => {
     });
 
     it("should add ingredient from reader", async () => {
-      const builder1 = Builder.new();
+      const builder1 = await Builder.newAsync();
       builder1.setIntent("edit");
       const signer = LocalSigner.newSigner(publicKey, privateKey, "es256");
       const dest1: DestinationBufferAsset = {
@@ -1034,7 +1033,7 @@ describe("Builder", () => {
       expect(reader).not.toBeNull();
 
       // Create a new builder and add ingredient from the reader
-      const builder2 = Builder.new();
+      const builder2 = await Builder.newAsync();
       builder2.setIntent("edit");
       const ingredient = builder2.addIngredientFromReader(reader!);
       expect(ingredient).toBeDefined();
@@ -1063,10 +1062,11 @@ describe("Builder", () => {
   });
 
   describe("Context", () => {
-    it("newAsync() with no context behaves like new()", async () => {
+    it("newAsync() with no context uses an empty Context", async () => {
       const builder = await Builder.newAsync();
       const definition = builder.getManifestDefinition();
-      expect(definition).toEqual(Builder.new().getManifestDefinition());
+      const configured = await Builder.newAsync(new Context());
+      expect(definition).toEqual(configured.getManifestDefinition());
     });
 
     it("newAsync(context) applies the Context's settings", async () => {
@@ -1171,8 +1171,8 @@ describe("Builder", () => {
       );
     });
 
-    it("fromArchive(asset, context) accepts a Context in place of the deprecated raw settings", async () => {
-      const builder = Builder.withJson(manifestDefinition);
+    it("fromArchive(asset, context) restores a Builder with a Context", async () => {
+      const builder = await Builder.withJsonAsync(manifestDefinition);
       await builder.addIngredient(parent_json, source);
       await builder.addResource("thumbnail.jpg", {
         mimeType: "jpeg",
@@ -1223,8 +1223,8 @@ describe("Builder", () => {
       resources: { resources: {} },
     });
 
-    it("filterActions keeps the inception action and drops excluded actions", () => {
-      const builder = Builder.withJson(actionsManifest());
+    it("filterActions keeps the inception action and drops excluded actions", async () => {
+      const builder = await Builder.withJsonAsync(actionsManifest());
 
       // The predicate only keeps c2pa.edited; c2pa.created must survive regardless
       // because it is the inception action.
@@ -1243,8 +1243,8 @@ describe("Builder", () => {
       expect(names).not.toContain("c2pa.color_adjustments");
     });
 
-    it("filterActions surfaces an error thrown by the predicate", () => {
-      const builder = Builder.withJson(actionsManifest());
+    it("filterActions surfaces an error thrown by the predicate", async () => {
+      const builder = await Builder.withJsonAsync(actionsManifest());
       expect(() =>
         builder.filterActions((action) => {
           if (action.action === "c2pa.color_adjustments") {
@@ -1255,16 +1255,16 @@ describe("Builder", () => {
       ).toThrow("boom from predicate");
     });
 
-    it("filterActions surfaces a non-boolean predicate return", () => {
-      const builder = Builder.withJson(actionsManifest());
+    it("filterActions surfaces a non-boolean predicate return", async () => {
+      const builder = await Builder.withJsonAsync(actionsManifest());
       expect(() =>
         // Returning a non-boolean is a programming error and must not be coerced.
         builder.filterActions(() => "yes" as unknown as boolean),
       ).toThrow(/must return a boolean/);
     });
 
-    it("filterIngredients prunes orphans and passes provenance to the predicate", () => {
-      const builder = Builder.withJson({
+    it("filterIngredients prunes orphans and passes provenance to the predicate", async () => {
+      const builder = await Builder.withJsonAsync({
         claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
         title: "Test_FilterIngredients",
         format: "image/jpeg",
@@ -1308,8 +1308,8 @@ describe("Builder", () => {
       expect(definition.ingredients ?? []).toHaveLength(0);
     });
 
-    it("filterIngredients surfaces an error thrown by the predicate", () => {
-      const builder = Builder.withJson({
+    it("filterIngredients surfaces an error thrown by the predicate", async () => {
+      const builder = await Builder.withJsonAsync({
         claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
         title: "Test_FilterIngredientsThrow",
         format: "image/jpeg",
@@ -1331,8 +1331,8 @@ describe("Builder", () => {
       ).toThrow("ingredient boom");
     });
 
-    it("filterActionsAndIngredients rescues an edited action for a kept ingredient", () => {
-      const builder = Builder.withJson({
+    it("filterActionsAndIngredients rescues an edited action for a kept ingredient", async () => {
+      const builder = await Builder.withJsonAsync({
         claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
         title: "Test_FilterActionsAndIngredients",
         format: "image/jpeg",
@@ -1385,8 +1385,8 @@ describe("Builder", () => {
       expect(definition.ingredients ?? []).toHaveLength(1);
     });
 
-    it("filterActionsAndIngredients drops unreferenced and unrescued", () => {
-      const builder = Builder.withJson(actionsManifest());
+    it("filterActionsAndIngredients drops unreferenced and unrescued", async () => {
+      const builder = await Builder.withJsonAsync(actionsManifest());
 
       builder.addIngredient(
         JSON.stringify({
@@ -1415,8 +1415,8 @@ describe("Builder", () => {
       expect(definition.ingredients ?? []).toHaveLength(0);
     });
 
-    it("filterActionsAndIngredients surfaces an error thrown by either predicate", () => {
-      const builder = Builder.withJson(actionsManifest());
+    it("filterActionsAndIngredients surfaces an error thrown by either predicate", async () => {
+      const builder = await Builder.withJsonAsync(actionsManifest());
       expect(() =>
         builder.filterActionsAndIngredients(
           () => {
@@ -1427,8 +1427,8 @@ describe("Builder", () => {
       ).toThrow("action predicate boom");
     });
 
-    it("updateAssertion updates exact label matches in order and preserves metadata", () => {
-      const builder = Builder.withJson({
+    it("updateAssertion updates exact label matches in order and preserves metadata", async () => {
+      const builder = await Builder.withJsonAsync({
         ...actionsManifest(),
         assertions: [
           { label: "org.test.note", data: { value: 1 }, kind: "Cbor" },
@@ -1452,7 +1452,7 @@ describe("Builder", () => {
     });
 
     it("updateAssertion preserves JSON and CBOR kinds when signing", async () => {
-      const builder = Builder.withJson({
+      const builder = await Builder.withJsonAsync({
         ...actionsManifest(),
         assertions: [
           ...actionsManifest().assertions,
@@ -1489,8 +1489,8 @@ describe("Builder", () => {
       );
     });
 
-    it("updateAssertion skips null and undefined results without dropping other updates", () => {
-      const builder = Builder.withJson({
+    it("updateAssertion skips null and undefined results without dropping other updates", async () => {
+      const builder = await Builder.withJsonAsync({
         ...actionsManifest(),
         assertions: [
           { label: "org.test.note", data: { value: 1 }, kind: "Json" },
@@ -1507,8 +1507,8 @@ describe("Builder", () => {
       ).toEqual([{ value: 1 }, { value: 2 }, { value: 33 }]);
     });
 
-    it("updateAssertion is atomic on callback failure and ignores missing labels", () => {
-      const builder = Builder.withJson({
+    it("updateAssertion is atomic on callback failure and ignores missing labels", async () => {
+      const builder = await Builder.withJsonAsync({
         ...actionsManifest(),
         assertions: [
           { label: "org.test.note", data: { value: 1 } },
@@ -1541,8 +1541,8 @@ describe("Builder", () => {
       expect(calls).toBe(0);
     });
 
-    it("updateActions patches a parameter on an existing action", () => {
-      const builder = Builder.withJson(actionsManifest());
+    it("updateActions patches a parameter on an existing action", async () => {
+      const builder = await Builder.withJsonAsync(actionsManifest());
 
       builder.updateActions((actions) =>
         actions.map((action) =>
@@ -1571,12 +1571,12 @@ describe("Builder", () => {
       expect(patched[0].parameters.patchMe).toBe("patch-test");
     });
 
-    it("updateActions adds a new parameter alongside the existing ones", () => {
+    it("updateActions adds a new parameter alongside the existing ones", async () => {
       const manifest = actionsManifest();
       (manifest.assertions[0]!.data as any).actions[1].parameters = {
         existingValue: "kept",
       };
-      const builder = Builder.withJson(manifest);
+      const builder = await Builder.withJsonAsync(manifest);
 
       builder.updateActions((actions) =>
         actions.map((action) =>
@@ -1610,8 +1610,8 @@ describe("Builder", () => {
       expect(updated[2].parameters?.addedValue).toBeUndefined();
     });
 
-    it("updateActions is no-op when there is no actions assertion", () => {
-      const builder = Builder.withJson({
+    it("updateActions is no-op when there is no actions assertion", async () => {
+      const builder = await Builder.withJsonAsync({
         claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
         title: "Test_NoActions",
         format: "image/jpeg",
@@ -1635,10 +1635,10 @@ describe("Builder", () => {
       ).toHaveLength(0);
     });
 
-    it("updateActions drops an assertion whose transform returns an empty list", () => {
+    it("updateActions drops an assertion whose transform returns an empty list", async () => {
       // (this means there could be no actions, so in non-test code, something after such a call
       // should make sure the manifest is still valid and inception actions are here as needed!)
-      const builder = Builder.withJson({
+      const builder = await Builder.withJsonAsync({
         claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
         title: "Test_TwoAssertions",
         format: "image/jpeg",
@@ -1679,8 +1679,8 @@ describe("Builder", () => {
       ).toEqual(["c2pa.created"]);
     });
 
-    it("updateActions rewrites every actions assertion under its own label", () => {
-      const builder = Builder.withJson({
+    it("updateActions rewrites every actions assertion under its own label", async () => {
+      const builder = await Builder.withJsonAsync({
         claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
         title: "Test_MultiAssertion",
         format: "image/jpeg",
@@ -1732,8 +1732,8 @@ describe("Builder", () => {
       }
     });
 
-    it("updateActions preserves the created flag", () => {
-      const builder = Builder.withJson({
+    it("updateActions preserves the created flag", async () => {
+      const builder = await Builder.withJsonAsync({
         claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
         title: "Test_CreatedFlag",
         format: "image/jpeg",
@@ -1776,7 +1776,7 @@ describe("Builder", () => {
     });
 
     it("updateActions produces a signable manifest", async () => {
-      const builder = Builder.withJson({
+      const builder = await Builder.withJsonAsync({
         claim_generator_info: [{ name: "c2pa_test", version: "1.0.0" }],
         title: "Test_UpdateActionsSign",
         format: "image/jpeg",
@@ -1818,8 +1818,8 @@ describe("Builder", () => {
       expect(codes).not.toContain("assertion.action.ingredientMismatch");
     });
 
-    it("updateActions preserves action order when transform patches in place", () => {
-      const builder = Builder.withJson(actionsManifest());
+    it("updateActions preserves action order when transform patches in place", async () => {
+      const builder = await Builder.withJsonAsync(actionsManifest());
 
       // Patch the middle entry; the transform never reorders.
       builder.updateActions((actions) =>
@@ -1844,8 +1844,8 @@ describe("Builder", () => {
       ]);
     });
 
-    it("updateActions surfaces an error thrown by transform", () => {
-      const builder = Builder.withJson(actionsManifest());
+    it("updateActions surfaces an error thrown by transform", async () => {
+      const builder = await Builder.withJsonAsync(actionsManifest());
       expect(() =>
         builder.updateActions(() => {
           throw new Error("transform boom");
@@ -1853,7 +1853,7 @@ describe("Builder", () => {
       ).toThrow("transform boom");
     });
 
-    it("updateActions preserves allActionsIncluded/softwareAgents/templates/metadata not seen by transform", () => {
+    it("updateActions preserves allActionsIncluded/softwareAgents/templates/metadata not seen by transform", async () => {
       const manifest = actionsManifest();
       (manifest.assertions[0]!.data as any).allActionsIncluded = true;
       (manifest.assertions[0]!.data as any).softwareAgents = [
@@ -1865,7 +1865,7 @@ describe("Builder", () => {
       (manifest.assertions[0]!.data as any).metadata = {
         dataSource: { type: "humanEdits" },
       };
-      const builder = Builder.withJson(manifest);
+      const builder = await Builder.withJsonAsync(manifest);
 
       // transform only ever sees/returns the flattened actions list, never the sibling fields.
       builder.updateActions((actions) => actions);
