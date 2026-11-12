@@ -22,6 +22,10 @@ on:
         description: 'Build and package binaries without uploading release assets (requires version)'
         type: boolean
         default: false
+      replace-existing:
+        description: 'Replace existing native assets after a successful rebuild'
+        type: boolean
+        default: false
       docs-release-tag:
         description: 'Stable web or node release tag to promote in docs (leave empty for a rebuild)'
         type: string
@@ -97,7 +101,7 @@ jobs:
          contains(needs.release.outputs.publishedPackages, '@contentauth/c2pa-node'))
       )
     name: Build native binary for ${{ matrix.target }}
-    runs-on: ${{ contains(matrix.target, 'apple-darwin') && 'macos-latest' || contains(matrix.target, 'windows') && 'windows-latest' || 'ubuntu-latest' }}
+    runs-on: ${{ contains(matrix.target, 'apple-darwin') && 'macos-latest' || contains(matrix.target, 'windows') && 'windows-latest' || 'ubuntu-24.04' }}
     permissions:
       contents: write
     timeout-minutes: 60
@@ -201,7 +205,7 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ matrix.target }}
+          shared-key: ${{ contains(matrix.target, 'linux') && format('{0}-ubuntu-24.04', matrix.target) || matrix.target }}
 
       - name: Install Node.js dependencies
         env:
@@ -287,6 +291,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_ID: ${{ steps.get-release-id.outputs.id }}
           ASSET_NAME: ${{ steps.package-artifact.outputs.archive }}
+          REPLACE_EXISTING: ${{ inputs.replace-existing }}
         run: |
           # Re-running this job (e.g. after a transient failure on another
           # matrix leg) would otherwise 422 on a duplicate asset name, so
@@ -299,7 +304,7 @@ jobs:
             | jq -r --arg name "$ASSET_NAME" '.[] | select(.name == $name) | .id')
 
           if [ -n "$existing_asset_id" ]; then
-            if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && [ "$REPLACE_EXISTING" != true ]; then
               echo "Asset ${ASSET_NAME} already exists; leaving it unchanged."
               exit 0
             fi
