@@ -19,15 +19,11 @@ Existing release assets are left unchanged; selecting **all** still builds those
 targets but skips their uploads.
 
 To repair an incompatible existing binary, select its target and enable
-**replace-existing**. The workflow builds and validates the replacement before
+**replace-existing**. The workflow builds the replacement before
 replacing that asset; the default still preserves existing assets.
 
-Linux binaries are built on Ubuntu 24.04 and checked for glibc requirements no
-newer than 2.39. The x86_64 binary must also load successfully on that runner
-before it can be uploaded. Linux build caches include this baseline so newer
-runner images cannot supply incompatible cached output.
-The compatibility verifier comes from the workflow revision, not the binary
-source tag, so manual recovery also works for older releases.
+Linux binaries are built on Ubuntu 24.04. Linux build caches include this
+baseline so newer runner images cannot supply incompatible cached output.
 
 Leaving the version empty preserves the manual documentation-only workflow.
 

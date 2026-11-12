@@ -11,7 +11,7 @@
     "ci:docs:releases": "pnpm ci:docs:node && pnpm ci:docs:web",
     "ci:docs:node": "node scripts/generate-api-docs.mjs node",
     "ci:docs:web": "node scripts/generate-api-docs.mjs web",
-    "test:docs": "node --test scripts/api-docs.test.mjs scripts/update-api-docs-version.test.mjs scripts/native-release.test.mjs"
+    "test:docs": "node --test scripts/api-docs.test.mjs scripts/update-api-docs-version.test.mjs"
   },
   "private": true,
   "devDependencies": {

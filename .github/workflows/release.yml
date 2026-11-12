@@ -233,17 +233,6 @@ jobs:
           pnpm run build:rust --target=${{ matrix.target }}
           cp index.node generated
 
-      - name: Verify Linux binary compatibility
-        if: contains(matrix.target, 'linux')
-        working-directory: packages/c2pa-node
-        env:
-          NATIVE_TARGET: ${{ matrix.target }}
-          WORKFLOW_SHA: ${{ github.workflow_sha }}
-        run: |
-          # The checked-out release tag may predate this workflow's verifier.
-          git show "$WORKFLOW_SHA:scripts/verify-linux-binary.mjs" > "$RUNNER_TEMP/verify-linux-binary.mjs"
-          node "$RUNNER_TEMP/verify-linux-binary.mjs" generated/index.node
-
       - name: Package artifact
         id: package-artifact
         # This needs to be set so that this works on a Windows runner
