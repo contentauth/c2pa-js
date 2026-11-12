@@ -238,25 +238,11 @@ jobs:
         working-directory: packages/c2pa-node
         env:
           NATIVE_TARGET: ${{ matrix.target }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
         run: |
-          node --input-type=module <<'NODE'
-          import assert from 'node:assert/strict';
-          import { readFileSync } from 'node:fs';
-          import { createRequire } from 'node:module';
-          import { resolve } from 'node:path';
-
-          const binary = resolve('generated/index.node');
-          const requirements = [...readFileSync(binary).toString('latin1').matchAll(/GLIBC_(\d+)\.(\d+)/g)];
-          assert(requirements.length > 0, 'No glibc requirements found in the Linux binary');
-          for (const [, major, minor] of requirements) {
-            assert(Number(major) < 2 || (Number(major) === 2 && Number(minor) <= 39),
-              `Binary requires GLIBC_${major}.${minor}, newer than Ubuntu 24.04`);
-          }
-          if (process.env.NATIVE_TARGET === 'x86_64-unknown-linux-gnu') {
-            createRequire(import.meta.url)(binary);
-          }
-          console.log('Linux binary is compatible with the Ubuntu 24.04 glibc baseline');
-          NODE
+          # The checked-out release tag may predate this workflow's verifier.
+          git show "$WORKFLOW_SHA:scripts/verify-linux-binary.mjs" > "$RUNNER_TEMP/verify-linux-binary.mjs"
+          node "$RUNNER_TEMP/verify-linux-binary.mjs" generated/index.node
 
       - name: Package artifact
         id: package-artifact

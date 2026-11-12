@@ -26,6 +26,8 @@ Linux binaries are built on Ubuntu 24.04 and checked for glibc requirements no
 newer than 2.39. The x86_64 binary must also load successfully on that runner
 before it can be uploaded. Linux build caches include this baseline so newer
 runner images cannot supply incompatible cached output.
+The compatibility verifier comes from the workflow revision, not the binary
+source tag, so manual recovery also works for older releases.
 
 Leaving the version empty preserves the manual documentation-only workflow.
 

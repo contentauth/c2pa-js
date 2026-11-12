@@ -13,10 +13,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 const workflow = fs.readFileSync(
   new URL('../.github/workflows/release.yml', import.meta.url),
   'utf8'
+);
+const verifier = fileURLToPath(
+  new URL('./verify-linux-binary.mjs', import.meta.url)
 );
 
 test('Linux runner and cache retain the Ubuntu 24.04 baseline', () => {
@@ -37,16 +41,29 @@ test('manual asset replacement is opt-in and follows binary validation', () => {
   );
 });
 
-test('Linux verification rejects incompatible glibc requirements before upload', () => {
-  const block = workflow
-    .split('- name: Verify Linux binary compatibility')[1]
-    .split('- name: Package artifact')[0];
-  const source = block
-    .split("<<'NODE'\n")[1]
-    .split('\n          NODE')[0]
-    .replace(/^ {10}/gm, '');
-  assert(source.includes('createRequire(import.meta.url)(binary)'));
+test('verification uses the workflow revision rather than an older release tag', () => {
+  assert(workflow.includes('WORKFLOW_SHA: ${{ github.workflow_sha }}'));
+  assert(
+    workflow.includes(
+      'git show "$WORKFLOW_SHA:scripts/verify-linux-binary.mjs"'
+    )
+  );
+  assert(
+    workflow.includes(
+      'node "$RUNNER_TEMP/verify-linux-binary.mjs" generated/index.node'
+    )
+  );
+});
 
+test('Linux verification reports a missing binary argument', () => {
+  const result = spawnSync(process.execPath, [verifier], {
+    encoding: 'utf8'
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Usage: node verify-linux-binary\.mjs <binary>/);
+});
+
+test('Linux verification rejects incompatible glibc requirements before upload', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'c2pa-native-abi-'));
   fs.mkdirSync(path.join(directory, 'generated'));
   try {
@@ -58,15 +75,17 @@ test('Linux verification rejects incompatible glibc requirements before upload',
       ['no versioned glibc symbols', false]
     ]) {
       fs.writeFileSync(path.join(directory, 'generated/index.node'), symbols);
-      const result = spawnSync(process.execPath, ['--input-type=module'], {
-        cwd: directory,
-        input: source,
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          NATIVE_TARGET: 'aarch64-unknown-linux-gnu'
+      const result = spawnSync(
+        process.execPath,
+        [verifier, path.join(directory, 'generated/index.node')],
+        {
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            NATIVE_TARGET: 'aarch64-unknown-linux-gnu'
+          }
         }
-      });
+      );
       assert.equal(result.status === 0, accepted, result.stderr);
     }
   } finally {
