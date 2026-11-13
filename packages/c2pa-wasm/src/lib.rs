@@ -16,6 +16,9 @@ mod error;
 /// Contains functions to create types usable by c2pa-rs from JS types.
 pub mod stream;
 
+/// Registers reusable, instance-local settings contexts.
+mod wasm_context;
+
 /// Exposes a reader API to JS via wasm-bindgen.
 pub mod wasm_reader;
 

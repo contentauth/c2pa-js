@@ -8,7 +8,7 @@
 use std::io::Cursor;
 
 use c2pa::{
-    Builder, BuilderIntent, Context, Ingredient,
+    Builder, BuilderIntent, Ingredient,
     assertions::{Action, Actions, C2paReason},
 };
 use js_sys::{JsString, Uint8Array};
@@ -21,6 +21,7 @@ use crate::{
     error::WasmError,
     stream::BlobStream,
     utils::cursor_to_u8array,
+    wasm_context::{context_from_id, register_context},
     wasm_identity_assertion::{WasmIdentityAssertionSigner, parse_identity_assertions},
     wasm_signer::{SignerDefinition, WasmSigner},
 };
@@ -54,13 +55,14 @@ impl WasmBuilder {
     /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = new)]
     pub fn new(context_json: Option<String>) -> Result<WasmBuilder, JsString> {
-        let context = match context_json {
-            Some(json) => Context::new()
-                .with_settings(json.as_str())
-                .map_err(WasmError::from)?,
-            None => Context::new(),
-        };
-        let builder = Builder::from_context(context);
+        Self::new_with_context(register_context(context_json)?)
+    }
+
+    /// Creates a builder using settings registered by `registerContext`.
+    #[wasm_bindgen(js_name = newWithContext)]
+    pub fn new_with_context(context_id: u32) -> Result<WasmBuilder, JsString> {
+        let context = context_from_id(context_id)?;
+        let builder = Builder::from_shared_context(&context);
 
         Ok(WasmBuilder::from_builder(builder))
     }
@@ -79,13 +81,14 @@ impl WasmBuilder {
     /// Optionally accepts a context JSON string to configure the builder.
     #[wasm_bindgen(js_name = fromJson)]
     pub fn from_json(json: &str, context_json: Option<String>) -> Result<WasmBuilder, JsString> {
-        let context = match context_json {
-            Some(ctx_json) => Context::new()
-                .with_settings(ctx_json.as_str())
-                .map_err(WasmError::from)?,
-            None => Context::new(),
-        };
-        let builder = Builder::from_context(context)
+        Self::from_json_with_context(json, register_context(context_json)?)
+    }
+
+    /// Creates a builder from manifest JSON using settings registered by `registerContext`.
+    #[wasm_bindgen(js_name = fromJsonWithContext)]
+    pub fn from_json_with_context(json: &str, context_id: u32) -> Result<WasmBuilder, JsString> {
+        let context = context_from_id(context_id)?;
+        let builder = Builder::from_shared_context(&context)
             .with_definition(json)
             .map_err(WasmError::from)?;
 
@@ -100,18 +103,26 @@ impl WasmBuilder {
         context_json: Option<String>,
     ) -> Result<WasmBuilder, JsString> {
         let stream = BlobStream::new(archive).map_err(WasmError::other)?;
-        let builder = if let Some(ctx_json) = context_json {
-            let context = Context::new()
-                .with_settings(ctx_json.as_str())
-                .map_err(WasmError::from)?;
-            Builder::from_context(context)
-                .with_archive(stream)
-                .map_err(WasmError::from)?
-        } else {
-            Builder::default()
-                .with_archive(stream)
-                .map_err(WasmError::from)?
-        };
+
+        Self::from_archive_stream(stream, register_context(context_json)?)
+    }
+
+    /// Creates a builder from an archive using settings registered by `registerContext`.
+    #[wasm_bindgen(js_name = fromArchiveWithContext)]
+    pub fn from_archive_with_context(
+        archive: &Blob,
+        context_id: u32,
+    ) -> Result<WasmBuilder, JsString> {
+        let stream = BlobStream::new(archive).map_err(WasmError::other)?;
+
+        Self::from_archive_stream(stream, context_id)
+    }
+
+    fn from_archive_stream(stream: BlobStream, context_id: u32) -> Result<WasmBuilder, JsString> {
+        let context = context_from_id(context_id)?;
+        let builder = Builder::from_shared_context(&context)
+            .with_archive(stream)
+            .map_err(WasmError::from)?;
 
         Ok(WasmBuilder::from_builder(builder))
     }

@@ -5,7 +5,10 @@
 // accordance with the terms of the Adobe license agreement accompanying
 // it.
 
-use std::io::{Cursor, Read, Seek};
+use std::{
+    io::{Cursor, Read, Seek},
+    sync::Arc,
+};
 
 use c2pa::{Context, Reader};
 use js_sys::{JsString, Uint8Array};
@@ -14,7 +17,12 @@ use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 use web_sys::Blob;
 
-use crate::{error::WasmError, stream::BlobStream, utils::cursor_to_u8array};
+use crate::{
+    error::WasmError,
+    stream::BlobStream,
+    utils::cursor_to_u8array,
+    wasm_context::{context_from_id, context_from_json},
+};
 
 /// Wraps a `c2pa::Reader`.
 #[wasm_bindgen]
@@ -41,21 +49,28 @@ impl WasmReader {
         context_json: Option<String>,
     ) -> Result<WasmReader, JsString> {
         let stream = BlobStream::new(blob).map_err(WasmError::other)?;
-        WasmReader::from_stream(format, stream, context_json).await
+        WasmReader::from_stream(format, stream, context_from_json(context_json)?).await
+    }
+
+    /// Creates a reader using settings registered by `registerContext`.
+    #[wasm_bindgen(js_name = fromBlobWithContext)]
+    pub async fn from_blob_with_context(
+        format: &str,
+        blob: &Blob,
+        context_id: u32,
+    ) -> Result<WasmReader, JsString> {
+        let context = context_from_id(context_id)?;
+        let stream = BlobStream::new(blob).map_err(WasmError::other)?;
+
+        WasmReader::from_stream(format, stream, context).await
     }
 
     async fn from_stream(
         format: &str,
         stream: impl Read + Seek + Send,
-        context_json: Option<String>,
+        context: Arc<Context>,
     ) -> Result<WasmReader, JsString> {
-        let context = match context_json {
-            Some(json) => Context::new()
-                .with_settings(json.as_str())
-                .map_err(WasmError::from)?,
-            None => Context::new(),
-        };
-        let reader = Reader::from_context(context)
+        let reader = Reader::from_shared_context(&context)
             .with_stream_async(format, stream)
             .await
             .map_err(WasmError::from)?;
@@ -78,7 +93,7 @@ impl WasmReader {
         context_json: Option<String>,
     ) -> Result<WasmReader, JsString> {
         let stream = Cursor::new(bytes);
-        WasmReader::from_stream(format, stream, context_json).await
+        WasmReader::from_stream(format, stream, context_from_json(context_json)?).await
     }
 
     /// Attempts to create a new `WasmReader` from an asset format, a `Blob` of the bytes of the initial segment, and a fragment `Blob`.
@@ -93,22 +108,37 @@ impl WasmReader {
         let init_stream = BlobStream::new(init).map_err(WasmError::other)?;
         let fragment_stream = BlobStream::new(fragment).map_err(WasmError::other)?;
 
-        WasmReader::from_stream_fragment(format, init_stream, fragment_stream, context_json).await
+        WasmReader::from_stream_fragment(
+            format,
+            init_stream,
+            fragment_stream,
+            context_from_json(context_json)?,
+        )
+        .await
+    }
+
+    /// Creates a fragment reader using settings registered by `registerContext`.
+    #[wasm_bindgen(js_name = fromBlobFragmentWithContext)]
+    pub async fn from_blob_fragment_with_context(
+        format: &str,
+        init: &Blob,
+        fragment: &Blob,
+        context_id: u32,
+    ) -> Result<WasmReader, JsString> {
+        let context = context_from_id(context_id)?;
+        let init_stream = BlobStream::new(init).map_err(WasmError::other)?;
+        let fragment_stream = BlobStream::new(fragment).map_err(WasmError::other)?;
+
+        WasmReader::from_stream_fragment(format, init_stream, fragment_stream, context).await
     }
 
     async fn from_stream_fragment(
         format: &str,
         init: impl Read + Seek + Send,
         fragment: impl Read + Seek + Send,
-        context_json: Option<String>,
+        context: Arc<Context>,
     ) -> Result<WasmReader, JsString> {
-        let context = match context_json {
-            Some(json) => Context::new()
-                .with_settings(json.as_str())
-                .map_err(WasmError::from)?,
-            None => Context::new(),
-        };
-        let reader = Reader::from_context(context)
+        let reader = Reader::from_shared_context(&context)
             .with_fragment_async(format, init, fragment)
             .await
             .map_err(WasmError::from)?;
@@ -210,5 +240,31 @@ mod tests {
         let result = WasmReader::from_bytes("image/jpeg", empty_jpeg, None).await;
 
         assert!(result.is_err(), "an asset without C2PA data must error");
+    }
+
+    #[wasm_bindgen_test]
+    async fn json_fragment_entry_point_matches_registered_context() {
+        use crate::wasm_context::register_context;
+
+        fn blob(bytes: &[u8]) -> Blob {
+            let parts = js_sys::Array::new();
+            parts.push(&Uint8Array::from(bytes));
+            Blob::new_with_u8_array_sequence(&parts).unwrap()
+        }
+
+        let init = blob(include_bytes!("../../c2pa-web/test/assets/dashinit.mp4"));
+        let fragment = blob(include_bytes!("../../c2pa-web/test/assets/dash1.m4s"));
+        let settings = r#"{"verify":{"verify_trust":false}}"#.to_owned();
+        let id = register_context(Some(settings.clone())).unwrap();
+        let direct = WasmReader::from_blob_fragment("video/mp4", &init, &fragment, Some(settings))
+            .await
+            .unwrap();
+        let registered =
+            WasmReader::from_blob_fragment_with_context("video/mp4", &init, &fragment, id)
+                .await
+                .unwrap();
+
+        assert!(direct.active_label().is_some());
+        assert_eq!(direct.json(), registered.json());
     }
 }
