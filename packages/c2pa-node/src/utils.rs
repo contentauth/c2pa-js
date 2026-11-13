@@ -19,6 +19,12 @@ use neon::prelude::*;
 
 use crate::error::{Error, Result};
 
+/// Native Context shared by Readers/Builders for the same resolved JS Context.
+/// Sharing includes c2pa-rs's one-way cancellation flag and progress callback,
+/// not just settings. Node does not expose these operation-control APIs today.
+/// Before adding per-instance controls, revisit this ownership: cancellation
+/// would affect all current and future users of the cached Context, and
+/// concurrent operations would report progress through the same callback.
 pub struct NeonContextHandle {
     context: Arc<Context>,
 }
