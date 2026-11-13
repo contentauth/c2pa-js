@@ -37,7 +37,6 @@ export type {
   RegionOfInterest,
   ResourceRef,
   ReviewRating,
-  Role,
   Shape,
   SignatureInfo,
   StatusCodes,

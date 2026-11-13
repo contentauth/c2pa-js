@@ -1,5 +1,12 @@
 # @contentauth/c2pa-utilities
 
+## 0.5.1
+
+### Patch Changes
+
+- Updated dependencies [ca4bf52]
+  - @contentauth/c2pa-types@0.8.0
+
 ## 0.5.0
 
 ### Minor Changes

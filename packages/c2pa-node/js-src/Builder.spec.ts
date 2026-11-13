@@ -245,7 +245,9 @@ describe("Builder", () => {
       expect(reader).not.toBeNull();
       const activeManifest = reader!.getActive();
       const cborAssertion = activeManifest?.assertions?.find(
-        (a: any) => a.label === "c2pa.actions.v2",
+        (assertion) =>
+          isActionsAssertion(assertion) &&
+          assertion.data.actions.some((action) => action.action === "c2pa.edited"),
       );
       expect(cborAssertion).toBeDefined();
       if (isActionsAssertion(cborAssertion)) {
@@ -942,7 +944,9 @@ describe("Builder", () => {
       expect(reader).not.toBeNull();
       const activeManifest = reader!.getActive();
       const actionsAssertion = activeManifest?.assertions?.find(
-        (a: any) => a.label === "c2pa.actions.v2",
+        (assertion) =>
+          isActionsAssertion(assertion) &&
+          assertion.data.actions.some((action) => action.action === "c2pa.edited"),
       );
       expect(actionsAssertion).toBeDefined();
       if (isActionsAssertion(actionsAssertion)) {
