@@ -22,6 +22,7 @@ import type {
 import { Context } from "@contentauth/c2pa-utilities";
 
 import { getNeonBinary } from "./binary.js";
+import { resolveNativeContextForNeon } from "./Settings.js";
 import type {
   BuilderInterface,
   CallbackSignerInterface,
@@ -66,8 +67,8 @@ export class Builder implements BuilderInterface {
    * Defaults to an empty `Context` using default settings if one is not provided.
    */
   static async newAsync(context: Context = new Context()): Promise<Builder> {
-    const settingsStr = await context.toJson();
-    const builder: NeonBuilderHandle = getNeonBinary().builderNew(settingsStr);
+    const settings = await resolveNativeContextForNeon(context, "Builder");
+    const builder: NeonBuilderHandle = getNeonBinary().builderNew(settings);
     return new Builder(builder);
   }
 
@@ -85,10 +86,10 @@ export class Builder implements BuilderInterface {
     context: Context = new Context(),
   ): Promise<Builder> {
     const jsonString = stringifyManifestDefinition(json);
-    const settingsStr = await context.toJson();
+    const settings = await resolveNativeContextForNeon(context, "Builder");
     const builder: NeonBuilderHandle = getNeonBinary().builderWithJson(
       jsonString,
-      settingsStr,
+      settings,
     );
     return new Builder(builder);
   }
@@ -165,9 +166,9 @@ export class Builder implements BuilderInterface {
     asset: SourceAsset,
     context: Context = new Context(),
   ): Promise<Builder> {
-    const settingsStr = await context.toJson();
+    const settings = await resolveNativeContextForNeon(context, "Builder");
     return new Builder(
-      await getNeonBinary().builderFromArchive(asset, settingsStr),
+      await getNeonBinary().builderFromArchive(asset, settings),
     );
   }
 

@@ -28,6 +28,8 @@ pub mod neon_trustmark;
 
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
+    cx.export_function("contextFromSettings", utils::from_settings)?;
+
     // Builder
     cx.export_function("builderNew", neon_builder::NeonBuilder::new)?;
     cx.export_function("builderWithJson", neon_builder::NeonBuilder::with_json)?;

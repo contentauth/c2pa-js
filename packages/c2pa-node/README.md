@@ -145,6 +145,10 @@ const isEmbedded = reader.isEmbedded();
 const remoteUrl = reader.remoteUrl();
 ```
 
+Node keeps the latest resolved settings JSON and native context handle for each JavaScript `Context` in a `WeakMap`. Repeated `Reader` and `Builder` construction with the same effective settings reuses that handle without retransferring or reparsing the JSON. Successful settings resolution stays memoized within the `Context`; create a new `Context` to resolve updated trust resources. Existing Readers and Builders retain their construction-time settings.
+
+The shared native context also owns cancellation/progress state, although Node does not expose those native APIs today. Future per-instance controls must revisit this ownership: cancellation would affect all users of that native context, and progress callbacks would receive events from multiple operations.
+
 `Reader.fromAsset` and `Reader.fromManifestDataAndAsset` reject assets larger than 10 GB, throwing `AssetTooLargeError` (exported from `@contentauth/c2pa-node`). Note that for a `SourceBufferAsset`, this only rejects after the buffer is already fully allocated in memory. Pass a `FileAsset` instead for large or untrusted assets so oversized files are rejected before being read into memory.
 
 > [!WARNING]
