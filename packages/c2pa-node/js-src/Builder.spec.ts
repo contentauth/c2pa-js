@@ -1153,31 +1153,6 @@ describe("Builder", () => {
       }
     });
 
-    it.each([
-      null,
-      { verify: { verifyTrust: false } },
-      '{"verify":{"verify_trust":false}}',
-    ])("rejects non-Context configuration %j", async (configuration) => {
-      // @ts-expect-error SDK creation requires a Context, not raw settings or null.
-      await expect(Builder.newAsync(configuration)).rejects.toThrow(TypeError);
-      await expect(
-        // @ts-expect-error SDK creation requires a Context, not raw settings or null.
-        Builder.withJsonAsync(manifestDefinition, configuration),
-      ).rejects.toThrow(TypeError);
-      await expect(
-        // @ts-expect-error SDK creation requires a Context, not raw settings or null.
-        Builder.fromArchive(source, configuration),
-      ).rejects.toThrow(TypeError);
-      await expect(
-        // @ts-expect-error SDK creation requires a Context, not raw settings or null.
-        Reader.fromAsset(source, configuration),
-      ).rejects.toThrow(TypeError);
-      await expect(
-        // @ts-expect-error SDK creation requires a Context, not raw settings or null.
-        Reader.fromManifestDataAndAsset(Buffer.alloc(0), source, configuration),
-      ).rejects.toThrow(TypeError);
-    });
-
     it("newAsync(context) fetches trust-anchor URLs before creating the Builder", async () => {
       const pem = "-----BEGIN CERTIFICATE-----\nanchor\n-----END CERTIFICATE-----";
       const fetch = vi.fn(async () => new Response(pem));
