@@ -59,6 +59,56 @@ For documentation builds and version-list maintenance, see
 
 ## Components
 
+### Trustmark
+
+`Trustmark` uses TrustMark 0.5 to encode and decode watermarks. Watermark removal
+is opt-in and supported for variants **P** and **Q** only. Select the variant
+used to embed the watermark:
+
+```javascript
+import { Trustmark } from '@contentauth/c2pa-node';
+
+const trustmark = await Trustmark.newTrustmark({
+  variant: 'P',
+  version: 'BCH_5',
+  modelPath: './models',
+  loadRemover: true
+});
+const recoveredPng = await trustmark.remove(watermarkedImageBuffer);
+```
+
+`loadRemover` defaults to `false`. Enabling it downloads and loads the separate
+`remover_P.onnx` or `remover_Q.onnx` file in `modelPath` (default `./models`), in
+addition to the encoder and decoder. Cached files are reused. This adds startup
+time and memory usage; ordinary encode/decode callers do not load a remover.
+
+`remove()` accepts an 8-bit JPEG or PNG (RGB, RGBA, or grayscale) and returns an
+**encoded PNG**, preserving dimensions and alpha. This differs from `encode()`,
+which returns **raw RGB8 pixels**. Unsupported formats or bit depths, malformed
+images, missing removal support, and model/inference failures reject the promise;
+failures are never silently treated as successful removal.
+
+Removal rejects encoded inputs larger than **64 MiB**, dimensions larger than
+**16,384 pixels** on either axis, and images with more than **32 million pixels**.
+Dimensions and pixel count are checked before decoding pixels or running
+inference. Decoding also has a **best-effort 128 MiB allocation budget**. These
+are per-call limits, not a cap on total process memory: removal allocates additional
+full-resolution buffers, and concurrent calls require additional memory.
+
+The returned PNG is **pixel-only**. It does not copy image metadata, including
+EXIF, XMP, ICC color profiles, or embedded C2PA manifests. Preserving dimensions
+and alpha does not mean preserving metadata. Callers that need ordinary image
+metadata must carry it forward separately using an encoder that supports it.
+Existing C2PA credentials bind to the original asset and do not remain valid for
+the modified pixels. Use the original asset as an ingredient and sign a new
+manifest to attach valid Content Credentials to the output; do not simply copy
+the original manifest.
+
+Removal is lossy: it does not restore the original pixels or guarantee removal of
+arbitrary watermarks. It can also change an image without a detectable watermark.
+Remove before re-watermarking if replacing an existing identifier. Operations on
+a shared remover are serialized internally.
+
 ### Reader
 
 The `Reader` class is used to read and validate C2PA manifests from media files. It can parse embedded manifests or fetch remote manifests. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.

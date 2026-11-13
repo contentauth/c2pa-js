@@ -12,6 +12,7 @@
 // each license.
 
 import path from "path";
+import os from "os";
 import fs from "fs-extra";
 import sharp from "sharp";
 
@@ -35,8 +36,25 @@ async function rawRgbToJpeg(
     },
   });
 
-  // Convert to JPEG format
-  return await image.jpeg().toBuffer();
+  // Use a high-quality JPEG round-trip for the perceptual P model.
+  return await image.jpeg({ quality: 95 }).toBuffer();
+}
+
+// Modify only the PNG header so oversized-image tests never allocate its pixels.
+function pngWithDimensions(png: Buffer, width: number, height: number): Buffer {
+  const image = Buffer.from(png);
+  expect(image.toString("ascii", 12, 16)).toBe("IHDR");
+  image.writeUInt32BE(width, 16);
+  image.writeUInt32BE(height, 20);
+  let crc = 0xffffffff;
+  for (const byte of image.subarray(12, 29)) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit++) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+  }
+  image.writeUInt32BE((crc ^ 0xffffffff) >>> 0, 29);
+  return image;
 }
 
 describe("Trustmark", () => {
@@ -46,15 +64,18 @@ describe("Trustmark", () => {
   let testImageHeight: number;
 
   const trustmarkConfig: TrustmarkConfig = {
-    variant: "B", // Original Trustmark model
-    version: "BCH_3", // Tolerates 3 bit flips
+    variant: "P", // Perceptual model, cached in CI
+    version: "BCH_5", // Tolerates 5 bit flips
     modelPath: path.join(tempDir, "trustmark_models"), // Use temporary directory for model path
   };
 
   beforeAll(async () => {
     await fs.ensureDir(tempDir);
     // Use an actual test image from fixtures directory
-    testImage = await fs.readFile("./tests/fixtures/A.jpg");
+    testImage = await sharp("./tests/fixtures/A.jpg")
+      .resize(512, 512)
+      .png()
+      .toBuffer();
 
     // Get image dimensions for converting raw pixel data
     const imageInfo = await sharp(testImage).metadata();
@@ -132,8 +153,9 @@ describe("Trustmark", () => {
 
   describe("decode", () => {
     it("should decode a watermark from an encoded image", async () => {
-      const strength = 0.8;
-      const customWatermark = "0101000011001";
+      const strength = 0.95;
+      const customWatermark =
+        "1011011110011000111111000000011111011111011100000110110110111";
 
       // First encode a watermark
       const rawPixelData = await trustmark.encode(
@@ -156,11 +178,11 @@ describe("Trustmark", () => {
       expect(typeof decodedWatermark).toBe("string");
       expect(decodedWatermark.length).toBeGreaterThan(0);
       // The decoded watermark should match the original
-      expect(decodedWatermark.startsWith(customWatermark)).toBeTruthy();
+      expect(decodedWatermark).toBe(customWatermark);
     }, 30000);
 
     it("should decode watermark from image with generated watermark", async () => {
-      const strength = 0.75;
+      const strength = 0.95;
 
       // Encode with default watermark
       const rawPixelData = await trustmark.encode(testImage, strength);
@@ -194,4 +216,292 @@ describe("Trustmark", () => {
       );
     }, 30000);
   });
+
+  it("rejects removal when not opted in", async () => {
+    await expect(trustmark.remove(testImage)).rejects.toThrow(
+      "Watermark remover not loaded",
+    );
+  });
+});
+
+describe("Trustmark removal configuration", () => {
+  it.each(["B", "C"] as const)(
+    "rejects unsupported variant %s before creating the model directory",
+    async (variant) => {
+      const root = await fs.mkdtemp(
+        path.join(os.tmpdir(), "trustmark-config-"),
+      );
+      const modelPath = path.join(root, "models");
+      try {
+        await expect(
+          Trustmark.newTrustmark({
+            variant,
+            version: "BCH_5",
+            loadRemover: true,
+            modelPath,
+          }),
+        ).rejects.toThrow("removal supports only P/Q variants");
+        expect(await fs.pathExists(modelPath)).toBe(false);
+      } finally {
+        await fs.remove(root);
+      }
+    },
+  );
+});
+
+describe("Trustmark P removal", () => {
+  const variant = "P";
+  let runner: Trustmark;
+  let source: Buffer;
+  const modelPath = path.join(tempDir, "trustmark_models");
+  const original =
+    "1011011110011000111111000000011111011111011100000110110110111";
+  const replacement =
+    "0011011110011000111111000000011111011111011100000110110110111";
+
+  beforeAll(async () => {
+    runner = await Trustmark.newTrustmark({
+      variant,
+      version: "BCH_5",
+      loadRemover: true,
+      modelPath,
+    });
+    source = await sharp("./tests/fixtures/A.jpg")
+      .resize(512, 512)
+      .png()
+      .toBuffer();
+  }, 180000);
+
+  it.each(["jpeg", "png"] as const)(
+    "removes the old watermark and allows re-watermarking a %s",
+    async (format) => {
+      const raw = await runner.encode(source, 0.95, original);
+      const encoded = await sharp(raw, {
+        raw: { width: 512, height: 512, channels: 3 },
+      })
+        .toFormat(format, { quality: 95 })
+        .toBuffer();
+      expect(await runner.decode(encoded)).toBe(original);
+
+      const recovered = await runner.remove(encoded);
+      expect(await sharp(recovered).metadata()).toMatchObject({
+        format: "png",
+        width: 512,
+        height: 512,
+        channels: 3,
+        hasAlpha: false,
+      });
+      const decoded = await runner.decode(recovered).catch((error: unknown) => {
+        expect(error).toBeInstanceOf(Error);
+        if (!(error instanceof Error)) throw error;
+        expect(error.message).toContain("watermark is corrupt or missing");
+      });
+      expect(decoded).not.toBe(original);
+
+      const reencoded = await runner.encode(recovered, 0.95, replacement);
+      const png = await sharp(reencoded, {
+        raw: { width: 512, height: 512, channels: 3 },
+      })
+        .png()
+        .toBuffer();
+      expect(await runner.decode(png)).toBe(replacement);
+    },
+    60000,
+  );
+
+  it("preserves dimensions and exact alpha on unwatermarked images concurrently", async () => {
+    await Promise.all(
+      [
+        [17, 11],
+        [11, 17],
+      ].map(async ([width, height]) => {
+        const rgba = Buffer.alloc(width * height * 4);
+        for (let i = 0; i < rgba.length; i += 4) {
+          rgba.set([120, 80, 160, (i / 4) % 256], i);
+        }
+        const input = await sharp(rgba, {
+          raw: { width, height, channels: 4 },
+        })
+          .png()
+          .toBuffer();
+        const output = await runner.remove(input);
+        const { data, info } = await sharp(output)
+          .raw()
+          .toBuffer({ resolveWithObject: true });
+        expect(info).toMatchObject({ width, height, channels: 4 });
+        for (let i = 3; i < rgba.length; i += 4) {
+          expect(data[i]).toBe(rgba[i]);
+        }
+      }),
+    );
+  }, 30000);
+
+  it("rejects invalid and unsupported input then remains usable", async () => {
+    const gif = await sharp(source).gif().toBuffer();
+    for (const invalid of [
+      Buffer.alloc(0),
+      Buffer.from("not an image"),
+      source.subarray(0, 40),
+      gif,
+    ]) {
+      await expect(runner.remove(invalid)).rejects.toThrow();
+    }
+    expect(await sharp(await runner.remove(source)).metadata()).toMatchObject({
+      width: 512,
+      height: 512,
+    });
+  }, 30000);
+
+  it("rejects 16-bit PNG input", async () => {
+    const input = await sharp(source).toColourspace("rgb16").png().toBuffer();
+    expect(await sharp(input).metadata()).toMatchObject({ bitsPerSample: 16 });
+    await expect(runner.remove(input)).rejects.toThrow(
+      "removal supports only 8-bit JPEG/PNG images",
+    );
+  });
+
+  it("rejects encoded input larger than 64 MiB before reading its contents", async () => {
+    const oversized = Buffer.alloc(64 * 1024 * 1024 + 1);
+    await expect(runner.remove(oversized)).rejects.toThrow(
+      "removal input exceeds 64 MiB",
+    );
+  });
+
+  it.each([
+    [16385, 1],
+    [1, 16385],
+  ])(
+    "rejects dimensions %i x %i before decoding pixels",
+    async (width, height) => {
+      const input = pngWithDimensions(source, width, height);
+      await expect(runner.remove(input)).rejects.toThrow(/limit/i);
+    },
+  );
+
+  it("rejects more than 32 million pixels before decoding pixels", async () => {
+    const input = pngWithDimensions(source, 8000, 4001);
+    await expect(runner.remove(input)).rejects.toThrow(
+      "removal image exceeds 32000000 pixels",
+    );
+  });
+
+  it("accepts the dimension boundary and remains usable after rejected input", async () => {
+    const input = await sharp({
+      create: {
+        width: 16384,
+        height: 1,
+        channels: 3,
+        background: { r: 120, g: 80, b: 160 },
+      },
+    })
+      .png()
+      .toBuffer();
+    const output = await runner.remove(input);
+    expect(await sharp(output).metadata()).toMatchObject({
+      format: "png",
+      width: 16384,
+      height: 1,
+      channels: 3,
+    });
+  }, 30000);
+
+  it("does not download or load a remover by default or with loadRemover false", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "trustmark-opt-in-"));
+    try {
+      for (const name of ["encoder", "decoder"]) {
+        const filename = `${name}_${variant}.onnx`;
+        await fs.copyFile(
+          path.join(modelPath, filename),
+          path.join(root, filename),
+        );
+      }
+      for (const loadRemover of [undefined, false]) {
+        const disabled = await Trustmark.newTrustmark({
+          variant,
+          version: "BCH_5",
+          modelPath: root,
+          loadRemover,
+        });
+        await expect(disabled.remove(source)).rejects.toThrow(
+          "Watermark remover not loaded",
+        );
+      }
+      expect(
+        await fs.pathExists(path.join(root, `remover_${variant}.onnx`)),
+      ).toBe(false);
+    } finally {
+      await fs.remove(root);
+    }
+  }, 30000);
+
+  it("rejects initialization with an invalid remover instead of falling back", async () => {
+    const root = await fs.mkdtemp(
+      path.join(os.tmpdir(), "trustmark-invalid-model-"),
+    );
+    try {
+      for (const name of ["encoder", "decoder"]) {
+        const filename = `${name}_${variant}.onnx`;
+        await fs.copyFile(
+          path.join(modelPath, filename),
+          path.join(root, filename),
+        );
+      }
+      await fs.writeFile(
+        path.join(root, `remover_${variant}.onnx`),
+        "invalid ONNX",
+      );
+      await expect(
+        Trustmark.newTrustmark({
+          variant,
+          version: "BCH_5",
+          modelPath: root,
+          loadRemover: true,
+        }),
+      ).rejects.toThrow(
+        `unable to load remover model ${path.join(
+          root,
+          `remover_${variant}.onnx`,
+        )}`,
+      );
+    } finally {
+      await fs.remove(root);
+    }
+  }, 30000);
+
+  it("rejects non-finite inference output instead of returning an image", async () => {
+    const root = await fs.mkdtemp(
+      path.join(os.tmpdir(), "trustmark-inference-"),
+    );
+    try {
+      for (const name of ["encoder", "decoder"]) {
+        const filename = `${name}_${variant}.onnx`;
+        await fs.copyFile(
+          path.join(modelPath, filename),
+          path.join(root, filename),
+        );
+      }
+      // ONNX opset 13 ConstantOfShape graph: declares float32 [1, 3, 256, 256]
+      // input/output, but returns NaN pixels. Loading succeeds; inference fails
+      // TrustMark's output validation, exercising the native promise error path.
+      const model = Buffer.from(
+        "CAg6wwEKOAoFc2hhcGUSBm91dHB1dCIPQ29uc3RhbnRPZlNoYXBlKhYKBXZhbHVlKgoIARABSgQAAMB/oAEEEhFub25maW5pdGVfcmVtb3ZlciotCAQQB0IFc2hhcGVKIAEAAAAAAAAAAwAAAAAAAAAAAQAAAAAAAAABAAAAAAAAWiEKBWlucHV0EhgKFggBEhIKAggBCgIIAwoDCIACCgMIgAJiIgoGb3V0cHV0EhgKFggBEhIKAggBCgIIAwoDCIACCgMIgAJCAhAN",
+        "base64",
+      );
+      await fs.writeFile(path.join(root, `remover_${variant}.onnx`), model);
+      const invalid = await Trustmark.newTrustmark({
+        variant,
+        version: "BCH_5",
+        modelPath: root,
+        loadRemover: true,
+      });
+      // Repeated failures must reject without poisoning the shared remover.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await expect(invalid.remove(source)).rejects.toThrow(
+          "invalid remover model",
+        );
+      }
+    } finally {
+      await fs.remove(root);
+    }
+  }, 30000);
 });
