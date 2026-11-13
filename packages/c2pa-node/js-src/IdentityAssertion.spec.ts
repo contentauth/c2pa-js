@@ -19,6 +19,7 @@ import * as crypto from "crypto";
 import { spawnSync } from "child_process";
 import { once } from "node:events";
 import { createServer } from "node:http";
+import { Context } from "@contentauth/c2pa-utilities";
 import { encodeSignerPayload } from "./index.js";
 
 import type {
@@ -134,7 +135,7 @@ describe("IdentityAssertionBuilder", () => {
       tsaUrl: undefined,
       tsaHeaders: undefined,
       tsaBody: undefined,
-      directCoseHandling: true,
+      directCoseHandling: false,
     };
 
     // Create signers
@@ -188,6 +189,46 @@ describe("IdentityAssertionBuilder", () => {
       buffer: dest.buffer! as Buffer,
       mimeType: "image/jpeg",
     });
+  });
+
+  it("forwards directCoseHandling through the identity signer", async () => {
+    const { CallbackSigner } = await import("./Signer.js");
+    const { Builder } = await import("./Builder.js");
+    const { IdentityAssertionSigner } = await import("./IdentityAssertion.js");
+
+    let calls = 0;
+    const signer = CallbackSigner.newSigner(
+      {
+        alg: "es256",
+        certs: [],
+        reserveSize: 1000,
+        directCoseHandling: true,
+      },
+      async () => {
+        calls += 1;
+        return Buffer.alloc(100);
+      },
+    );
+    const builder = await Builder.withJsonAsync(
+      {
+        claim_generator_info: [{ name: "c2pa_test", version: "2.0.0" }],
+        format: "image/jpeg",
+        assertions: manifestDefinition.assertions,
+      },
+      new Context({ verify: { verifyAfterSign: false } }),
+    );
+
+    await expect(
+      builder.signAsync(
+        IdentityAssertionSigner.new(signer.getHandle()),
+        {
+          buffer: await fs.readFile("./tests/fixtures/CA.jpg"),
+          mimeType: "image/jpeg",
+        },
+        { buffer: null } as DestinationBufferAsset,
+      ),
+    ).resolves.toBeDefined();
+    expect(calls).toBe(1);
   });
 
   it("forwards timestamp requests and failures through the identity signer", async () => {
@@ -375,7 +416,7 @@ describe("handles reserveSize", () => {
         tsaUrl: undefined,
         tsaHeaders: undefined,
         tsaBody: undefined,
-        directCoseHandling: true,
+        directCoseHandling: false,
       },
       c2paTestSigner.sign,
     );

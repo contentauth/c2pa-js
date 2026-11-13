@@ -12,7 +12,7 @@
 // each license.
 
 use std::ops::Deref;
-use std::sync::RwLock;
+use std::sync::{PoisonError, RwLock};
 
 use async_trait::async_trait;
 use c2pa::{
@@ -142,6 +142,11 @@ impl AsyncSigner for NeonIdentityAssertionSigner {
     ) -> Option<Result<Vec<u8>, c2pa::Error>> {
         let signer = self.signer.read().unwrap().clone();
         c2pa::AsyncSigner::send_timestamp_request(&signer, message, context).await
+    }
+
+    fn direct_cose_handling(&self) -> bool {
+        let signer = self.signer.read().unwrap_or_else(PoisonError::into_inner);
+        c2pa::AsyncSigner::direct_cose_handling(&*signer)
     }
 
     fn dynamic_assertions(&self) -> Vec<Box<dyn AsyncDynamicAssertion>> {
