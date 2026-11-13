@@ -56,19 +56,23 @@ jobs:
         working-directory: ./packages/c2pa-web
         run: pnpm exec playwright install --with-deps
 
-      - name: Cache Trustmark models
+      - name: Cache Trustmark P models
         id: cache-trustmark-models
         uses: actions/cache@v4
         with:
-          path: packages/c2pa-node/tmp/trustmark_models
-          key: trustmark-models-B-v1
+          path: |
+            packages/c2pa-node/tmp/trustmark_models/encoder_P.onnx
+            packages/c2pa-node/tmp/trustmark_models/decoder_P.onnx
+            packages/c2pa-node/tmp/trustmark_models/remover_P.onnx
+          key: trustmark-models-P-v1
 
-      - name: Download Trustmark models
+      - name: Download Trustmark P models
         if: steps.cache-trustmark-models.outputs.cache-hit != 'true'
         run: |
           mkdir -p packages/c2pa-node/tmp/trustmark_models
           BASE="https://cai-watermark.adobe.net/watermarking/trustmark-models"
-          curl -fSL "$BASE/encoder_B.onnx" -o packages/c2pa-node/tmp/trustmark_models/encoder_B.onnx
-          curl -fSL "$BASE/decoder_B.onnx" -o packages/c2pa-node/tmp/trustmark_models/decoder_B.onnx
+          curl -fSL "$BASE/encoder_P.onnx" -o packages/c2pa-node/tmp/trustmark_models/encoder_P.onnx
+          curl -fSL "$BASE/decoder_P.onnx" -o packages/c2pa-node/tmp/trustmark_models/decoder_P.onnx
+          curl -fSL "$BASE/remover_P.onnx" -o packages/c2pa-node/tmp/trustmark_models/remover_P.onnx
 
       - run: pnpm ci:check

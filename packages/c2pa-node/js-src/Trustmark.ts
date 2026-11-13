@@ -43,4 +43,13 @@ export class Trustmark implements TrustmarkInterface {
   async decode(image: Buffer): Promise<string> {
     return getNeonBinary().trustmarkDecode.call(this.trustmark, image);
   }
+
+  /**
+   * Remove a P/Q watermark from an 8-bit JPEG or PNG, returning an encoded PNG
+   * with the same dimensions and alpha. Requires `loadRemover: true`.
+   * Removal is lossy and does not guarantee restoration of the original pixels.
+   */
+  async remove(image: Buffer): Promise<Buffer> {
+    return getNeonBinary().trustmarkRemove.call(this.trustmark, image);
+  }
 }

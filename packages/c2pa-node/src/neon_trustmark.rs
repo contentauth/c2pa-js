@@ -13,7 +13,7 @@
 
 use std::{
     fs::OpenOptions,
-    io::Write,
+    io::{Cursor, Write},
     path::PathBuf,
     sync::{Arc, Mutex},
     time::Duration,
@@ -24,7 +24,7 @@ use neon::result::{JsResult, NeonResult};
 use neon::types::{buffer::TypedArray, Finalize, JsObject};
 use rand::{distributions::Standard, prelude::Distribution as _};
 use reqwest::Client;
-use trustmark::{Trustmark, Variant, Version};
+use trustmark::{Trustmark, Variant, Version, WatermarkRemover};
 
 use crate::error::{as_js_error, as_js_error_fn, Error, Result};
 use crate::runtime::runtime;
@@ -34,12 +34,14 @@ pub struct WatermarkConfig {
     variant: Variant,
     version: Version,
     model_path: PathBuf,
+    load_remover: bool,
 }
 
 pub struct NeonTrustmark {
     // All Trustmark calls are synchronous, so the standard Mutex works.
     trustmark: Arc<Mutex<Trustmark>>,
     version: Version,
+    remover: Option<Arc<WatermarkRemover>>,
 }
 
 impl Finalize for NeonTrustmark {}
@@ -79,10 +81,19 @@ pub fn parse_watermark_config(
         .map(|val| std::path::PathBuf::from(val.value(cx)))
         .unwrap_or_else(|| PathBuf::from("./models"));
 
+    let load_remover = obj
+        .get_opt::<JsBoolean, _, _>(cx, "loadRemover")?
+        .is_some_and(|value| value.value(cx));
+
+    if load_remover && !matches!(variant, Variant::P | Variant::Q) {
+        return cx.throw_error("Watermark configuration error: removal supports only P/Q variants");
+    }
+
     Ok(WatermarkConfig {
         variant,
         version,
         model_path,
+        load_remover,
     })
 }
 
@@ -110,9 +121,25 @@ impl NeonTrustmark {
             Err(err) => return as_js_error_fn(&mut cx, err.into()).and_then(|err| cx.throw(err)),
         };
 
+        let remover = if config.load_remover {
+            let result = fetch_models(
+                &config.model_path,
+                &[format!("remover_{}.onnx", config.variant)],
+            )
+            .and_then(|path| WatermarkRemover::new(path, config.variant).map_err(Error::Watermark));
+
+            match result {
+                Ok(remover) => Some(Arc::new(remover)),
+                Err(err) => return as_js_error_fn(&mut cx, err).and_then(|err| cx.throw(err)),
+            }
+        } else {
+            None
+        };
+
         Ok(cx.boxed(Self {
             trustmark: Arc::new(Mutex::new(trustmark)),
             version: config.version,
+            remover,
         }))
     }
 
@@ -156,6 +183,24 @@ impl NeonTrustmark {
         Ok(promise)
     }
 
+    pub fn remove(mut cx: FunctionContext) -> JsResult<JsPromise> {
+        let this = cx.this::<JsBox<Self>>()?;
+        let Some(remover) = this.remover.clone() else {
+            return cx.throw_error(
+                "Watermark remover not loaded; initialize Trustmark with loadRemover: true",
+            );
+        };
+        let image_bytes = cx.argument::<JsBuffer>(0)?.as_slice(&cx).to_vec();
+        let promise = cx
+            .task(move || remove_image(&image_bytes, &remover))
+            .promise(move |mut cx, result: Result<Vec<u8>>| match result {
+                Ok(png) => JsBuffer::from_slice(&mut cx, &png),
+                Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
+            });
+
+        Ok(promise)
+    }
+
     pub fn decode(mut cx: FunctionContext) -> JsResult<JsPromise> {
         let this = cx.this::<JsBox<Self>>()?;
         let trustmark = this.trustmark.clone();
@@ -177,6 +222,40 @@ impl NeonTrustmark {
     }
 }
 
+fn remove_image(bytes: &[u8], remover: &WatermarkRemover) -> Result<Vec<u8>> {
+    let format = image::guess_format(bytes)?;
+    if !matches!(format, image::ImageFormat::Jpeg | image::ImageFormat::Png) {
+        return Err(Error::WatermarkConfiguration(
+            "removal supports only 8-bit JPEG/PNG images".to_string(),
+        ));
+    }
+
+    let image = image::load_from_memory_with_format(bytes, format)?;
+    if !matches!(
+        image.color(),
+        image::ColorType::L8
+            | image::ColorType::La8
+            | image::ColorType::Rgb8
+            | image::ColorType::Rgba8
+    ) {
+        return Err(Error::WatermarkConfiguration(
+            "removal supports only 8-bit JPEG/PNG images".to_string(),
+        ));
+    }
+
+    let has_alpha = image.color().has_alpha();
+    let recovered = remover.remove(image).map_err(Error::Watermark)?;
+    let output = if has_alpha {
+        image::DynamicImage::ImageRgba8(recovered.to_rgba8())
+    } else {
+        image::DynamicImage::ImageRgb8(recovered.to_rgb8())
+    };
+    let mut png = Cursor::new(Vec::new());
+    output.write_to(&mut png, image::ImageFormat::Png)?;
+
+    Ok(png.into_inner())
+}
+
 fn check_strength(strength: f32) -> Result<()> {
     if !(0.0..=1.0).contains(&strength) {
         return Err(Error::WatermarkConfiguration(
@@ -195,6 +274,16 @@ const MAX_RETRIES: u32 = 3;
 // Taken from Trustmark xtask.
 // Will not overwrite models if they already exist.
 pub fn fetch_model(variant: Variant, dir_path: &std::path::Path) -> Result<PathBuf> {
+    fetch_models(
+        dir_path,
+        &[
+            format!("encoder_{variant}.onnx"),
+            format!("decoder_{variant}.onnx"),
+        ],
+    )
+}
+
+fn fetch_models(dir_path: &std::path::Path, filenames: &[String]) -> Result<PathBuf> {
     let rt = runtime();
     let client = Client::builder()
         .timeout(Duration::from_secs(120))
@@ -208,12 +297,8 @@ pub fn fetch_model(variant: Variant, dir_path: &std::path::Path) -> Result<PathB
 
     let root = "https://cai-watermark.adobe.net/watermarking/trustmark-models";
 
-    // Construct filenames manually since encoder_filename/decoder_filename are private
-    let encoder_filename = format!("encoder_{variant}.onnx");
-    let decoder_filename = format!("decoder_{variant}.onnx");
-
-    for filename in [encoder_filename, decoder_filename] {
-        let model_path = dir_path.join(&filename);
+    for filename in filenames {
+        let model_path = dir_path.join(filename);
         if model_path.exists() {
             continue;
         }

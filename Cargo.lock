@@ -4715,9 +4715,9 @@ dependencies = [
 
 [[package]]
 name = "trustmark"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dce7fafc947e84d7c0940407d08b2e5dab3fe00479b2d799a3e648989d4848a"
+checksum = "521fc123b2dae9984090e06f8f80cda9e4a4d885c5c14b6e549d52036bdf2f38"
 dependencies = [
  "fast_image_resize",
  "image",

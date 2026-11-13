@@ -523,10 +523,26 @@ export interface TrustmarkInterface {
    * @param image image to extract the watermark from (must be in a supported image format like JPEG, PNG, etc.)
    */
   decode(image: Buffer): Promise<string>;
+
+  /**
+   * Remove a P/Q watermark using the separately loaded removal model.
+   * Requires `loadRemover: true`; rejects unsupported input and removal failures.
+   * Removal is lossy, may change unwatermarked images, and does not guarantee
+   * restoration of original pixels or removal of arbitrary watermarks.
+   * @param image An 8-bit JPEG or PNG (RGB, RGBA, or grayscale)
+   * @returns Encoded PNG preserving dimensions and alpha, not raw pixel data
+   */
+  remove(image: Buffer): Promise<Buffer>;
 }
 
 export interface TrustmarkConfig {
   variant: TrustmarkVariant;
   version: TrustmarkVersion;
   modelPath?: string;
+  /**
+   * Load/download the separate `remover_P.onnx` or `remover_Q.onnx` model.
+   * Only supported for P/Q. Defaults to false to avoid additional downloads,
+   * startup time, and memory usage. Uses the same `modelPath` as encode/decode.
+   */
+  loadRemover?: boolean;
 }
