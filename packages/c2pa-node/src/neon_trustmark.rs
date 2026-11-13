@@ -19,6 +19,7 @@ use std::{
     time::Duration,
 };
 
+use image::ImageDecoder as _;
 use neon::prelude::*;
 use neon::result::{JsResult, NeonResult};
 use neon::types::{buffer::TypedArray, Finalize, JsObject};
@@ -190,7 +191,14 @@ impl NeonTrustmark {
                 "Watermark remover not loaded; initialize Trustmark with loadRemover: true",
             );
         };
-        let image_bytes = cx.argument::<JsBuffer>(0)?.as_slice(&cx).to_vec();
+        let buffer = cx.argument::<JsBuffer>(0)?;
+        let image_bytes = buffer.as_slice(&cx);
+        if image_bytes.len() > MAX_REMOVAL_INPUT_BYTES {
+            let error = Error::WatermarkConfiguration("removal input exceeds 64 MiB".to_string());
+            return as_js_error_fn(&mut cx, error).and_then(|err| cx.throw(err));
+        }
+
+        let image_bytes = image_bytes.to_vec();
         let promise = cx
             .task(move || remove_image(&image_bytes, &remover))
             .promise(move |mut cx, result: Result<Vec<u8>>| match result {
@@ -222,6 +230,13 @@ impl NeonTrustmark {
     }
 }
 
+// Bound the input copy, decoding, and the full-resolution buffers allocated by
+// removal. These are per-call limits, not a process-wide concurrency budget.
+const MAX_REMOVAL_INPUT_BYTES: usize = 64 * 1024 * 1024;
+const MAX_REMOVAL_DIMENSION: u32 = 16_384;
+const MAX_REMOVAL_PIXELS: u64 = 32_000_000;
+const MAX_REMOVAL_DECODE_BYTES: u64 = 128 * 1024 * 1024;
+
 fn remove_image(bytes: &[u8], remover: &WatermarkRemover) -> Result<Vec<u8>> {
     let format = image::guess_format(bytes)?;
     if !matches!(format, image::ImageFormat::Jpeg | image::ImageFormat::Png) {
@@ -230,9 +245,22 @@ fn remove_image(bytes: &[u8], remover: &WatermarkRemover) -> Result<Vec<u8>> {
         ));
     }
 
-    let image = image::load_from_memory_with_format(bytes, format)?;
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(MAX_REMOVAL_DIMENSION);
+    limits.max_image_height = Some(MAX_REMOVAL_DIMENSION);
+    limits.max_alloc = Some(MAX_REMOVAL_DECODE_BYTES);
+    let mut reader = image::ImageReader::with_format(Cursor::new(bytes), format);
+    reader.limits(limits.clone());
+    let mut decoder = reader.into_decoder()?;
+    let (width, height) = decoder.dimensions();
+    if u64::from(width) * u64::from(height) > MAX_REMOVAL_PIXELS {
+        return Err(Error::WatermarkConfiguration(
+            "removal image exceeds 32000000 pixels".to_string(),
+        ));
+    }
+
     if !matches!(
-        image.color(),
+        decoder.color_type(),
         image::ColorType::L8
             | image::ColorType::La8
             | image::ColorType::Rgb8
@@ -243,6 +271,11 @@ fn remove_image(bytes: &[u8], remover: &WatermarkRemover) -> Result<Vec<u8>> {
         ));
     }
 
+    // Include the decoded image buffer in the allocation budget, as
+    // ImageReader::decode does. from_decoder does not reserve it itself.
+    limits.reserve(decoder.total_bytes())?;
+    decoder.set_limits(limits)?;
+    let image = image::DynamicImage::from_decoder(decoder)?;
     let has_alpha = image.color().has_alpha();
     let recovered = remover.remove(image).map_err(Error::Watermark)?;
     let output = if has_alpha {

@@ -40,6 +40,23 @@ async function rawRgbToJpeg(
   return await image.jpeg({ quality: 95 }).toBuffer();
 }
 
+// Modify only the PNG header so oversized-image tests never allocate its pixels.
+function pngWithDimensions(png: Buffer, width: number, height: number): Buffer {
+  const image = Buffer.from(png);
+  expect(image.toString("ascii", 12, 16)).toBe("IHDR");
+  image.writeUInt32BE(width, 16);
+  image.writeUInt32BE(height, 20);
+  let crc = 0xffffffff;
+  for (const byte of image.subarray(12, 29)) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit++) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+  }
+  image.writeUInt32BE((crc ^ 0xffffffff) >>> 0, 29);
+  return image;
+}
+
 describe("Trustmark", () => {
   let trustmark: Trustmark;
   let testImage: Buffer;
@@ -342,6 +359,51 @@ describe("Trustmark P removal", () => {
       "removal supports only 8-bit JPEG/PNG images",
     );
   });
+
+  it("rejects encoded input larger than 64 MiB before reading its contents", async () => {
+    const oversized = Buffer.alloc(64 * 1024 * 1024 + 1);
+    await expect(runner.remove(oversized)).rejects.toThrow(
+      "removal input exceeds 64 MiB",
+    );
+  });
+
+  it.each([
+    [16385, 1],
+    [1, 16385],
+  ])(
+    "rejects dimensions %i x %i before decoding pixels",
+    async (width, height) => {
+      const input = pngWithDimensions(source, width, height);
+      await expect(runner.remove(input)).rejects.toThrow(/limit/i);
+    },
+  );
+
+  it("rejects more than 32 million pixels before decoding pixels", async () => {
+    const input = pngWithDimensions(source, 8000, 4001);
+    await expect(runner.remove(input)).rejects.toThrow(
+      "removal image exceeds 32000000 pixels",
+    );
+  });
+
+  it("accepts the dimension boundary and remains usable after rejected input", async () => {
+    const input = await sharp({
+      create: {
+        width: 16384,
+        height: 1,
+        channels: 3,
+        background: { r: 120, g: 80, b: 160 },
+      },
+    })
+      .png()
+      .toBuffer();
+    const output = await runner.remove(input);
+    expect(await sharp(output).metadata()).toMatchObject({
+      format: "png",
+      width: 16384,
+      height: 1,
+      channels: 3,
+    });
+  }, 30000);
 
   it("does not download or load a remover by default or with loadRemover false", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "trustmark-opt-in-"));

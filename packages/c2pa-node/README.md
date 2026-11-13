@@ -88,6 +88,22 @@ which returns **raw RGB8 pixels**. Unsupported formats or bit depths, malformed
 images, missing removal support, and model/inference failures reject the promise;
 failures are never silently treated as successful removal.
 
+Removal rejects encoded inputs larger than **64 MiB**, dimensions larger than
+**16,384 pixels** on either axis, and images with more than **32 million pixels**.
+Dimensions and pixel count are checked before decoding pixels or running
+inference. Decoding also has a **best-effort 128 MiB allocation budget**. These
+are per-call limits, not a cap on total process memory: removal allocates additional
+full-resolution buffers, and concurrent calls require additional memory.
+
+The returned PNG is **pixel-only**. It does not copy image metadata, including
+EXIF, XMP, ICC color profiles, or embedded C2PA manifests. Preserving dimensions
+and alpha does not mean preserving metadata. Callers that need ordinary image
+metadata must carry it forward separately using an encoder that supports it.
+Existing C2PA credentials bind to the original asset and do not remain valid for
+the modified pixels. Use the original asset as an ingredient and sign a new
+manifest to attach valid Content Credentials to the output; do not simply copy
+the original manifest.
+
 Removal is lossy: it does not restore the original pixels or guarantee removal of
 arbitrary watermarks. It can also change an image without a detectable watermark.
 Remove before re-watermarking if replacing an existing identifier. Operations on

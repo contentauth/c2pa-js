@@ -48,6 +48,12 @@ export class Trustmark implements TrustmarkInterface {
    * Remove a P/Q watermark from an 8-bit JPEG or PNG, returning an encoded PNG
    * with the same dimensions and alpha. Requires `loadRemover: true`.
    * Removal is lossy and does not guarantee restoration of the original pixels.
+   * Input is limited to 64 MiB, 16,384 pixels per dimension, and 32 million
+   * pixels, with a best-effort 128 MiB decoder allocation budget. Limits are
+   * per call, not a cap on total process memory.
+   * Image metadata (EXIF, XMP, ICC profiles, and C2PA manifests) is not copied.
+   * Existing credentials do not remain valid for the modified pixels; sign a
+   * new manifest to attach valid Content Credentials to the output.
    */
   async remove(image: Buffer): Promise<Buffer> {
     return getNeonBinary().trustmarkRemove.call(this.trustmark, image);
