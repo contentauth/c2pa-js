@@ -216,6 +216,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     )?;
     cx.export_function("trustmarkEncode", neon_trustmark::NeonTrustmark::encode)?;
     cx.export_function("trustmarkDecode", neon_trustmark::NeonTrustmark::decode)?;
+    cx.export_function("trustmarkRemove", neon_trustmark::NeonTrustmark::remove)?;
 
     Ok(())
 }

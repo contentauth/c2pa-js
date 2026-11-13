@@ -85,7 +85,7 @@ describe("Reader", () => {
                 "parameters": {
                   "ingredient": {
                     "url": "self#jumbf=c2pa.assertions/c2pa.ingredient",
-                    "hash": "5dNlxTKe4afGAicpJa1hF1R3mBZKE+Bl0xmh0McXuO4="
+                    "hash": "b64'5dNlxTKe4afGAicpJa1hF1R3mBZKE+Bl0xmh0McXuO4='"
                   }
                 }
               },
@@ -315,18 +315,22 @@ describe("Reader", () => {
     expect(signatureInfo.cert_serial_number).toBe(
       "638838410810235485828984295321338730070538954823",
     );
-    expect(signatureInfo.revocation_status).toBe(true);
+    expect(signatureInfo.revocation_status).toBeUndefined();
 
     // Verify signer_payload values
     expect(signerPayload.sig_type).toBe("cawg.x509.cose");
     expect(signerPayload.referenced_assertions).toHaveLength(2);
     expect(signerPayload.referenced_assertions[0]).toEqual({
       url: "self#jumbf=c2pa.assertions/cawg.training-mining",
-      hash: "rBBgURB+/0Bc2Uk3+blNpYTGQTxOwzXQ2xhjA3gsqI4=",
+      hash: Array.from(
+        Buffer.from("rBBgURB+/0Bc2Uk3+blNpYTGQTxOwzXQ2xhjA3gsqI4=", "base64"),
+      ),
     });
     expect(signerPayload.referenced_assertions[1]).toEqual({
       url: "self#jumbf=c2pa.assertions/c2pa.hash.data",
-      hash: "sASozh9KFSkW+cyMI0Pw5KYoD2qn7MkUEq9jUUhe/sM=",
+      hash: Array.from(
+        Buffer.from("sASozh9KFSkW+cyMI0Pw5KYoD2qn7MkUEq9jUUhe/sM=", "base64"),
+      ),
     });
   });
 

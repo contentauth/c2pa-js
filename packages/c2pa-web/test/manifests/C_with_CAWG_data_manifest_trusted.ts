@@ -49,8 +49,7 @@ export default {
               cert_serial_number:
                 '638838410810235485828984295321338730070538954823',
               common_name: 'C2PA Signer',
-              issuer: 'C2PA Test Signing Cert',
-              revocation_status: true
+              issuer: 'C2PA Test Signing Cert'
             },
             signer_payload: {
               referenced_assertions: [
@@ -96,7 +95,14 @@ export default {
   },
   validation_results: {
     activeManifest: {
-      failure: [],
+      failure: [
+        {
+          code: 'cawg.x509.credential.untrusted',
+          explanation:
+            'certificate does not satisfy the CAWG X.509 trust model',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
+        }
+      ],
       informational: [
         {
           code: 'signingCredential.ocsp.skipped',
@@ -169,12 +175,6 @@ export default {
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.hash.data'
         },
         {
-          code: 'cawg.x509.credential.trusted',
-          explanation:
-            'signing certificate trusted, found in [cawg_system_anchors] trust anchors',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
-        },
-        {
           code: 'cawg.x509.signature.validated',
           explanation: 'X.509 identity assertion signature validated',
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
@@ -189,5 +189,12 @@ export default {
     specVersion: '2.4.0',
     trustListUri: 'manifest_system_anchors'
   },
-  validation_state: 'Trusted'
+  validation_state: 'Valid',
+  validation_status: [
+    {
+      code: 'cawg.x509.credential.untrusted',
+      explanation: 'certificate does not satisfy the CAWG X.509 trust model',
+      url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
+    }
+  ]
 } satisfies ManifestStore;

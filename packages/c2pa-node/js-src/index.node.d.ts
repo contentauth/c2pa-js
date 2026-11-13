@@ -180,6 +180,7 @@ declare module "index.node" {
     watermark?: string,
   ): Promise<Buffer>;
   export function trustmarkDecode(image: Buffer): Promise<string>;
+  export function trustmarkRemove(image: Buffer): Promise<Buffer>;
 
   // Settings API
   export function loadSettings(json: string): void;
