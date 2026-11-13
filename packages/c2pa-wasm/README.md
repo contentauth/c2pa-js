@@ -8,6 +8,21 @@ The WebAssembly wrapper for [`c2pa-rs`](https://github.com/contentauth/c2pa-rs) 
 npm install @contentauth/c2pa-wasm
 ```
 
+## Reusing settings contexts
+
+Direct WASM callers can use `registerContext(settingsJson)` once, then pass its
+opaque, WASM-instance-local ID to `WasmReader.fromBlobWithContext`,
+`WasmReader.fromBlobFragmentWithContext`, `WasmBuilder.newWithContext`,
+`WasmBuilder.fromJsonWithContext`, or `WasmBuilder.fromArchiveWithContext`.
+These constructors do not transfer settings JSON into WASM again.
+
+The cache retains at most 16 distinct settings entries in insertion order.
+Evicted IDs reject further construction; register the settings again for a new
+ID. `clearContextCache()` releases cache ownership and invalidates all cached IDs.
+Live Readers and Builders retain their settings until freed, with independent
+manifest state. All existing JSON-based constructors, including `fromBytes`,
+remain supported.
+
 ## Development
 
 ### Prerequisites

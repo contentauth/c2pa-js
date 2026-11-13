@@ -19,7 +19,9 @@ import type {
 import { channel } from 'highgain';
 
 export interface WorkerContext {
+  // Worker-local registration key, distinct from the opaque WASM context ID.
   id: number;
+  // Supplied only on registration; subsequent construction uses IDs alone.
   json?: string;
 }
 

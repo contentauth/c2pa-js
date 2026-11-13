@@ -13,6 +13,7 @@ import {
   WasmReader,
   initSync,
   WasmBuilder,
+  registerContext,
   encodeSignerPayload as wasmEncodeSignerPayload
 } from '@contentauth/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
@@ -24,34 +25,37 @@ import { transfer } from 'highgain';
 
 const readerMap = createWorkerObjectMap<WasmReader>();
 const builderMap = createWorkerObjectMap<WasmBuilder>();
-const contextJsonMap = new Map<number, string>();
+const contextMap = new Map<number, { json: string; wasmId: number }>();
 
 const tx = createWorkerTx();
 
-function getContextJson(context: WorkerContext): string {
-  const existingJson = contextJsonMap.get(context.id);
+function getContextId(context: WorkerContext): number {
+  const existing = contextMap.get(context.id);
   if (context.json !== undefined) {
-    if (existingJson !== undefined && existingJson !== context.json) {
+    if (existing !== undefined && existing.json !== context.json) {
       throw new Error('Worker context ID was reused with different settings');
     }
-    if (
-      existingJson === undefined &&
-      contextJsonMap.size === MAX_CACHED_CONTEXTS
-    ) {
-      const oldestId = contextJsonMap.keys().next().value;
+
+    if (existing !== undefined) {
+      return existing.wasmId;
+    }
+
+    const wasmId = registerContext(context.json);
+    if (contextMap.size === MAX_CACHED_CONTEXTS) {
+      const oldestId = contextMap.keys().next().value;
       if (oldestId !== undefined) {
-        contextJsonMap.delete(oldestId);
+        contextMap.delete(oldestId);
       }
     }
-    contextJsonMap.set(context.id, context.json);
+    contextMap.set(context.id, { json: context.json, wasmId });
+    return wasmId;
   }
 
-  const contextJson = contextJsonMap.get(context.id);
-  if (contextJson === undefined) {
+  if (existing === undefined) {
     throw new Error('Worker context settings have not been registered');
   }
 
-  return contextJson;
+  return existing.wasmId;
 }
 
 /**
@@ -74,7 +78,10 @@ function buildWasmIdentityAssertions(
       // Transfer the hash buffers nested in referencedAssertions, mirroring
       // how the plain signer's `sign` closure transfers its `bytes` argument.
       const buffers = payload.referencedAssertions.map((ra) => ra.hash.buffer);
-      const result = await tx.cawgSign(ia.requestId, transfer(payload, buffers));
+      const result = await tx.cawgSign(
+        ia.requestId,
+        transfer(payload, buffers)
+      );
       return result;
     }
   }));
@@ -90,20 +97,20 @@ rx(
       return transfer(bytes, bytes.buffer);
     },
     async reader_fromBlob(format, blob, context) {
-      const reader = await WasmReader.fromBlob(
+      const reader = await WasmReader.fromBlobWithContext(
         format,
         blob,
-        getContextJson(context)
+        getContextId(context)
       );
       const readerId = readerMap.add(reader);
       return readerId;
     },
     async reader_fromBlobFragment(format, init, fragment, context) {
-      const reader = await WasmReader.fromBlobFragment(
+      const reader = await WasmReader.fromBlobFragmentWithContext(
         format,
         init,
         fragment,
-        getContextJson(context)
+        getContextId(context)
       );
       const readerId = readerMap.add(reader);
       return readerId;
@@ -139,17 +146,23 @@ rx(
       readerMap.remove(readerId);
     },
     builder_new(context) {
-      const builder = WasmBuilder.new(getContextJson(context));
+      const builder = WasmBuilder.newWithContext(getContextId(context));
       const builderId = builderMap.add(builder);
       return builderId;
     },
     builder_fromJson(json: string, context) {
-      const builder = WasmBuilder.fromJson(json, getContextJson(context));
+      const builder = WasmBuilder.fromJsonWithContext(
+        json,
+        getContextId(context)
+      );
       const builderId = builderMap.add(builder);
       return builderId;
     },
     builder_fromArchive(archive, context) {
-      const builder = WasmBuilder.fromArchive(archive, getContextJson(context));
+      const builder = WasmBuilder.fromArchiveWithContext(
+        archive,
+        getContextId(context)
+      );
       const builderId = builderMap.add(builder);
       return builderId;
     },
