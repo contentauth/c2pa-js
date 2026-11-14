@@ -117,11 +117,11 @@ const settings = mergeSettings(trustSettings, verifySettings);
 const settingsJson = await resolveSettings(settings);
 ```
 
-`resolveSettings` is the entry point most direct callers want. It resolves any `trust`/`cawgTrust` URL fields (fetching and inlining the PEM content, retrying transient failures), and returns the result as a snake_case JSON string. `settings` is merged on top of this package's defaults, so `resolveSettings` always returns a value, even when called with `undefined`. To combine more than one `Settings` object first, merge them with `mergeSettings()` before calling `resolveSettings`, as above.
+`resolveSettings` is the entry point most direct callers want. It resolves any `trust`/`tsaTrust`/`cawgTrust` URL fields (fetching and inlining the PEM content, retrying transient failures), and returns the result as a snake_case JSON string. `settings` is merged on top of this package's defaults, so `resolveSettings` always returns a value, even when called with `undefined`. To combine more than one `Settings` object first, merge them with `mergeSettings()` before calling `resolveSettings`, as above.
 
 Other exports:
 
-- `createTrustSettings` / `createCawgTrustSettings` / `createVerifySettings` — construct a `Settings` fragment for one section.
+- `createTrustSettings` / `createTsaTrustSettings` / `createCawgTrustSettings` / `createVerifySettings` — construct a `Settings` fragment for one section.
 - `mergeSettings` — deep-merge any number of `Settings` fragments, with later arguments overriding earlier ones. Nested fields are merged rather than overwritten.
 - `settingsToJson` — serialize a `Settings` object to its snake_case JSON form without resolving trust-anchor URLs.
 - `snakeCaseify` — the lower-level camelCase-to-snake_case object converter `settingsToJson`/`resolveSettings` use internally.

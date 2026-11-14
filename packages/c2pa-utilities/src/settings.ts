@@ -50,9 +50,13 @@ export interface Settings {
    */
   trust?: TrustSettings;
   /**
+   * Trust configuration for timestamp validation.
+   */
+  tsaTrust?: TsaTrustSettings;
+  /**
    * Trust configuration for CAWG identity validation.
    */
-  cawgTrust?: TrustSettings;
+  cawgTrust?: CawgTrustSettings;
   /**
    * Verification settings.
    */
@@ -88,11 +92,14 @@ export interface TrustSettings {
    * End-entity certificates.
    *
    * Possible values are: the text content of a end-entity cert file, a URL to fetch a end-entity cert file from, or an array of URLs that will be fetched and concatenated.
+   *
+   * The allowed list of every section is added to the claim signer check, so an allowed list in
+   * `cawgTrust` also trusts those certificates as claim signers.
    */
   allowedList?: string | string[];
   /**
-   * Enable trust-list validation for this section (`trust` or `cawgTrust`). The default value
-   * is "true."
+   * Enable trust-list validation for this section (`trust`, `tsaTrust` or `cawgTrust`). The
+   * default value is "true."
    *
    * `c2pa-rs` 0.91 removed the separate `cawg_trust` settings section and the underlying
    * "check trust but don't report anything" toggle it backed. Setting this to `false` is
@@ -102,6 +109,28 @@ export interface TrustSettings {
    * staying silent.
    */
   verifyTrustList?: boolean;
+}
+
+/**
+ * Trust configuration for timestamp validation. It has no `allowedList`: an allowed list here
+ * would make its certificates trusted claim signers and would not affect timestamps. It has no
+ * `trustConfig`: timestamp validation does not read one.
+ */
+export type TsaTrustSettings = Omit<
+  TrustSettings,
+  'allowedList' | 'trustConfig'
+>;
+
+export interface CawgTrustSettings extends TrustSettings {
+  /**
+   * DIDs of identity claims aggregation (ICA) issuers to trust, without a DID fragment. A
+   * credential matches an entry when its issuer, with any DID fragment removed, equals the
+   * entry. Empty or missing trusts no ICA issuer.
+   *
+   * {@link mergeSettings} concatenates arrays, so merging two settings objects adds issuers
+   * and never removes any.
+   */
+  trustedIcaIssuers?: string[];
 }
 
 export interface VerifySettings {
@@ -224,6 +253,12 @@ export async function resolveSettings(
     );
   }
 
+  if (finalSettings.tsaTrust) {
+    const { tsaTrust } = createTsaTrustSettings(finalSettings.tsaTrust);
+    finalSettings.tsaTrust = tsaTrust;
+    resolvePromises.push(resolveTrustSettings(tsaTrust, options));
+  }
+
   if (finalSettings.cawgTrust) {
     resolvePromises.push(
       resolveTrustSettings(finalSettings.cawgTrust, options)
@@ -240,17 +275,22 @@ export async function resolveSettings(
  * `c2pa-rs` 0.91 replaced the separate top-level `cawg_trust` settings section (and the flat,
  * now-deprecated `trust_anchors`/`user_anchors` string fields) with a single `trust.anchors[]`
  * list, where each entry is tagged with a `trustKind` identifying which certificate chain it
- * applies to. This builds that shape directly from our own `trust`/`cawgTrust` sections rather
- * than relying on the deprecated fields, which are slated for removal in 0.92.
+ * applies to. This builds that shape directly from our own `trust`/`tsaTrust`/`cawgTrust`
+ * sections rather than relying on the deprecated fields, which are slated for removal in 0.92.
  *
  * Must run after {@link resolveTrustSettings} has resolved `settings`' anchor fields to plain
  * strings.
  */
 function toWireSettings(settings: Settings): SettingsObjectType {
-  const { trust, cawgTrust, ...rest } = settings;
+  const { trust, tsaTrust, cawgTrust, ...rest } = settings;
   const anchors = [
     ...buildTrustAnchorEntries(trust, 'manifest'),
-    ...buildTrustAnchorEntries(cawgTrust, 'cawg')
+    ...buildTrustAnchorEntries(
+      tsaTrust && createTsaTrustSettings(tsaTrust).tsaTrust,
+      'tsa'
+    ),
+    // Trusted ICA issuers are read from cawg entries only.
+    ...buildTrustAnchorEntries(cawgTrust, 'cawg', cawgTrust?.trustedIcaIssuers)
   ];
 
   const wireSettings = rest as SettingsObjectType;
@@ -266,11 +306,12 @@ function toWireSettings(settings: Settings): SettingsObjectType {
   return wireSettings;
 }
 
-type TrustAnchorKind = 'manifest' | 'cawg';
+type TrustAnchorKind = 'manifest' | 'tsa' | 'cawg';
 
 function buildTrustAnchorEntries(
   settings: TrustSettings | undefined,
-  kind: TrustAnchorKind
+  kind: TrustAnchorKind,
+  trustedIcaIssuers?: string[]
 ): SettingsObjectType[] {
   // There's no upstream equivalent left for "run this trust kind's checks but report nothing" -
   // omitting its anchors is the closest approximation. Unlike before, validation still runs and
@@ -281,15 +322,20 @@ function buildTrustAnchorEntries(
 
   const trustConfig = settings.trustConfig as string | undefined;
   const allowedList = settings.allowedList as string | undefined;
+  const issuers = trustedIcaIssuers?.length ? trustedIcaIssuers : undefined;
+  const entryFields: SettingsObjectType = {
+    trustKind: kind,
+    ...(trustConfig ? { trustConfig } : {}),
+    ...(allowedList ? { allowedList } : {}),
+    ...(issuers ? { trustedIcaIssuers: issuers } : {})
+  };
   const entries: SettingsObjectType[] = [];
 
   if (settings.userAnchors) {
     entries.push({
       trustAnchors: settings.userAnchors as string,
       trustUri: `${kind}_user_anchors`,
-      trustKind: kind,
-      ...(trustConfig ? { trustConfig } : {}),
-      ...(allowedList ? { allowedList } : {})
+      ...entryFields
     });
   }
 
@@ -297,9 +343,17 @@ function buildTrustAnchorEntries(
     entries.push({
       trustAnchors: settings.trustAnchors as string,
       trustUri: `${kind}_system_anchors`,
+      ...entryFields
+    });
+  }
+
+  if (entries.length === 0 && issuers) {
+    // Every entry needs trust_anchors; an empty string adds no certificates.
+    entries.push({
+      trustAnchors: '',
+      trustUri: `${kind}_ica_issuers`,
       trustKind: kind,
-      ...(trustConfig ? { trustConfig } : {}),
-      ...(allowedList ? { allowedList } : {})
+      trustedIcaIssuers: issuers
     });
   }
 
@@ -320,12 +374,26 @@ export function createTrustSettings(trustConfig: TrustSettings): Settings {
 }
 
 /**
+ * Create a Settings object with timestamp trust configuration.
+ * Only the fields of {@link TsaTrustSettings} are kept.
+ * @param trustConfig The timestamp trust configuration.
+ * @returns Settings object that can be passed to Reader/Builder.
+ */
+export function createTsaTrustSettings({
+  userAnchors,
+  trustAnchors,
+  verifyTrustList
+}: TsaTrustSettings): { tsaTrust: TsaTrustSettings } {
+  return { tsaTrust: { userAnchors, trustAnchors, verifyTrustList } };
+}
+
+/**
  * Create a Settings object with CAWG trust configuration.
  * @param trustConfig The CAWG trust configuration.
  * @returns Settings object that can be passed to Reader/Builder.
  */
 export function createCawgTrustSettings(
-  trustConfig: TrustSettings
+  trustConfig: CawgTrustSettings
 ): Settings {
   return { cawgTrust: { ...trustConfig } };
 }

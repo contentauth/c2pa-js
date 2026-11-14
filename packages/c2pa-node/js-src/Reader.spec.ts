@@ -16,7 +16,11 @@
 import type { ManifestStore } from "@contentauth/c2pa-types";
 import path from "path";
 import fs from "fs-extra";
-import { AssetTooLargeError, Context } from "@contentauth/c2pa-utilities";
+import {
+  AssetTooLargeError,
+  Context,
+  type Settings,
+} from "@contentauth/c2pa-utilities";
 
 import { Reader } from "./Reader.js";
 import { MAX_SIZE_IN_BYTES } from "./assetSize.js";
@@ -348,5 +352,28 @@ describe("Reader", () => {
 
     const reader = await Reader.fromAsset(asset);
     expect(reader).toBeNull();
+  });
+
+  // TMN-TODO: Add the ica_did_jwk.jpg fixture from c2pa-rs.
+  it.skip("trusts an ICA issuer listed in cawgTrust trustedIcaIssuers", async () => {
+    const asset = { path: "./tests/fixtures/ica_did_jwk.jpg" };
+    const issuer =
+      "did:jwk:eyJhbGciOiJFZERTQSIsImt0eSI6Ik9LUCIsImNydiI6IkVkMjU1MTkiLCJ4IjoiTXA1LTBlODNuTmdRaGRoQlc4UnNoa2p5OTBzYTFBOUpJemtJdGNEcUN1SSJ9";
+    const activeManifestCodes = async (settings: Settings) => {
+      const reader = await Reader.fromAsset(asset, new Context(settings));
+      const results = reader!.json().validation_results?.activeManifest;
+      return [
+        ...(results?.success ?? []),
+        ...(results?.informational ?? []),
+        ...(results?.failure ?? []),
+      ].map((status) => status.code);
+    };
+
+    expect(
+      await activeManifestCodes({ cawgTrust: { trustedIcaIssuers: [issuer] } }),
+    ).toContain("cawg.ica.credential_valid");
+    expect(await activeManifestCodes({})).toContain(
+      "cawg.ica.untrusted_issuer",
+    );
   });
 });

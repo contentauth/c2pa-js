@@ -23,6 +23,7 @@ import {
   resolveSettings,
   createTrustSettings,
   createCawgTrustSettings,
+  createTsaTrustSettings,
   createVerifySettings,
   mergeSettings,
   settingsToJson,
@@ -226,6 +227,31 @@ describe('settings', () => {
             }
           })
         );
+      });
+
+      test('should not fetch an allowedList URL in tsaTrust', async () => {
+        server.use(
+          http.get('http://tsaAnchors', () =>
+            HttpResponse.text(
+              '-----BEGIN CERTIFICATE-----tsa-----END CERTIFICATE-----'
+            )
+          )
+        );
+        const tsaTrust: TrustSettings = {
+          trustAnchors: 'http://tsaAnchors',
+          allowedList: 'http://tsaAllowedList'
+        };
+
+        const result = JSON.parse(await resolveSettings({ tsaTrust }));
+
+        expect(result.trust.anchors).toEqual([
+          {
+            trust_anchors:
+              '-----BEGIN CERTIFICATE-----tsa-----END CERTIFICATE-----',
+            trust_uri: 'tsa_system_anchors',
+            trust_kind: 'tsa'
+          }
+        ]);
       });
 
       test('should concatenate the fetched results of URLs when given as an array', async () => {
@@ -618,6 +644,11 @@ describe('createTrustSettings / createCawgTrustSettings / createVerifySettings',
     expect(settings.cawgTrust?.trustAnchors).toBe('anchors');
   });
 
+  it('creates timestamp trust settings', () => {
+    const settings = createTsaTrustSettings({ trustAnchors: 'tsa anchors' });
+    expect(settings).toEqual({ tsaTrust: { trustAnchors: 'tsa anchors' } });
+  });
+
   it('creates verify settings', () => {
     const verifyConfig: VerifySettings = {
       verifyAfterReading: true,
@@ -717,6 +748,9 @@ describe('mergeSettings', () => {
 });
 
 describe('settingsToJson', () => {
+  const PEM = '-----BEGIN CERTIFICATE-----tsa-----END CERTIFICATE-----';
+  const ISSUER = 'did:web:example.com';
+
   it('converts settings to JSON with snake_case keys', () => {
     const settings = createVerifySettings({
       verifyAfterReading: true,
@@ -799,6 +833,95 @@ describe('settingsToJson', () => {
     expect(cawgAnchor.trust_anchors).toBe('test');
     expect('allowed_list' in cawgAnchor).toBe(false);
     expect(parsed.verify.verify_after_reading).toBe(false);
+  });
+
+  it('emits tsaTrust anchors as tsa entries', () => {
+    const parsed = JSON.parse(
+      settingsToJson({ tsaTrust: { userAnchors: 'user', trustAnchors: PEM } })
+    );
+
+    expect('tsa_trust' in parsed).toBe(false);
+    expect(parsed.trust).toEqual({
+      anchors: [
+        {
+          trust_anchors: 'user',
+          trust_uri: 'tsa_user_anchors',
+          trust_kind: 'tsa'
+        },
+        {
+          trust_anchors: PEM,
+          trust_uri: 'tsa_system_anchors',
+          trust_kind: 'tsa'
+        }
+      ]
+    });
+  });
+
+  it('puts only the issuers on an issuer-only cawg entry', () => {
+    const parsed = JSON.parse(
+      settingsToJson({
+        cawgTrust: {
+          trustConfig: 'config',
+          allowedList: 'allowed',
+          trustedIcaIssuers: [ISSUER]
+        }
+      })
+    );
+
+    expect(parsed.trust).toEqual({
+      anchors: [
+        {
+          trust_anchors: '',
+          trust_uri: 'cawg_ica_issuers',
+          trust_kind: 'cawg',
+          trusted_ica_issuers: [ISSUER]
+        }
+      ]
+    });
+  });
+
+  it('keeps trustedIcaIssuers on an anchored cawg entry', () => {
+    const parsed = JSON.parse(
+      settingsToJson({
+        cawgTrust: {
+          userAnchors: 'user',
+          trustAnchors: PEM,
+          trustedIcaIssuers: [ISSUER]
+        }
+      })
+    );
+
+    expect(parsed.trust.anchors).toEqual([
+      {
+        trust_anchors: 'user',
+        trust_uri: 'cawg_user_anchors',
+        trust_kind: 'cawg',
+        trusted_ica_issuers: [ISSUER]
+      },
+      {
+        trust_anchors: PEM,
+        trust_uri: 'cawg_system_anchors',
+        trust_kind: 'cawg',
+        trusted_ica_issuers: [ISSUER]
+      }
+    ]);
+  });
+
+  it('never emits an allowed list or trust config on tsa entries', () => {
+    const tsaTrust: TrustSettings = {
+      trustAnchors: PEM,
+      allowedList: 'allowed',
+      trustConfig: 'config'
+    };
+    const parsed = JSON.parse(settingsToJson({ tsaTrust }));
+
+    expect(parsed.trust.anchors).toEqual([
+      {
+        trust_anchors: PEM,
+        trust_uri: 'tsa_system_anchors',
+        trust_kind: 'tsa'
+      }
+    ]);
   });
 });
 

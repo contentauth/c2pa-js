@@ -637,6 +637,7 @@ The library provides helper functions to create and manage settings objects:
 import {
   Context,
   createTrustSettings,
+  createTsaTrustSettings,
   createCawgTrustSettings,
   createVerifySettings,
   mergeSettings
@@ -650,10 +651,16 @@ const trustSettings = createTrustSettings({
   allowedList: "path/to/allowed-list.pem"
 });
 
+// Create timestamp trust settings.
+const tsaTrustSettings = createTsaTrustSettings({
+  trustAnchors: "path/to/tsa-anchors.pem"
+});
+
 // Create CAWG trust settings
 const cawgTrustSettings = createCawgTrustSettings({
   verifyTrustList: true,
-  trustAnchors: "path/to/cawg-anchors.pem"
+  trustAnchors: "path/to/cawg-anchors.pem",
+  trustedIcaIssuers: ["did:web:example.com"]
 });
 
 // Create verify settings
@@ -683,8 +690,11 @@ Low-level serialization and loading helpers remain available, but their raw JSON
 - `verifyTrustList` - Whether to verify against the trust list
 - `userAnchors` - User-provided trust anchors (PEM format or path)
 - `trustAnchors` - Trust anchors for validation (PEM format or path)
-- `trustConfig` - Path to trust configuration file
-- `allowedList` - Allowed list of certificates (PEM format or path)
+- `trustConfig` - Path to trust configuration file. Not available in `tsaTrust`.
+- `allowedList` - Allowed list of certificates (PEM format or path). Not available in `tsaTrust`.
+- `trustedIcaIssuers` - DIDs of identity claims aggregation issuers to trust. Available only in `cawgTrust`.
+
+The same fields configure three sections: `trust` for claim signers, `tsaTrust` for timestamps and `cawgTrust` for CAWG identities.
 
 **Verify settings:**
 - `verifyAfterReading` - Whether to verify after reading a manifest
