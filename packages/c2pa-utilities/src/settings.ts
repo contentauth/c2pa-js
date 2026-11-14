@@ -254,9 +254,11 @@ export async function resolveSettings(
   }
 
   if (finalSettings.tsaTrust) {
-    const { tsaTrust } = createTsaTrustSettings(finalSettings.tsaTrust);
-    finalSettings.tsaTrust = tsaTrust;
-    resolvePromises.push(resolveTrustSettings(tsaTrust, options));
+    Object.assign(
+      finalSettings,
+      createTsaTrustSettings(finalSettings.tsaTrust)
+    );
+    resolvePromises.push(resolveTrustSettings(finalSettings.tsaTrust, options));
   }
 
   if (finalSettings.cawgTrust) {
@@ -282,13 +284,13 @@ export async function resolveSettings(
  * strings.
  */
 function toWireSettings(settings: Settings): SettingsObjectType {
-  const { trust, tsaTrust, cawgTrust, ...rest } = settings;
+  const { trust, tsaTrust, cawgTrust, ...rest } = {
+    ...settings,
+    ...(settings.tsaTrust && createTsaTrustSettings(settings.tsaTrust))
+  };
   const anchors = [
     ...buildTrustAnchorEntries(trust, 'manifest'),
-    ...buildTrustAnchorEntries(
-      tsaTrust && createTsaTrustSettings(tsaTrust).tsaTrust,
-      'tsa'
-    ),
+    ...buildTrustAnchorEntries(tsaTrust, 'tsa'),
     // Trusted ICA issuers are read from cawg entries only.
     ...buildTrustAnchorEntries(cawgTrust, 'cawg', cawgTrust?.trustedIcaIssuers)
   ];
@@ -379,12 +381,17 @@ export function createTrustSettings(trustConfig: TrustSettings): Settings {
  * @param trustConfig The timestamp trust configuration.
  * @returns Settings object that can be passed to Reader/Builder.
  */
-export function createTsaTrustSettings({
-  userAnchors,
-  trustAnchors,
-  verifyTrustList
-}: TsaTrustSettings): { tsaTrust: TsaTrustSettings } {
-  return { tsaTrust: { userAnchors, trustAnchors, verifyTrustList } };
+export function createTsaTrustSettings(
+  trustConfig: TsaTrustSettings
+): Settings {
+  const { userAnchors, trustAnchors, verifyTrustList } = trustConfig;
+  return {
+    tsaTrust: {
+      ...(userAnchors !== undefined ? { userAnchors } : {}),
+      ...(trustAnchors !== undefined ? { trustAnchors } : {}),
+      ...(verifyTrustList !== undefined ? { verifyTrustList } : {})
+    }
+  };
 }
 
 /**

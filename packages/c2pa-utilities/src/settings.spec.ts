@@ -649,6 +649,17 @@ describe('createTrustSettings / createCawgTrustSettings / createVerifySettings',
     expect(settings).toEqual({ tsaTrust: { trustAnchors: 'tsa anchors' } });
   });
 
+  it('keeps earlier timestamp trust fields when merged', () => {
+    const merged = mergeSettings(
+      createTsaTrustSettings({ userAnchors: 'user' }),
+      createTsaTrustSettings({ trustAnchors: 'system' })
+    );
+    expect(merged.tsaTrust).toEqual({
+      userAnchors: 'user',
+      trustAnchors: 'system'
+    });
+  });
+
   it('creates verify settings', () => {
     const verifyConfig: VerifySettings = {
       verifyAfterReading: true,
