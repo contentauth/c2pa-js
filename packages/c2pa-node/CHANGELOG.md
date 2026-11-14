@@ -1,5 +1,15 @@
 # @contentauth/c2pa-node
 
+## 0.12.0
+
+### Minor Changes
+
+- 705cc17: Upgrade to TrustMark 0.5 and expose opt-in P/Q watermark removal with separately downloaded removal models. Preserve dimensions and alpha in the returned PNG, enforce input and decoded-image limits, and reject removal when its model was not loaded. Document that output does not preserve image metadata or embedded C2PA manifests.
+
+### Patch Changes
+
+- 0b59c97: feat: Add COSE handler forwarding to node
+
 ## 0.11.0
 
 ### Minor Changes
