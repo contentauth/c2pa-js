@@ -109,39 +109,40 @@ pub fn gen_watermark(version: Version) -> String {
 }
 
 impl NeonTrustmark {
-    pub fn new_from_config(mut cx: FunctionContext) -> JsResult<JsBox<NeonTrustmark>> {
+    pub fn new_from_config(mut cx: FunctionContext) -> JsResult<JsPromise> {
         let config = cx
             .argument::<JsObject>(0)
             .and_then(|obj| parse_watermark_config(&mut cx, obj))?;
-        let model_path = match fetch_model(config.variant, &config.model_path) {
-            Ok(path) => path,
-            Err(err) => return as_js_error_fn(&mut cx, err).and_then(|err| cx.throw(err)),
-        };
-        let trustmark = match Trustmark::new(model_path, config.variant, config.version) {
-            Ok(trustmark) => trustmark,
-            Err(err) => return as_js_error_fn(&mut cx, err.into()).and_then(|err| cx.throw(err)),
-        };
 
-        let remover = if config.load_remover {
-            let result = fetch_models(
-                &config.model_path,
-                &[format!("remover_{}.onnx", config.variant)],
-            )
-            .and_then(|path| WatermarkRemover::new(path, config.variant).map_err(Error::Watermark));
+        let promise = cx
+            .task(move || {
+                let model_path = fetch_model(config.variant, &config.model_path)?;
+                let trustmark = Trustmark::new(model_path, config.variant, config.version)?;
 
-            match result {
-                Ok(remover) => Some(Arc::new(remover)),
-                Err(err) => return as_js_error_fn(&mut cx, err).and_then(|err| cx.throw(err)),
-            }
-        } else {
-            None
-        };
+                let remover = if config.load_remover {
+                    let remover = fetch_models(
+                        &config.model_path,
+                        &[format!("remover_{}.onnx", config.variant)],
+                    )
+                    .and_then(|path| {
+                        WatermarkRemover::new(path, config.variant).map_err(Error::Watermark)
+                    })?;
+                    Some(Arc::new(remover))
+                } else {
+                    None
+                };
 
-        Ok(cx.boxed(Self {
-            trustmark: Arc::new(Mutex::new(trustmark)),
-            version: config.version,
-            remover,
-        }))
+                Ok(Self {
+                    trustmark: Arc::new(Mutex::new(trustmark)),
+                    version: config.version,
+                    remover,
+                })
+            })
+            .promise(move |mut cx, result: Result<Self>| match result {
+                Ok(trustmark) => Ok(cx.boxed(trustmark)),
+                Err(err) => as_js_error(&mut cx, err).and_then(|err| cx.throw(err)),
+            });
+        Ok(promise)
     }
 
     pub fn encode(mut cx: FunctionContext) -> JsResult<JsPromise> {

@@ -13,6 +13,7 @@
 
 import path from "path";
 import os from "os";
+import { setImmediate } from "timers";
 import fs from "fs-extra";
 import sharp from "sharp";
 
@@ -106,6 +107,15 @@ describe("Trustmark", () => {
         "Watermark configuration error: invalid variant",
       );
     });
+
+    it("lets go of the event loop during model download", async () => {
+      let hasTicked = false;
+      setImmediate(() => {
+        hasTicked = true;
+      });
+      await Trustmark.newTrustmark(trustmarkConfig);
+      expect(hasTicked).toBe(true);
+    }, 30000);
   });
 
   describe("encode", () => {
