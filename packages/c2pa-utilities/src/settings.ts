@@ -92,9 +92,6 @@ export interface TrustSettings {
    * End-entity certificates.
    *
    * Possible values are: the text content of a end-entity cert file, a URL to fetch a end-entity cert file from, or an array of URLs that will be fetched and concatenated.
-   *
-   * The allowed list of every section is added to the claim signer check, so an allowed list in
-   * `cawgTrust` also trusts those certificates as claim signers.
    */
   allowedList?: string | string[];
   /**
@@ -112,9 +109,7 @@ export interface TrustSettings {
 }
 
 /**
- * Trust configuration for timestamp validation. It has no `allowedList`: an allowed list here
- * would make its certificates trusted claim signers and would not affect timestamps. It has no
- * `trustConfig`: timestamp validation does not read one.
+ * Trust configuration for timestamp validation.
  */
 export type TsaTrustSettings = Omit<
   TrustSettings,
@@ -350,7 +345,7 @@ function buildTrustAnchorEntries(
   }
 
   if (entries.length === 0 && issuers) {
-    // Every entry needs trust_anchors; an empty string adds no certificates.
+    // Every entry needs trust_anchors, an empty string in trust anchors adds no certificates.
     entries.push({
       trustAnchors: '',
       trustUri: `${kind}_ica_issuers`,
