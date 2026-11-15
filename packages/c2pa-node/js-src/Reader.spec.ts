@@ -354,9 +354,8 @@ describe("Reader", () => {
     expect(reader).toBeNull();
   });
 
-  // TMN-TODO: Add the ica_did_jwk.jpg fixture from c2pa-rs.
-  it.skip("trusts an ICA issuer listed in cawgTrust trustedIcaIssuers", async () => {
-    const asset = { path: "./tests/fixtures/ica_did_jwk.jpg" };
+  it("trusts an ICA issuer listed in cawgTrust trustedIcaIssuers", async () => {
+    const asset = { path: "./tests/fixtures/cawg_ica_trust.jpg" };
     const issuer =
       "did:jwk:eyJhbGciOiJFZERTQSIsImt0eSI6Ik9LUCIsImNydiI6IkVkMjU1MTkiLCJ4IjoiTXA1LTBlODNuTmdRaGRoQlc4UnNoa2p5OTBzYTFBOUpJemtJdGNEcUN1SSJ9";
     const activeManifestCodes = async (settings: Settings) => {
