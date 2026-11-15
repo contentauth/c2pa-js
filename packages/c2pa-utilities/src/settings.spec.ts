@@ -868,7 +868,7 @@ describe('settingsToJson', () => {
     });
   });
 
-  it('puts only the issuers on an issuer-only cawg entry', () => {
+  it('puts the allowed list and issuers on a cawg entry without anchors', () => {
     const parsed = JSON.parse(
       settingsToJson({
         cawgTrust: {
@@ -885,7 +885,25 @@ describe('settingsToJson', () => {
           trust_anchors: '',
           trust_uri: 'cawg_ica_issuers',
           trust_kind: 'cawg',
+          allowed_list: 'allowed',
           trusted_ica_issuers: [ISSUER]
+        }
+      ]
+    });
+  });
+
+  it('emits the allowed list of a trust section without anchors', () => {
+    const parsed = JSON.parse(
+      settingsToJson({ trust: { allowedList: 'allowed' } })
+    );
+
+    expect(parsed.trust).toEqual({
+      anchors: [
+        {
+          trust_anchors: '',
+          trust_uri: 'manifest_ica_issuers',
+          trust_kind: 'manifest',
+          allowed_list: 'allowed'
         }
       ]
     });

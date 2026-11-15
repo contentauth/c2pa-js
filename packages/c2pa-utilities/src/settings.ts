@@ -92,6 +92,9 @@ export interface TrustSettings {
    * End-entity certificates.
    *
    * Possible values are: the text content of a end-entity cert file, a URL to fetch a end-entity cert file from, or an array of URLs that will be fetched and concatenated.
+   *
+   * An allowed list can take effect without any anchors, to trust only those certificates (no
+   * other trust).
    */
   allowedList?: string | string[];
   /**
@@ -344,13 +347,17 @@ function buildTrustAnchorEntries(
     });
   }
 
-  if (entries.length === 0 && issuers) {
-    // Every entry needs trust_anchors, an empty string in trust anchors adds no certificates.
+  const hasAnchors = Boolean(settings.userAnchors || settings.trustAnchors);
+  if (!hasAnchors && (allowedList || issuers)) {
+    // The native base library reads allowed_list and trusted_ica_issuers only from a trust.anchors[] entry,
+    // and every entry needs trust_anchors. An empty string adds no certificates.
+    // trust_config is left out: it applies only to chains trusted through this entry's anchors.
     entries.push({
       trustAnchors: '',
       trustUri: `${kind}_ica_issuers`,
       trustKind: kind,
-      trustedIcaIssuers: issuers
+      ...(allowedList ? { allowedList } : {}),
+      ...(issuers ? { trustedIcaIssuers: issuers } : {})
     });
   }
 
