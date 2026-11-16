@@ -1,5 +1,15 @@
 # @contentauth/c2pa-web
 
+## 0.17.1
+
+### Patch Changes
+
+- 4bae64f: chore: Bump c2pa-rs version to v0.92.0
+- Updated dependencies [4bae64f]
+- Updated dependencies [214677a]
+  - @contentauth/c2pa-wasm@0.15.1
+  - @contentauth/c2pa-utilities@0.5.2
+
 ## 0.17.0
 
 ### Minor Changes

@@ -1,5 +1,15 @@
 # @contentauth/c2pa-node
 
+## 0.12.1
+
+### Patch Changes
+
+- 4bae64f: chore: Bump c2pa-rs version to v0.92.0
+- f333df7: fix: Switch locking order in watermarking/image load
+- 214677a: fix: Update trust handling
+- Updated dependencies [214677a]
+  - @contentauth/c2pa-utilities@0.5.2
+
 ## 0.12.0
 
 ### Minor Changes
