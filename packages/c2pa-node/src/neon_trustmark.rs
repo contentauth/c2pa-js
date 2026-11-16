@@ -165,8 +165,8 @@ impl NeonTrustmark {
 
         let promise = cx
             .task(move || {
-                let trustmark = trustmark.lock()?;
                 let image = image::load_from_memory(&image_bytes)?;
+                let trustmark = trustmark.lock()?;
                 let watermark = watermark.unwrap_or_else(|| gen_watermark(version));
                 let watermarked_image = trustmark
                     .encode(watermark, image, strength)
@@ -217,8 +217,8 @@ impl NeonTrustmark {
 
         let promise = cx
             .task(move || {
-                let trustmark = trustmark.lock()?;
                 let image = image::load_from_memory(&image_bytes)?;
+                let trustmark = trustmark.lock()?;
                 let watermark = trustmark.decode(image)?;
                 Ok(watermark)
             })
