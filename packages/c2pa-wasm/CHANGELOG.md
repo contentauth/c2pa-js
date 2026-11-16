@@ -1,5 +1,13 @@
 # @contentauth/c2pa-wasm
 
+## 0.15.0
+
+### Minor Changes
+
+- ca4bf52: Update the JavaScript bindings and generated types to the published c2pa-rs 0.92.0 crate.
+
+  Forward the signing Context through identity-signer timestamp requests, remove the unsupported Role export, and update validation and byte-string expectations for the upstream release.
+
 ## 0.14.0
 
 ### Minor Changes

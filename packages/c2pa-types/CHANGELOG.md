@@ -1,5 +1,13 @@
 # @contentauth/c2pa-types
 
+## 0.8.0
+
+### Minor Changes
+
+- ca4bf52: Update the JavaScript bindings and generated types to the published c2pa-rs 0.92.0 crate.
+
+  Forward the signing Context through identity-signer timestamp requests, remove the unsupported Role export, and update validation and byte-string expectations for the upstream release.
+
 ## 0.7.8
 
 ### Patch Changes

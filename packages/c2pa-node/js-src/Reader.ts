@@ -12,13 +12,11 @@
 // each license.
 
 import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
-import type { Context } from "@contentauth/c2pa-utilities";
+import { Context } from "@contentauth/c2pa-utilities";
 
 import { getNeonBinary } from "./binary.js";
 import { validateSourceAssetSize } from "./assetSize.js";
-import { resolveSdkConfig, resolveSettingsForNeon } from "./Settings.js";
 import type {
-  C2paSettings,
   DestinationAsset,
   ReaderInterface,
   ResourceAsset,
@@ -46,33 +44,29 @@ export class Reader implements ReaderInterface {
   }
 
   /**
-   * @param settingsOrContext A `Context`, or (@deprecated) a raw `C2paSettings` string/object. Passing a
-   * raw `C2paSettings` value is deprecated and will be removed in a future version. `null` is treated
-   * the same as `undefined`.
+   * @param context A `Context` configuring this Reader. Defaults to an empty `Context`.
    */
   static async fromAsset(
     asset: SourceAsset,
-    settingsOrContext?: C2paSettings | Context | null,
+    context: Context = new Context(),
   ): Promise<Reader | null> {
-    await validateSourceAssetSize(asset, resolveSdkConfig(settingsOrContext));
-    const settingsStr = await resolveSettingsForNeon(settingsOrContext);
+    await validateSourceAssetSize(asset, context.sdkConfig);
+    const settingsStr = await context.toJson();
     const reader: NeonReaderHandle | null =
       await getNeonBinary().readerFromAsset(asset, settingsStr);
     return reader ? new Reader(reader) : null;
   }
 
   /**
-   * @param settingsOrContext A `Context`, or (@deprecated) a raw `C2paSettings` string/object. Passing a
-   * raw `C2paSettings` value is deprecated and will be removed in a future version. `null` is treated
-   * the same as `undefined`.
+   * @param context A `Context` configuring this Reader. Defaults to an empty `Context`.
    */
   static async fromManifestDataAndAsset(
     manifestData: Buffer,
     asset: SourceAsset,
-    settingsOrContext?: C2paSettings | Context | null,
+    context: Context = new Context(),
   ): Promise<Reader> {
-    await validateSourceAssetSize(asset, resolveSdkConfig(settingsOrContext));
-    const settingsStr = await resolveSettingsForNeon(settingsOrContext);
+    await validateSourceAssetSize(asset, context.sdkConfig);
+    const settingsStr = await context.toJson();
     const reader: NeonReaderHandle =
       await getNeonBinary().readerFromManifestDataAndAsset(manifestData, asset, settingsStr);
     return new Reader(reader);

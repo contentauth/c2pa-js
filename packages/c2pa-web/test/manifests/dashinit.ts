@@ -26,7 +26,7 @@ export default {
                 data: [
                   {
                     offset: 8,
-                    value: expect.any(Array)
+                    value: "b64'2P7D1hsOSDySl1goh37EgQ=='"
                   }
                 ],
                 xpath: '/uuid'
@@ -40,7 +40,7 @@ export default {
                 alg: 'sha256',
                 count: 11,
                 hashes: expect.any(Array),
-                initHash: expect.any(Array),
+                initHash: "b64'I06fNAlptpr/4DcJZ/wIMRgd0bb6qygVCrodNQhhvbI='",
                 localId: 1,
                 uniqueId: 1
               }
