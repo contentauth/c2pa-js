@@ -6,25 +6,29 @@ description: 'Use when preflighting a c2pa-rs branch or tag, upgrading the Rust 
 # c2pa-rs migration
 
 Read the [migration and preflight runbook](../../../docs/c2pa-rs-preflight.md)
-before editing. It is the authoritative workflow; do not duplicate release pins
-or historical migration patches here.
+before editing, together with the repository instructions. It uses existing
+Cargo, pnpm and Nx tooling; it does not install a migration runner.
 
-1. Establish current main, branch/worktree state and the requested lifecycle
-   stage: Git branch, Git tag, final registry crate or published JavaScript.
-   Record immutable source identity and preserve existing features.
-2. Follow the runbook through native/WASM adapters, generated schemas, the public
-   type facade and affected consumers. Do not invent compatibility aliases for
-   removed upstream APIs without explicit authorization.
-3. Use fresh isolated builds and exact toolchain versions. Validate types,
-   compilation and real binding runtime behavior separately; preserve trust,
-   validation, failure and cleanup contracts.
-4. Rebuild/repack and repin downstream after changes. For final publication
-   readiness, verify actual registry tarballs, native assets and browser assets,
-   then test the published binaries without local overrides.
+1. Establish the requested outcome: new Git preflight, existing PR refresh,
+   registry crate upgrade, or published-package verification. Start new work
+   from current main; preserve and update an existing migration branch rather
+   than creating a competing one. Record immutable source identity and the
+   applicable stop condition.
+2. Set up the selected source's tools and dependencies before running generation
+   or builds. Preserve features and the repository's build output layout.
+3. Trace changes through native/WASM adapters, generated schemas, the public type
+   facade and affected consumers. Do not invent compatibility aliases for removed
+   upstream APIs without explicit authorization. Validate types, compilation and
+   real runtime behavior separately; preserve trust, errors and cleanup.
+4. When a downstream probe is requested, build/pack one committed upstream head,
+   verify installed bytes and invalidate stale same-version candidate caches.
+   Repin after upstream changes. Test actual registry/native/WASM artifacts when
+   available; source-probe results do not prove published-package readiness.
 5. Return changed files, source/artifact identities, exact checks and actual
    pass/fail/skipped counts, missing prerequisites and remaining lifecycle gates.
    Keep the final upgrade diff and PR description focused on current changes.
+   Stop at the requested stage; do not publish or replace assets implicitly.
 
 For example, a successful Git-tag probe still requires a registry-source rebuild
-when the final crate appears. A passing TypeScript check does not prove a native
-addon loads. Neither result authorizes publication, asset replacement or deployment.
+when the final crate appears. A passing TypeScript check does not prove that the
+published native addon loads on the supported Linux baseline.
