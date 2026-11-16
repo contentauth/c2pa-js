@@ -15,10 +15,18 @@
 // import native objects from built native code
 import type { ManifestStore } from "@contentauth/c2pa-types";
 import path from "path";
+import { createHash, X509Certificate } from "crypto";
 import fs from "fs-extra";
-import { AssetTooLargeError, Context } from "@contentauth/c2pa-utilities";
+import {
+  AssetTooLargeError,
+  Context,
+  type Settings,
+} from "@contentauth/c2pa-utilities";
 
+import type { DestinationBufferAsset } from "./types.d.ts";
+import { Builder } from "./Builder.js";
 import { Reader } from "./Reader.js";
+import { LocalSigner } from "./Signer.js";
 import { MAX_SIZE_IN_BYTES } from "./assetSize.js";
 
 const tempDir = path.join(__dirname, "tmp");
@@ -348,5 +356,89 @@ describe("Reader", () => {
 
     const reader = await Reader.fromAsset(asset);
     expect(reader).toBeNull();
+  });
+
+  it("trusts a claim signer pinned from trust.allowedList when no other trust set", async () => {
+    const certs = await fs.readFile("./tests/fixtures/certs/es256.pub");
+    const privateKey = await fs.readFile("./tests/fixtures/certs/es256.pem");
+    const leafHash = createHash("sha256")
+      .update(new X509Certificate(certs).raw)
+      .digest("base64");
+    const builder = await Builder.withJsonAsync({
+      claim_generator_info: [{ name: "c2pa-js tests", version: "1.0.0" }],
+      title: "allowed-list.jpg",
+      format: "image/jpeg",
+      assertions: [
+        {
+          label: "c2pa.actions",
+          data: {
+            actions: [
+              {
+                action: "c2pa.created",
+                digitalSourceType:
+                  "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+              },
+            ],
+          },
+        },
+      ],
+    });
+    const dest: DestinationBufferAsset = { buffer: null };
+    builder.sign(
+      LocalSigner.newSigner(certs, privateKey, "es256"),
+      {
+        buffer: await fs.readFile("./tests/fixtures/thumbnail.jpg"),
+        mimeType: "image/jpeg",
+      },
+      dest,
+    );
+
+    const successCodes = async (allowedList: string) => {
+      const reader = await Reader.fromAsset(
+        { buffer: dest.buffer!, mimeType: "image/jpeg" },
+        new Context({ trust: { allowedList } }),
+      );
+      return (
+        reader!
+          .json()
+          .validation_results?.activeManifest?.success.map(
+            (status) => status.code,
+          ) ?? []
+      );
+    };
+    const otherHash = createHash("sha256")
+      .update(
+        new X509Certificate(
+          await fs.readFile("./tests/fixtures/certs/ed25519.pub"),
+        ).raw,
+      )
+      .digest("base64");
+
+    expect(await successCodes(leafHash)).toContain("signingCredential.trusted");
+    expect(await successCodes(otherHash)).not.toContain(
+      "signingCredential.trusted",
+    );
+  });
+
+  it("trusts an ICA issuer listed in cawgTrust trustedIcaIssuers", async () => {
+    const asset = { path: "./tests/fixtures/cawg_ica_trust.jpg" };
+    const issuer =
+      "did:jwk:eyJhbGciOiJFZERTQSIsImt0eSI6Ik9LUCIsImNydiI6IkVkMjU1MTkiLCJ4IjoiTXA1LTBlODNuTmdRaGRoQlc4UnNoa2p5OTBzYTFBOUpJemtJdGNEcUN1SSJ9";
+    const activeManifestCodes = async (settings: Settings) => {
+      const reader = await Reader.fromAsset(asset, new Context(settings));
+      const results = reader!.json().validation_results?.activeManifest;
+      return [
+        ...(results?.success ?? []),
+        ...(results?.informational ?? []),
+        ...(results?.failure ?? []),
+      ].map((status) => status.code);
+    };
+
+    expect(
+      await activeManifestCodes({ cawgTrust: { trustedIcaIssuers: [issuer] } }),
+    ).toContain("cawg.ica.credential_valid");
+    expect(await activeManifestCodes({})).toContain(
+      "cawg.ica.untrusted_issuer",
+    );
   });
 });
