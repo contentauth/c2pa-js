@@ -16,6 +16,7 @@ import { Context } from "@contentauth/c2pa-utilities";
 
 import { getNeonBinary } from "./binary.js";
 import { validateSourceAssetSize } from "./assetSize.js";
+import { resolveNativeContextForNeon } from "./Settings.js";
 import type {
   DestinationAsset,
   ReaderInterface,
@@ -51,9 +52,9 @@ export class Reader implements ReaderInterface {
     context: Context = new Context(),
   ): Promise<Reader | null> {
     await validateSourceAssetSize(asset, context.sdkConfig);
-    const settingsStr = await context.toJson();
+    const settings = await resolveNativeContextForNeon(context, "Reader");
     const reader: NeonReaderHandle | null =
-      await getNeonBinary().readerFromAsset(asset, settingsStr);
+      await getNeonBinary().readerFromAsset(asset, settings);
     return reader ? new Reader(reader) : null;
   }
 
@@ -66,9 +67,9 @@ export class Reader implements ReaderInterface {
     context: Context = new Context(),
   ): Promise<Reader> {
     await validateSourceAssetSize(asset, context.sdkConfig);
-    const settingsStr = await context.toJson();
+    const settings = await resolveNativeContextForNeon(context, "Reader");
     const reader: NeonReaderHandle =
-      await getNeonBinary().readerFromManifestDataAndAsset(manifestData, asset, settingsStr);
+      await getNeonBinary().readerFromManifestDataAndAsset(manifestData, asset, settings);
     return new Reader(reader);
   }
 

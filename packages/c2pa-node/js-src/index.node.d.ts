@@ -26,6 +26,7 @@ import type {
   TrustmarkConfig,
   NeonCallbackSignerHandle,
   NeonLocalSignerHandle,
+  NeonContextHandle,
   NeonReaderHandle,
   NeonBuilderHandle,
   NeonIdentityAssertionSignerHandle,
@@ -37,9 +38,19 @@ import type {
 // These functions are not exposed directly, but are called by the Builder, Reader, and Signer, etc. classes
 
 declare module "index.node" {
+  export function contextFromSettings(
+    settings: string,
+    errorPrefix: string,
+  ): NeonContextHandle;
+
   // Builder methods
-  export function builderNew(): NeonBuilderHandle;
-  export function builderWithJson(json: string): NeonBuilderHandle;
+  export function builderNew(
+    settings?: string | NeonContextHandle,
+  ): NeonBuilderHandle;
+  export function builderWithJson(
+    json: string,
+    settings?: string | NeonContextHandle,
+  ): NeonBuilderHandle;
   export function builderSetIntent(intent: string): void;
   export function builderSetNoEmbed(noEmbed: boolean): void;
   export function builderSetRemoteUrl(url: string): void;
@@ -59,6 +70,7 @@ declare module "index.node" {
   export function builderToArchive(asset: DestinationAsset): Promise<void>;
   export function builderFromArchive(
     asset: SourceAsset,
+    settings?: string | NeonContextHandle,
   ): Promise<NeonBuilderHandle>;
   export function builderSign(
     signer: NeonLocalSignerHandle,
@@ -91,10 +103,12 @@ declare module "index.node" {
   // Reader methods
   export function readerFromAsset(
     asset: SourceAsset,
+    settings?: string | NeonContextHandle,
   ): Promise<NeonReaderHandle>;
   export function readerFromManifestDataAndAsset(
     manifestData: Buffer,
     asset: SourceAsset,
+    settings?: string | NeonContextHandle,
   ): Promise<NeonReaderHandle>;
   export function readerJson(): string;
   export function readerRemoteUrl(): string;

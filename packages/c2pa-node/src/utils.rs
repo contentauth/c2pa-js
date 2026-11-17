@@ -11,10 +11,42 @@
 // specific language governing permissions and limitations under
 // each license.
 
+use std::sync::Arc;
+
 use c2pa::Context;
+use neon::context::Context as NeonContext;
 use neon::prelude::*;
 
 use crate::error::{Error, Result};
+
+/// Native Context shared by Readers/Builders for the same resolved JS Context.
+/// Sharing includes c2pa-rs's one-way cancellation flag and progress callback,
+/// not just settings. Node does not expose these operation-control APIs today.
+/// Before adding per-instance controls, revisit this ownership: cancellation
+/// would affect all current and future users of the cached Context, and
+/// concurrent operations would report progress through the same callback.
+pub struct NeonContextHandle {
+    context: Arc<Context>,
+}
+
+impl Finalize for NeonContextHandle {}
+
+fn parse_context(settings: &str, error_prefix: &str) -> Result<Arc<Context>> {
+    let context = Context::new()
+        .with_settings(settings)
+        .map_err(|e| Error::Signing(format!("{error_prefix}: Invalid settings: {e}")))?
+        .into_shared();
+    Ok(context)
+}
+
+pub fn from_settings(mut cx: FunctionContext) -> JsResult<JsBox<NeonContextHandle>> {
+    let settings = cx.argument::<JsString>(0)?.value(&mut cx);
+    let error_prefix = cx.argument::<JsString>(1)?.value(&mut cx);
+    match parse_context(&settings, &error_prefix) {
+        Ok(context) => Ok(cx.boxed(NeonContextHandle { context })),
+        Err(error) => cx.throw_error(error.to_string()),
+    }
+}
 
 #[allow(dead_code)]
 // Used in debugging
@@ -33,18 +65,25 @@ pub fn log_message<'a, C: neon::context::Context<'a>>(cx: &mut C, message: &str)
 }
 
 /// Parse optional settings string from JS argument and create a Context.
-/// Returns Ok(Some(Context)) if settings are provided, Ok(None) if not provided,
+/// Returns Ok(Some(Arc<Context>)) if settings are provided, Ok(None) if not provided,
 /// or Err if settings are invalid.
 pub fn parse_settings(
     cx: &mut FunctionContext,
     arg_index: usize,
     error_prefix: &str,
-) -> Result<Option<Context>> {
+) -> Result<Option<Arc<Context>>> {
     let settings_opt = cx.argument_opt(arg_index);
 
     match settings_opt {
         Some(js_value) => {
-            if js_value.is_a::<JsString, _>(cx) {
+            if js_value.is_a::<JsBox<NeonContextHandle>, _>(cx) {
+                let context_handle = js_value
+                    .downcast::<JsBox<NeonContextHandle>, _>(cx)
+                    .map_err(|_| {
+                        Error::Signing(format!("{error_prefix}: Invalid native Context handle"))
+                    })?;
+                Ok(Some(Arc::clone(&context_handle.context)))
+            } else if js_value.is_a::<JsString, _>(cx) {
                 let settings_string = js_value
                     .downcast::<JsString, _>(cx)
                     .map_err(|_| {
@@ -52,12 +91,7 @@ pub fn parse_settings(
                     })?
                     .value(cx);
 
-                // Create context with settings
-                let context = Context::new()
-                    .with_settings(settings_string.as_str())
-                    .map_err(|e| {
-                        Error::Signing(format!("{error_prefix}: Invalid settings: {e}"))
-                    })?;
+                let context = parse_context(settings_string.as_str(), error_prefix)?;
                 Ok(Some(context))
             } else if js_value.is_a::<JsNull, _>(cx) || js_value.is_a::<JsUndefined, _>(cx) {
                 Ok(None)
@@ -67,6 +101,7 @@ pub fn parse_settings(
                 )))
             }
         }
+
         None => Ok(None),
     }
 }

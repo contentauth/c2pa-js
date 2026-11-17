@@ -155,6 +155,7 @@ export type CallbackSignerConfig = unknown;
 export type NeonCallbackSignerHandle = unknown;
 export type NeonCallbackCredentialHolderHandle = unknown;
 export type NeonLocalSignerHandle = unknown;
+export type NeonContextHandle = unknown;
 export type NeonBuilderHandle = unknown;
 export type NeonReaderHandle = unknown;
 export type NeonIdentityAssertionSignerHandle = unknown;
