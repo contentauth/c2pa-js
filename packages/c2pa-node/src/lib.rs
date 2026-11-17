@@ -28,6 +28,8 @@ pub mod neon_trustmark;
 
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
+    cx.export_function("contextFromSettings", utils::from_settings)?;
+
     // Builder
     cx.export_function("builderNew", neon_builder::NeonBuilder::new)?;
     cx.export_function("builderWithJson", neon_builder::NeonBuilder::with_json)?;
@@ -214,6 +216,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     )?;
     cx.export_function("trustmarkEncode", neon_trustmark::NeonTrustmark::encode)?;
     cx.export_function("trustmarkDecode", neon_trustmark::NeonTrustmark::decode)?;
+    cx.export_function("trustmarkRemove", neon_trustmark::NeonTrustmark::remove)?;
 
     Ok(())
 }

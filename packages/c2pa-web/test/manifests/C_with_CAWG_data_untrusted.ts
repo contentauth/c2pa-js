@@ -65,8 +65,7 @@ export default {
               cert_serial_number:
                 '638838410810235485828984295321338730070538954823',
               common_name: 'C2PA Signer',
-              issuer: 'C2PA Test Signing Cert',
-              revocation_status: true
+              issuer: 'C2PA Test Signing Cert'
             },
             signer_payload: {
               referenced_assertions: [

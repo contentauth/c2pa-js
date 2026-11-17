@@ -12,8 +12,14 @@
 // each license.
 
 import fs from "fs-extra";
-import { Context, type SdkConfig } from "@contentauth/c2pa-utilities";
-import type { C2paSettings } from "./types.d.ts";
+import type { Context } from "@contentauth/c2pa-utilities";
+import type { NeonContextHandle } from "./types.d.ts";
+import { getNeonBinary } from "./binary.js";
+
+const nativeContexts = new WeakMap<
+  Context,
+  { settingsJson: string; handle: NeonContextHandle }
+>();
 
 /**
  * This file contains only Settings functions that are unique to the Node SDK.
@@ -33,51 +39,26 @@ export async function loadSettingsFromFile(filePath: string): Promise<string> {
 }
 
 /**
- * Reads the SDK config out of a settings argument.
- *
- * Only a `Context` carries an SDK config so the deprecated raw `C2paSettings` forms always
- * resolve to `undefined`, leaving this package's defaults in place.
- *
- * @param settingsOrContext A `Context`, or (@deprecated) a raw `C2paSettings` string/object.
- * @returns The `Context`'s SDK config, or `undefined` if there is none.
+ * Resolves a Context to its latest native handle. The settings JSON is transferred and parsed
+ * only when a Context produces a new effective JSON value.
  */
-export function resolveSdkConfig(
-  settingsOrContext: C2paSettings | Context | null | undefined,
-): SdkConfig | undefined {
-  return settingsOrContext instanceof Context
-    ? settingsOrContext.sdkConfig
-    : undefined;
-}
-
-/**
- * Resolves Context settings, including any trust-anchor URLs, before passing them to the native
- * library. Deprecated raw settings retain their existing pass-through behavior.
- */
-export async function resolveSettingsForNeon(
-  settingsOrContext: C2paSettings | Context | null | undefined,
-): Promise<string | undefined> {
-  if (settingsOrContext == null) {
-    return undefined;
+export async function resolveNativeContextForNeon(
+  context: Context,
+  errorPrefix: string,
+): Promise<NeonContextHandle> {
+  const settingsJson = await context.toJson();
+  const cachedContext = nativeContexts.get(context);
+  if (cachedContext?.settingsJson === settingsJson) {
+    return cachedContext.handle;
   }
 
-  if (settingsOrContext instanceof Context) {
-    return settingsOrContext.toJson();
-  }
-
-  return typeof settingsOrContext === "string"
-    ? settingsOrContext
-    : JSON.stringify(settingsOrContext);
-}
-
-/**
- * Resolves deprecated raw settings for the synchronous Builder factories.
- */
-export function resolveRawSettingsForNeon(
-  settings: C2paSettings | null | undefined,
-): string | undefined {
-  if (settings == null) {
-    return undefined;
-  }
-
-  return typeof settings === "string" ? settings : JSON.stringify(settings);
+  const nativeContext = getNeonBinary().contextFromSettings(
+    settingsJson,
+    errorPrefix,
+  );
+  nativeContexts.set(context, {
+    settingsJson,
+    handle: nativeContext,
+  });
+  return nativeContext;
 }

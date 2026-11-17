@@ -43,6 +43,7 @@ export {
   type ManifestProperty
 } from './lib/builder.js';
 export * from './common.js';
+export * from '@contentauth/c2pa-utilities';
 
 function dataUrlToArrayBuffer(dataUrl: string) {
   const base64StartIndex = dataUrl.indexOf('base64,');

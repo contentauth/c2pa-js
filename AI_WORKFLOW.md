@@ -64,9 +64,9 @@ For repeated reads, share the initialized `c2pa` instance and dispose it at its
 owner's teardown rather than starting a worker for every asset.
 See the [Reader implementation](./packages/c2pa-web/src/lib/reader.ts).
 
-Use the static `Reader`/`Builder` APIs and explicit Contexts for new examples.
+Use the static `Reader`/`Builder` APIs and Contexts to configure Readers and Builders.
 The instance-level `c2pa.reader`, `c2pa.builder`, and top-level `settings` option are
-deprecated; do not extend their use.
+removed; do not reintroduce them.
 
 ### Read an asset in Node
 
@@ -116,7 +116,8 @@ function contextWithAnchors(trustAnchors: string) {
 ```
 
 A Context takes one Settings object; merge configuration sources explicitly.
-Pass the resulting Context to Reader/Builder construction. Treat it as
+Pass the resulting Context to Reader/Builder construction, not a raw settings
+object or JSON string. Treat it as
 construction-time configuration, not a live channel for updating existing
 instances. See [Context and settings](./packages/c2pa-utilities/README.md).
 
