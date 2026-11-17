@@ -21,7 +21,7 @@ import { channel } from 'highgain';
 export interface WorkerContext {
   // Worker-local registration key, distinct from the opaque WASM context ID.
   id: number;
-  // Supplied only on registration; subsequent construction uses IDs alone.
+  // Supplied until registration is acknowledged; subsequent calls use IDs alone.
   json?: string;
 }
 
@@ -59,9 +59,9 @@ const { createTx, rx } = channel<{
   reader_free: (readerId: number) => void;
 
   // Builder construction methods
-  builder_new: (context: WorkerContext) => number;
-  builder_fromJson: (json: string, context: WorkerContext) => number;
-  builder_fromArchive: (archive: Blob, context: WorkerContext) => number;
+  builder_new: (context: WorkerContext) => Promise<number>;
+  builder_fromJson: (json: string, context: WorkerContext) => Promise<number>;
+  builder_fromArchive: (archive: Blob, context: WorkerContext) => Promise<number>;
 
   // Builder methods
   builder_setIntent: (builderId: number, intent: BuilderIntent) => void;
@@ -132,6 +132,7 @@ const { createTx, rx } = channel<{
 
 // Define worker-to-browser RPC interface
 const { createTx: createWorkerTx, rx: workerRx } = channel<{
+  context_registered: (id: number) => void;
   sign: (
     requestId: number,
     bytes: Uint8Array<ArrayBuffer>,

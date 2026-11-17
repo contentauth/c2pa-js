@@ -108,6 +108,8 @@ Within each worker, Readers and Builders register their effective settings JSON 
 
 A `Context` memoizes successful settings resolution without automatic expiry. Repeated `Reader`/`Builder` calls using that Context reuse its resolution. Create a new `Context` to fetch updated trust resources; the new resolution does not change existing Readers or Builders. Failed resolution rejects and can be retried.
 
+The worker acknowledges successful WASM settings registration before subsequent calls omit settings JSON. Failed registration remains retryable; an asset or manifest construction error after successful registration does not discard that registration.
+
 `Context` is defined in `@contentauth/c2pa-utilities` and re-exported unchanged by `@contentauth/c2pa-node`, `@contentauth/c2pa-web` and `@contentauth/c2pa-web/inline`. These entry points share constructor identity and types, including for subclasses. Application bundlers should resolve a single compatible utilities version rather than embedding separate copies.
 
 ### Migrating from the deprecated factory API

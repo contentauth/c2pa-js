@@ -18,6 +18,7 @@ const snapshot: ContextBoundarySnapshot = {
   calls: {},
   settings: []
 };
+let failNextRegistration = false;
 
 // Instrument actual WASM exports, not RPC messages or the JavaScript JSON cache.
 WebAssembly.Instance = class extends WebAssembly.Instance {
@@ -54,6 +55,10 @@ WebAssembly.Instance = class extends WebAssembly.Instance {
               new Uint8Array(exports.memory.buffer, pointer, length)
             )
           );
+          if (failNextRegistration) {
+            failNextRegistration = false;
+            throw new Error('Injected context registration failure');
+          }
         }
         return value(...args);
       };
@@ -65,6 +70,9 @@ WebAssembly.Instance = class extends WebAssembly.Instance {
 };
 
 self.addEventListener('message', (event: MessageEvent) => {
+  if (event.data?.type === 'fail-next-context-registration') {
+    failNextRegistration = true;
+  }
   if (event.data?.type === 'context-boundary') {
     self.postMessage(snapshot);
   }

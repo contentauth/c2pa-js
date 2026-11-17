@@ -74,6 +74,68 @@ async function instrumentedC2pa() {
 }
 
 describe('WASM context boundary', () => {
+  test('retries failed registration before sending bare context IDs', async () => {
+    const { c2pa, worker } = await instrumentedC2pa();
+    const context = new Context({ verify: { verifyTrust: false } });
+    const settings = await context.toJson();
+    const builders: Builder[] = [];
+    try {
+      worker.postMessage({ type: 'fail-next-context-registration' });
+      await expect(Builder.new(c2pa, context)).rejects.toThrow(
+        'Injected context registration failure'
+      );
+      expect(c2pa.worker.context(settings).json).toBe(settings);
+
+      const blob = await getBlobForAsset(signedJpeg);
+      const [reader, first, second] = await Promise.all([
+        Reader.fromBlob(c2pa, blob.type, blob, context),
+        Builder.new(c2pa, context),
+        Builder.new(c2pa, context)
+      ]);
+      builders.push(first, second);
+      expect(reader).not.toBeNull();
+      await reader?.free();
+      expect(c2pa.worker.context(settings).json).toBeUndefined();
+      expect((await boundarySnapshot(worker)).settings).toEqual([
+        settings,
+        settings
+      ]);
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await expect(
+          c2pa.worker.tx.builder_new(c2pa.worker.context('invalid JSON'))
+        ).rejects.not.toThrow(
+          'Worker context settings have not been registered'
+        );
+        expect(c2pa.worker.context('invalid JSON').json).toBe('invalid JSON');
+      }
+    } finally {
+      await Promise.all(builders.map((builder) => builder.free()));
+      c2pa.dispose();
+    }
+  });
+
+  test('acknowledges registered settings even when construction fails', async () => {
+    const { c2pa, worker } = await instrumentedC2pa();
+    const settings = '{"verify":{"verify_trust":false}}';
+    try {
+      await expect(
+        c2pa.worker.tx.builder_fromJson(
+          'invalid manifest JSON',
+          c2pa.worker.context(settings)
+        )
+      ).rejects.toThrow();
+      expect(c2pa.worker.context(settings).json).toBeUndefined();
+      const builder = await c2pa.worker.tx.builder_new(
+        c2pa.worker.context(settings)
+      );
+      await c2pa.worker.tx.builder_free(builder);
+      expect((await boundarySnapshot(worker)).settings).toEqual([settings]);
+    } finally {
+      c2pa.dispose();
+    }
+  });
+
   test('transfers settings exactly once across every Reader and Builder constructor', async () => {
     const { c2pa, worker } = await instrumentedC2pa();
     const context = new Context({

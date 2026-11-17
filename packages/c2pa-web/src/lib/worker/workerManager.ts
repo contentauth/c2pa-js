@@ -71,12 +71,23 @@ export async function createWorkerManager(
 
   const tx = createTx(worker);
 
-  const contextIds = new Map<string, number>();
+  const contextIds = new Map<string, { id: number; registered: boolean }>();
   const signingRequestMap = new Map<number, Signer['sign']>();
-  const credentialHolderRequestMap = new Map<number, CredentialHolder['sign']>();
+  const credentialHolderRequestMap = new Map<
+    number,
+    CredentialHolder['sign']
+  >();
 
   workerRx(
     {
+      context_registered: (id) => {
+        for (const entry of contextIds.values()) {
+          if (entry.id === id) {
+            entry.registered = true;
+            break;
+          }
+        }
+      },
       sign: async (id, bytes, reserveSize) => {
         const signFn = signingRequestMap.get(id);
         signingRequestMap.delete(id);
@@ -117,9 +128,11 @@ export async function createWorkerManager(
   }
 
   function context(settingsJson: string): WorkerContext {
-    const existingId = contextIds.get(settingsJson);
-    if (existingId !== undefined) {
-      return { id: existingId };
+    const existing = contextIds.get(settingsJson);
+    if (existing !== undefined) {
+      return existing.registered
+        ? { id: existing.id }
+        : { id: existing.id, json: settingsJson };
     }
 
     if (contextIds.size === MAX_CACHED_CONTEXTS) {
@@ -130,7 +143,7 @@ export async function createWorkerManager(
     }
 
     const id = contextRequestId++;
-    contextIds.set(settingsJson, id);
+    contextIds.set(settingsJson, { id, registered: false });
     return { id, json: settingsJson };
   }
 

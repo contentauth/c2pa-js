@@ -271,9 +271,12 @@ describe('reader', () => {
                 contextMessage.id
               );
             } else {
-              expect(firstMessageBySettings.has(contextMessage.json)).toBe(
-                false
+              const existingId = firstMessageBySettings.get(
+                contextMessage.json
               );
+              if (existingId !== undefined) {
+                expect(contextMessage.id).toBe(existingId);
+              }
               firstMessageBySettings.set(
                 contextMessage.json,
                 contextMessage.id
@@ -281,6 +284,12 @@ describe('reader', () => {
             }
           }
           expect(firstMessageBySettings.size).toBe(2);
+          expect(
+            c2pa.worker.context(await trustedContext.toJson()).json
+          ).toBeUndefined();
+          expect(
+            c2pa.worker.context(await untrustedContext.toJson()).json
+          ).toBeUndefined();
           for (const contextId of firstMessageBySettings.values()) {
             expect(
               contextMessages.filter((message) => message.id === contextId)
