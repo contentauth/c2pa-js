@@ -74,6 +74,54 @@ async function instrumentedC2pa() {
 }
 
 describe('WASM context boundary', () => {
+  test('preserves native validation errors on repeated public calls with invalid settings', async () => {
+    const { c2pa, worker } = await instrumentedC2pa();
+    const settings = {
+      verify: { verifyTrust: false }
+    };
+    // JavaScript consumers can provide values that violate TypeScript's types.
+    Reflect.set(settings.verify, 'verifyTrust', 'not a boolean');
+    const context = new Context(settings);
+    const readers: (Reader | null)[] = [];
+    const builders: Builder[] = [];
+    try {
+      const settingsJson = await context.toJson();
+      expect(JSON.parse(settingsJson).verify.verify_trust).toBe(
+        'not a boolean'
+      );
+      const blob = await getBlobForAsset(signedJpeg);
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await expect(Builder.new(c2pa, context)).rejects.toThrow(
+          'C2pa(BadParam('
+        );
+        await expect(
+          Reader.fromBlob(c2pa, blob.type, blob, context)
+        ).rejects.toThrow('C2pa(BadParam(');
+      }
+      await expect(
+        Builder.new(c2pa, new InlineContext(settings))
+      ).rejects.toThrow('C2pa(BadParam(');
+      expect((await boundarySnapshot(worker)).settings).toEqual(
+        Array(5).fill(settingsJson)
+      );
+
+      const validContext = new Context({ verify: { verifyTrust: false } });
+      builders.push(await Builder.new(c2pa, validContext));
+      const reader = await Reader.fromBlob(c2pa, blob.type, blob, validContext);
+      readers.push(reader);
+      expect(reader).not.toBeNull();
+      expect(await reader?.activeManifest()).toBeDefined();
+      expect((await boundarySnapshot(worker)).settings).toEqual([
+        ...Array(5).fill(settingsJson),
+        await validContext.toJson()
+      ]);
+    } finally {
+      await Promise.all(readers.map((reader) => reader?.free()));
+      await Promise.all(builders.map((builder) => builder.free()));
+      c2pa.dispose();
+    }
+  });
+
   test('retries failed registration before sending bare context IDs', async () => {
     const { c2pa, worker } = await instrumentedC2pa();
     const context = new Context({ verify: { verifyTrust: false } });
