@@ -13,58 +13,60 @@ import {
   WasmReader,
   initSync,
   WasmBuilder,
-  registerContext,
+  WasmContext,
   encodeSignerPayload as wasmEncodeSignerPayload
 } from '@contentauth/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
-import { createWorkerTx, MAX_CACHED_CONTEXTS, rx } from './worker/rpc.js';
+import {
+  CONTEXT_MISSING,
+  createWorkerTx,
+  MAX_CACHED_CONTEXTS,
+  rx
+} from './worker/rpc.js';
 import { sanitizeManifestStore } from './worker/sanitizeManifestStore.js';
-import type { WorkerContext } from './worker/rpc.js';
+import type { WorkerContext, WorkerContextResult } from './worker/rpc.js';
 import type { SerializableIdentityAssertion, SignerPayload } from './signer.js';
 import { transfer } from 'highgain';
 
 const readerMap = createWorkerObjectMap<WasmReader>();
 const builderMap = createWorkerObjectMap<WasmBuilder>();
-const contextMap = new Map<number, { json: string; wasmId: number }>();
+const contextMap = new Map<number, WasmContext>();
 
 const tx = createWorkerTx();
 
-function getContextId(context: WorkerContext): number {
+function getContext(context: WorkerContext): WasmContext | undefined {
   const existing = contextMap.get(context.id);
+  if (existing !== undefined) {
+    return existing;
+  }
+
   if (context.json !== undefined) {
-    if (existing !== undefined && existing.json !== context.json) {
-      throw new Error('Worker context ID was reused with different settings');
-    }
-
-    if (existing !== undefined) {
-      return existing.wasmId;
-    }
-
-    const wasmId = registerContext(context.json);
+    const handle = new WasmContext(context.json);
     if (contextMap.size === MAX_CACHED_CONTEXTS) {
-      const oldestId = contextMap.keys().next().value;
-      if (oldestId !== undefined) {
+      const oldest = contextMap.entries().next().value;
+      if (oldest !== undefined) {
+        const [oldestId, oldestHandle] = oldest;
+        oldestHandle.free();
         contextMap.delete(oldestId);
       }
     }
-    contextMap.set(context.id, { json: context.json, wasmId });
-    return wasmId;
+    contextMap.set(context.id, handle);
+    return handle;
   }
 
-  if (existing === undefined) {
-    throw new Error('Worker context settings have not been registered');
-  }
-
-  return existing.wasmId;
+  return undefined;
 }
 
-async function withRegisteredContext<T>(
+async function withRegisteredContext(
   context: WorkerContext,
-  create: (id: number) => T | Promise<T>
-): Promise<T> {
-  const id = getContextId(context);
+  create: (handle: WasmContext) => number | Promise<number>
+): Promise<WorkerContextResult> {
+  const handle = getContext(context);
+  if (handle === undefined) {
+    return CONTEXT_MISSING;
+  }
   try {
-    return await create(id);
+    return await create(handle);
   } finally {
     // Registration succeeded even if asset or manifest construction failed.
     if (context.json !== undefined) {
@@ -112,18 +114,23 @@ rx(
       return transfer(bytes, bytes.buffer);
     },
     async reader_fromBlob(format, blob, context) {
-      const reader = await withRegisteredContext(context, (id) =>
-        WasmReader.fromBlobWithContext(format, blob, id)
+      return withRegisteredContext(context, async (handle) =>
+        readerMap.add(
+          await WasmReader.fromBlobWithContext(format, blob, handle)
+        )
       );
-      const readerId = readerMap.add(reader);
-      return readerId;
     },
     async reader_fromBlobFragment(format, init, fragment, context) {
-      const reader = await withRegisteredContext(context, (id) =>
-        WasmReader.fromBlobFragmentWithContext(format, init, fragment, id)
+      return withRegisteredContext(context, async (handle) =>
+        readerMap.add(
+          await WasmReader.fromBlobFragmentWithContext(
+            format,
+            init,
+            fragment,
+            handle
+          )
+        )
       );
-      const readerId = readerMap.add(reader);
-      return readerId;
     },
     reader_activeLabel(readerId) {
       const reader = readerMap.get(readerId);
@@ -156,25 +163,19 @@ rx(
       readerMap.remove(readerId);
     },
     async builder_new(context) {
-      const builder = await withRegisteredContext(context, (id) =>
-        WasmBuilder.newWithContext(id)
+      return withRegisteredContext(context, (handle) =>
+        builderMap.add(WasmBuilder.newWithContext(handle))
       );
-      const builderId = builderMap.add(builder);
-      return builderId;
     },
     async builder_fromJson(json: string, context) {
-      const builder = await withRegisteredContext(context, (id) =>
-        WasmBuilder.fromJsonWithContext(json, id)
+      return withRegisteredContext(context, (handle) =>
+        builderMap.add(WasmBuilder.fromJsonWithContext(json, handle))
       );
-      const builderId = builderMap.add(builder);
-      return builderId;
     },
     async builder_fromArchive(archive, context) {
-      const builder = await withRegisteredContext(context, (id) =>
-        WasmBuilder.fromArchiveWithContext(archive, id)
+      return withRegisteredContext(context, (handle) =>
+        builderMap.add(WasmBuilder.fromArchiveWithContext(archive, handle))
       );
-      const builderId = builderMap.add(builder);
-      return builderId;
     },
     builder_setIntent(builderId, intent) {
       const builder = builderMap.get(builderId);

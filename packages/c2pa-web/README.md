@@ -104,11 +104,11 @@ const reader2 = await Reader.fromBlob(
 
 Each `Context` holds whatever single `Settings` object was passed to its constructor and does not handle any merging of settings. To combine more than one `Settings` source, merge them first with `mergeSettings()`, then construct a `Context` from the single, merged result. See [`c2pa-utilities`'s README](../c2pa-utilities/README.md#combining-settings) for details.
 
-Within each worker, Readers and Builders register their effective settings JSON in WASM once and reuse an opaque context ID for subsequent construction, avoiding repeated settings transfer and parsing. Different resolved settings create a separate context generation. The worker and WASM each retain at most 16 settings generations. Evicted settings are transferred and parsed again if requested, while existing Readers and Builders keep their original context snapshot until freed. Disposing `c2pa` terminates the worker and releases its cache. This reuse does not change trust-resource resolution or error handling; see [`c2pa-utilities`'s README](../c2pa-utilities/README.md#trust-resource-fetching) for fetch behavior.
+Within each worker, Readers and Builders transfer their effective settings JSON into WASM once and reuse an owned context handle for subsequent construction, avoiding repeated settings transfer and parsing. Different resolved settings create a separate context generation. The worker retains at most 16 settings generations and explicitly frees handles on eviction; WASM has no separate context cache or numeric-ID registry. Evicted settings are transferred and parsed again if requested, while existing Readers, Builders and pending Reader operations keep their original context snapshot until freed. Disposing `c2pa` terminates the worker and releases its resources. This reuse does not change trust-resource resolution or error handling; see [`c2pa-utilities`'s README](../c2pa-utilities/README.md#trust-resource-fetching) for fetch behavior.
 
 A `Context` memoizes successful settings resolution without automatic expiry. Repeated `Reader`/`Builder` calls using that Context reuse its resolution. Create a new `Context` to fetch updated trust resources; the new resolution does not change existing Readers or Builders. Failed resolution rejects and can be retried.
 
-The worker acknowledges successful WASM settings registration before subsequent calls omit settings JSON. Failed registration remains retryable; an asset or manifest construction error after successful registration does not discard that registration.
+The worker acknowledges successful WASM settings registration before subsequent calls omit settings JSON. Failed registration remains retryable; an asset or manifest construction error after successful registration does not discard that registration. An in-flight worker ID that was evicted is recovered by resending its settings once, before construction starts. Native validation and construction errors are not retried or replaced by cache errors.
 
 `Context` is defined in `@contentauth/c2pa-utilities` and re-exported unchanged by `@contentauth/c2pa-node`, `@contentauth/c2pa-web` and `@contentauth/c2pa-web/inline`. These entry points share constructor identity and types, including for subclasses. Application bundlers should resolve a single compatible utilities version rather than embedding separate copies.
 
@@ -154,6 +154,7 @@ await reader.free();
 `Reader.fromBlob` rejects assets larger than 1 GB, throwing `AssetTooLargeError`. `Reader.fromBlobFragment` reject assets where any fragment is larger than 1 GB, also throwing `AssetTooLargeError`.
 
 > [!WARNING]
+>
 > `Reader.fromBlob`'s `format` argument (typically `blob.type`) is optional. If it's omitted or empty, the native library falls back to detecting the format from the asset's bytes. **This is not a feature to lean on.** Always supply `format` when it's known, as byte-based detection is slower than a direct lookup and can be unreliable, which could surface as more confusing errors later on. Only omit it when the caller has no way to determine the asset's format. `Reader.fromBlobFragment` and the `Builder` API always require an explicit format.
 
 ### Building C2PA manifests with ingredients

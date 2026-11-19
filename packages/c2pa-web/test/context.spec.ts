@@ -11,15 +11,41 @@ import { describe, test, expect } from './methods.js';
 import { vi } from 'vitest';
 import { createC2pa, Context, Reader, Builder } from '../src/index.js';
 import { Context as InlineContext } from '../src/inline.js';
-import { MAX_CACHED_CONTEXTS } from '../src/lib/worker/rpc.js';
+import {
+  CONTEXT_MISSING,
+  MAX_CACHED_CONTEXTS,
+  type WorkerContext,
+  type WorkerContextResult
+} from '../src/lib/worker/rpc.js';
 import ContextWorker from './context-worker?worker';
-import type { ContextBoundarySnapshot } from './context-worker.js';
+import type {
+  ContextBoundarySnapshot,
+  ContextHandleSnapshot
+} from './context-worker.js';
 import { getBlobForAsset } from './utils.js';
 import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
 import signedJpeg from './assets/C.jpg';
 import dashinit from './assets/dashinit.mp4';
 import dash1 from './assets/dash1.m4s?url';
 import trustAnchor from './trust/anchor-correct.pem?raw';
+
+function registered(result: WorkerContextResult): number {
+  if (result === CONTEXT_MISSING) {
+    throw new Error('Expected a registered context');
+  }
+  return result;
+}
+
+class ContextGeneration extends Context {
+  constructor(private generation: number) {
+    super({ verify: { verifyTrust: false } });
+  }
+
+  override async toJson(): Promise<string> {
+    // Whitespace creates distinct cache keys without changing native verification behavior.
+    return `${await super.toJson()}${' '.repeat(this.generation)}`;
+  }
+}
 
 function boundarySnapshot(worker: Worker): Promise<ContextBoundarySnapshot> {
   return new Promise((resolve, reject) => {
@@ -74,6 +100,173 @@ async function instrumentedC2pa() {
 }
 
 describe('WASM context boundary', () => {
+  test('allows immediate handle disposal while Reader promises are pending and preserves JSON APIs', async () => {
+    const { c2pa, worker } = await instrumentedC2pa();
+    try {
+      const result = await new Promise<ContextHandleSnapshot>(
+        (resolve, reject) => {
+          const timeout = setTimeout(() => {
+            worker.removeEventListener('message', receive);
+            reject(new Error('Direct WASM handle exercise timed out'));
+          }, 10000);
+          function receive(event: MessageEvent<ContextHandleSnapshot>) {
+            if (event.data?.type === 'context-handles') {
+              clearTimeout(timeout);
+              worker.removeEventListener('message', receive);
+              resolve(event.data);
+            }
+          }
+          worker.addEventListener('message', receive);
+          Promise.all([
+            getBlobForAsset(signedJpeg),
+            getBlobForAsset(dashinit),
+            getBlobForAsset(dash1)
+          ]).then(
+            ([blob, init, fragment]) =>
+              worker.postMessage({
+                type: 'context-handles',
+                blob,
+                init,
+                fragment
+              }),
+            reject
+          );
+        }
+      );
+      expect(result.error).toBeUndefined();
+      expect(result.result).toMatchObject({
+        firstTitle: 'first',
+        secondTitle: 'second',
+        compatible: true
+      });
+      expect(result.result?.label).toBeTruthy();
+      expect(result.result?.fragmentLabel).toBeTruthy();
+      expect(result.result?.error).toContain('C2pa(');
+    } finally {
+      c2pa.dispose();
+    }
+  });
+
+  test('survives the failed-registration FIFO drift sequence from review', async () => {
+    const { c2pa, worker } = await instrumentedC2pa();
+    const contexts = Array.from(
+      { length: 18 },
+      (_, index) => new ContextGeneration(index)
+    );
+    const badSettings = { verify: { verifyTrust: false } };
+    Reflect.set(badSettings.verify, 'verifyTrust', 'not a boolean');
+    const blob = await getBlobForAsset(signedJpeg);
+    try {
+      for (const context of contexts.slice(0, 16)) {
+        await (await Builder.new(c2pa, context)).free();
+      }
+      await expect(Builder.new(c2pa, new Context(badSettings))).rejects.toThrow(
+        'C2pa(BadParam('
+      );
+      await (await Builder.new(c2pa, contexts[0])).free();
+      await (await Builder.new(c2pa, contexts[17])).free();
+      const before = (await boundarySnapshot(worker)).settings.length;
+      const reader = await Reader.fromBlob(c2pa, blob.type, blob, contexts[0]);
+      expect(reader).not.toBeNull();
+      await reader?.free();
+      await (await Builder.new(c2pa, contexts[0])).free();
+      expect((await boundarySnapshot(worker)).settings).toHaveLength(before);
+    } finally {
+      c2pa.dispose();
+    }
+  });
+
+  test('recovers a delayed bare ID after eviction without retrying construction failures', async () => {
+    const { c2pa, worker } = await instrumentedC2pa();
+    const context = new Context({ verify: { verifyTrust: false } });
+    const settings = await context.toJson();
+    let resume: () => void = () => {
+      throw new Error('Gate not initialized');
+    };
+    let started: () => void = () => {
+      throw new Error('Gate not initialized');
+    };
+    const gate = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    const ready = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    try {
+      await (await Builder.new(c2pa, context)).free();
+      const create = vi.fn(async (descriptor: WorkerContext) => {
+        if (descriptor.json === undefined) {
+          expect(descriptor.json).toBeUndefined();
+          started();
+          await gate;
+        }
+        return c2pa.worker.tx.builder_new(descriptor);
+      });
+      const pending = c2pa.worker.withContext(settings, create);
+      await ready;
+      for (let generation = 1; generation <= 16; generation++) {
+        const id = registered(
+          await c2pa.worker.tx.builder_new(
+            c2pa.worker.context(`${settings}${' '.repeat(generation)}`)
+          )
+        );
+        await c2pa.worker.tx.builder_free(id);
+      }
+      resume();
+      await c2pa.worker.tx.builder_free(await pending);
+      expect(create).toHaveBeenLastCalledWith({ id: 0, json: settings });
+      expect((await boundarySnapshot(worker)).settings).toHaveLength(18);
+      expect(create).toHaveBeenCalledTimes(2);
+      const fromJson = vi.fn((descriptor: WorkerContext) =>
+        c2pa.worker.tx.builder_fromJson('invalid manifest JSON', descriptor)
+      );
+      await expect(
+        c2pa.worker.withContext(settings, fromJson)
+      ).rejects.toThrow();
+      expect(fromJson).toHaveBeenCalledOnce();
+    } finally {
+      resume();
+      vi.restoreAllMocks();
+      c2pa.dispose();
+    }
+  });
+
+  test('keeps more than 16 concurrent Reader/Builder constructions alive across eviction', async () => {
+    const { c2pa, worker } = await instrumentedC2pa();
+    const blob = await getBlobForAsset(signedJpeg);
+    const objects: (Reader | Builder | null)[] = [];
+    try {
+      objects.push(
+        ...(await Promise.all(
+          Array.from({ length: 40 }, async (_, index) => {
+            const context = new ContextGeneration(index);
+            return index % 2 === 0
+              ? Reader.fromBlob(c2pa, blob.type, blob, context)
+              : Builder.fromDefinition(
+                  c2pa,
+                  { title: `builder ${index}` },
+                  context
+                );
+          })
+        ))
+      );
+      for (const [index, object] of objects.entries()) {
+        expect(object).not.toBeNull();
+        if (object instanceof Reader) {
+          expect(await object.activeLabel()).toBeTruthy();
+        } else if (object instanceof Builder) {
+          expect((await object.getDefinition()).title).toBe(`builder ${index}`);
+        }
+      }
+      const snapshot = await boundarySnapshot(worker);
+      expect(snapshot.settings).toHaveLength(40);
+      expect(snapshot.calls.__wbg_wasmcontext_free).toBe(24);
+    } finally {
+      await Promise.all(objects.map((object) => object?.free()));
+      c2pa.dispose();
+    }
+  });
+
   test('preserves native validation errors on repeated public calls with invalid settings', async () => {
     const { c2pa, worker } = await instrumentedC2pa();
     const settings = {
@@ -174,8 +367,8 @@ describe('WASM context boundary', () => {
         )
       ).rejects.toThrow();
       expect(c2pa.worker.context(settings).json).toBeUndefined();
-      const builder = await c2pa.worker.tx.builder_new(
-        c2pa.worker.context(settings)
+      const builder = registered(
+        await c2pa.worker.tx.builder_new(c2pa.worker.context(settings))
       );
       await c2pa.worker.tx.builder_free(builder);
       expect((await boundarySnapshot(worker)).settings).toEqual([settings]);
@@ -214,14 +407,18 @@ describe('WASM context boundary', () => {
       builders.push(
         await Builder.fromDefinition(c2pa, { title: 'independent' }, context)
       );
-      const archiveBuilder = await c2pa.worker.tx.builder_new(
-        c2pa.worker.context(await context.toJson())
+      const archiveBuilder = registered(
+        await c2pa.worker.tx.builder_new(
+          c2pa.worker.context(await context.toJson())
+        )
       );
       const archive = await c2pa.worker.tx.builder_toArchive(archiveBuilder);
       await c2pa.worker.tx.builder_free(archiveBuilder);
-      const archived = await c2pa.worker.tx.builder_fromArchive(
-        new Blob([archive]),
-        c2pa.worker.context(await context.toJson())
+      const archived = registered(
+        await c2pa.worker.tx.builder_fromArchive(
+          new Blob([archive]),
+          c2pa.worker.context(await context.toJson())
+        )
       );
       await c2pa.worker.tx.builder_free(archived);
       const init = await getBlobForAsset(dashinit);
@@ -236,7 +433,7 @@ describe('WASM context boundary', () => {
       );
       const snapshot = await boundarySnapshot(worker);
       expect(snapshot.settings).toEqual([await context.toJson()]);
-      expect(snapshot.calls.registerContext).toBe(1);
+      expect(snapshot.calls.wasmcontext_new).toBe(1);
       expect(snapshot.calls.wasmreader_fromBlobWithContext).toBe(2);
       expect(snapshot.calls.wasmreader_fromBlobFragmentWithContext).toBe(1);
       expect(snapshot.calls.wasmbuilder_newWithContext).toBe(2);
@@ -267,8 +464,10 @@ describe('WASM context boundary', () => {
     const settings = '{"verify":{"verify_trust":false}}';
     const blob = await getBlobForAsset(signedJpeg);
     const first = c2pa.worker.context(settings);
-    const builder = await c2pa.worker.tx.builder_new(first);
-    const reader = await c2pa.worker.tx.reader_fromBlob(blob.type, blob, first);
+    const builder = registered(await c2pa.worker.tx.builder_new(first));
+    const reader = registered(
+      await c2pa.worker.tx.reader_fromBlob(blob.type, blob, first)
+    );
     const definition = await c2pa.worker.tx.builder_getDefinition(builder);
     const manifest = await c2pa.worker.tx.reader_manifestStore(reader);
     try {
@@ -277,16 +476,18 @@ describe('WASM context boundary', () => {
         generation <= MAX_CACHED_CONTEXTS;
         generation++
       ) {
-        const id = await c2pa.worker.tx.builder_new(
-          c2pa.worker.context(`${settings}${' '.repeat(generation)}`)
+        const id = registered(
+          await c2pa.worker.tx.builder_new(
+            c2pa.worker.context(`${settings}${' '.repeat(generation)}`)
+          )
         );
         await c2pa.worker.tx.builder_free(id);
       }
-      await expect(
-        c2pa.worker.tx.builder_new({ id: first.id })
-      ).rejects.toThrow('Worker context settings have not been registered');
+      await expect(c2pa.worker.tx.builder_new({ id: first.id })).resolves.toBe(
+        CONTEXT_MISSING
+      );
       const refreshed = c2pa.worker.context(settings);
-      const id = await c2pa.worker.tx.builder_new(refreshed);
+      const id = registered(await c2pa.worker.tx.builder_new(refreshed));
       await c2pa.worker.tx.builder_free(id);
       expect((await boundarySnapshot(worker)).settings).toEqual([
         settings,
@@ -304,18 +505,17 @@ describe('WASM context boundary', () => {
       );
       await expect(
         c2pa.worker.tx.builder_new({
-          id: refreshed.id,
-          json: '{}'
-        })
-      ).rejects.toThrow('Worker context ID was reused with different settings');
-      await expect(
-        c2pa.worker.tx.builder_new({
           id: 1000,
           json: 'invalid JSON'
         })
       ).rejects.toThrow();
-      const otherBuilder = await other.c2pa.worker.tx.builder_new(
-        other.c2pa.worker.context(settings)
+      expect(
+        (await boundarySnapshot(worker)).calls.__wbg_wasmcontext_free
+      ).toBe(2);
+      const otherBuilder = registered(
+        await other.c2pa.worker.tx.builder_new(
+          other.c2pa.worker.context(settings)
+        )
       );
       await other.c2pa.worker.tx.builder_free(otherBuilder);
       expect((await boundarySnapshot(other.worker)).settings).toEqual([

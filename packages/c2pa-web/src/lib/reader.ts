@@ -20,11 +20,12 @@ import {
 export const MAX_SIZE_IN_BYTES = 10 ** 9;
 
 // Module-level registry for garbage collection
-const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>(
-  async ({ worker, id }) => {
-    await worker.tx.reader_free(id);
-  }
-);
+const registry = new FinalizationRegistry<{
+  worker: WorkerManager;
+  id: number;
+}>(async ({ worker, id }) => {
+  await worker.tx.reader_free(id);
+});
 
 /**
  * The `Reader` class supports reading C2PA data out of an asset.
@@ -72,10 +73,8 @@ export class Reader {
       const settingsJson = await context.toJson();
       const { worker } = c2pa;
 
-      const readerId = await worker.tx.reader_fromBlob(
-        format ?? '',
-        blob,
-        worker.context(settingsJson)
+      const readerId = await worker.withContext(settingsJson, (workerContext) =>
+        worker.tx.reader_fromBlob(format ?? '', blob, workerContext)
       );
 
       const reader = new Reader(worker, readerId);
@@ -116,13 +115,8 @@ export class Reader {
     try {
       const settingsJson = await context.toJson();
       const { worker } = c2pa;
-      const workerContext = worker.context(settingsJson);
-
-      const readerId = await worker.tx.reader_fromBlobFragment(
-        format,
-        init,
-        fragment,
-        workerContext
+      const readerId = await worker.withContext(settingsJson, (workerContext) =>
+        worker.tx.reader_fromBlobFragment(format, init, fragment, workerContext)
       );
 
       const reader = new Reader(worker, readerId);
@@ -154,7 +148,9 @@ export class Reader {
    * @returns The asset's active {@link Manifest}.
    */
   async activeManifest(): Promise<Manifest> {
-    const activeManifest = await this.#worker.tx.reader_activeManifest(this.#id);
+    const activeManifest = await this.#worker.tx.reader_activeManifest(
+      this.#id
+    );
     return activeManifest;
   }
 

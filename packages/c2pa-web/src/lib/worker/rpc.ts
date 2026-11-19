@@ -19,13 +19,15 @@ import type {
 import { channel } from 'highgain';
 
 export interface WorkerContext {
-  // Worker-local registration key, distinct from the opaque WASM context ID.
+  // Worker-local registration key; never passed into WASM.
   id: number;
   // Supplied until registration is acknowledged; subsequent calls use IDs alone.
   json?: string;
 }
 
 export const MAX_CACHED_CONTEXTS = 16;
+export const CONTEXT_MISSING = 'context-missing';
+export type WorkerContextResult = number | typeof CONTEXT_MISSING;
 
 // Define browser-to-worker RPC interface
 const { createTx, rx } = channel<{
@@ -38,13 +40,13 @@ const { createTx, rx } = channel<{
     format: string,
     blob: Blob,
     context: WorkerContext
-  ) => Promise<number>;
+  ) => Promise<WorkerContextResult>;
   reader_fromBlobFragment: (
     format: string,
     init: Blob,
     fragment: Blob,
     context: WorkerContext
-  ) => Promise<number>;
+  ) => Promise<WorkerContextResult>;
 
   // Reader methods
   reader_activeLabel: (readerId: number) => string | null;
@@ -59,9 +61,15 @@ const { createTx, rx } = channel<{
   reader_free: (readerId: number) => void;
 
   // Builder construction methods
-  builder_new: (context: WorkerContext) => Promise<number>;
-  builder_fromJson: (json: string, context: WorkerContext) => Promise<number>;
-  builder_fromArchive: (archive: Blob, context: WorkerContext) => Promise<number>;
+  builder_new: (context: WorkerContext) => Promise<WorkerContextResult>;
+  builder_fromJson: (
+    json: string,
+    context: WorkerContext
+  ) => Promise<WorkerContextResult>;
+  builder_fromArchive: (
+    archive: Blob,
+    context: WorkerContext
+  ) => Promise<WorkerContextResult>;
 
   // Builder methods
   builder_setIntent: (builderId: number, intent: BuilderIntent) => void;
@@ -69,21 +77,28 @@ const { createTx, rx } = channel<{
   builder_addAssertion: (
     builderId: number,
     label: string,
-    data: unknown,
+    data: unknown
   ) => void;
   builder_updateAssertionsAt: (
     builderId: number,
     label: string,
-    data: unknown[],
+    data: unknown[]
   ) => void;
-  builder_addRedaction: (builderId: number, uri: string, reason: C2paReason) => void;
+  builder_addRedaction: (
+    builderId: number,
+    uri: string,
+    reason: C2paReason
+  ) => void;
   builder_filterActionsAt: (builderId: number, indices: number[]) => void;
-  builder_updateActionsAt: (builderId: number, actionGroups: Action[][]) => void;
+  builder_updateActionsAt: (
+    builderId: number,
+    actionGroups: Action[][]
+  ) => void;
   builder_filterIngredientsAt: (builderId: number, indices: number[]) => void;
   builder_filterActionsAndIngredientsAt: (
     builderId: number,
     actionIndices: number[],
-    ingredientIndices: number[],
+    ingredientIndices: number[]
   ) => void;
   builder_setRemoteUrl: (builderId: number, url: string) => void;
   builder_setNoEmbed: (builderId: number, noEmbed: boolean) => void;

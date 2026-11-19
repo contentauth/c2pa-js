@@ -12,7 +12,7 @@ import { vi } from 'vitest';
 import { createC2pa } from './c2pa.js';
 import { Reader } from './reader.js';
 import { Builder } from './builder.js';
-import { MAX_CACHED_CONTEXTS } from './worker/rpc.js';
+import { CONTEXT_MISSING, MAX_CACHED_CONTEXTS } from './worker/rpc.js';
 import {
   AssetTooLargeError,
   Context,
@@ -402,14 +402,17 @@ describe('reader', () => {
         }
       });
 
-      test('re-registers evicted worker settings and rejects unknown context IDs', async () => {
+      test('re-registers evicted worker settings and reports unknown context IDs', async () => {
         const c2pa = await createC2pa({ wasmSrc });
         const builders: number[] = [];
         const firstSettings = '{"builder":{"generate_c2pa_archive":true}}';
 
         try {
           const firstContext = c2pa.worker.context(firstSettings);
-          const firstBuilder = await c2pa.worker.tx.builder_new(firstContext);
+          const firstBuilder = await c2pa.worker.withContext(
+            firstSettings,
+            (context) => c2pa.worker.tx.builder_new(context)
+          );
           builders.push(firstBuilder);
 
           for (
@@ -418,8 +421,9 @@ describe('reader', () => {
             generation++
           ) {
             const settings = `${firstSettings}${' '.repeat(generation)}`;
-            const builderId = await c2pa.worker.tx.builder_new(
-              c2pa.worker.context(settings)
+            const builderId = await c2pa.worker.withContext(
+              settings,
+              (context) => c2pa.worker.tx.builder_new(context)
             );
             builders.push(builderId);
           }
@@ -427,8 +431,9 @@ describe('reader', () => {
           const reRegisteredContext = c2pa.worker.context(firstSettings);
           expect(reRegisteredContext.id).not.toBe(firstContext.id);
           expect(reRegisteredContext.json).toBe(firstSettings);
-          const reRegisteredBuilder = await c2pa.worker.tx.builder_new(
-            reRegisteredContext
+          const reRegisteredBuilder = await c2pa.worker.withContext(
+            firstSettings,
+            (context) => c2pa.worker.tx.builder_new(context)
           );
           builders.push(reRegisteredBuilder);
           await expect(
@@ -437,7 +442,7 @@ describe('reader', () => {
 
           await expect(
             c2pa.worker.tx.builder_new({ id: Number.MAX_SAFE_INTEGER })
-          ).rejects.toThrow('Worker context settings have not been registered');
+          ).resolves.toBe(CONTEXT_MISSING);
         } finally {
           await Promise.all(
             builders.map((builderId) => c2pa.worker.tx.builder_free(builderId))

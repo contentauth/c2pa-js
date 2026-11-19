@@ -10,9 +10,11 @@
 import { CredentialHolder, Signer } from '../signer.js';
 import {
   createTx,
+  CONTEXT_MISSING,
   MAX_CACHED_CONTEXTS,
   workerRx,
-  type WorkerContext
+  type WorkerContext,
+  type WorkerContextResult
 } from './rpc.js';
 import InlineWorker from '../worker?worker&inline';
 import { transfer } from 'highgain';
@@ -20,6 +22,10 @@ import { transfer } from 'highgain';
 export interface WorkerManager {
   tx: ReturnType<typeof createTx>;
   context: (settingsJson: string) => WorkerContext;
+  withContext: (
+    settingsJson: string,
+    create: (context: WorkerContext) => Promise<WorkerContextResult>
+  ) => Promise<number>;
   registerSignReceiver: (signFn: Signer['sign']) => number;
   registerCredentialHolderReceiver: (
     signFn: CredentialHolder['sign']
@@ -142,9 +148,32 @@ export async function createWorkerManager(
       }
     }
 
+    if (!Number.isSafeInteger(contextRequestId)) {
+      throw new Error('Worker context ID space exhausted');
+    }
+
     const id = contextRequestId++;
     contextIds.set(settingsJson, { id, registered: false });
     return { id, json: settingsJson };
+  }
+
+  async function withContext(
+    this: WorkerManager,
+    settingsJson: string,
+    create: (context: WorkerContext) => Promise<WorkerContextResult>
+  ): Promise<number> {
+    const descriptor = this.context(settingsJson);
+    const result = await create(descriptor);
+    if (result !== CONTEXT_MISSING) {
+      return result;
+    }
+
+    // Eviction can race an in-flight bare ID. Retry only this pre-construction miss.
+    const retried = await create({ id: descriptor.id, json: settingsJson });
+    if (retried === CONTEXT_MISSING) {
+      throw new Error('Worker did not register the supplied context settings');
+    }
+    return retried;
   }
 
   await tx.initWorker(wasm);
@@ -152,6 +181,7 @@ export async function createWorkerManager(
   return {
     tx,
     context,
+    withContext,
     registerSignReceiver,
     registerCredentialHolderReceiver,
     terminate: () => {
