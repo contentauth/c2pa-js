@@ -9,6 +9,25 @@ Read [README.md](./README.md), the [development guide](./docs/project-contributi
 [CONTRIBUTING.md](./CONTRIBUTING.md), and the relevant package README.
 This guide applies repository-wide. Follow package conventions; Node and browser bindings are not interchangeable.
 
+## Package workflow guides
+
+Use the guide for the package involved:
+[web](./packages/c2pa-web/AI_WORKFLOW.md) or
+[Node](./packages/c2pa-node/AI_WORKFLOW.md). When a change affects both, including
+shared utilities or generated types, read the relevant sections of both.
+
+| Task                                                    | Web guide                                                                                                 | Node guide                                                                                                 |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Write applications, examples, or tests that use the SDK | [Part 1: Using the Package](./packages/c2pa-web/AI_WORKFLOW.md#part-1-using-the-package)                  | [Part 1: Using the Package](./packages/c2pa-node/AI_WORKFLOW.md#part-1-using-the-package)                  |
+| Change public APIs or package behavior                  | Part 1 and [Part 2: Changing the Package](./packages/c2pa-web/AI_WORKFLOW.md#part-2-changing-the-package) | Part 1 and [Part 2: Changing the Package](./packages/c2pa-node/AI_WORKFLOW.md#part-2-changing-the-package) |
+| Change Rust bindings                                    | [WebAssembly](./packages/c2pa-web/AI_WORKFLOW.md#bindings-development-rust-with-webassembly)              | [Neon](./packages/c2pa-node/AI_WORKFLOW.md#bindings-development-rust-with-neon)                            |
+| Change tests, build tooling, or documentation           | [Testing and Validation](./packages/c2pa-web/AI_WORKFLOW.md#testing-and-validation)                       | [Testing and Validation](./packages/c2pa-node/AI_WORKFLOW.md#testing-and-validation)                       |
+| Prepare a change for review                             | [Done Checklist](./packages/c2pa-web/AI_WORKFLOW.md#done-checklist)                                       | [Done Checklist](./packages/c2pa-node/AI_WORKFLOW.md#done-checklist)                                       |
+
+These guides supplement this repository-wide entry point. Verify APIs against
+the package being changed instead of translating examples from another runtime
+or language's SDK.
+
 ## Repository map
 
 pnpm/Nx monorepo with a Rust workspace. Production packages use `@contentauth/`; workspace dependencies use `workspace:*`.
@@ -142,7 +161,9 @@ See [CI](./.github/workflows/ci.yml) for environment details.
 - Follow the contributor CLA and code of conduct. Discuss major API additions in an issue first.
 - Follow [PR template](./.github/PULL_REQUEST_TEMPLATE): Overview, Changes, Testing, and applicable cross-package drift check.
   Explain compatibility effects and validation.
-- For changes requiring a package release, run `pnpm changeset` and include the generated file.
+- Create a changeset only when explicitly requested by the user. When requested,
+  run `pnpm changeset` and include the generated file; do not create one automatically
+  even if the change requires a package release.
   Do not run release/versioning workflows in feature PRs.
 - Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for commit subjects and PR titles:
   `<type>[optional scope]: <description>`, e.g. `feat(c2pa-node): add support`, `fix: correct validation`, `docs: update guidance`.
