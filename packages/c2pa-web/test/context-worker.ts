@@ -7,6 +7,9 @@
  * it.
  */
 
+import { WasmContext, WasmReader, WasmBuilder } from '@contentauth/c2pa-wasm';
+import '../src/lib/worker.js';
+
 export interface ContextBoundarySnapshot {
   type: 'context-boundary';
   calls: Record<string, number>;
@@ -99,9 +102,6 @@ self.addEventListener('message', (event: MessageEvent) => {
     );
   }
 });
-
-import { WasmContext, WasmReader, WasmBuilder } from '@contentauth/c2pa-wasm';
-import '../src/lib/worker.js';
 
 async function exerciseHandles(blob: Blob, init: Blob, fragment: Blob) {
   const settings =
