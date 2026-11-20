@@ -114,6 +114,8 @@ See [CI](./.github/workflows/ci.yml) for environment details.
   Apply required lint/format fixes to changed code; avoid unrelated rewrites or repository-wide formatting.
 - Keep strict TypeScript, ESM exports, and `.js` relative imports.
   Prefer domain types and guards over `any`, unchecked casts, or non-null assertions.
+- Keep static imports organized together at the top of every JavaScript/TypeScript file, after the license header and before declarations or executable code.
+  Follow existing import grouping/order and preserve side-effect import order.
 - Use applicable ESLint and [Prettier](./.prettierrc): single quotes, no trailing commas.
   Preserve license headers; new JS/TS covered by [root ESLint](./eslint.config.mjs) needs the adjacent Adobe header.
 - Use nightly rustfmt and [rustfmt.toml](./rustfmt.toml) import grouping.
