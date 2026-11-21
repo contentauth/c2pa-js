@@ -111,7 +111,12 @@ See [CI](./.github/workflows/ci.yml) for environment details.
 ### General
 
 - Match surrounding naming, imports, layout, and error handling.
-  Apply required lint/format fixes to changed code; avoid unrelated rewrites or repository-wide formatting.
+  When writing or changing code, format only as needed to fix actual formatting-rule or lint-rule violations.
+  Preserve existing formatting in untouched code; avoid indentation/newline-only churn that adds review noise without fixing violations.
+  Run checks first, then limit fixes to actual violations and the narrowest necessary scope.
+  Do not indiscriminately run automatic formatter `--write` or lint `--fix` on entire files or the repository.
+  If a tool necessarily rewrites a broader scope, retain only required or task-related formatting changes; avoid unrelated cleanup.
+  Do not weaken formatting/lint requirements or suppress rules to avoid fixes.
 - Keep strict TypeScript, ESM exports, and `.js` relative imports.
   Prefer domain types and guards over `any`, unchecked casts, or non-null assertions.
 - Keep static imports organized together at the top of every JavaScript/TypeScript file, after the license header and before declarations or executable code.
