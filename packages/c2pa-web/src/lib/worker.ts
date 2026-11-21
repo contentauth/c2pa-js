@@ -95,10 +95,7 @@ function buildWasmIdentityAssertions(
       // Transfer the hash buffers nested in referencedAssertions, mirroring
       // how the plain signer's `sign` closure transfers its `bytes` argument.
       const buffers = payload.referencedAssertions.map((ra) => ra.hash.buffer);
-      const result = await tx.cawgSign(
-        ia.requestId,
-        transfer(payload, buffers)
-      );
+      const result = await tx.cawgSign(ia.requestId, transfer(payload, buffers));
       return result;
     }
   }));

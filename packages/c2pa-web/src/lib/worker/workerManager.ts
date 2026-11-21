@@ -79,10 +79,7 @@ export async function createWorkerManager(
 
   const contextIds = new Map<string, { id: number; registered: boolean }>();
   const signingRequestMap = new Map<number, Signer['sign']>();
-  const credentialHolderRequestMap = new Map<
-    number,
-    CredentialHolder['sign']
-  >();
+  const credentialHolderRequestMap = new Map<number, CredentialHolder['sign']>();
 
   workerRx(
     {
