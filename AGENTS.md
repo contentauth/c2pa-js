@@ -171,6 +171,9 @@ See [CI](./.github/workflows/ci.yml) for environment details.
 - Create a changeset only when explicitly requested by the user. When requested,
   run `pnpm changeset` and include the generated file; do not create one automatically
   even if the change requires a package release.
+  When writing a changeset for a pre-1.0 package, use a patch bump for additive,
+  backward-compatible changes. Reserve minor bumps for breaking changes in the
+  public API; do not create major bumps while the package is pre-1.0.
   Do not run release/versioning workflows in feature PRs.
 - Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for commit subjects and PR titles:
   `<type>[optional scope]: <description>`, e.g. `feat(c2pa-node): add support`, `fix: correct validation`, `docs: update guidance`.
