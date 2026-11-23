@@ -13,18 +13,67 @@ import {
   WasmReader,
   initSync,
   WasmBuilder,
+  WasmContext,
   encodeSignerPayload as wasmEncodeSignerPayload
 } from '@contentauth/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
-import { createWorkerTx, rx } from './worker/rpc.js';
+import {
+  CONTEXT_MISSING,
+  createWorkerTx,
+  MAX_CACHED_CONTEXTS,
+  rx
+} from './worker/rpc.js';
 import { sanitizeManifestStore } from './worker/sanitizeManifestStore.js';
+import type { WorkerContext, WorkerContextResult } from './worker/rpc.js';
 import type { SerializableIdentityAssertion, SignerPayload } from './signer.js';
 import { transfer } from 'highgain';
 
 const readerMap = createWorkerObjectMap<WasmReader>();
 const builderMap = createWorkerObjectMap<WasmBuilder>();
+const contextMap = new Map<number, WasmContext>();
 
 const tx = createWorkerTx();
+
+function getContext(context: WorkerContext): WasmContext | undefined {
+  const existing = contextMap.get(context.id);
+  if (existing !== undefined) {
+    return existing;
+  }
+
+  if (context.json !== undefined) {
+    const handle = new WasmContext(context.json);
+    if (contextMap.size === MAX_CACHED_CONTEXTS) {
+      const oldest = contextMap.entries().next().value;
+      if (oldest !== undefined) {
+        const [oldestId, oldestHandle] = oldest;
+        oldestHandle.free();
+        contextMap.delete(oldestId);
+      }
+    }
+    contextMap.set(context.id, handle);
+    return handle;
+  }
+
+  return undefined;
+}
+
+async function withRegisteredContext(
+  context: WorkerContext,
+  create: (handle: WasmContext) => number | Promise<number>
+): Promise<WorkerContextResult> {
+  const handle = getContext(context);
+  if (handle === undefined) {
+    return CONTEXT_MISSING;
+  }
+  try {
+    return await create(handle);
+  } finally {
+    // Registration succeeded even if asset or manifest construction failed.
+    if (context.json !== undefined) {
+      await tx.context_registered(context.id);
+    }
+  }
+}
 
 /**
  * Maps the serializable `identityAssertions` payload (browser->worker) to the
@@ -61,20 +110,24 @@ rx(
       const bytes = wasmEncodeSignerPayload(payload);
       return transfer(bytes, bytes.buffer);
     },
-    async reader_fromBlob(format, blob, contextJson) {
-      const reader = await WasmReader.fromBlob(format, blob, contextJson);
-      const readerId = readerMap.add(reader);
-      return readerId;
-    },
-    async reader_fromBlobFragment(format, init, fragment, contextJson) {
-      const reader = await WasmReader.fromBlobFragment(
-        format,
-        init,
-        fragment,
-        contextJson
+    async reader_fromBlob(format, blob, context) {
+      return withRegisteredContext(context, async (handle) =>
+        readerMap.add(
+          await WasmReader.fromBlobWithContext(format, blob, handle)
+        )
       );
-      const readerId = readerMap.add(reader);
-      return readerId;
+    },
+    async reader_fromBlobFragment(format, init, fragment, context) {
+      return withRegisteredContext(context, async (handle) =>
+        readerMap.add(
+          await WasmReader.fromBlobFragmentWithContext(
+            format,
+            init,
+            fragment,
+            handle
+          )
+        )
+      );
     },
     reader_activeLabel(readerId) {
       const reader = readerMap.get(readerId);
@@ -106,20 +159,20 @@ rx(
       reader.free();
       readerMap.remove(readerId);
     },
-    builder_new(contextJson) {
-      const builder = WasmBuilder.new(contextJson);
-      const builderId = builderMap.add(builder);
-      return builderId;
+    async builder_new(context) {
+      return withRegisteredContext(context, (handle) =>
+        builderMap.add(WasmBuilder.newWithContext(handle))
+      );
     },
-    builder_fromJson(json: string, contextJson) {
-      const builder = WasmBuilder.fromJson(json, contextJson);
-      const builderId = builderMap.add(builder);
-      return builderId;
+    async builder_fromJson(json: string, context) {
+      return withRegisteredContext(context, (handle) =>
+        builderMap.add(WasmBuilder.fromJsonWithContext(json, handle))
+      );
     },
-    builder_fromArchive(archive, contextJson) {
-      const builder = WasmBuilder.fromArchive(archive, contextJson);
-      const builderId = builderMap.add(builder);
-      return builderId;
+    async builder_fromArchive(archive, context) {
+      return withRegisteredContext(context, (handle) =>
+        builderMap.add(WasmBuilder.fromArchiveWithContext(archive, handle))
+      );
     },
     builder_setIntent(builderId, intent) {
       const builder = builderMap.get(builderId);

@@ -18,6 +18,17 @@ import type {
 
 import { channel } from 'highgain';
 
+export interface WorkerContext {
+  // Worker-local registration key; never passed into WASM.
+  id: number;
+  // Supplied until registration is acknowledged; subsequent calls use IDs alone.
+  json?: string;
+}
+
+export const MAX_CACHED_CONTEXTS = 16;
+export const CONTEXT_MISSING = 'context-missing';
+export type WorkerContextResult = number | typeof CONTEXT_MISSING;
+
 // Define browser-to-worker RPC interface
 const { createTx, rx } = channel<{
   initWorker: (module: WebAssembly.Module) => void;
@@ -28,14 +39,14 @@ const { createTx, rx } = channel<{
   reader_fromBlob: (
     format: string,
     blob: Blob,
-    contextJson?: string
-  ) => Promise<number>;
+    context: WorkerContext
+  ) => Promise<WorkerContextResult>;
   reader_fromBlobFragment: (
     format: string,
     init: Blob,
     fragment: Blob,
-    contextJson?: string
-  ) => Promise<number>;
+    context: WorkerContext
+  ) => Promise<WorkerContextResult>;
 
   // Reader methods
   reader_activeLabel: (readerId: number) => string | null;
@@ -50,9 +61,15 @@ const { createTx, rx } = channel<{
   reader_free: (readerId: number) => void;
 
   // Builder construction methods
-  builder_new: (contextJson?: string) => number;
-  builder_fromJson: (json: string, contextJson?: string) => number;
-  builder_fromArchive: (archive: Blob, contextJson?: string) => number;
+  builder_new: (context: WorkerContext) => Promise<WorkerContextResult>;
+  builder_fromJson: (
+    json: string,
+    context: WorkerContext
+  ) => Promise<WorkerContextResult>;
+  builder_fromArchive: (
+    archive: Blob,
+    context: WorkerContext
+  ) => Promise<WorkerContextResult>;
 
   // Builder methods
   builder_setIntent: (builderId: number, intent: BuilderIntent) => void;
@@ -123,6 +140,7 @@ const { createTx, rx } = channel<{
 
 // Define worker-to-browser RPC interface
 const { createTx: createWorkerTx, rx: workerRx } = channel<{
+  context_registered: (id: number) => void;
   sign: (
     requestId: number,
     bytes: Uint8Array<ArrayBuffer>,
