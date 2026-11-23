@@ -8,6 +8,41 @@ The WebAssembly wrapper for [`c2pa-rs`](https://github.com/contentauth/c2pa-rs) 
 npm install @contentauth/c2pa-wasm
 ```
 
+## Reusing settings contexts
+
+Direct WASM callers can create `new WasmContext(settingsJson)` once, then pass the
+owned, WASM-instance-local handle to `WasmReader.fromBlobWithContext`,
+`WasmReader.fromBlobFragmentWithContext`, `WasmBuilder.newWithContext`,
+`WasmBuilder.fromJsonWithContext`, or `WasmBuilder.fromArchiveWithContext`.
+These constructors do not transfer settings JSON into WASM again.
+
+There is no global WASM context registry or implicit cache. The caller owns the
+handle and must call `context.free()` when it is no longer needed, just as with
+Readers and Builders. Each constructor takes its own native shared reference;
+freeing the handle does not invalidate existing objects or pending Reader
+Promises. Native settings are released when the last owner is freed. Each
+Reader and Builder retains independent manifest state.
+
+```typescript
+const context = new WasmContext(settingsJson);
+const pendingReader = WasmReader.fromBlobWithContext(
+  'image/jpeg',
+  blob,
+  context
+);
+const builder = WasmBuilder.newWithContext(context);
+context.free(); // Safe even before pendingReader settles.
+const reader = await pendingReader;
+// Use reader and builder, then free each when finished.
+reader.free();
+builder.free();
+```
+
+`c2pa-web` owns a bounded cache of these handles inside each worker and frees them
+on eviction. Direct WASM callers choose their own handle lifetimes. All existing
+JSON-based constructors, including `fromBytes`, remain supported; those entry
+points parse their supplied settings per call rather than retaining them globally.
+
 ## Development
 
 ### Prerequisites
