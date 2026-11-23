@@ -148,10 +148,10 @@ Node and web have independent version lists:
   `@contentauth/c2pa-web`, including the main and `/inline` entry points.
 
 Versions must be exact npm releases, not tags such as `latest` or version ranges.
-The first entry is the default. Stable web releases automatically prepend their
-exact npm version to the web list, promoting an existing entry without duplicates.
-Older entries and other index metadata are preserved. Node releases still require
-manual list updates; prereleases do not automatically change either list.
+The first entry is the default. Stable web and Node releases automatically propose
+their exact npm versions at the front of their respective lists in a pull request,
+promoting existing entries without duplicates. Older entries and other index
+metadata are preserved. Prereleases do not automatically change either list.
 
 The first Node.js version is served at `api-docs/node/index.html`; every selected
 release is also available at `api-docs/node/versions/<version>/index.html`,
@@ -176,26 +176,39 @@ those source files and the versioned sites. Rebuilding one versioned site does
 not remove the other. Generated files are ignored by Git, but the version lists
 and selector assets remain tracked.
 
-The release workflow publishes the complete site after a new package release.
+The release workflow proposes version-list updates after a stable package release
+and publishes the complete site after those changes merge into `main`.
 Run that workflow manually to rebuild documentation without publishing packages.
 GitHub Pages publishes `api-docs/` as the site root, so public URLs are unchanged.
 
 For stable web and node releases, the existing `publish-docs` job verifies the exact
 GitHub release tag (`@contentauth/c2pa-web@<version>` or
-`@contentauth/c2pa-node@<version>`) and npm publication, then commits only that
-package's `api-docs/web-versions.json` or `api-docs/node-versions.json` directly to
-`main` using `GITHUB_TOKEN`. Each index promotes the exact version, removes duplicate
-entries for it, and preserves older versions and metadata. It builds
-and deploys the complete site from that same checkout after a successful push;
-reruns do not create empty commits. Branch protection and repository rules must
-permit this bot update, or the job fails before deployment.
+`@contentauth/c2pa-node@<version>`) and npm publication, then opens a pull request
+containing only the affected `api-docs/web-versions.json` and/or
+`api-docs/node-versions.json` files using `GITHUB_TOKEN`. The job needs
+`contents: write` and `pull-requests: write`, and repository Actions settings must
+allow GitHub Actions to create pull requests. No branch-protection bypass or
+additional credential is required. Each index promotes the exact version, removes
+duplicate entries for it, and preserves older versions and metadata.
+
+The promotion branch includes the package names and exact versions, so reruns
+update the same PR while different publications cannot overwrite each other's
+pending changes. Review and merge promotion PRs in release order; overlapping
+version-list changes may require conflict resolution. If GitHub requires approval
+for CI on a token-created PR, approve those runs before merging.
+
+While a promotion is pending, the job does not build or deploy the site. A push to
+`main` that changes either version list, including a merged promotion PR, triggers
+the complete-site build and deployment. The workflow compares the full push range,
+not only its last commit. Reruns with no version-list changes do not create empty
+PRs and can rebuild the already-promoted documentation.
 
 Changesets creates releases using `GITHUB_TOKEN`, which does not trigger another
-release workflow. Its publication outputs therefore drive the update and deploy
-explicitly in the same workflow. When Changesets publishes both packages, both
-indexes update before one complete-site build and deployment. A separately published
-stable web or node GitHub release
-dispatches the release workflow on `main`, passing the exact tag through the
+release workflow. Its publication outputs therefore drive promotion explicitly
+in the same workflow. When Changesets publishes both packages, both indexes are
+proposed in one PR before one complete-site build and deployment after merge.
+A separately published stable web or node GitHub release dispatches the release
+workflow on `main`, passing the exact tag through the
 `docs-release-tag` input. The tag-triggered job only dispatches; it does not use
 the `github-pages` environment. Promotion and deployment run exclusively with
 `refs/heads/main`, satisfying the environment's main-only deployment policy.

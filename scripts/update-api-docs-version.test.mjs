@@ -342,9 +342,9 @@ test('prereleases, drafts and other package tags cannot change web versions', as
 });
 
 for (const packageKeys of [['web'], ['node'], ['web', 'node']]) {
-  test(`workflow persists ${packageKeys.join(
+  test(`workflow prepares ${packageKeys.join(
     '+'
-  )} to main without empty commits and fails on errors`, async (t) => {
+  )} for review without pushing to main and fails on errors`, async (t) => {
     const root = await fixture(t);
     await mkdir(path.join(root, 'scripts'));
     for (const filename of [
@@ -374,6 +374,11 @@ for (const packageKeys of [['web'], ['node'], ['web', 'node']]) {
     git('init', '--bare', path.join(root, 'remote.git'));
     git('remote', 'add', 'origin', path.join(root, 'remote.git'));
     git('push', 'origin', 'main');
+    await writeFile(
+      path.join(root, 'remote.git/hooks/pre-receive'),
+      '#!/bin/sh\necho "Changes must be made through a pull request." >&2\nexit 1\n'
+    );
+    await chmod(path.join(root, 'remote.git/hooks/pre-receive'), 0o755);
     const bin = path.join(root, 'bin');
     await mkdir(bin);
     for (const [name, script] of Object.entries({
@@ -459,24 +464,52 @@ for (const packageKeys of [['web'], ['node'], ['web', 'node']]) {
       if (!packageKeys.includes(packageKey)) continue;
       const first = run(packageKey);
       assert.equal(first.status, 0, first.stderr);
-      assert.equal(git('rev-parse', 'HEAD'), git('rev-parse', 'origin/main'));
-      assert.deepEqual(
-        git('diff-tree', '--no-commit-id', '--name-only', '-r', 'HEAD').split(
-          '\n'
-        ),
-        [`api-docs/${packageKey}-versions.json`]
-      );
+      assert.equal(git('rev-parse', 'HEAD'), initialHead);
+      assert.equal(git('rev-parse', 'origin/main'), initialHead);
     }
-    const head = git('rev-parse', 'HEAD');
     assert.deepEqual(
-      git('diff', '--name-only', initialHead, head).split('\n').sort(),
+      git('diff', '--name-only').split('\n').sort(),
       packageKeys.map((key) => `api-docs/${key}-versions.json`).sort()
     );
+    const diff = git('diff');
     for (const packageKey of packageKeys) {
       const rerun = run(packageKey);
       assert.equal(rerun.status, 0, rerun.stderr);
-      assert.equal(git('rev-parse', 'HEAD'), head);
+      assert.equal(git('rev-parse', 'HEAD'), initialHead);
+      assert.equal(git('diff'), diff);
     }
+    const promotion = workflow
+      .split('      - name: Determine documentation promotion\n')[1]
+      .split('\n      - ')[0]
+      .split('        run: |\n')[1]
+      .split('\n')
+      .map((line) => line.replace(/^ {10}/, ''))
+      .join('\n');
+    const determinePromotion = () =>
+      spawnSync(
+        'bash',
+        ['--noprofile', '--norc', '-eo', 'pipefail', '-c', promotion],
+        {
+          cwd: root,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            GITHUB_OUTPUT: outputPath,
+            WEB_RELEASE_TAG: packageKeys.includes('web') ? tag : '',
+            NODE_RELEASE_TAG: packageKeys.includes('node') ? nodeTag : ''
+          }
+        }
+      );
+    await writeFile(outputPath, '');
+    const pending = determinePromotion();
+    assert.equal(pending.status, 0, pending.stderr);
+    const branch = `docs/promote-api-versions${packageKeys
+      .map((key) => `-c2pa-${key}-${key === 'web' ? '0.16.0' : '0.10.0'}`)
+      .join('')}`;
+    assert.equal(
+      await readFile(outputPath, 'utf8'),
+      `branch=${branch}\npending=true\n`
+    );
     for (const dispatchedTag of [tag, nodeTag]) {
       await writeFile(
         eventPath,
@@ -495,24 +528,6 @@ for (const packageKeys of [['web'], ['node'], ['web', 'node']]) {
       }
     }
     const packageKey = packageKeys.at(-1);
-    const filename = `api-docs/${packageKey}-versions.json`;
-
-    await writeFile(
-      path.join(root, 'remote.git/hooks/pre-receive'),
-      '#!/bin/sh\nexit 1\n'
-    );
-    await chmod(path.join(root, 'remote.git/hooks/pre-receive'), 0o755);
-    await writeFile(
-      path.join(root, filename),
-      JSON.stringify(packageKey === 'web' ? initial : { versions: ['0.9.10'] })
-    );
-    git('add', filename);
-    git('commit', '-m', 'restore fixture list');
-    const failedPush = run(packageKey);
-    assert.notEqual(failedPush.status, 0);
-    assert.match(failedPush.stderr, /rejected/);
-
-    const failedHead = git('rev-parse', 'HEAD');
     await writeFile(
       path.join(bin, 'gh'),
       '#!/bin/sh\nprintf \'{"tag_name":"wrong","draft":false,"prerelease":false}\\n\'\n'
@@ -520,7 +535,7 @@ for (const packageKeys of [['web'], ['node'], ['web', 'node']]) {
     const invalidMetadata = run(packageKey);
     assert.notEqual(invalidMetadata.status, 0);
     assert.match(invalidMetadata.stderr, /different release/);
-    assert.equal(git('rev-parse', 'HEAD'), failedHead);
+    assert.equal(git('diff'), diff);
 
     await writeFile(
       path.join(bin, 'npm'),
@@ -533,9 +548,79 @@ for (const packageKeys of [['web'], ['node'], ['web', 'node']]) {
     const missingPublication = run(packageKey);
     assert.notEqual(missingPublication.status, 0);
     assert.match(missingPublication.stdout, /unavailable after retrying/);
-    assert.equal(git('rev-parse', 'HEAD'), failedHead);
+    assert.equal(git('rev-parse', 'HEAD'), initialHead);
+    assert.equal(git('diff'), diff);
+
+    git('add', 'api-docs');
+    git('commit', '-m', 'simulate merged promotion');
+    await writeFile(outputPath, '');
+    const merged = determinePromotion();
+    assert.equal(merged.status, 0, merged.stderr);
+    assert.equal(await readFile(outputPath, 'utf8'), `branch=${branch}\n`);
   });
 }
+
+test('version-list changes on main trigger docs deployment, including multi-commit pushes', async (t) => {
+  const root = await fixture(t);
+  const git = (...args) =>
+    execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+  git('init', '-b', 'main');
+  git('config', 'user.name', 'Test');
+  git('config', 'user.email', 'test@example.invalid');
+  git('add', 'api-docs');
+  git('commit', '-m', 'fixture');
+  const before = git('rev-parse', 'HEAD');
+  const workflow = await readFile(
+    path.join(ROOT, '.github/workflows/release.yml'),
+    'utf8'
+  );
+  const shell = workflow
+    .split('      - name: Detect documentation version changes\n')[1]
+    .split('\n      - ')[0]
+    .split('        run: |\n')[1]
+    .split('\n')
+    .map((line) => line.replace(/^ {10}/, ''))
+    .join('\n');
+  const output = path.join(root, 'output');
+  const detect = (base = before) =>
+    spawnSync(
+      'bash',
+      ['--noprofile', '--norc', '-eo', 'pipefail', '-c', shell],
+      {
+        cwd: root,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          BEFORE_SHA: base,
+          AFTER_SHA: git('rev-parse', 'HEAD'),
+          GITHUB_OUTPUT: output
+        }
+      }
+    );
+  for (const packageKey of ['web', 'node']) {
+    const filename = `api-docs/${packageKey}-versions.json`;
+    await writeFile(path.join(root, filename), '{"versions":["0.99.0"]}\n');
+    git('add', filename);
+    git('commit', '-m', `promote ${packageKey}`);
+    await writeFile(output, '');
+    const changed = detect();
+    assert.equal(changed.status, 0, changed.stderr);
+    assert.equal(await readFile(output, 'utf8'), 'changed=true\n');
+  }
+  const promoted = git('rev-parse', 'HEAD');
+  await writeFile(path.join(root, 'README.md'), 'unrelated change\n');
+  git('add', 'README.md');
+  git('commit', '-m', 'unrelated');
+  await writeFile(output, '');
+  const unchanged = detect(promoted);
+  assert.equal(unchanged.status, 0, unchanged.stderr);
+  assert.equal(await readFile(output, 'utf8'), 'changed=false\n');
+  await writeFile(output, '');
+  const multiCommit = detect();
+  assert.equal(multiCommit.status, 0, multiCommit.stderr);
+  assert.equal(await readFile(output, 'utf8'), 'changed=true\n');
+  assert.notEqual(detect('missing-commit').status, 0);
+});
 
 test('release events dispatch docs on main without entering the Pages environment', async (t) => {
   const root = await fixture(t);
@@ -634,7 +719,7 @@ test('release events dispatch docs on main without entering the Pages environmen
   }
 });
 
-test('release routing only deploys from main and preserves explicit Changesets/manual rebuilds', async () => {
+test('release routing defers pending promotions and deploys merged indexes only from main', async () => {
   const workflow = await readFile(
     path.join(ROOT, '.github/workflows/release.yml'),
     'utf8'
@@ -647,7 +732,9 @@ test('release routing only deploys from main and preserves explicit Changesets/m
     eventName,
     event = {},
     published = '',
-    ref = 'refs/heads/main'
+    ref = 'refs/heads/main',
+    docsChanged = 'false',
+    releaseResult = 'success'
   ) =>
     vm.runInNewContext(condition, {
       always: () => true,
@@ -655,7 +742,12 @@ test('release routing only deploys from main and preserves explicit Changesets/m
       startsWith: (value, prefix) => value.startsWith(prefix),
       github: { event_name: eventName, event, ref },
       inputs: { version: event.version || '' },
-      needs: { release: { outputs: { published } } }
+      needs: {
+        release: {
+          result: releaseResult,
+          outputs: { published, docsChanged }
+        }
+      }
     });
   assert.equal(
     shouldDeploy('release', { release }, '', `refs/tags/${tag}`),
@@ -684,6 +776,18 @@ test('release routing only deploys from main and preserves explicit Changesets/m
   );
   assert.equal(shouldDeploy('push', {}, 'true'), true);
   assert.equal(shouldDeploy('push', {}, 'false'), false);
+  assert.equal(
+    shouldDeploy('push', {}, 'false', 'refs/heads/main', 'true'),
+    true
+  );
+  assert.equal(
+    shouldDeploy('push', {}, 'false', 'refs/heads/main', 'true', 'failure'),
+    false
+  );
+  assert.equal(
+    shouldDeploy('push', {}, 'false', 'refs/heads/feature', 'true'),
+    false
+  );
   assert.equal(shouldDeploy('workflow_dispatch'), true);
   assert.equal(
     shouldDeploy('workflow_dispatch', { inputs: { 'docs-release-tag': tag } }),
@@ -718,13 +822,52 @@ test('release routing only deploys from main and preserves explicit Changesets/m
   assert.match(docs, /github\.ref == 'refs\/heads\/main'/);
   assert.match(docs, /ref: main/);
   assert.match(docs, /contents: write/);
+  assert.match(docs, /pull-requests: write/);
+  assert.doesNotMatch(docs, /git push/);
+  const createPr = docs
+    .split('      - name: Create documentation promotion pull request\n')[1]
+    .split('\n      - ')[0];
+  assert.match(createPr, /uses: peter-evans\/create-pull-request@[a-f0-9]{40}/);
+  assert.match(createPr, /base: main/);
+  assert.match(
+    createPr,
+    /branch: \$\{\{ steps\.promotion\.outputs\.branch \}\}/
+  );
+  assert.match(
+    createPr,
+    /add-paths: \|\n {12}api-docs\/web-versions.json\n {12}api-docs\/node-versions.json/
+  );
+  for (const name of [
+    'Create documentation promotion pull request',
+    'Setup Pages',
+    'Build documentation dependencies',
+    'Build docs',
+    'Upload artifact',
+    'Deploy to GitHub Pages'
+  ]) {
+    const step = docs
+      .split(`      - name: ${name}\n`)[1]
+      .split('\n      - ')[0];
+    const condition = step.match(/        if: (.+)/)[1];
+    for (const pending of ['', 'true']) {
+      assert.equal(
+        vm.runInNewContext(condition, {
+          steps: { promotion: { outputs: { pending } } }
+        }),
+        name === 'Create documentation promotion pull request'
+          ? pending === 'true'
+          : pending !== 'true',
+        `${name}: pending=${pending}`
+      );
+    }
+  }
   assert.equal(docs.split('run: pnpm ci:docs').length - 1, 1);
   assert.equal(docs.split('uses: actions/deploy-pages@v4').length - 1, 1);
   assert.ok(
     docs.indexOf('update node "$metadata"') < docs.indexOf('run: pnpm ci:docs')
   );
   assert.ok(
-    docs.indexOf('git push origin HEAD:main') <
+    docs.indexOf('Create documentation promotion pull request') <
       docs.indexOf('run: pnpm ci:docs')
   );
   assert.ok(

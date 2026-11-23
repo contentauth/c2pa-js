@@ -72,11 +72,26 @@ jobs:
     outputs:
       published: ${{ steps.changesets.outputs.published }}
       publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
+      docsChanged: ${{ steps.docs-changes.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
         with:
           filter: tree:0
           fetch-depth: 0
+
+      - name: Detect documentation version changes
+        id: docs-changes
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          changes=$(git diff --name-only "$BEFORE_SHA" "$AFTER_SHA" -- \
+            api-docs/web-versions.json api-docs/node-versions.json)
+          if [ -n "$changes" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: ./.github/actions/install-dependencies
         name: Install dependencies
@@ -331,6 +346,7 @@ jobs:
     if: |
       always() && !cancelled() && github.ref == 'refs/heads/main' && (
         needs.release.outputs.published == 'true' ||
+        (needs.release.result == 'success' && needs.release.outputs.docsChanged == 'true') ||
         (github.event_name == 'workflow_dispatch' && inputs.version == '')
       )
     concurrency:
@@ -338,6 +354,7 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: write
+      pull-requests: write
       pages: write
       id-token: write
     environment:
@@ -350,9 +367,6 @@ jobs:
           ref: main
           filter: tree:0
           fetch-depth: 0
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
 
       - uses: ./.github/actions/install-dependencies
         name: Install dependencies
@@ -398,13 +412,6 @@ jobs:
             exit 1
           fi
           node scripts/update-api-docs-version.mjs update web "$metadata"
-          if ! git diff --quiet -- api-docs/web-versions.json; then
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add api-docs/web-versions.json
-            git commit -m "docs: promote $DOCS_RELEASE_TAG API documentation"
-            git push origin HEAD:main
-          fi
 
       - name: Verify release and persist node documentation version
         if: steps.node-release.outputs.tag != ''
@@ -431,24 +438,73 @@ jobs:
             exit 1
           fi
           node scripts/update-api-docs-version.mjs update node "$metadata"
-          if ! git diff --quiet -- api-docs/node-versions.json; then
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add api-docs/node-versions.json
-            git commit -m "docs: promote $DOCS_RELEASE_TAG API documentation"
-            git push origin HEAD:main
+
+      - name: Determine documentation promotion
+        id: promotion
+        env:
+          WEB_RELEASE_TAG: ${{ steps.web-release.outputs.tag }}
+          NODE_RELEASE_TAG: ${{ steps.node-release.outputs.tag }}
+        run: |
+          branch=docs/promote-api-versions
+          for tag in "$WEB_RELEASE_TAG" "$NODE_RELEASE_TAG"; do
+            if [ -n "$tag" ]; then
+              package="${tag%@*}"
+              branch="$branch-${package##*/}-${tag##*@}"
+            fi
+          done
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          changes=$(git diff --name-only -- \
+            api-docs/web-versions.json api-docs/node-versions.json)
+          if [ -n "$changes" ]; then
+            echo "pending=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - run: pnpm exec nx run-many -t build --projects=tag:lib
+      - name: Create documentation promotion pull request
+        if: steps.promotion.outputs.pending == 'true'
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
+        with:
+          base: main
+          branch: ${{ steps.promotion.outputs.branch }}
+          add-paths: |
+            api-docs/web-versions.json
+            api-docs/node-versions.json
+          commit-message: 'docs: promote published API documentation versions'
+          title: 'docs: promote published API documentation versions'
+          body: |
+            ## Overview
+            Promote verified stable releases in the API documentation version lists.
+
+            ## Changes
+            - Web release: ${{ steps.web-release.outputs.tag || 'unchanged' }}
+            - Node release: ${{ steps.node-release.outputs.tag || 'unchanged' }}
+            - The complete documentation site will deploy after this PR merges.
+
+            ## Testing
+            Exact GitHub releases and npm versions were verified by the release workflow.
+            Approve CI runs if GitHub requires approval for this token-created PR.
+
+            ## Cross-package drift check
+            N/A: documentation version lists only.
+
+      - name: Setup Pages
+        if: steps.promotion.outputs.pending != 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Build documentation dependencies
+        if: steps.promotion.outputs.pending != 'true'
+        run: pnpm exec nx run-many -t build --projects=tag:lib
 
       - name: Build docs
+        if: steps.promotion.outputs.pending != 'true'
         run: pnpm ci:docs
 
       - name: Upload artifact
+        if: steps.promotion.outputs.pending != 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: 'api-docs/'
 
       - name: Deploy to GitHub Pages
+        if: steps.promotion.outputs.pending != 'true'
         id: deployment
         uses: actions/deploy-pages@v4
