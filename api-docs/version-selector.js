@@ -32,12 +32,14 @@
     config.label + ' API documentation version'
   );
   for (const version of config.versions) {
+    const line = version.split('.').slice(0, 2).join('.');
     const option = document.createElement('option');
     option.value = new URL(
-      'versions/' + version + '/index.html',
+      'versions/' + line + '/index.html',
       packageRoot
     ).href;
-    option.textContent = version;
+    option.textContent = line;
+    option.title = 'Generated from ' + version;
     option.selected = version === config.version;
     select.appendChild(option);
   }

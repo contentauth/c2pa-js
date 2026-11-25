@@ -13,6 +13,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   rename,
   rm,
   writeFile
@@ -21,6 +22,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { Application, JSX, TSConfigReader } from 'typedoc';
+import {
+  validateManifest,
+  validateVersions,
+  versionLine
+} from './api-docs-manifest.mjs';
+export { validateVersions } from './api-docs-manifest.mjs';
 
 export const ROOT = fileURLToPath(new URL('../', import.meta.url));
 export const PACKAGES = {
@@ -44,31 +51,12 @@ export const PACKAGES = {
   }
 };
 const run = promisify(execFile);
-const VERSION =
-  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$/;
-
 export async function loadVersions(filename) {
-  const config = JSON.parse(await readFile(filename, 'utf8'));
-  return validateVersions(config?.versions);
+  return (await loadManifest(filename)).versions;
 }
 
-export function validateVersions(versions) {
-  if (
-    !Array.isArray(versions) ||
-    versions.length === 0 ||
-    versions.some(
-      (version) =>
-        typeof version !== 'string' ||
-        version.trim() !== version ||
-        !VERSION.test(version)
-    ) ||
-    new Set(versions).size !== versions.length
-  ) {
-    throw new Error(
-      'Documentation versions must be a non-empty list of unique exact npm versions.'
-    );
-  }
-  return versions;
+export async function loadManifest(filename) {
+  return validateManifest(JSON.parse(await readFile(filename, 'utf8')));
 }
 
 export async function installRelease(
@@ -77,6 +65,7 @@ export async function installRelease(
   stage,
   execute = run
 ) {
+  validateVersions([version]);
   await writeFile(
     path.join(stage, 'package.json'),
     JSON.stringify({
@@ -192,6 +181,36 @@ export async function generateDocs(
   await readFile(path.join(output, 'index.html'));
 }
 
+export async function writeAliases(site, aliases) {
+  async function redirectPages(source, output) {
+    await mkdir(output, { recursive: true });
+    for (const entry of await readdir(source, { withFileTypes: true })) {
+      const target = path.join(source, entry.name);
+      const destination = path.join(output, entry.name);
+      if (entry.isDirectory()) {
+        await redirectPages(target, destination);
+      } else if (entry.isFile() && entry.name.endsWith('.html')) {
+        const url = path
+          .relative(path.dirname(destination), target)
+          .split(path.sep)
+          .join('/');
+        await writeFile(
+          destination,
+          '<!doctype html><meta charset="utf-8"><title>API documentation moved</title>' +
+            `<a href="${url}">Continue to the maintained release line</a>` +
+            `<script>location.replace(${JSON.stringify(url)} + location.search + location.hash);</script>\n`
+        );
+      }
+    }
+  }
+  for (const [alias, line] of Object.entries(aliases)) {
+    await redirectPages(
+      path.join(site, 'versions', line),
+      path.join(site, 'versions', alias)
+    );
+  }
+}
+
 export async function buildSite(
   packageKey,
   root = ROOT,
@@ -202,7 +221,7 @@ export async function buildSite(
     throw new Error('Choose a documentation package: node or web.');
   }
   const packageInfo = PACKAGES[packageKey];
-  const versions = await loadVersions(
+  const { versions, aliases } = await loadManifest(
     path.join(root, `api-docs/${packageKey}-versions.json`)
   );
   const temporaryRoot = path.join(root, 'tmp');
@@ -213,6 +232,7 @@ export async function buildSite(
   const site = path.join(workspace, 'site');
   try {
     for (const version of versions) {
+      const line = versionLine(version);
       const stage = path.join(workspace, version);
       await mkdir(stage);
       const packageRoot = await install(packageInfo, version, stage);
@@ -220,10 +240,10 @@ export async function buildSite(
         root,
         packageInfo,
         packageRoot,
-        path.join(site, 'versions', version),
+        path.join(site, 'versions', line),
         version,
         versions,
-        `versions/${version}`
+        `versions/${line}`
       );
       if (version === versions[0]) {
         await generate(
@@ -238,6 +258,7 @@ export async function buildSite(
         await cp(path.join(workspace, 'default'), site, { recursive: true });
       }
     }
+    await writeAliases(site, aliases);
     const docs = path.join(root, 'api-docs');
     await mkdir(docs, { recursive: true });
     const output = path.join(docs, packageKey);

@@ -1,0 +1,126 @@
+name: API documentation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      docs-release-tag:
+        description: 'Optional exact stable web or node release tag to verify'
+        type: string
+        required: false
+  workflow_call:
+    inputs:
+      published-packages:
+        type: string
+        default: '[]'
+      docs-release-tag:
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Require organization documentation App configuration
+        env:
+          APP_ID: ${{ vars.C2PA_DOCS_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.C2PA_DOCS_APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "$APP_ID" ] || [ -z "$APP_PRIVATE_KEY" ]; then
+            echo "::error::Configure C2PA_DOCS_APP_ID and C2PA_DOCS_APP_PRIVATE_KEY for this repository."
+            exit 1
+          fi
+
+      - uses: actions/create-github-app-token@v2
+        id: docs-app
+        with:
+          app-id: ${{ vars.C2PA_DOCS_APP_ID }}
+          private-key: ${{ secrets.C2PA_DOCS_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+
+      - name: Reconcile verified publications and persist only the manifests
+        env:
+          DOCS_APP_TOKEN: ${{ steps.docs-app.outputs.token }}
+          PUBLISHED_PACKAGES: ${{ inputs.published-packages || '[]' }}
+          DOCS_RELEASE_TAG: ${{ inputs.docs-release-tag }}
+        run: node scripts/persist-api-docs-versions.mjs
+
+  build:
+    needs: promote
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.snapshot.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Record current main snapshot
+        id: snapshot
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: ./.github/actions/install-dependencies
+        name: Install dependencies
+
+      - run: pnpm exec nx run-many -t build --projects=tag:lib
+
+      - name: Build complete API documentation site
+        run: pnpm ci:docs
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: api-docs/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Reject stale main snapshots
+        id: current
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_SHA: ${{ needs.build.outputs.sha }}
+        run: |
+          current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          if [ "$current" = "$BUILD_SHA" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Skipping stale build; the newer main run will publish the current site."
+          fi
+
+      - uses: actions/configure-pages@v5
+        if: steps.current.outputs.deploy == 'true'
+
+      - uses: actions/deploy-pages@v4
+        if: steps.current.outputs.deploy == 'true'
+        id: deployment
+        with:
+          artifact_name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}

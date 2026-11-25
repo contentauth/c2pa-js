@@ -29,12 +29,14 @@ import {
   buildSite,
   generateDocs,
   installRelease,
-  loadVersions
+  loadVersions,
+  writeAliases
 } from './generate-api-docs.mjs';
+import { versionLine } from './api-docs-manifest.mjs';
 
 const VERSIONS = {
-  node: ['0.9.10', '0.9.9'],
-  web: ['0.15.4', '0.15.3']
+  node: ['0.10.1', '0.9.12'],
+  web: ['0.16.1', '0.15.4']
 };
 
 async function fixture(t) {
@@ -44,7 +46,11 @@ async function fixture(t) {
   for (const [key, versions] of Object.entries(VERSIONS)) {
     await writeFile(
       path.join(root, `api-docs/${key}-versions.json`),
-      JSON.stringify({ versions })
+      JSON.stringify({
+        versions,
+        retiredLines: [],
+        aliases: Object.fromEntries(versions.map((version) => [version, versionLine(version)]))
+      })
     );
   }
   return root;
@@ -160,6 +166,9 @@ test('invalid lists, ranges, tags and unsafe versions are rejected', async (t) =
     ...[
       [],
       ['0.15.4', '0.15.4'],
+      ['0.15.4', '0.15.3'],
+      ['0.14.0', '0.15.4'],
+      ['0.15.4-rc.1'],
       ['latest'],
       ['^0.15.4'],
       ['../main'],
@@ -169,7 +178,7 @@ test('invalid lists, ranges, tags and unsafe versions are rejected', async (t) =
       ['01.15.4'],
       [15],
       [null]
-    ].map((versions) => ({ versions }))
+    ].map((versions) => ({ versions, retiredLines: [], aliases: {} }))
   ]) {
     await writeFile(filename, JSON.stringify(value));
     await assert.rejects(loadVersions(filename), /unique exact npm versions/);
@@ -290,10 +299,10 @@ for (const [key, packageInfo] of Object.entries(PACKAGES)) {
     for (const version of versions) {
       assert.equal(
         await readFile(
-          path.join(site, 'versions', version, 'index.html'),
+          path.join(site, 'versions', versionLine(version), 'index.html'),
           'utf8'
         ),
-        `${version}:versions/${version}`
+        `${version}:versions/${versionLine(version)}`
       );
     }
     assert.equal(
@@ -463,10 +472,12 @@ for (const [key, packageInfo] of Object.entries(PACKAGES)) {
   ]) {
     for (const prefix of [
       '',
-      ...versions.map((version) => `versions/${version}`)
+      ...versions.map((version) => `versions/${versionLine(version)}`)
     ]) {
       test(`selector links and navigation: ${base}${prefix}`, () => {
-        const version = prefix ? prefix.split('/').pop() : versions[0];
+        const version = prefix
+          ? versions.find((value) => versionLine(value) === prefix.split('/').pop())
+          : versions[0];
         function element() {
           return {
             children: [],
@@ -525,15 +536,17 @@ for (const [key, packageInfo] of Object.entries(PACKAGES)) {
         for (const [index, option] of select.children.entries()) {
           assert.equal(
             option.value,
-            base + 'versions/' + versions[index] + '/index.html'
+            base + 'versions/' + versionLine(versions[index]) + '/index.html'
           );
+          assert.equal(option.textContent, versionLine(versions[index]));
+          assert.equal(option.title, 'Generated from ' + versions[index]);
           assert.equal(option.selected, versions[index] === version);
         }
         select.value = select.children[1].value;
         select.change();
         assert.equal(
           destination,
-          base + 'versions/' + versions[1] + '/index.html'
+          base + 'versions/' + versionLine(versions[1]) + '/index.html'
         );
         assert.equal(
           toolbar.children[1].href,
@@ -541,5 +554,37 @@ for (const [key, packageInfo] of Object.entries(PACKAGES)) {
         );
       });
     }
+
+    test('legacy exact-version pages redirect nested paths, query strings and fragments to their line', async (t) => {
+      const root = await fixture(t);
+      const canonical = path.join(root, 'versions/0.16');
+      await mkdir(path.join(canonical, 'classes'), { recursive: true });
+      for (const page of ['index.html', 'classes/Reader.html']) {
+        await writeFile(path.join(canonical, page), 'Canonical API docs');
+      }
+      await writeAliases(root, { '0.16.0': '0.16', '0.16.1': '0.16' });
+      for (const alias of ['0.16.0', '0.16.1']) {
+        for (const page of ['index.html', 'classes/Reader.html']) {
+          const base = `https://contentauth.github.io/c2pa-js/web/versions/${alias}/${page}`;
+          const dom = new JSDOM(
+            await readFile(path.join(root, 'versions', alias, page), 'utf8'),
+            { url: base }
+          );
+          let destination;
+          vm.runInNewContext(dom.window.document.querySelector('script').textContent, {
+            location: {
+              search: '?example=1',
+              hash: '#json',
+              replace(value) { destination = new URL(value, base).href; }
+            }
+          });
+          assert.equal(destination,
+            `https://contentauth.github.io/c2pa-js/web/versions/0.16/${page}?example=1#json`);
+          assert.equal(dom.window.document.querySelector('a').href,
+            `https://contentauth.github.io/c2pa-js/web/versions/0.16/${page}`);
+          dom.window.close();
+        }
+      }
+    });
   }
 }
