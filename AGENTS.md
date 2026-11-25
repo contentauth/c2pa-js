@@ -111,9 +111,16 @@ See [CI](./.github/workflows/ci.yml) for environment details.
 ### General
 
 - Match surrounding naming, imports, layout, and error handling.
-  Apply required lint/format fixes to changed code; avoid unrelated rewrites or repository-wide formatting.
+  When writing or changing code, format only as needed to fix actual formatting-rule or lint-rule violations.
+  Preserve existing formatting in untouched code; avoid indentation/newline-only churn that adds review noise without fixing violations.
+  Run checks first, then limit fixes to actual violations and the narrowest necessary scope.
+  Do not indiscriminately run automatic formatter `--write` or lint `--fix` on entire files or the repository.
+  If a tool necessarily rewrites a broader scope, retain only required or task-related formatting changes; avoid unrelated cleanup.
+  Do not weaken formatting/lint requirements or suppress rules to avoid fixes.
 - Keep strict TypeScript, ESM exports, and `.js` relative imports.
   Prefer domain types and guards over `any`, unchecked casts, or non-null assertions.
+- Keep static imports organized together at the top of every JavaScript/TypeScript file, after the license header and before declarations or executable code.
+  Follow existing import grouping/order and preserve side-effect import order.
 - Use applicable ESLint and [Prettier](./.prettierrc): single quotes, no trailing commas.
   Preserve license headers; new JS/TS covered by [root ESLint](./eslint.config.mjs) needs the adjacent Adobe header.
 - Use nightly rustfmt and [rustfmt.toml](./rustfmt.toml) import grouping.
@@ -164,6 +171,9 @@ See [CI](./.github/workflows/ci.yml) for environment details.
 - Create a changeset only when explicitly requested by the user. When requested,
   run `pnpm changeset` and include the generated file; do not create one automatically
   even if the change requires a package release.
+  When writing a changeset for a pre-1.0 package, use a patch bump for additive,
+  backward-compatible changes. Reserve minor bumps for breaking changes in the
+  public API; do not create major bumps while the package is pre-1.0.
   Do not run release/versioning workflows in feature PRs.
 - Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for commit subjects and PR titles:
   `<type>[optional scope]: <description>`, e.g. `feat(c2pa-node): add support`, `fix: correct validation`, `docs: update guidance`.

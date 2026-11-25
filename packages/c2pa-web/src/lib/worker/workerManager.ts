@@ -8,12 +8,24 @@
  */
 
 import { CredentialHolder, Signer } from '../signer.js';
-import { createTx, workerRx } from './rpc.js';
+import {
+  createTx,
+  CONTEXT_MISSING,
+  MAX_CACHED_CONTEXTS,
+  workerRx,
+  type WorkerContext,
+  type WorkerContextResult
+} from './rpc.js';
 import InlineWorker from '../worker?worker&inline';
 import { transfer } from 'highgain';
 
 export interface WorkerManager {
   tx: ReturnType<typeof createTx>;
+  context: (settingsJson: string) => WorkerContext;
+  withContext: (
+    settingsJson: string,
+    create: (context: WorkerContext) => Promise<WorkerContextResult>
+  ) => Promise<number>;
   registerSignReceiver: (signFn: Signer['sign']) => number;
   registerCredentialHolderReceiver: (
     signFn: CredentialHolder['sign']
@@ -57,6 +69,7 @@ export async function createWorkerManager(
 ): Promise<WorkerManager> {
   const { wasm, workerSrc } = config;
   let signerRequestId = 0;
+  let contextRequestId = 0;
 
   const worker = workerSrc
     ? new Worker(validateWorkerSrc(workerSrc), { type: 'module' })
@@ -64,11 +77,20 @@ export async function createWorkerManager(
 
   const tx = createTx(worker);
 
+  const contextIds = new Map<string, { id: number; registered: boolean }>();
   const signingRequestMap = new Map<number, Signer['sign']>();
   const credentialHolderRequestMap = new Map<number, CredentialHolder['sign']>();
 
   workerRx(
     {
+      context_registered: (id) => {
+        for (const entry of contextIds.values()) {
+          if (entry.id === id) {
+            entry.registered = true;
+            break;
+          }
+        }
+      },
       sign: async (id, bytes, reserveSize) => {
         const signFn = signingRequestMap.get(id);
         signingRequestMap.delete(id);
@@ -108,12 +130,60 @@ export async function createWorkerManager(
     return id;
   }
 
+  function context(settingsJson: string): WorkerContext {
+    const existing = contextIds.get(settingsJson);
+    if (existing !== undefined) {
+      return existing.registered
+        ? { id: existing.id }
+        : { id: existing.id, json: settingsJson };
+    }
+
+    if (contextIds.size === MAX_CACHED_CONTEXTS) {
+      const oldestSettings = contextIds.keys().next().value;
+      if (oldestSettings !== undefined) {
+        contextIds.delete(oldestSettings);
+      }
+    }
+
+    if (!Number.isSafeInteger(contextRequestId)) {
+      throw new Error('Worker context ID space exhausted');
+    }
+
+    const id = contextRequestId++;
+    contextIds.set(settingsJson, { id, registered: false });
+    return { id, json: settingsJson };
+  }
+
+  async function withContext(
+    this: WorkerManager,
+    settingsJson: string,
+    create: (context: WorkerContext) => Promise<WorkerContextResult>
+  ): Promise<number> {
+    const descriptor = this.context(settingsJson);
+    const result = await create(descriptor);
+    if (result !== CONTEXT_MISSING) {
+      return result;
+    }
+
+    // Eviction can race an in-flight bare ID. Retry only this pre-construction miss.
+    const retried = await create({ id: descriptor.id, json: settingsJson });
+    if (retried === CONTEXT_MISSING) {
+      throw new Error('Worker did not register the supplied context settings');
+    }
+    return retried;
+  }
+
   await tx.initWorker(wasm);
 
   return {
     tx,
+    context,
+    withContext,
     registerSignReceiver,
     registerCredentialHolderReceiver,
-    terminate: () => worker.terminate()
+    terminate: () => {
+      contextIds.clear();
+      worker.terminate();
+    }
   };
 }

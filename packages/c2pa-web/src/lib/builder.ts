@@ -138,7 +138,9 @@ export class Builder {
     const settingsJson = await context.toJson();
     const { worker } = c2pa;
 
-    const builderId = await worker.tx.builder_new(settingsJson);
+    const builderId = await worker.withContext(settingsJson, (workerContext) =>
+      worker.tx.builder_new(workerContext)
+    );
 
     const builder = new Builder(worker, builderId);
     registry.register(builder, { worker, id: builderId }, builder);
@@ -163,7 +165,9 @@ export class Builder {
     const settingsJson = await context.toJson();
     const { worker } = c2pa;
 
-    const builderId = await worker.tx.builder_fromJson(json, settingsJson);
+    const builderId = await worker.withContext(settingsJson, (workerContext) =>
+      worker.tx.builder_fromJson(json, workerContext)
+    );
 
     const builder = new Builder(worker, builderId);
     registry.register(builder, { worker, id: builderId }, builder);
@@ -187,7 +191,9 @@ export class Builder {
     const settingsJson = await context.toJson();
     const { worker } = c2pa;
 
-    const builderId = await worker.tx.builder_fromArchive(archive, settingsJson);
+    const builderId = await worker.withContext(settingsJson, (workerContext) =>
+      worker.tx.builder_fromArchive(archive, workerContext)
+    );
 
     const builder = new Builder(worker, builderId);
     registry.register(builder, { worker, id: builderId }, builder);
