@@ -10,18 +10,23 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PACKAGES, ROOT, validateVersions } from './generate-api-docs.mjs';
+import {
+  PACKAGE_NAMES,
+  STABLE_VERSION,
+  promoteVersions,
+  validateManifest
+} from './api-docs-manifest.mjs';
 
-const STABLE_VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+const ROOT = fileURLToPath(new URL('../', import.meta.url));
 
 function packageName(packageKey) {
-  if (!Object.hasOwn(PACKAGES, packageKey)) {
+  if (!Object.hasOwn(PACKAGE_NAMES, packageKey)) {
     throw new Error('Choose a documentation package: node or web.');
   }
-  return PACKAGES[packageKey].name;
+  return PACKAGE_NAMES[packageKey];
 }
 
-function stableVersion(packageKey, tag) {
+export function stableVersion(packageKey, tag) {
   const prefix = `${packageName(packageKey)}@`;
   if (typeof tag !== 'string' || !tag.startsWith(prefix)) return null;
   const version = tag.slice(prefix.length);
@@ -33,7 +38,7 @@ export function selectRelease(packageKey, publishedPackages, event) {
   const dispatchedTag = event.inputs?.['docs-release-tag'];
   if (dispatchedTag) {
     if (
-      !Object.keys(PACKAGES).some((key) => stableVersion(key, dispatchedTag))
+      !Object.keys(PACKAGE_NAMES).some((key) => stableVersion(key, dispatchedTag))
     ) {
       throw new Error(
         'Expected an exact stable release tag for a documentation package.'
@@ -58,7 +63,12 @@ export function selectRelease(packageKey, publishedPackages, event) {
   }
   if (!packages.length) return '';
   const version = packages[0].version;
-  validateVersions([version]);
+  if (
+    typeof version !== 'string' ||
+    !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$/.test(version)
+  ) {
+    throw new Error('Expected an exact npm version from Changesets.');
+  }
   return STABLE_VERSION.test(version) ? `${name}@${version}` : '';
 }
 
@@ -82,20 +92,12 @@ export async function updateReleaseVersion(
   if (!version || release.prerelease || release.draft) return false;
 
   const filename = path.join(root, `api-docs/${packageKey}-versions.json`);
-  const config = JSON.parse(await readFile(filename, 'utf8'));
-  if (!Array.isArray(config?.versions)) {
-    throw new Error('Expected a documentation versions array.');
-  }
-  const versions = [
-    version,
-    ...config.versions.filter((entry) => entry !== version)
-  ];
-  validateVersions(versions);
-  if (JSON.stringify(config.versions) === JSON.stringify(versions))
-    return false;
+  const config = validateManifest(JSON.parse(await readFile(filename, 'utf8')));
+  const next = promoteVersions(config, [version]);
+  if (JSON.stringify(config) === JSON.stringify(next)) return false;
   await writeFile(
     filename,
-    JSON.stringify({ ...config, versions }, null, 2) + '\n'
+    JSON.stringify(next, null, 2) + '\n'
   );
   return true;
 }

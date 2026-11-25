@@ -34,7 +34,9 @@ const release = { tag_name: tag, draft: false, prerelease: false };
 const nodeTag = '@contentauth/c2pa-node@0.10.0';
 const nodeRelease = { ...release, tag_name: nodeTag };
 const initial = {
-  versions: ['0.15.4', '0.16.0', '0.15.3', '0.16.0'],
+  versions: ['0.15.4'],
+  retiredLines: ['0.14'],
+  aliases: { '0.15.4': '0.15', '0.15.3': '0.15' },
   metadata: { keep: ['unchanged'] }
 };
 
@@ -48,7 +50,7 @@ async function fixture(t) {
   );
   await writeFile(
     path.join(root, 'api-docs/node-versions.json'),
-    '{"versions":["0.9.10"]}\n'
+    '{"versions":["0.9.10"],"retiredLines":[],"aliases":{}}\n'
   );
   return root;
 }
@@ -141,7 +143,8 @@ test('promotes, deduplicates and prepends exact versions preserving metadata and
   const promoted = await readFile(filename, 'utf8');
   assert.deepEqual(JSON.parse(promoted), {
     ...initial,
-    versions: ['0.16.0', '0.15.4', '0.15.3']
+    versions: ['0.16.0', '0.15.4'],
+    aliases: { '0.16.0': '0.16', ...initial.aliases }
   });
   assert.equal(await updateReleaseVersion('web', release, tag, root), false);
   assert.equal(await readFile(filename, 'utf8'), promoted);
@@ -152,9 +155,7 @@ test('promotes, deduplicates and prepends exact versions preserving metadata and
   );
   assert.deepEqual(JSON.parse(await readFile(filename, 'utf8')).versions, [
     '0.16.1',
-    '0.16.0',
-    '0.15.4',
-    '0.15.3'
+    '0.15.4'
   ]);
   assert.equal(
     await readFile(path.join(root, 'api-docs/node-versions.json'), 'utf8'),
@@ -252,7 +253,8 @@ test('node promotions preserve metadata, history and web index and reject invali
   );
   const config = {
     ...initial,
-    versions: ['0.9.10', '0.10.0', '0.9.9', '0.10.0']
+    versions: ['0.9.10'],
+    aliases: { '0.9.10': '0.9', '0.9.9': '0.9' }
   };
   await writeFile(filename, JSON.stringify(config));
   assert.equal(
@@ -261,7 +263,8 @@ test('node promotions preserve metadata, history and web index and reject invali
   );
   assert.deepEqual(JSON.parse(await readFile(filename, 'utf8')), {
     ...config,
-    versions: ['0.10.0', '0.9.10', '0.9.9']
+    versions: ['0.10.0', '0.9.10'],
+    aliases: { '0.10.0': '0.10', ...config.aliases }
   });
   assert.equal(
     await updateReleaseVersion('node', nodeRelease, nodeTag, root),
@@ -274,9 +277,7 @@ test('node promotions preserve metadata, history and web index and reject invali
   );
   assert.deepEqual(JSON.parse(await readFile(filename, 'utf8')).versions, [
     '0.10.1',
-    '0.10.0',
-    '0.9.10',
-    '0.9.9'
+    '0.9.10'
   ]);
   const before = await readFile(filename, 'utf8');
   for (const excluded of [

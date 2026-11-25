@@ -147,18 +147,31 @@ Node and web have independent version lists:
 - [web-versions.json](../api-docs/web-versions.json) selects releases of
   `@contentauth/c2pa-web`, including the main and `/inline` entry points.
 
-Versions must be exact npm releases, not tags such as `latest` or version ranges.
-The first entry is the default. Stable web releases automatically prepend their
-exact npm version to the web list, promoting an existing entry without duplicates.
-Older entries and other index metadata are preserved. Node releases still require
-manual list updates; prereleases do not automatically change either list.
+Each manifest has `versions`, `retiredLines`, and `aliases`. `versions` contains
+exact stable npm `X.Y.Z` releases, with one highest published patch per retained
+major/minor line, sorted by numeric semver descending. Tags, ranges, prereleases,
+duplicate lines, and unsorted versions fail validation. The first entry is the
+independent package default; an older line's patch release cannot replace it.
 
-The first Node.js version is served at `api-docs/node/index.html`; every selected
-release is also available at `api-docs/node/versions/<version>/index.html`,
-published at `https://contentauth.github.io/c2pa-js/node/versions/<version>/`.
-The equivalent web paths are `api-docs/web/index.html` and
-`api-docs/web/versions/<version>/index.html`, published at
-`https://contentauth.github.io/c2pa-js/web/versions/<version>/`.
+Canonical URLs use the release line, for example
+`https://contentauth.github.io/c2pa-js/web/versions/0.16/`.
+The selector displays `X.Y`; the generated page title and metadata identify the
+exact `X.Y.Z` used for declarations. Node uses the equivalent `/node/versions/X.Y/`
+layout. Package roots `/web/` and `/node/` serve their respective defaults.
+The all-packages root remains unchanged.
+
+`aliases` maps historical exact-version directory names to their active `X.Y`
+line, for example `"0.16.0": "0.16"`. Generated HTML redirects retain equivalent
+page paths, query strings, and fragments when JavaScript is enabled; a plain link
+is also provided. Removed or renamed symbols have no compatibility guarantee.
+The migration collapses existing same-line patches and retains their aliases;
+it does not backfill previously unselected historical lines.
+
+To prune a line, submit a human-reviewed PR removing its version and aliases and
+adding its unprefixed `X.Y` to `retiredLines`. Retired and active lines must be
+disjoint and unique. Automation never restores retired lines. It advances retained
+lines monotonically and admits new lines only above the highest active or retired
+line; older unselected lines require an intentional human manifest change.
 
 The public web docs exclude members marked `@internal`. Versioned builds rewrite
 the published README's monorepo-root relative links to their public GitHub URLs.
@@ -176,24 +189,49 @@ those source files and the versioned sites. Rebuilding one versioned site does
 not remove the other. Generated files are ignored by Git, but the version lists
 and selector assets remain tracked.
 
-The release workflow publishes the complete site after a new package release.
-Run that workflow manually to rebuild documentation without publishing packages.
-GitHub Pages publishes `api-docs/` as the site root, so public URLs are unchanged.
+The reusable `API documentation` workflow builds the complete site after
+successful promotion. Main-branch pushes (including documentation-only changes)
+and manual dispatch also reconcile publications and rebuild the site without
+requiring a new package release. GitHub Pages publishes `api-docs/` as the root.
 
-For stable web and node releases, the existing `publish-docs` job verifies the exact
-GitHub release tag (`@contentauth/c2pa-web@<version>` or
-`@contentauth/c2pa-node@<version>`) and npm publication, then commits only that
-package's `api-docs/web-versions.json` or `api-docs/node-versions.json` directly to
-`main` using `GITHUB_TOKEN`. Each index promotes the exact version, removes duplicate
-entries for it, and preserves older versions and metadata. It builds
-and deploys the complete site from that same checkout after a successful push;
-reruns do not create empty commits. Branch protection and repository rules must
-permit this bot update, or the job fails before deployment.
+The promotion job installs no project dependencies and runs no documentation
+generation. Its repository-scoped GitHub App token writes only the two manifest
+paths, in one commit where possible. It reconciles all stable published GitHub
+releases against exact npm package names and versions, so duplicate/out-of-order
+events and pending-run replacement cannot lose a release update. Expected releases
+from Changesets or manual tag inputs are retried and fail explicitly if unavailable.
+There is no updater concurrency group that can discard a pending release event.
+
+The writer reads both manifests from current `main`, creates a tree based on that
+commit, and updates the ref without force. A concurrent change causes up to five
+attempts, each recomputing from current manifests, including human retirement.
+No-op reruns create no commit. Failure prevents the dependent build/deployment.
+The build uses a fresh current-main checkout with read-only repository permissions
+and no App token. Only deployment has Pages/id-token write permissions, serialized
+by the `github-pages` concurrency group; it skips artifacts whose source SHA is no
+longer current `main`. Every newer main push schedules its own fresh build.
+
+#### Organization App setup
+
+Install the organization documentation App on `contentauth/c2pa-js`, granting
+Contents read/write, and make the organization variable `C2PA_DOCS_APP_ID` and
+secret `C2PA_DOCS_APP_PRIVATE_KEY` available to this repository. The workflow uses
+`vars.C2PA_DOCS_APP_ID` and `secrets.C2PA_DOCS_APP_PRIVATE_KEY` to request an
+installation token scoped to this repository. Missing configuration fails
+explicitly; there is no ordinary-token writer fallback.
+
+An administrator must configure applicable main-branch rulesets/protection to
+permit the App's manifest commits (including any required bypass for mandatory
+PRs or checks). App installation does not itself bypass protection. Use the
+narrowest available exception and retain normal human review rules. Configure
+Pages for GitHub Actions and retain the `github-pages` environment's main-only
+policy. This change does not install the App, set credentials, alter protections,
+or perform a live deployment.
 
 Changesets creates releases using `GITHUB_TOKEN`, which does not trigger another
 release workflow. Its publication outputs therefore drive the update and deploy
 explicitly in the same workflow. When Changesets publishes both packages, both
-indexes update before one complete-site build and deployment. A separately published
+indexes update before a complete-site build and deployment. A separately published
 stable web or node GitHub release
 dispatches the release workflow on `main`, passing the exact tag through the
 `docs-release-tag` input. The tag-triggered job only dispatches; it does not use
@@ -209,8 +247,11 @@ The dispatched tag selects only its own package's index; node events cannot
 change the web index, and web events cannot change the node index. Unsupported
 package tags and invalid or prerelease dispatch inputs fail validation. Prereleases
 are not automatically added.
-Main-branch package publishing, prerelease docs rebuilds after Changesets
-publication, and manual docs-only/native-binary rebuild behavior are preserved.
+App manifest pushes can trigger workflows, unlike ordinary `GITHUB_TOKEN` pushes.
+The release workflow checks changed paths and skips Changesets for docs-only
+pushes, preventing another package-publication cycle. Changeset and package changes
+retain normal publication behavior. Prerelease docs rebuilds after Changesets
+publication and manual docs-only/native-binary rebuild behavior are preserved.
 Manual native-binary rebuild inputs do not promote npm documentation versions.
 The automation does not modify release tags or bypass branch protection.
 
